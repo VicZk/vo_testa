@@ -9,6 +9,82 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 20/10/2026 — Faturamento para agência, NFS-e certa e a recepção mais flexível (`a6d63a4` a `108b444`)
+
+Terceiro bloco: o resto das regras de dinheiro da auditoria e as primeiras correções de
+operação da recepção.
+
+**O que melhorou**
+- **Reserva de agência ou empresa fecha sem o hóspede pagar.**
+  - Na reserva faturada, a gerência (ou quem tem o Financeiro) clica em "Faturar para
+    <empresa>": o saldo vira uma conta a receber no Financeiro, com vencimento em 30 dias
+    por padrão, e a saída fecha.
+  - Consumo pessoal pode ficar de fora e ser recebido do hóspede.
+  - Funciona também no folio de grupo.
+- **NFS-e sobre o valor certo.** O ISS e a taxa de turismo saíram da base da nota: antes o
+  ISS incidia sobre ele mesmo. Contas antigas foram corrigidas pela migration.
+- **Diárias somam o total cotado.** A última noite absorve os centavos do arredondamento:
+  sem sobra de 1 centavo no check-out e sem adiantamento exato recusado.
+- **Loja sem venda em dobro.** Clique duplo ou conexão que cai não cobra nem baixa o
+  estoque duas vezes. Devoluções de estoque não apagam mais uma venda feita no mesmo
+  instante.
+- **Troca de quarto mais esperta.**
+  - Confere se as camas cabem no quarto novo.
+  - Mantém a diária combinada e avisa quando a tarifa do quarto novo é outra; a gerência
+    pode cobrar a nova.
+  - Só manda faxinar o quarto antigo se o hóspede estava nele.
+- **Estender a estadia** de quem está hospedado: as noites a mais entram na conta pela
+  tarifa do dia, com ISS e taxa.
+- **Mudar a lotação antes do check-in** (veio mais uma criança): refaz camas e diária.
+- **Gerência decide o preço.** Dispensar ISS ou taxa de turismo numa reserva, manter a
+  diária com outra lotação e cobrar a tarifa do quarto novo exigem gerência.
+- **Sinal do Comercial configurável** (`COMERCIAL_SINAL_PCT`, padrão 30%). A mensagem do
+  WhatsApp mostra o percentual real do sinal.
+- **Menos tropeços:**
+  - quarto de grupo ocupa a vaga de uma pré-reserva vencida;
+  - o BOH deixa de fora as fichas FNRH vazias;
+  - o pedido pelo portal aceita só itens do cardápio, até 20 por item, e nunca dá erro
+    500;
+  - reservas criadas pelo site ou pelo Comercial seguem as regras do formulário (1
+    adulto, titular no faturado).
+
+**O que foi modificado**
+- **Migrations:**
+  - `loja.0002`: `Venda.chave`;
+  - `reservas.0024`: tipo "taxa" no folio, com correção das contas antigas;
+  - `reservas.0025`: `Reserva.valor_hospedagem`;
+  - `reservas.0026`: `PagamentoConta.conta_receber`.
+- **Serviços novos:**
+  - Reservas: `faturar_conta`, `estender_estadia`, `alterar_lotacao`,
+    `Reserva.valores_das_diarias()`;
+  - núcleo: `devolver_ao_estoque`.
+- **Configuração:** `COMERCIAL_SINAL_PCT` e `FATURAMENTO_PRAZO_DIAS`.
+- **Telas:**
+  - "Faturar para" no detalhe da reserva e do grupo;
+  - "Estender a estadia" e "Mudar a lotação";
+  - opção da gerência na troca de quarto;
+  - PDV da Loja com a chave do carrinho.
+- **Documentação:** `docs/MODULOS_E_FLUXOS.md` e `docs/ARQUITETURA.md`.
+
+**Como foi testado**
+- Testes novos em cada commit, entre eles:
+  - faturar parte e o resto fica com o hóspede;
+  - permissão de faturar;
+  - folio de grupo;
+  - base da NFS-e com taxas ligadas;
+  - última noite com o arredondamento;
+  - venda repetida com a mesma chave;
+  - troca de quarto com tarifa nova, hospedado e antes do check-in;
+  - estender sobre a próxima reserva é recusado;
+  - pedido do portal com quantidade inválida.
+- Suíte completa no Windows antes do push; o CI (Linux + PostgreSQL 16) roda no push.
+
+**Depois do deploy:** as migrations rodam sozinhas. Se quiser outro percentual de sinal
+ou outro prazo de faturamento, defina `COMERCIAL_SINAL_PCT` / `FATURAMENTO_PRAZO_DIAS` no
+Railway.
+
+---
+
 ## 20/10/2026 — Dinheiro certo na conta do hóspede e primeira polida no front-end
 
 Segundo bloco das correções da auditoria. Duas frentes: o dinheiro que entrava por um
