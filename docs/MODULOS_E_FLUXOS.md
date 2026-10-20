@@ -70,7 +70,7 @@ preço, grupos (bloco de quartos), FNRH/BOH, estoque de colchões extra e berço
 |---|---|---|---|
 | orçamento/pré-reserva → **confirmada** | `Reserva.confirmar(usuario)` (`models.py:367`) | `reservas:confirmar`, `services.confirmar_reserva` (Pagamentos), `confirmar_grupo` | se vinha de orçamento, revalida o arranjo/pool de colchões; limpa `expira_em`; grava `confirmada_em` (marco da janela de arrependimento) |
 | confirmada/pré-reserva → **hospedada** | `Reserva.fazer_checkin(usuario)` (`models.py:446`) | `reservas:checkin`, `services.checkin_grupo` | atômico, com a reserva travada (clique duplo esbarra no status relido); exige `fnrh_pronta` quando `FNRH_BLOQUEAR_CHECKIN`; exige `uh.status == ATIVA`; com Governança ativa exige quarto limpo/inspecionado; marca `fnrh_status=pendente`; **cria a `ContaHospedagem`** e lança diárias + ISS + taxa de turismo (no folio-mãe, se houver grupo) |
-| hospedada → **checkout** | `Reserva.fazer_checkout(usuario)` (`models.py:492`) | `reservas:checkout` | atômico, trava reserva e conta; **único bloqueio é dinheiro**: `conta.saldo()` tem de ser 0,00 (resíduo de arredondamento até `CHECKOUT_TOLERANCIA_ARREDONDAMENTO`, padrão R$ 0,10, vira desconto automático registrado na trilha); fecha a conta; emite `quarto_liberado(origem="checkout")` |
+| hospedada → **checkout** | `Reserva.fazer_checkout(usuario)` (`models.py:492`) | `reservas:checkout` | atômico, trava reserva e conta; **único bloqueio é dinheiro**: `conta.saldo()` tem de ser 0,00 (resíduo de arredondamento até `CHECKOUT_TOLERANCIA_ARREDONDAMENTO`, padrão R$ 0,10, vira desconto automático registrado na trilha; saldo negativo = crédito do hóspede, recusado com a indicação de "Devolver ao hóspede"); fecha a conta; emite `quarto_liberado(origem="checkout")` |
 | orçamento/pré/confirmada → **cancelada** | `Reserva.cancelar(usuario, motivo)` | `reservas:cancelar`, `cancelar_grupo`, `expirar_vencidas` | motivo obrigatório; `registrar_auditoria("cancelamento_reserva")`; emite `reserva_encerrada(evento="cancelada")` |
 | confirmada → **no_show** | `Reserva.marcar_no_show(usuario)` | `reservas:no_show` | auditado; emite `reserva_encerrada(evento="no_show")` |
 
@@ -109,6 +109,10 @@ Conta e dinheiro: `contas_abertas()`, `conta_aberta(conta_id)`,
 `receber_pagamento(conta, usuario, forma, valor, parcelas, observacao, autorizacao)`,
 `receber_adiantamento(reserva, usuario, forma, valor, parcelas, autorizacao)`,
 `resumo_fiscal_conta(conta_id)`, `diarias_periodo(inicio, fim)`.
+
+Devolução: `limite_devolucao(reserva)`, `situacao_devolucao(reserva)`,
+`devolver_ao_hospede(reserva, valor, usuario, motivo)`; `Reserva.total_previsto()` (diárias
++ ISS + taxa de turismo, as mesmas regras do check-in).
 
 Pagamento online (chamados por Pagamentos):
 `registrar_pagamento_online(*, cobranca_id, valor, descricao, reserva_id, grupo_id)` —
@@ -157,6 +161,7 @@ Módulos auxiliares: `precos.py` (motor de preço), `colchoes.py` (arranjos de c
 | `reservas:detalhe` | folio, transições, FNRH, política de cancelamento, troca de quarto | `@requer_modulo` |
 | `confirmar` / `checkin` / `checkout` / `cancelar` / `transferir` / `trocar_quarto` / `no_show` | transições (POST) | `@requer_modulo` |
 | `lancamento_novo` / `pagamento_novo` / `adiantamento_novo` / `acompanhante_novo` | folio e caixa | `@requer_modulo`; **desconto exige gerência** (`views.py:645`) |
+| `devolver` | devolução ao hóspede (excedente da conta ou cancelamento) | `@requer_modulo` + **gerência** (saída de dinheiro) |
 | `reservas:fnrh` / `fnrh_reenviar` | formset das fichas da reserva / push manual à FNRH | `@requer_modulo` |
 | `reservas:grupos` + 10 rotas `grupos/<pk>/…` | bloco de quartos: criar, adicionar quarto, confirmar, check-in, cancelar, remover quarto, receber folio, sinal, encerrar | `@requer_modulo` |
 | `reservas:boh` | Boletim de Ocupação Hoteleira + `?formato=csv` | **só** `@requer_gerencia` (sem `@requer_modulo`) |
@@ -267,12 +272,26 @@ dentro de `CANCELAMENTO_ARREPENDIMENTO_DIAS` contados da confirmação (fallback
 adiantamento → criação) devolve 100%; fora, retém `CANCELAMENTO_RETENCAO_PCT`% do valor
 da hospedagem. Estadia **iniciada**: diárias consumidas (mínimo 1) + retenção, sem janela.
 `resumo_cancelamento` devolve `{cenario, retencao_valor, pago, devolver, …}`; a view
-grava a frase no motivo e audita `"politica_cancelamento"`. **A execução do estorno é da
-camada de UI** — o módulo só calcula.
+grava a frase no motivo, guarda em `Reserva.valor_retido` o que a pousada fica e audita
+`"politica_cancelamento"`.
+
+**Devolução ao hóspede.** `devolver_ao_hospede(reserva, valor, usuario, motivo)` (view
+`reservas:devolver`, só gerência) devolve até `limite_devolucao(reserva)`: o crédito da
+conta aberta (hospedada), o que passou de `Reserva.total_previsto()` (antes do check-in)
+ou tudo o que foi pago (cancelada/no-show). Estorna no caixa de Reservas do operador os
+créditos que passaram pela gaveta, do mais recente ao mais antigo; o gancho `ao_estornar`
+lança o crédito negativo. O que entrou online só volta pela cobrança (Pagamentos →
+Estornar): se o valor depender disso, nada é feito. `situacao_devolucao(reserva)`
+alimenta a tela, com o valor sugerido (cancelada: pago − `valor_retido`; no-show: zero) e
+quanto está no caixa × online. Cancelada com devolução por fazer aparece na Auditoria
+(`devolucao_pendente`).
 
 **Caixa.** Todo recebimento de Reservas vai ao caixa **do módulo Reservas** do operador
 (`_receber_no_caixa` → `nucleo.receber_no_caixa(..., modulo=Modulo.RESERVAS)`).
 `receber_pagamento` trava a conta (`sistema.travar`) e recusa valor acima do saldo.
+`receber_adiantamento` trava a reserva e recusa valor acima do que falta pagar
+(`total_previsto()` − o que já foi pago); em quarto de grupo recusa, porque as diárias
+vão ao folio-mãe e o sinal é do grupo.
 
 **Day use.** Fica fora do mapa operacional e do cálculo de ocupação do dashboard
 (`exclude(tipo__modalidade=DAY_USE)` em `resumo_do_dia`, `mapa_quartos_hoje`,
@@ -1703,7 +1722,8 @@ sequenceDiagram
 8. **Saída.** `reservas:checkout` → `fazer_checkout` (trava reserva e conta): o **único**
    bloqueio é `conta.saldo() == 0,00`. Um resíduo de arredondamento até
    `CHECKOUT_TOLERANCIA_ARREDONDAMENTO` (padrão R$ 0,10) vira desconto automático,
-   registrado na trilha. Fecha a conta, grava `checkout_real` e emite
+   registrado na trilha. Saldo negativo (o hóspede pagou a mais) é recusado: a gerência
+   devolve a diferença em "Devolver ao hóspede" e a saída fecha. Fecha a conta, grava `checkout_real` e emite
    `quarto_liberado(origem="checkout")`.
 9. **NFS-e.** No detalhe, "Emitir NFS-e da hospedagem" → `fiscal:emitir_nfse` →
    `emitir_nfse_da_conta(conta_id)` (idempotente por conta, com lock), que lê a parte
