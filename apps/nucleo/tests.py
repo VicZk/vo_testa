@@ -1602,3 +1602,69 @@ class CaixaConcorrenciaEEstornoTests(CaixaTestsBase):
         self.sessao.fechar(Decimal("150.00"), self.operador)
         with self.assertRaisesMessage(ValidationError, "abra o seu caixa"):
             estornar_movimento(movimento, movimento.sessao, self.gerente, "Devolução")
+
+
+class TrilhaLGPDTests(TestCase):
+    """Trilha: documento mascarado, escrita pública atribuída, retenção e exportação."""
+
+    def setUp(self):
+        from apps.nucleo import audit
+        self.audit = audit
+        self.user = Usuario.objects.create_user(username="rec2", password="x")
+
+    def tearDown(self):
+        self.audit.limpar_contexto()
+
+    def _trilha(self, **f):
+        from apps.nucleo.models import TrilhaAuditoria
+        return TrilhaAuditoria.objects.filter(**f)
+
+    def test_documento_vai_mascarado_mas_a_mudanca_fica(self):
+        from apps.nucleo.models import Pessoa
+        self.audit.definir_contexto(self.user, "200.1.2.3")
+        p = Pessoa.objects.create(nome="Ana Doc", documento="529.982.247-25")
+        criar = self._trilha(alvo="Pessoa", alvo_id=str(p.pk), acao="criar").get()
+        self.assertEqual(criar.detalhe["valores"]["documento"], "•••")
+        self.assertEqual(criar.detalhe["valores"]["nome"], "Ana Doc")
+        p.documento = "111.444.777-35"
+        p.save()
+        editar = self._trilha(alvo="Pessoa", alvo_id=str(p.pk), acao="editar").get()
+        self.assertEqual(editar.detalhe["alteracoes"]["documento"], ["•••", "•••"])
+        self.assertNotIn("111.444.777-35", str(editar.detalhe))
+
+    def test_escrita_publica_fica_na_trilha_com_usuario_de_sistema(self):
+        r = self.client.post(reverse("core:pedir_proposta"), {
+            "nome": "Lead Público", "telefone": "49999880303", "email": "pub@ex.com",
+            "tipo_interesse": "hospedagem"})
+        self.assertEqual(r.status_code, 302)
+        t = self._trilha(alvo="Pessoa", acao="criar").select_related("usuario").first()
+        self.assertIsNotNone(t)
+        self.assertEqual(t.usuario.username, "_site")
+
+    def test_purga_respeita_a_retencao(self):
+        from datetime import timedelta
+
+        from django.core.management import call_command
+        from django.utils import timezone
+
+        from apps.nucleo.models import TrilhaAuditoria
+        velho = TrilhaAuditoria.objects.create(acao="x", alvo="X", alvo_id="1")
+        TrilhaAuditoria.objects.filter(pk=velho.pk).update(
+            criado_em=timezone.now() - timedelta(days=400))
+        novo = TrilhaAuditoria.objects.create(acao="y", alvo="Y", alvo_id="2")
+        call_command("purgar_trilha", stdout=__import__("io").StringIO())  # padrão: 0 = não apaga
+        self.assertTrue(TrilhaAuditoria.objects.filter(pk=velho.pk).exists())
+        call_command("purgar_trilha", "--dias", "365", stdout=__import__("io").StringIO())
+        self.assertFalse(TrilhaAuditoria.objects.filter(pk=velho.pk).exists())
+        self.assertTrue(TrilhaAuditoria.objects.filter(pk=novo.pk).exists())
+        self.assertTrue(TrilhaAuditoria.objects.filter(acao="purga_trilha").exists())
+
+    def test_exportar_a_trilha_exige_gerencia(self):
+        from apps.nucleo.models import ModuloContratado
+        from apps.nucleo.modulos import Modulo
+        ModuloContratado.objects.update_or_create(codigo=Modulo.AUDITORIA, defaults={"ativo": True})
+        self.user.modulos.add(ModuloContratado.objects.get(codigo=Modulo.AUDITORIA))
+        self.client.force_login(self.user)
+        self.assertEqual(self.client.get(reverse("auditoria:trilha")).status_code, 200)
+        self.assertEqual(
+            self.client.get(reverse("auditoria:trilha") + "?export=csv").status_code, 403)

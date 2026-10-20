@@ -1,6 +1,7 @@
 import csv
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.views.decorators.cache import never_cache
@@ -9,7 +10,7 @@ from apps.nucleo.audit import redigir_sensiveis
 from apps.nucleo.models import TrilhaAuditoria
 from apps.nucleo.modulos import Modulo
 from apps.nucleo.periodos import periodo, selecao_periodo
-from apps.nucleo.permissoes import pode_ver_salario, requer_modulo
+from apps.nucleo.permissoes import eh_gerente, pode_ver_salario, requer_modulo
 
 from . import services
 
@@ -48,6 +49,9 @@ def trilha(request):
     # trilha (a mudança continua registrada — só o número é mascarado).
     ocultar_sensivel = not pode_ver_salario(request.user)
     if request.GET.get("export") == "csv":
+        # Exportar é tirar a trilha inteira do sistema: só a gerência.
+        if not eh_gerente(request.user):
+            raise PermissionDenied("Exportar a trilha exige gerência.")
         import json as _json
 
         from apps.nucleo.export import resposta_csv, sanitizar_celula

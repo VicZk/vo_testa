@@ -2126,3 +2126,12 @@ class AlterarReservaTests(ReservasTestsBase):
         self.client.force_login(self.usuario)
         self.assertContains(self.client.get(reverse("reservas:detalhe", args=[r.pk])),
                             "Estender a estadia")
+
+
+class ExpiracaoAuditadaTests(ReservasTestsBase):
+    def test_pre_reserva_expirada_fica_na_trilha(self):
+        r = self.reserva(dias=2, offset=30, status=Reserva.Status.PRE_RESERVA)
+        Reserva.objects.filter(pk=r.pk).update(expira_em=timezone.now() - timedelta(minutes=1))
+        self.assertEqual(services.expirar_vencidas(), 1)
+        self.assertTrue(TrilhaAuditoria.objects.filter(
+            acao="expiracao_retencao", alvo="Reserva", alvo_id=str(r.pk)).exists())

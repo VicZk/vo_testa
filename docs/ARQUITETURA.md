@@ -662,7 +662,9 @@ Ligada em `NucleoConfig.ready()` → `conectar_auditoria_automatica()`.
 IP** num `threading.local()` (`definir_contexto` / `usuario_atual()` / `ip_atual()`,
 limpo no `finally`), para que qualquer service — mesmo sem `request` em mãos — saiba a
 quem atribuir a ação. O IP vem do primeiro item de `X-Forwarded-For` (Railway) ou de
-`REMOTE_ADDR`.
+`REMOTE_ADDR`. Escrita sem login (POST do site, do portal do hóspede, do link de
+pagamento e dos webhooks) é atribuída a um usuário de sistema escolhido pelo caminho
+(`_portal`, `_pagamentos`, `_whatsapp`; o resto, `_site`); leitura anônima não tem ator.
 
 **Signals por denylist, não allowlist.** `_modelos_para_auditar()` pega **todos** os
 models cujo app começa com `apps.` (ignora Django/contrib e tabelas M2M
@@ -682,13 +684,16 @@ MODELOS_EXCLUIDOS = {
 - `post_save` grava `criar` (`{"valores": …}`) ou `editar` (`{"alteracoes": {campo: [antes, depois]}}`);
   `save` sem mudança de campo não gera registro.
 - `post_delete` grava `excluir` com o snapshot.
-- **Só registra com usuário real no contexto** — seed, migration, shell, cron e
-  webhook de sistema não poluem a trilha.
+- **Só registra com ator no contexto** — o usuário logado ou, na escrita pública, o
+  usuário de sistema. Seed, migration, shell e cron sem contexto não poluem a trilha.
 - `CAMPOS_IGNORADOS` lista os campos que nunca entram no diff (carimbos automáticos e
   credenciais, como `password`). Ao criar um campo sensível novo (segredo, token,
   documento), avalie incluí-lo ali ou em `CAMPOS_SENSIVEIS`.
 - `CAMPOS_SENSIVEIS = {salario}`: a mudança **é** auditada, mas o valor é redigido
   (`"•••"`) por `redigir_sensiveis()` para quem não tem a área Remuneração.
+- `CAMPOS_PII` (documento, CPF, RG, passaporte, nascimento): a trilha grava **que**
+  mudou, nunca o valor — `"•••"` já na gravação (o diff compara os valores reais antes de
+  mascarar; vazio continua vazio).
 - `user_logged_in` / `user_logged_out` → ações `login` / `logout`.
 
 **`registrar_auditoria(usuario, acao, objeto, detalhe=None, ip=None)`** é a via
@@ -698,26 +703,32 @@ recado…). Se `usuario`/`ip` vierem `None`, faz fallback para o contexto do mid
 
 **`TrilhaAuditoria`** — `usuario` (`SET_NULL`), `acao`, `alvo` (nome da classe),
 `alvo_id`, `detalhe` (JSON), `ip`, `criado_em`; 3 índices
-(`-criado_em`, `usuario+-criado_em`, `alvo+alvo_id`); **append-only**.
+(`-criado_em`, `usuario+-criado_em`, `alvo+alvo_id`); **append-only**. A única saída é a
+retenção: `manage.py purgar_trilha` apaga o que passou de `TRILHA_RETENCAO_DIAS` (0 =
+guardar sempre, o padrão) e registra a própria purga; roda no grupo diário do `rotinas`.
 
 **Leitura** — `apps/auditoria`: `formatacao.frase()` + filtro `|frase_auditoria`
 transformam o registro em frase pt-BR (“Abriu o caixa de Reservas — fundo R$ 0,00”),
 com o JSON cru no `title`; filtro mês/ano compartilhado (`nucleo.periodos`), usuário
-clicável (timeline por operador) e export CSV. Acesso por `@requer_modulo(Modulo.AUDITORIA)`.
+clicável (timeline por operador) e export CSV. Acesso por `@requer_modulo(Modulo.AUDITORIA)`;
+**exportar** o CSV exige gerência.
 
 **O que a auditoria automática não cobre** (documentado no próprio código e em
 `CLAUDE.md`): só **escritas** — leitura/visualização não gera log; `bulk_create`,
-`QuerySet.update()` e SQL cru não passam por signals; e o `pre_save` custa 1 query
-extra por escrita feita por um usuário (as do site, do portal, dos webhooks e das rotinas
+`QuerySet.update()` e SQL cru não passam por signals — onde um `update()` muda estado de
+negócio, o registro é explícito (ex.: `expirar_vencidas` grava `expiracao_retencao` por
+reserva); e o `pre_save` custa 1 query extra por escrita com ator (as rotinas sem contexto
 não pagam esse custo).
 
 ### 5.6 Camadas de segurança (o que cada uma faz)
 
 | Camada | Onde | O que faz |
 |---|---|---|
-| `CSPMiddleware` | `apps/nucleo/security_headers.py` | Adiciona a Content-Security-Policy do projeto. Começa em **report-only** (`CSP_REPORT_ONLY=1`, default): o navegador apenas reporta no console. Com `CSP_REPORT_ONLY=False` o header passa a ser `Content-Security-Policy` (bloqueio). A política libera o que o app usa (unpkg/jsdelivr/cdnjs/GTM/Facebook em `script-src`, Google Fonts em `style-src`/`font-src`, `img-src https:` para fotos, `frame-src https:` para o tour 360°) e fecha `object-src`, `base-uri`, `frame-ancestors` e `form-action`. |
-| `MFAObrigatorioMiddleware` | `apps/nucleo/security_headers.py` | Superusuário com `mfa_ativo=False` é redirecionado para `mfa_ativar` em qualquer rota que não seja `mfa_ativar`/`login`/`logout`/`/static/`/`/media/`. Não roda sob `TESTING` nem com `MFA_OBRIGATORIO=False`. `mfa_obrigatorio(user)` hoje = `is_superuser`; os demais são opt-in. |
-| `LoginComLimite` | `apps/nucleo/auth_views.py` | `LoginView` com rate-limit por IP (10 tentativas / 300 s, via `apps/nucleo/ratelimit.py` sobre o cache do Django) e **passo de MFA**: senha correta com `mfa_ativo` não loga — guarda `mfa_pending_user` na sessão e redireciona para `mfa_desafio`. Pulado sob `TESTING`. |
+| `CSPMiddleware` | `apps/nucleo/security_headers.py` | Adiciona a Content-Security-Policy do projeto. Começa em **report-only** (`CSP_REPORT_ONLY=1`, default): o navegador apenas reporta no console. Com `CSP_REPORT_ONLY=False` o header passa a ser `Content-Security-Policy` (bloqueio). A política libera o que o app usa (unpkg/jsdelivr/cdnjs/GTM/Facebook em `script-src`, Google Fonts em `style-src`/`font-src`, `img-src https:` para fotos, `frame-src https:` para o tour 360°) e fecha `object-src`, `base-uri`, `frame-ancestors` e `form-action`. `report-uri /csp/relatorio/`: cada violação vira uma linha no logger `csp` (tokens das URLs mascarados), para saber o que quebraria antes de ligar o bloqueio. |
+| `MFAObrigatorioMiddleware` | `apps/nucleo/security_headers.py` | Superusuário com `mfa_ativo=False` é redirecionado para `mfa_ativar` em qualquer rota que não seja `mfa_ativar`/`login`/`logout`/`/static/`/`/media/`/"Esqueci minha senha". Não roda sob `TESTING` nem com `MFA_OBRIGATORIO=False`. `mfa_obrigatorio(user)` segue `MFA_OBRIGATORIO_PARA`: `superusuario` (padrão), `gerencia` (+ staff) ou `financeiro` (+ áreas Financeiro/Caixa); os demais são opt-in. |
+| `LoginComLimite` | `apps/nucleo/auth_views.py` | `LoginView` com rate-limit por IP (10 tentativas / 300 s, via `apps/nucleo/ratelimit.py` sobre o cache do Django), **trava por usuário** (8 senhas erradas para o mesmo usuário, de qualquer IP → 15 min; acerto zera; `LOGIN_TRAVA_POR_CONTA`, desligada sob `TESTING`) e **passo de MFA**: senha correta com `mfa_ativo` não loga — guarda `mfa_pending_user` na sessão e redireciona para `mfa_desafio`. Mensagens em pt-BR (`FormularioEntrada`). |
+| Esqueci minha senha | `RecuperarSenha` em `auth_views.py` | `/crm/senha/esqueci/` → e-mail com link de uso único válido por 1 h (`PASSWORD_RESET_TIMEOUT`); mesma resposta exista ou não o e-mail; 5 pedidos / 15 min por IP. |
+| Anti-robô | `apps/nucleo/antirrobo.py` + `{% campos_antirrobo %}` | Campo armadilha invisível + carimbo assinado de tempo mínimo (2 s) nos formulários públicos ("Pedir proposta", páginas de captação); robô recebe sucesso falso e nada é criado. |
 | MFA (TOTP) | `apps/nucleo/mfa.py`, `mfa_views.py` | `pyotp` com `valid_window=1`; segredo e **códigos de backup com hash do Django** em `Usuario`; QR gerado inline como SVG (`SvgPathImage`); `consumir_backup` é de uso único. |
 | Settings de produção | `config/settings.py:234-243` | Com `DEBUG=0`: `SECURE_PROXY_SSL_HEADER`, `SECURE_SSL_REDIRECT` (isentando `^healthz/?$`), cookies `Secure`, HSTS 30 dias com subdomínios e preload. |
 | Sempre ligados | `config/settings.py:217-231` | Cookies com nome próprio (`vo_testa_sessionid`/`vo_testa_csrftoken`), `SECURE_REFERRER_POLICY="same-origin"` (protege tokens em URL do portal/pagamento), `SECURE_CONTENT_TYPE_NOSNIFF`, sessão de 10 h renovada por atividade, `SameSite=Lax`. |
@@ -812,7 +823,9 @@ Tudo que varia por ambiente é lido em `config/settings.py` (`.env` em dev via
 | Variável | Default | O que faz |
 |---|---|---|
 | `CSP_REPORT_ONLY` | `1` | `1` = header `…-Report-Only` (observa); `0`/outro = CSP que **bloqueia**. |
-| `MFA_OBRIGATORIO` | `0` se `DEBUG`, senão `1` | Liga o `MFAObrigatorioMiddleware` (hoje aplicado a superusuários). |
+| `MFA_OBRIGATORIO` | `0` se `DEBUG`, senão `1` | Liga o `MFAObrigatorioMiddleware`. |
+| `MFA_OBRIGATORIO_PARA` | `superusuario` | A quem o MFA é obrigatório: `superusuario`, `gerencia` (+ staff) ou `financeiro` (+ áreas Financeiro/Caixa). |
+| `TRILHA_RETENCAO_DIAS` | `0` | Retenção da trilha de auditoria (`purgar_trilha`); 0 = guardar sempre. Registros financeiros pedem 5 anos (≥ 1830). |
 
 ### Mídia (Cloudflare R2)
 
@@ -844,6 +857,7 @@ Sem elas, filesystem local — e **o disco do Railway é efêmero**.
 | `PIX_CHAVE` | `""` | Chave Pix da pousada. |
 | `PIX_RECEBEDOR_NOME` | `POUSADA VO TESTA` | Nome no BR Code. |
 | `PIX_RECEBEDOR_CIDADE` | `ITA` | Cidade no BR Code. |
+| `PAGAMENTOS_TELEFONE_PADRAO` | `4920550005` | Telefone mandado ao gateway quando o pagador não tem (o comercial público da pousada). |
 
 ### Reservas e preço
 
@@ -859,6 +873,8 @@ Sem elas, filesystem local — e **o disco do Railway é efêmero**.
 | `PRECO_TAXAS_ATIVAS` | `1` (e **forçado off** sob `TESTING`) | Lança ISS + taxa de turismo na conta no check-in. |
 | `CANCELAMENTO_ARREPENDIMENTO_DIAS` | `7` | Janela de arrependimento (CDC) a partir da confirmação. |
 | `CANCELAMENTO_RETENCAO_PCT` | `10` | % retida depois da janela. |
+| `FATURAMENTO_PRAZO_DIAS` | `30` | Vencimento padrão do título a receber quando a conta é faturada para agência/empresa. |
+| `COMERCIAL_SINAL_PCT` | `30` | Sinal que o Comercial gera para um lead, em % do valor estimado. |
 
 ### FNRH (Embratur/Serpro)
 
@@ -900,6 +916,7 @@ Sem elas, filesystem local — e **o disco do Railway é efêmero**.
 | `EMAIL_ENVIO_ASSINCRONO` | `1` | Envia o 1:1 em thread de fundo; desligar em testes para determinismo. |
 | `LEADS_ALERTA_EMAILS` | `""` | Quem é avisado de lead novo (vírgula); vazio → `comercial@`. |
 | `LEAD_BOAS_VINDAS` | `1` | Boas-vindas automáticas ao lead de LP/site. |
+| `LEAD_BOAS_VINDAS_MAX_DIA` | `100` | Teto diário dessas boas-vindas (uma por pessoa, sempre). |
 
 ### Site, SEO e analytics
 

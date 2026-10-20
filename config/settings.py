@@ -123,6 +123,9 @@ MFA_OBRIGATORIO_PARA = os.environ.get("MFA_OBRIGATORIO_PARA", "superusuario")
 # Trava por conta no login (8 senhas erradas → 15 min). Desligada na suíte, como o
 # limite por IP: o cache é compartilhado entre os testes.
 LOGIN_TRAVA_POR_CONTA = not TESTING
+# Retenção da trilha de auditoria em dias (comando purgar_trilha). 0 = guardar sempre.
+# Registros financeiros pedem 5 anos: se ligar, use 1830 ou mais.
+TRILHA_RETENCAO_DIAS = int(os.environ.get("TRILHA_RETENCAO_DIAS", "0"))
 # Link de "Esqueci minha senha" vale 1 hora (o padrão do Django é 3 dias).
 PASSWORD_RESET_TIMEOUT = 60 * 60
 
@@ -360,6 +363,8 @@ PIX_DIRETO = os.environ.get("PIX_DIRETO", "0") == "1"
 PIX_CHAVE = os.environ.get("PIX_CHAVE", "")  # CNPJ/e-mail/telefone/chave aleatória
 PIX_RECEBEDOR_NOME = os.environ.get("PIX_RECEBEDOR_NOME", "POUSADA VO TESTA")
 PIX_RECEBEDOR_CIDADE = os.environ.get("PIX_RECEBEDOR_CIDADE", "ITA")
+# Telefone mandado ao gateway quando o pagador não tem: o comercial público da pousada.
+PAGAMENTOS_TELEFONE_PADRAO = os.environ.get("PAGAMENTOS_TELEFONE_PADRAO", "4920550005")
 
 # Retenção da pré-reserva vinda de canal (site): minutos que seguram o quarto
 # antes de expirar automaticamente sem confirmação/pagamento.
@@ -505,6 +510,8 @@ META_CRM_NOME = os.environ.get("META_CRM_NOME", "Pousada Vô Testa CRM")
 META_CAPI_VERSION = os.environ.get("META_CAPI_VERSION", "v21.0")
 # Boas-vindas automáticas ao lead que se cadastra (LP/site). Desligável por env.
 LEAD_BOAS_VINDAS = os.environ.get("LEAD_BOAS_VINDAS", "1") == "1"
+# Teto diário de boas-vindas automáticas (o formulário é público). Uma por pessoa, sempre.
+LEAD_BOAS_VINDAS_MAX_DIA = int(os.environ.get("LEAD_BOAS_VINDAS_MAX_DIA", "100"))
 # GeoIP de CIDADE do lead (opcional, OFFLINE). Aponte para um GeoLite2-City.mmdb
 # (MaxMind, grátis) + `pip install geoip2` para preencher cidade_estimada. Vazio =
 # desligado (a UF já vem do DDD do WhatsApp, sem precisar de base). Ver enriquecimento.py.

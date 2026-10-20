@@ -38,6 +38,7 @@ GRUPOS = {
         "enviar_conversoes_pendentes",
         "sincronizar_gastos_midia",
         "backup_banco",
+        "purgar_trilha",
     ],
 }
 

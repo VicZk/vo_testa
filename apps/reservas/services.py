@@ -311,12 +311,23 @@ def reservas_no_periodo(uh: UH, checkin: date, checkout: date):
 def expirar_vencidas() -> int:
     """Cancela as pré-reservas cujo prazo de retenção venceu, liberando o quarto.
     Chamada pelo cron (management command) e antes de alocar uma nova reserva."""
-    n = Reserva.objects.filter(
+    from apps.nucleo.models import TrilhaAuditoria
+
+    motivo = "Pré-reserva expirada (retenção sem confirmação)."
+    vencidas = list(Reserva.objects.filter(
         status=Reserva.Status.PRE_RESERVA, expira_em__lt=timezone.now()
-    ).update(
-        status=Reserva.Status.CANCELADA,
-        motivo_cancelamento="Pré-reserva expirada (retenção sem confirmação).",
+    ).values_list("pk", flat=True))
+    if not vencidas:
+        return 0
+    n = Reserva.objects.filter(pk__in=vencidas, status=Reserva.Status.PRE_RESERVA).update(
+        status=Reserva.Status.CANCELADA, motivo_cancelamento=motivo,
     )
+    # .update() não passa pelos signals da auditoria: o registro vai aqui, um por reserva.
+    TrilhaAuditoria.objects.bulk_create([
+        TrilhaAuditoria(usuario=None, acao="expiracao_retencao", alvo="Reserva",
+                        alvo_id=str(pk), detalhe={"motivo": motivo})
+        for pk in vencidas
+    ])
     return n
 
 

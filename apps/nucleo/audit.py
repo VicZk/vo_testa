@@ -34,6 +34,19 @@ CAMPOS_IGNORADOS = {
 # trilha para quem tem a área Remuneração — para os demais fica redigido ("•••").
 CAMPOS_SENSIVEIS = {"salario"}
 
+# Documento e nascimento (LGPD, minimização): a trilha registra QUE mudou, nunca o valor
+# — o valor já mora no cadastro, e a trilha é lida e exportada por mais gente.
+CAMPOS_PII = {"documento", "documento_numero", "cpf", "rg", "passaporte",
+              "nascimento", "data_nascimento"}
+_OCULTO = "•••"
+
+
+def _mascara_pii(valores: dict) -> dict:
+    """Troca o valor dos campos PII por "•••" (vazio continua vazio, para dar para ver
+    que o campo foi preenchido ou apagado)."""
+    return {campo: (_OCULTO if campo in CAMPOS_PII and valor not in (None, "") else valor)
+            for campo, valor in valores.items()}
+
 
 def redigir_sensiveis(detalhe, campos=CAMPOS_SENSIVEIS):
     """Devolve uma cópia do detalhe com os valores dos campos sensíveis mascarados.
@@ -102,6 +115,30 @@ def _ip_da_requisicao(request):
     return request.META.get("REMOTE_ADDR")
 
 
+# Escritas sem login (site, portal do hóspede, link de pagamento, webhooks) também vão
+# para a trilha, atribuídas a um usuário de sistema pelo caminho. Antes elas passavam
+# sem registro nenhum (reserva do site, pedido no quarto, pagamento confirmado…).
+_ATORES_PUBLICOS = (
+    ("/hospede/", "_portal", "Portal"),
+    ("/crm/pagamentos/", "_pagamentos", "Pagamentos (público)"),
+    ("/whatsapp/", "_whatsapp", "WhatsApp"),
+)
+
+
+def _ator(request):
+    usuario = getattr(request, "user", None)
+    if usuario is not None and getattr(usuario, "is_authenticated", False):
+        return usuario
+    if request.method in ("GET", "HEAD", "OPTIONS"):
+        return None  # leitura não escreve; nada a atribuir
+    from apps.nucleo.sistema import usuario_de_sistema
+
+    for prefixo, username, nome in _ATORES_PUBLICOS:
+        if request.path.startswith(prefixo):
+            return usuario_de_sistema(username, nome)
+    return usuario_de_sistema("_site", "Site")
+
+
 class AuditContextMiddleware:
     """Publica o usuário/IP da requisição no threadlocal durante o processamento."""
 
@@ -109,7 +146,7 @@ class AuditContextMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        definir_contexto(getattr(request, "user", None), _ip_da_requisicao(request))
+        definir_contexto(_ator(request), _ip_da_requisicao(request))
         try:
             return self.get_response(request)
         finally:
@@ -163,12 +200,15 @@ def _post_save(sender, instance, created, **kwargs):
     from apps.nucleo.models import registrar_auditoria
 
     if created:
-        registrar_auditoria(usuario, "criar", instance, {"valores": _snapshot(instance)})
+        registrar_auditoria(usuario, "criar", instance,
+                            {"valores": _mascara_pii(_snapshot(instance))})
         return
     anterior = getattr(instance, "_audit_anterior", None) or {}
     atual = _snapshot(instance, getattr(instance, "_audit_campos", None))
+    # A comparação usa os valores reais; só o que é gravado na trilha sai mascarado.
     alteracoes = {
-        campo: [anterior.get(campo), novo]
+        campo: ([_OCULTO, _OCULTO] if campo in CAMPOS_PII
+                else [anterior.get(campo), novo])
         for campo, novo in atual.items()
         if anterior.get(campo) != novo
     }
@@ -183,7 +223,8 @@ def _post_delete(sender, instance, **kwargs):
         return
     from apps.nucleo.models import registrar_auditoria
 
-    registrar_auditoria(usuario, "excluir", instance, {"valores": _snapshot(instance)})
+    registrar_auditoria(usuario, "excluir", instance,
+                        {"valores": _mascara_pii(_snapshot(instance))})
 
 
 # ------------------------------------------------------------------ login/logout
