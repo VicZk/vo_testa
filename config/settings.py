@@ -174,6 +174,23 @@ AUTH_USER_MODEL = "nucleo.Usuario"
 # Logs no stdout (o Railway coleta). Sem isto, com DEBUG=0 o Django não imprime os
 # erros 500 em lugar nenhum (o padrão só manda e-mail para ADMINS, que não existe),
 # e os logger.exception(...) do código também se perdem.
+# Monitoramento de erros (opcional): com SENTRY_DSN, exceções e erros de log vão para o
+# Sentry (o plano gratuito basta). Sem dado pessoal nem de cartão: não envia corpo de
+# requisição nem variáveis locais (o pagamento com cartão passa número e CVV por elas).
+SENTRY_DSN = os.environ.get("SENTRY_DSN", "")
+if SENTRY_DSN and not TESTING:
+    import sentry_sdk
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        environment=os.environ.get("SENTRY_ENVIRONMENT", "dev" if DEBUG else "producao"),
+        release=os.environ.get("RAILWAY_GIT_COMMIT_SHA", "") or None,
+        send_default_pii=False,
+        include_local_variables=False,
+        max_request_body_size="never",
+        traces_sample_rate=float(os.environ.get("SENTRY_TRACES_SAMPLE_RATE", "0")),
+    )
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,

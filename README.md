@@ -571,6 +571,7 @@ Railway em produção). As essenciais:
 | `LOG_LEVEL` | nível dos logs no stdout (padrão INFO) |
 | `REDIS_URL` | cache compartilhado em Redis; vazio = tabela no próprio Postgres |
 | `SAFRAPAY_TIMEOUT` | segundos de espera pela Safrapay (padrão 10) |
+| `SENTRY_DSN` | monitoramento de erros no Sentry (sem corpo de requisição nem variáveis locais) |
 
 A lista completa, com padrões e efeitos, está em
 [`docs/ARQUITETURA.md` §7](docs/ARQUITETURA.md). Durante os testes a flag `TESTING`
