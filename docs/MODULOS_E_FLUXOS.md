@@ -28,8 +28,9 @@ com o tempo).
   de edição levanta `ValidationError`); correção = movimento inverso.
 - Os serviços do núcleo usados por quase todos os módulos:
   `receber_no_caixa`, `estornar_movimento`, `registrar_auditoria`, `saldo`,
-  `registrar_entrada`, `registrar_saida`, `transferir`, `ajustar`, `posicao_estoque`
-  (reexportados em `apps/nucleo/models/__init__.py`).
+  `registrar_entrada`, `registrar_saida`, `transferir`, `ajustar`,
+  `devolver_ao_estoque`, `posicao_estoque` (reexportados em
+  `apps/nucleo/models/__init__.py`).
 
 ---
 
@@ -101,7 +102,10 @@ Criação/edição: `obter_ou_criar_hospede(nome, email, telefone, documento)`,
 `criar_prereserva(*, tipo_uh|uh, checkin, checkout, hospede, usuario, canal, …, reter)`,
 `criar_reserva_site(...)`, `criar_reserva_site_unidade(...)`,
 `transferir_datas(reserva, novo_ci, novo_co, usuario)`,
-`trocar_quarto(reserva, novo_uh, usuario, motivo="")`,
+`trocar_quarto(reserva, novo_uh, usuario, motivo="", cobrar_tarifa_nova=False)`,
+`estender_estadia(reserva, nova_saida, usuario)` (hospedado),
+`alterar_lotacao(reserva, usuario, *, adultos, criancas_0_5, criancas_6_15, manter_preco)`
+(antes do check-in),
 `confirmar_reserva(reserva_id, usuario) → bool`.
 
 Conta e dinheiro: `contas_abertas()`, `conta_aberta(conta_id)`,
@@ -254,8 +258,25 @@ zero.
 
 **Troca de quarto.** `trocar_quarto` só aceita reserva ativa, quarto destino `ATIVA`, sem
 bloqueio de manutenção no período; a `ExclusionConstraint` valida a corrida. A conta
-pertence à reserva, logo diárias, consumo e pagamentos acompanham. Auditado
-(`"troca_quarto"`) e emite `quarto_liberado(origem="troca")` para o quarto antigo.
+pertence à reserva, logo diárias, consumo e pagamentos acompanham. O arranjo de camas é
+conferido no quarto novo (mantido se couber; senão o sugerido; senão recusa), com o pool
+de colchões travado. A diária combinada é mantida, e a tela avisa se a tarifa do destino
+for outra; com `cobrar_tarifa_nova` (gerência) a diária passa à do quarto novo — antes do
+check-in muda a diária, hospedado a diferença das noites restantes entra na conta.
+Auditado (`"troca_quarto"`, com a diária antiga e a nova) e emite
+`quarto_liberado(origem="troca")` só quando o hóspede estava no quarto antigo.
+
+**Estender e mudar a lotação.** `estender_estadia` (hospedado) confere o quarto livre e
+o pool de colchões nas noites a mais, lança uma diária por noite pela tarifa vigente
+(mais ISS e taxa de turismo, no folio-mãe se for de grupo) e move a saída; auditado
+(`"extensao_estadia"`). `alterar_lotacao` (antes do check-in) refaz o arranjo de camas e
+a diária pela nova lotação (a gerência pode manter a combinada); auditado
+(`"alteracao_lotacao"`). Antes do check-in, mudar datas é `transferir_datas`.
+
+**Validação nos serviços.** `criar_prereserva` e `adicionar_quarto` chamam
+`Reserva.clean()` antes de gravar (1 adulto, titular no faturado, day use de um dia):
+quem cria pelo site, Comercial ou API segue as regras do formulário. Também soltam as
+pré-reservas com retenção vencida antes de ocupar o quarto (a constraint ainda as vê).
 
 **FNRH e trava de check-in.** `garantir_fichas_fnrh` cria uma ficha por hóspede
 (`adultos + criancas`), a do titular pré-preenchida do cadastro. `Reserva.fnrh_pronta`
@@ -273,7 +294,8 @@ preenchimento: recepção (`reservas:fnrh`) e pré-check-in pelo portal
 **BOH.** `boh_mensal(ano, mes)` agrega as fichas dos hóspedes que **entraram** no mês
 (check-in no período e reserva hospedada/saída) por procedência (UF nacional × país
 estrangeiro), motivo da viagem, meio de transporte e sexo, mais ocupação (UH-noites,
-taxa) e permanência média. Só lê e soma.
+taxa) e permanência média. Só lê e soma. Ficha criada e não preenchida fica fora das
+contagens e aparece à parte (`fichas_incompletas`).
 
 **Política de cancelamento** (`apps/reservas/cancelamento.py`) — única, funções puras:
 reagendar é a 1ª opção (`transferir_datas`, não é cancelamento). Estadia **não iniciada**:
@@ -492,7 +514,9 @@ Nenhum emitido ou ouvido.
 - O cardápio só lista produtos ativos com `preco_venda > 0` **e saldo** no local do
   Restaurante (fallback Loja → qualquer local ativo).
 - `pedir_restaurante` é atômico: um item sem saldo reverte a comanda e as baixas já
-  feitas; pedido sem itens apaga a comanda e levanta erro.
+  feitas. O pedido inteiro é validado antes de abrir a comanda: só itens do cardápio
+  (ativos, com preço), de 1 a `MAX_ITENS_POR_PEDIDO` (20) unidades por item; entrada
+  inválida vira mensagem, não erro 500.
 - `cobrar_saldo` recusa saldo ≤ 0 e usa `finalidade=saldo_conta`.
 - `SECURE_REFERRER_POLICY = "same-origin"` protege o token na URL.
 
@@ -977,10 +1001,12 @@ caixa do operador ou conta do quarto.
 ### Interface pública (`apps/loja/services.py`)
 
 - `finalizar_venda(operador, local, itens, destino, forma=None, cliente=None,
-  conta_id=None, desconto=0)` — valida saldo item a item, cria `Venda`/`ItemVenda`,
-  chama `registrar_saida` por item e cobra pelo destino.
-- `cancelar_venda(venda, usuario, motivo)` — devolve estoque via `ajustar` e estorna o
-  caixa (`estornar_movimento`); auditado.
+  conta_id=None, desconto=0, chave=None)` — valida saldo item a item, cria
+  `Venda`/`ItemVenda`, chama `registrar_saida` por item (sempre na ordem dos produtos) e
+  cobra pelo destino. `chave` (UUID que o PDV gera por carrinho, `Venda.chave` única)
+  torna a venda idempotente: reenvio devolve a venda já feita.
+- `cancelar_venda(venda, usuario, motivo)` — trava a venda, devolve o estoque com
+  `devolver_ao_estoque` e estorna o caixa (`estornar_movimento`); auditado.
 - `vendas_do_dia()` (dashboard), `faturamento_periodo(inicio, fim)` →
   `{"caixa": …, "quarto": …}` (consumido por Relatórios).
 
@@ -1034,7 +1060,8 @@ na conta do quarto.
 `abrir_comanda(operador, local, mesa=None, cliente=None, rotulo="")`,
 `adicionar_item(comanda, produto, quantidade, operador)` (trava a comanda e recusa se ela
 já fechou; valida saldo e **baixa na hora**; soma na linha existente do mesmo produto),
-`remover_item(item, operador)` (devolve estoque por `ajustar`),
+`remover_item(item, operador)` (trava a comanda; devolve estoque por
+`devolver_ao_estoque`),
 `fechar_comanda(comanda, operador, destino, forma=None, conta_id=None, desconto=0)`,
 `cancelar_comanda(comanda, usuario, motivo)` (devolve tudo; auditado),
 `transferir_mesa(comanda, nova_mesa)`, `pendencias_auditoria()` (comandas abertas > 12 h),
@@ -1357,8 +1384,11 @@ Nenhum.
   linha do produto (mesma âncora da entrada, O(1) e válida no kardex vazio).
 - Transferência é registrada dos **dois lados** (movimentos ligados por
   `transferencia_par`) e auditada; origem ≠ destino.
-- `ajustar` grava o movimento da **diferença** (nada a fazer se zero) e audita; saldo
-  ajustado não pode ser negativo.
+- `ajustar` trava o produto, grava o movimento da **diferença** (nada a fazer se zero)
+  e audita; saldo ajustado não pode ser negativo. `transferir` também trava o produto.
+- `devolver_ao_estoque(produto, local, quantidade, usuario, motivo)` soma ao saldo de
+  agora (com a trava), sem mexer no custo médio — é o que Loja e Restaurante usam para
+  devolver item; `ajustar(saldo_lido + qtd)` dependia de um saldo lido antes da trava.
 - Inventário: abre com um item por produto ativo (contagem pré-preenchida com o saldo);
   contagem não numérica é **ignorada com aviso** (não grava lixo); `aplicar` gera um
   ajuste por item com diferença e audita `"inventario_aplicado"`.
