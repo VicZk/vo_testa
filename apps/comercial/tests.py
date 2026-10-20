@@ -2908,3 +2908,31 @@ class WebhookWhatsAppGuardadoTests(TestCase):
         esgotado.refresh_from_db()
         self.assertIsNone(esgotado.processado_em)
         self.assertFalse(WebhookWhatsApp.objects.filter(pk=antigo.pk).exists())
+
+
+@override_settings(META_CAPI_TOKEN="segredo-capi-123", META_PIXEL_ID="999")
+class TokenMetaForaDaURLTests(TestCase):
+    """O token da Conversions API vai no cabeçalho Authorization, nunca na URL."""
+
+    def _capturar(self, chamada):
+        from unittest.mock import MagicMock, patch
+
+        resposta = MagicMock()
+        resposta.__enter__.return_value.read.return_value = b"{}"
+        with patch("urllib.request.urlopen", return_value=resposta) as urlopen:
+            chamada()
+        return urlopen.call_args.args[0]
+
+    def test_evento_de_lead_pelo_servidor(self):
+        req = self._capturar(lambda: services.enviar_capi_lead(
+            email="a@b.com", event_id="x", assincrono=False))
+        self.assertNotIn("segredo-capi-123", req.full_url)
+        self.assertEqual(req.get_header("Authorization"), "Bearer segredo-capi-123")
+
+    def test_conversao_do_gateway(self):
+        from .midia_gateways import GatewayMeta
+
+        evento = {"evento": "lead", "event_time": 1, "event_id": "e1", "email_hash": "h"}
+        req = self._capturar(lambda: GatewayMeta().enviar_conversao(evento))
+        self.assertNotIn("segredo-capi-123", req.full_url)
+        self.assertEqual(req.get_header("Authorization"), "Bearer segredo-capi-123")

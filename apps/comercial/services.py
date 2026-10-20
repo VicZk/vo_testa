@@ -2581,10 +2581,11 @@ def enviar_capi_lead(*, email="", telefone="", event_id="", fbp="", fbc="",
 
     def _post():
         from urllib import request as urlreq
-        url = (f"https://graph.facebook.com/v21.0/{pixel}/events"
-               f"?access_token={token}")
+        # Token no cabeçalho, nunca na URL (URL vai parar em log).
+        url = f"https://graph.facebook.com/v21.0/{pixel}/events"
         req = urlreq.Request(url, data=body,
-                             headers={"Content-Type": "application/json"}, method="POST")
+                             headers={"Content-Type": "application/json",
+                                      "Authorization": f"Bearer {token}"}, method="POST")
         try:
             with urlreq.urlopen(req, timeout=10) as r:
                 r.read()

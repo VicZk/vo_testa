@@ -43,8 +43,14 @@ def hash_telefone(valor: str) -> str:
     return hashlib.sha256(d.encode()).hexdigest()
 
 
-def _get_json(url: str) -> dict:
-    req = urlrequest.Request(url, method="GET")
+def _bearer(token: str) -> dict:
+    """O token da Meta vai no cabeçalho, nunca na URL: URL com token acaba em log de
+    proxy, de erro e no histórico de quem a copiar."""
+    return {"Authorization": f"Bearer {token}"}
+
+
+def _get_json(url: str, headers: dict | None = None) -> dict:
+    req = urlrequest.Request(url, headers=headers or {}, method="GET")
     try:
         with urlrequest.urlopen(req, timeout=20) as resp:
             return {"ok": True, "dados": json.loads(resp.read().decode("utf-8", "replace"))}
@@ -55,10 +61,11 @@ def _get_json(url: str) -> dict:
         return {"ok": False, "erro": str(e)[:300]}
 
 
-def _post_json(url: str, payload: dict) -> dict:
+def _post_json(url: str, payload: dict, headers: dict | None = None) -> dict:
     data = json.dumps(payload).encode("utf-8")
     req = urlrequest.Request(
-        url, data=data, headers={"Content-Type": "application/json"}, method="POST")
+        url, data=data, headers={"Content-Type": "application/json", **(headers or {})},
+        method="POST")
     try:
         with urlrequest.urlopen(req, timeout=15) as resp:
             body = resp.read().decode("utf-8", "replace")
@@ -121,8 +128,8 @@ class GatewayMeta:
         code = getattr(settings, "META_CAPI_TEST_CODE", "")
         if code:
             payload["test_event_code"] = code
-        url = f"https://graph.facebook.com/v19.0/{pixel}/events?access_token={token}"
-        return _post_json(url, payload)
+        url = f"https://graph.facebook.com/v19.0/{pixel}/events"
+        return _post_json(url, payload, headers=_bearer(token))
 
     def enviar_evento_crm(self, evento: dict) -> dict:
         """Evento de ESTÁGIO do lead (integração 'leads qualificados' do CRM). Formato
@@ -155,8 +162,8 @@ class GatewayMeta:
         if code:
             payload["test_event_code"] = code
         versao = getattr(settings, "META_CAPI_VERSION", "v21.0")
-        url = f"https://graph.facebook.com/{versao}/{pixel}/events?access_token={token}"
-        return _post_json(url, payload)
+        url = f"https://graph.facebook.com/{versao}/{pixel}/events"
+        return _post_json(url, payload, headers=_bearer(token))
 
     def sincronizar_gastos(self, campanha, desde, ate) -> list:
         """Marketing API (Insights): gasto diário da campanha (Fase C).
@@ -172,10 +179,9 @@ class GatewayMeta:
         params = (
             f"fields=spend&level=campaign&time_increment=1"
             f"&time_range={{'since':'{desde.isoformat()}','until':'{ate.isoformat()}'}}"
-            f"&access_token={token}"
         )
         url = f"https://graph.facebook.com/v19.0/{campanha.id_externo}/insights?{params}"
-        dados = _get_json(url)
+        dados = _get_json(url, headers=_bearer(token))
         if not dados.get("ok"):
             raise ValidationError(f"Meta insights: {dados.get('erro')}")
         import datetime as _dt
