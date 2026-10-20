@@ -11,7 +11,6 @@ from apps.site.models import (
     Hospede,
     Quarto,
     Reserva,
-    Temporada,
 )
 
 CPF_VALIDO = '111.444.777-35'
@@ -59,35 +58,6 @@ class ModeloReservaTests(TestCase):
     def test_confirmada_nao_define_expira(self):
         r = criar_reserva(self.quarto, self.ci, self.co, status='confirmada')
         self.assertIsNone(r.expira_em)
-
-    def test_quarto_indisponivel_com_conflito(self):
-        criar_reserva(self.quarto, self.ci, self.co, status='confirmada')
-        meio = self.ci + timedelta(days=1)
-        self.assertFalse(Reserva.quarto_disponivel(self.quarto, meio, meio + timedelta(days=2)))
-
-    def test_quarto_disponivel_sem_sobreposicao(self):
-        criar_reserva(self.quarto, self.ci, self.co, status='confirmada')
-        depois = self.co + timedelta(days=1)
-        self.assertTrue(Reserva.quarto_disponivel(self.quarto, depois, depois + timedelta(days=2)))
-
-    def test_aguardando_expirada_libera_quarto(self):
-        passado = timezone.now() - timedelta(minutes=1)
-        criar_reserva(self.quarto, self.ci, self.co, status='aguardando', expira_em=passado)
-        self.assertTrue(Reserva.quarto_disponivel(self.quarto, self.ci, self.co))
-
-    def test_aguardando_ativa_bloqueia_quarto(self):
-        futuro = timezone.now() + timedelta(minutes=20)
-        criar_reserva(self.quarto, self.ci, self.co, status='aguardando', expira_em=futuro)
-        self.assertFalse(Reserva.quarto_disponivel(self.quarto, self.ci, self.co))
-
-    def test_preco_por_temporada(self):
-        Temporada.objects.create(
-            nome='Alta', tipo='alta', data_inicio=self.ci - timedelta(days=1),
-            data_fim=self.co + timedelta(days=1), multiplicador=Decimal('1.50'),
-        )
-        preco = Reserva.calcular_preco_noite(self.quarto, self.ci)
-        self.assertEqual(preco, Decimal('600.00'))  # 400 * 1.5
-
 
 class CpfTests(TestCase):
     def test_cpf_valido(self):

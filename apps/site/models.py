@@ -357,7 +357,10 @@ class Reserva(models.Model):
     valor_total = models.DecimalField('Valor total', max_digits=10, decimal_places=2, editable=False, default=0)
 
     metodo_pagamento = models.CharField('Método de pagamento', max_length=10, choices=PAGAMENTO_CHOICES, default='pendente')
-    pagamento_id = models.CharField('ID do pagamento (Mercado Pago)', max_length=100, blank=True)
+    pagamento_id = models.CharField(
+        'token da cobrança (Pagamentos)', max_length=100, blank=True,
+        help_text='Token da cobrança no módulo Pagamentos (Safrapay ou Pix direto).',
+    )
 
     status = models.CharField('Status', max_length=15, choices=STATUS_CHOICES, default='aguardando')
     observacoes = models.TextField('Observações', blank=True)
@@ -418,39 +421,3 @@ class Reserva(models.Model):
             self.expira_em = timezone.now() + timedelta(minutes=RESERVA_VALIDADE_MINUTOS)
         self.valor_total = self.calcular_valor_total()
         super().save(*args, **kwargs)
-
-    @staticmethod
-    def filtro_ativas(agora=None):
-        """Q das reservas que realmente ocupam um quarto.
-
-        'confirmada'/'checkin' sempre ocupam; 'aguardando' só ocupa enquanto não expira.
-        """
-        agora = agora or timezone.now()
-        return (
-            Q(status__in=['confirmada', 'checkin'])
-            | Q(status='aguardando', expira_em__isnull=True)
-            | Q(status='aguardando', expira_em__gt=agora)
-        )
-
-    @staticmethod
-    def quarto_disponivel(quarto, checkin, checkout, excluir_reserva_id=None):
-        """Verifica se o quarto está livre no período. Retorna True se disponível."""
-        conflitos = Reserva.objects.filter(
-            Reserva.filtro_ativas(),
-            quarto=quarto,
-            data_checkin__lt=checkout,
-            data_checkout__gt=checkin,
-        )
-        if excluir_reserva_id:
-            conflitos = conflitos.exclude(pk=excluir_reserva_id)
-        return not conflitos.exists()
-
-    @staticmethod
-    def calcular_preco_noite(quarto, data_checkin):
-        """Retorna o preço da noite com multiplicador de temporada aplicado."""
-        temporada = Temporada.objects.filter(
-            data_inicio__lte=data_checkin,
-            data_fim__gte=data_checkin,
-        ).order_by('-multiplicador').first()
-        multiplicador = Decimal(str(temporada.multiplicador)) if temporada else Decimal('1')
-        return (quarto.preco_base * multiplicador).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)

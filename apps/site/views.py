@@ -22,10 +22,8 @@ from apps.site.models import (
     Depoimento,
     Experiencia,
     FotoGaleria,
-    Hospede,
     Quarto,
     Reserva,
-    Temporada,
     VitrineQuarto,
 )
 
