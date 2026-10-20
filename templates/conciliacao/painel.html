@@ -33,54 +33,54 @@
     </div>
   </div>
 
-  {# Ações: importar + conciliar #}
-  <div class="cartao cartao-el" style="margin-top:1.2rem;display:grid;gap:1.1rem">
-    <div style="display:flex;flex-wrap:wrap;gap:1.4rem;align-items:flex-end">
-      <form method="post" action="{% url 'conciliacao:importar_ofx' %}" enctype="multipart/form-data"
-            style="display:flex;gap:.6rem;align-items:flex-end;flex-wrap:wrap">
-        {% csrf_token %}
-        <div style="display:grid;gap:.3rem">
-          <span class="letreiro" style="font-size:.8rem">Extrato bancário (OFX)</span>
-          <label class="botao-neutro" style="cursor:pointer">
-            Escolher arquivo…
-            <input type="file" name="arquivo" accept=".ofx,.OFX" required
-                   style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"
-                   onchange="this.parentNode.nextElementSibling.textContent = this.files.length ? this.files[0].name : ''">
-          </label>
-          <span class="tinta-suave" style="font-size:.82rem"></span>
-        </div>
-        <label style="display:grid;gap:.3rem">
-          <span class="letreiro" style="font-size:.8rem">Conta</span>
-          <input type="text" name="conta" placeholder="ex.: 12345-6" style="max-width:120px">
+  {% comment %}Importar + conciliar. Era um bloco com 25 estilos inline, em que
+  "EXTRATO BANCÁRIO (OFX)" e "CONTA" ficavam em linhas-base diferentes, com
+  três alturas de controle (35/32/42 px) na mesma linha. Agora usa a barra de
+  filtros canônica (`.filtro-barra` + `.filtro-campo`), que já tem rótulo,
+  altura e foco padronizados.{% endcomment %}
+  <div class="importar-conciliar">
+    <form method="post" action="{% url 'conciliacao:importar_ofx' %}" enctype="multipart/form-data"
+          class="filtro-barra filtro-inline">
+      {% csrf_token %}
+      <div class="filtro-campo">
+        <label for="arq-ofx">Extrato bancário (OFX)</label>
+        <label class="botao-neutro escolher-arquivo">
+          Escolher arquivo…
+          <input type="file" id="arq-ofx" name="arquivo" accept=".ofx,.OFX" required
+                 onchange="this.closest('.filtro-campo').querySelector('.arq-nome').textContent = this.files.length ? this.files[0].name : ''">
         </label>
-        <button class="botao-primario" type="submit">Importar OFX</button>
-      </form>
+        <small class="arq-nome ajuda"></small>
+      </div>
+      <div class="filtro-campo">
+        <label for="conta-ofx">Conta</label>
+        <input type="text" id="conta-ofx" name="conta" placeholder="ex.: 12345-6" class="campo-curto">
+      </div>
+      <button class="botao-primario" type="submit">Importar OFX</button>
+    </form>
 
-      <form method="post" action="{% url 'conciliacao:importar_cartao' %}" enctype="multipart/form-data"
-            style="display:flex;gap:.6rem;align-items:flex-end;flex-wrap:wrap">
-        {% csrf_token %}
-        <div style="display:grid;gap:.3rem">
-          <span class="letreiro" style="font-size:.8rem">Vendas SafraPay (CSV)</span>
-          <label class="botao-neutro" style="cursor:pointer">
-            Escolher arquivo…
-            <input type="file" name="arquivo" accept=".csv,.CSV" required
-                   style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"
-                   onchange="this.parentNode.nextElementSibling.textContent = this.files.length ? this.files[0].name : ''">
-          </label>
-          <span class="tinta-suave" style="font-size:.82rem"></span>
-        </div>
-        <button class="botao-neutro" type="submit">Importar cartão</button>
-      </form>
-    </div>
+    <form method="post" action="{% url 'conciliacao:importar_cartao' %}" enctype="multipart/form-data"
+          class="filtro-barra filtro-inline">
+      {% csrf_token %}
+      <div class="filtro-campo">
+        <label for="arq-csv">Vendas SafraPay (CSV)</label>
+        <label class="botao-neutro escolher-arquivo">
+          Escolher arquivo…
+          <input type="file" id="arq-csv" name="arquivo" accept=".csv,.CSV" required
+                 onchange="this.closest('.filtro-campo').querySelector('.arq-nome').textContent = this.files.length ? this.files[0].name : ''">
+        </label>
+        <small class="arq-nome ajuda"></small>
+      </div>
+      <button class="botao-neutro" type="submit">Importar cartão</button>
+    </form>
 
-    <div style="display:flex;gap:.8rem;align-items:center;flex-wrap:wrap">
-      <form method="post" action="{% url 'conciliacao:conciliar' %}" style="display:inline">
+    <div class="acoes">
+      <form method="post" action="{% url 'conciliacao:conciliar' %}">
         {% csrf_token %}
-        <button class="botao-primario" type="submit">⚡ Conciliar agora</button>
+        <button class="botao-primario" type="submit">Conciliar agora</button>
       </form>
       <a href="{% url 'conciliacao:manual' %}" class="botao-neutro">Conciliação manual →</a>
       <a href="{% url 'conciliacao:fechamento' %}" class="botao-neutro">Fechamento (mês/ano) →</a>
-      <span class="tinta-suave" style="font-size:.9rem">Casa por valor+data (banco) e por NSU (cartão); o que sobrar você resolve no manual.</span>
+      <p class="ajuda">Casa por valor+data (banco) e por NSU (cartão); o que sobrar você resolve no manual.</p>
     </div>
   </div>
 

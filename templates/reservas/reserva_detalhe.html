@@ -13,17 +13,20 @@
   <h1>Reserva #{{ reserva.pk }} — {{ reserva.hospede.nome }}</h1>
   <span class="selo mapa-cor-{{ reserva.status }} dica" data-dica="{{ reserva.status_ajuda }}">{{ reserva.get_status_display }}</span>
 </div>
-<p class="subtitulo">
-  {{ reserva.uh }} · {{ reserva.checkin|date:"d/m/Y" }} → {{ reserva.checkout|date:"d/m/Y" }}
-  ({{ reserva.noites }} noite{{ reserva.noites|pluralize }}) ·
-  {{ reserva.adultos }} adulto{{ reserva.adultos|pluralize }}{% if reserva.criancas %} + {{ reserva.criancas }} criança{{ reserva.criancas|pluralize }}{% endif %} ·
-  diária {{ reserva.valor_diaria|intcomma_brl }} · {{ reserva.get_canal_display }}
-</p>
-<p class="subtitulo">
-  Faturamento: <strong>{{ reserva.get_faturamento_display }}</strong>
-  {% if reserva.titular %} · titular <strong>{{ reserva.titular.nome }}</strong>{% endif %}
-  · quem paga: {{ reserva.pagador.nome }}
-</p>
+{% comment %}O dado mais consultado do produto era um parágrafo corrido com
+pontos-médios, que quebrava no meio do valor ("diária R$ / 360,00"). Agora é
+uma ficha: cada dado com o seu rótulo, lido de relance.{% endcomment %}
+<dl class="ficha-reserva">
+  <div><dt>Quarto</dt><dd>{{ reserva.uh }}</dd></div>
+  <div><dt>Período</dt><dd>{{ reserva.checkin|date:"d/m/Y" }} → {{ reserva.checkout|date:"d/m/Y" }}
+    <small>{{ reserva.noites }} noite{{ reserva.noites|pluralize }}</small></dd></div>
+  <div><dt>Hóspedes</dt><dd>{{ reserva.adultos }} adulto{{ reserva.adultos|pluralize }}{% if reserva.criancas %} + {{ reserva.criancas }} criança{{ reserva.criancas|pluralize }}{% endif %}</dd></div>
+  <div><dt>Diária</dt><dd class="num-ficha">{{ reserva.valor_diaria|intcomma_brl }}</dd></div>
+  <div><dt>Canal</dt><dd>{{ reserva.get_canal_display }}</dd></div>
+  <div><dt>Faturamento</dt><dd>{{ reserva.get_faturamento_display }}</dd></div>
+  {% if reserva.titular %}<div><dt>Titular</dt><dd>{{ reserva.titular.nome }}</dd></div>{% endif %}
+  <div><dt>Quem paga</dt><dd>{{ reserva.pagador.nome }}</dd></div>
+</dl>
 {% if reserva.observacoes %}<p><strong>Observações:</strong> {{ reserva.observacoes }}</p>{% endif %}
 {% if reserva.motivo_cancelamento %}
   <div class="mensagem error"><strong>Cancelada:</strong> {{ reserva.motivo_cancelamento }}</div>

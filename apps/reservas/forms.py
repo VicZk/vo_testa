@@ -272,3 +272,10 @@ class GrupoForm(forms.ModelForm):
             "checkout": DataInput(),
             "observacoes": forms.Textarea(attrs={"rows": 2}),
         }
+
+
+# Opção vazia dos selects com texto de gente ("Selecione…"), não com o traço
+# default do Django. Ver `apps/nucleo/forms.py`.
+from apps.nucleo.forms import rotular_selects_vazios  # noqa: E402
+
+rotular_selects_vazios(globals())

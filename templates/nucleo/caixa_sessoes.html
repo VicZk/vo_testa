@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load moeda %}
 
 {% block titulo %}Sessões de caixa — CRM Vô Testa{% endblock %}
 
@@ -20,7 +21,7 @@
         <td>{{ s.get_status_display }}</td>
         <td class="num">
           {% if s.diferenca is not None %}
-            <span class="{% if s.diferenca != 0 %}texto-alerta{% endif %}">R$ {{ s.diferenca }}</span>
+            <span class="{% if s.diferenca != 0 %}texto-alerta{% endif %}">{{ s.diferenca|intcomma_brl }}</span>
           {% else %}—{% endif %}
         </td>
       </tr>

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load moeda %}
 
 {% block titulo %}Sessão de caixa — CRM Vô Testa{% endblock %}
 
@@ -13,22 +14,22 @@
 <div class="cartoes cartoes-indicadores">
   <div class="cartao">
     <span class="indicador-rotulo letreiro">Fundo de troco</span>
-    <span class="indicador-valor">R$ {{ sessao.fundo_troco }}</span>
+    <span class="indicador-valor">{{ sessao.fundo_troco|intcomma_brl }}</span>
   </div>
   {% if not sessao.aberta %}
     <div class="cartao">
       <span class="indicador-rotulo letreiro">Contado</span>
-      <span class="indicador-valor">R$ {{ sessao.valor_contado }}</span>
+      <span class="indicador-valor">{{ sessao.valor_contado|intcomma_brl }}</span>
     </div>
     <div class="cartao">
       <span class="indicador-rotulo letreiro">Diferença</span>
-      <span class="indicador-valor {% if sessao.diferenca != 0 %}texto-alerta{% endif %}">R$ {{ sessao.diferenca }}</span>
+      <span class="indicador-valor {% if sessao.diferenca != 0 %}texto-alerta{% endif %}">{{ sessao.diferenca|intcomma_brl }}</span>
     </div>
   {% endif %}
   {% for nome, total in sessao.totais_por_forma %}
     <div class="cartao">
       <span class="indicador-rotulo letreiro">{{ nome }}</span>
-      <span class="indicador-valor">R$ {{ total }}</span>
+      <span class="indicador-valor">{{ total|intcomma_brl }}</span>
     </div>
   {% endfor %}
 </div>
@@ -64,7 +65,7 @@
         <td>{{ m.criado_em|date:"d/m H:i" }}</td>
         <td><span class="dica" data-dica="{{ m.tipo_ajuda }}">{{ m.get_tipo_display }}</span>{% if m.motivo %} <small class="ajuda">({{ m.motivo }})</small>{% endif %}</td>
         <td>{{ m.forma_pagamento|default:"Dinheiro" }}</td>
-        <td class="num">R$ {{ m.valor }}</td>
+        <td class="num">{{ m.valor|intcomma_brl }}</td>
         <td>{{ m.descricao }}</td>
         {% if eh_gerente %}
           <td>

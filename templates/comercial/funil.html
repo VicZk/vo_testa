@@ -113,7 +113,7 @@
       <p class="pagina-eyebrow letreiro">Comercial</p>
       <h1>Funil de vendas</h1>
     </div>
-    <div style="display:flex; gap:.5rem; align-items:center">
+    <div class="pagina-acoes">
       <a href="{% url 'comercial:tarefas' %}" class="botao-neutro">Tarefas</a>
       <a href="{% url 'comercial:email_campanhas' %}" class="botao-neutro">E-mail</a>
       <a href="{% url 'comercial:painel' %}" class="botao-neutro">Painel</a>
@@ -203,7 +203,8 @@
 
               <div class="rodape">
                 <span class="valor">{{ op.valor_estimado|intcomma_brl }}</span>
-                <span class="fchip fchip-{{ op.faturamento }}">{{ op.get_faturamento_display }}</span>
+                {# Faturamento é rótulo de dado (particular/agência/empresa), não status. #}
+                <span class="rotulo-dado">{{ op.get_faturamento_display }}</span>
               </div>
 
               {# 9 última observação #}

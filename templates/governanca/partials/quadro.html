@@ -23,14 +23,14 @@ e as views redirecionam quando o pedido não vem do HTMX.
 <table class="tabela tabela-limpeza tabela-cartoes"
        hx-target="#gov-quadro" hx-swap="innerHTML" hx-indicator="#gov-quadro">
   <thead>
-    <tr><th>Quarto</th><th>Situação</th><th>Camareira</th><th class="col-acao">Ação</th></tr>
+    <tr><th>Quarto</th><th>Situação</th><th class="col-camareira">Camareira</th><th class="col-acao">Ação</th></tr>
   </thead>
   <tbody>
     {% for ln in linhas %}
     <tr x-show="f==='todas' || f==='{{ ln.situacao }}'" x-transition.opacity>
       <td data-rotulo="Quarto"><strong>{{ ln.uh.numero }}</strong><small class="ajuda">{{ ln.uh.tipo.nome }}</small></td>
       <td data-rotulo="Situação"><span class="selo selo-{{ ln.situacao }}">{{ ln.situacao_label }}</span></td>
-      <td data-rotulo="Camareira">
+      <td class="col-camareira" data-rotulo="Camareira">
         {% if ln.tarefa and ln.situacao == 'suja' or ln.situacao == 'em_limpeza' and ln.tarefa %}
           {# Trocar no <select> não envia nada: aparece o "Salvar" e quem decide é a pessoa. #}
           <form method="post" action="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}" class="form-inline"
@@ -62,7 +62,7 @@ e as views redirecionam quando o pedido não vem do HTMX.
           {% endif %}
         {% elif ln.situacao == 'limpa' %}
           <form method="post" action="{% url 'governanca:status_marcar' ln.uh.pk %}" hx-post="{% url 'governanca:status_marcar' ln.uh.pk %}">{% csrf_token %}<input type="hidden" name="situacao" value="inspecionada"><button type="submit" class="botao-neutro">Inspecionar</button></form>
-          <form method="post" action="{% url 'governanca:nova_tarefa' %}" hx-post="{% url 'governanca:nova_tarefa' %}">{% csrf_token %}<input type="hidden" name="uh" value="{{ ln.uh.pk }}"><input type="hidden" name="tipo" value="faxina_completa"><button type="submit" class="botao-neutro">Nova faxina</button></form>
+          <form method="post" action="{% url 'governanca:nova_tarefa' %}" hx-post="{% url 'governanca:nova_tarefa' %}">{% csrf_token %}<input type="hidden" name="uh" value="{{ ln.uh.pk }}"><input type="hidden" name="tipo" value="faxina_completa"><button type="submit" class="botao-mini">Nova faxina</button></form>
         {% elif ln.situacao == 'inspecionada' %}
           <form method="post" action="{% url 'governanca:nova_tarefa' %}" hx-post="{% url 'governanca:nova_tarefa' %}">{% csrf_token %}<input type="hidden" name="uh" value="{{ ln.uh.pk }}"><input type="hidden" name="tipo" value="faxina_completa"><button type="submit" class="botao-neutro">Nova faxina</button></form>
         {% endif %}

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load moeda %}
 
 {% block titulo %}Conciliação — Pagamentos{% endblock %}
 
@@ -14,9 +15,9 @@
 </p>
 
 <div class="kpi-grade" style="margin:1rem 0">
-  <div class="kpi"><span class="kpi-rotulo letreiro">Recebido (bruto)</span><strong class="kpi-valor num">R$ {{ totais.recebido }}</strong></div>
-  <div class="kpi"><span class="kpi-rotulo letreiro">Taxa</span><strong class="kpi-valor num">R$ {{ totais.taxa }}</strong></div>
-  <div class="kpi kpi-destaque"><span class="kpi-rotulo letreiro">Líquido (banco)</span><strong class="kpi-valor num">R$ {{ totais.liquido }}</strong></div>
+  <div class="kpi"><span class="kpi-rotulo letreiro">Recebido (bruto)</span><strong class="kpi-valor num">{{ totais.recebido|intcomma_brl }}</strong></div>
+  <div class="kpi"><span class="kpi-rotulo letreiro">Taxa</span><strong class="kpi-valor num">{{ totais.taxa|intcomma_brl }}</strong></div>
+  <div class="kpi kpi-destaque"><span class="kpi-rotulo letreiro">Líquido (banco)</span><strong class="kpi-valor num">{{ totais.liquido|intcomma_brl }}</strong></div>
   <div class="kpi"><span class="kpi-rotulo letreiro">A liquidar (qtd)</span><strong class="kpi-valor num">{{ totais.a_liquidar_qtd }}</strong></div>
 </div>
 
@@ -63,9 +64,9 @@
         <td><a href="{% url 'pagamentos:detalhe' c.pk %}">{{ c.pk }}</a></td>
         <td>{{ c.get_metodo_display }}</td>
         <td>{{ c.descricao }}</td>
-        <td class="num">R$ {{ c.valor }}</td>
-        <td class="num">{% if c.taxa != None %}R$ {{ c.taxa }}{% else %}—{% endif %}</td>
-        <td class="num">{% if c.valor_liquido != None %}R$ {{ c.valor_liquido }}{% else %}—{% endif %}</td>
+        <td class="num">{{ c.valor|intcomma_brl }}</td>
+        <td class="num">{% if c.taxa != None %}{{ c.taxa|intcomma_brl }}{% else %}—{% endif %}</td>
+        <td class="num">{% if c.valor_liquido != None %}{{ c.valor_liquido|intcomma_brl }}{% else %}—{% endif %}</td>
         <td>
           {% if c.liquidado %}
             <span class="selo selo-pg-pago">✓ {{ c.data_liquidacao|date:"d/m/y" }}</span>

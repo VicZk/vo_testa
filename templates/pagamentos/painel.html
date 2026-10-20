@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load moeda %}
 
 {% block titulo %}Pagamentos Online — CRM Vô Testa{% endblock %}
 
@@ -28,7 +29,7 @@
             <td>{{ c.pk }}</td>
             <td>{{ c.get_metodo_display }}</td>
             <td>{{ c.descricao }}</td>
-            <td class="num">R$ {{ c.valor }}</td>
+            <td class="num">{{ c.valor|intcomma_brl }}</td>
             <td><span class="selo selo-pg-{{ c.status }}">{{ c.get_status_display }}</span></td>
           </tr>
         {% empty %}
@@ -42,7 +43,7 @@
       <thead><tr><th>Situação</th><th class="num">Qtd</th><th class="num">Total</th></tr></thead>
       <tbody>
         {% for r in conciliacao %}
-          <tr><td>{{ r.status }}</td><td class="num">{{ r.qtd }}</td><td class="num">R$ {{ r.total }}</td></tr>
+          <tr><td>{{ r.status }}</td><td class="num">{{ r.qtd }}</td><td class="num">{{ r.total|intcomma_brl }}</td></tr>
         {% empty %}
           <tr><td colspan="3" class="vazio">Sem movimento.</td></tr>
         {% endfor %}

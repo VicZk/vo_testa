@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load nucleo_extras %}
 
 {% block titulo %}{% if pessoa %}{{ pessoa.nome }}{% else %}Nova pessoa{% endif %} — CRM Vô Testa{% endblock %}
 
@@ -9,7 +10,39 @@
 <form method="post" class="form-cartao"
       x-data='{ hospede: {{ eh_hospede|yesno:"true,false" }}, agencia: {{ eh_agencia|yesno:"true,false" }}, fornecedor: {{ eh_fornecedor|yesno:"true,false" }} }'>
   {% csrf_token %}
-  {% include "nucleo/partials/campos.html" %}
+  {% if form.non_field_errors %}
+    <div class="mensagem error">{{ form.non_field_errors|join:" " }}</div>
+  {% endif %}
+
+  {% comment %}Dez campos em coluna única de 620px numa tela de 1440: a UF (duas
+  letras) e o CEP ocupavam a largura toda, e quem preenchia descia a página para
+  achar o próximo dado. Agora são três grupos nomeados, em duas colunas, com o
+  campo ocupando a largura do dado que ele guarda.{% endcomment %}
+  <h2 class="grupo-campos">Identificação</h2>
+  <div class="form-grade">
+    {% include "reservas/partials/campo.html" with campo=form.nome classe="col-2" %}
+    {% include "reservas/partials/campo.html" with campo=form.tipo %}
+    {% include "reservas/partials/campo.html" with campo=form.documento %}
+  </div>
+
+  <h2 class="grupo-campos">Contato</h2>
+  <div class="form-grade">
+    {% include "reservas/partials/campo.html" with campo=form.email %}
+    {% include "reservas/partials/campo.html" with campo=form.telefone %}
+  </div>
+
+  <h2 class="grupo-campos">Endereço</h2>
+  <div class="form-grade form-grade-endereco">
+    {% include "reservas/partials/campo.html" with campo=form.endereco classe="col-2" %}
+    {% include "reservas/partials/campo.html" with campo=form.cidade %}
+    {% include "reservas/partials/campo.html" with campo=form.uf %}
+    {% include "reservas/partials/campo.html" with campo=form.cep %}
+  </div>
+
+  <div class="form-grade">
+    {% include "reservas/partials/campo.html" with campo=form.observacoes classe="col-2" %}
+    {% include "reservas/partials/campo.html" with campo=form.ativo classe="col-2" %}
+  </div>
 
   <fieldset class="papeis">
     <legend class="letreiro">Papéis desta pessoa</legend>

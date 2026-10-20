@@ -1,3 +1,4 @@
+{% load nucleo_extras %}
 {# Conteúdo do modal de nova reserva (carregado e revalidado via HTMX). #}
 <form hx-post="{% url 'reservas:nova' %}" hx-target="this" hx-swap="outerHTML" class="modal-form"
       x-data="{ fat: '{{ form.faturamento.value|default:'particular' }}' }"
@@ -15,7 +16,7 @@
     {% endif %}
     <div class="form-grade">
       <div class="campo col-2 {% if form.hospede.errors %}campo-erro{% endif %}">
-        {{ form.hospede.label_tag }}
+        {{ form.hospede|rotulo }}
         <div class="campo-com-acao">
           {% include "componentes/combo_pessoa.html" with dados=hospedes_data dados_id="hospedes-data" campo="hospede" placeholder="Buscar hóspede/cliente…" valor_id=form.hospede.value autofocus=1 %}
           <button type="button" class="botao-mini" onclick="abrirNovoHospede()">+ Novo</button>
@@ -53,7 +54,7 @@
       {% include "reservas/partials/campo.html" with campo=form.faturamento classe="col-2" %}
       <div class="col-2" x-show="fat !== 'particular'" x-cloak style="display:none">
         <div class="campo {% if form.titular.errors %}campo-erro{% endif %}">
-          {{ form.titular.label_tag }}
+          {{ form.titular|rotulo }}
           {% include "componentes/combo_pessoa.html" with dados=titulares_data dados_id="titulares-data" campo="titular" placeholder="Buscar agência/empresa…" valor_id=form.titular.value %}
           {% for erro in form.titular.errors %}<small class="erro">{{ erro }}</small>{% endfor %}
         </div>

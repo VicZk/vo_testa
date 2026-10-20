@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load moeda %}
 
 {% block titulo %}Venda #{{ venda.pk }} — Loja{% endblock %}
 
@@ -9,7 +10,7 @@
 <p class="pagina-eyebrow letreiro">Vendas & Estoque</p>
 <div class="pagina-cabecalho">
   <h1>Venda #{{ venda.pk }}</h1>
-  <span class="selo {% if venda.status == 'cancelada' %}selo-alerta{% else %}selo-ativo{% endif %}">{{ venda.get_status_display }}</span>
+  <span class="selo {% if venda.status == 'cancelada' %}selo-alerta{% else %}selo-ok{% endif %}">{{ venda.get_status_display }}</span>
 </div>
 <p class="subtitulo">
   {{ venda.criado_em|date:"d/m/Y H:i" }} · operador {{ venda.criado_por }} ·
@@ -30,14 +31,14 @@
         <td>{{ i.descricao }}</td>
         <td>{{ i.natureza|capfirst }}</td>
         <td class="num">{{ i.quantidade }}</td>
-        <td class="num">R$ {{ i.preco_unitario }}</td>
-        <td class="num">R$ {{ i.subtotal }}</td>
+        <td class="num">{{ i.preco_unitario|intcomma_brl }}</td>
+        <td class="num">{{ i.subtotal|intcomma_brl }}</td>
       </tr>
     {% endfor %}
   </tbody>
   <tfoot>
-    {% if venda.desconto %}<tr><td colspan="4">Desconto</td><td class="num">− R$ {{ venda.desconto }}</td></tr>{% endif %}
-    <tr><td colspan="4"><strong>Total</strong></td><td class="num"><strong>R$ {{ venda.total }}</strong></td></tr>
+    {% if venda.desconto %}<tr><td colspan="4">Desconto</td><td class="num">− {{ venda.desconto|intcomma_brl }}</td></tr>{% endif %}
+    <tr><td colspan="4"><strong>Total</strong></td><td class="num"><strong>{{ venda.total|intcomma_brl }}</strong></td></tr>
   </tfoot>
 </table>
 

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load moeda %}
 
 {% block titulo %}Lavanderia #{{ ordem.pk }}{% endblock %}
 
@@ -25,7 +26,7 @@
                   hx-target="#ordem-itens" hx-swap="outerHTML">
             <span class="pdv-produto-nome">{{ s.nome }}</span>
             <span class="pdv-produto-meta">
-              <span class="pdv-preco">R$ {{ s.preco }}</span>
+              <span class="pdv-preco">{{ s.preco|intcomma_brl }}</span>
               <small class="pdv-saldo">por {{ s.get_unidade_display|lower }}</small>
             </span>
             <span class="pdv-add" aria-hidden="true">+</span>

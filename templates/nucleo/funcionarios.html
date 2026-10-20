@@ -31,9 +31,10 @@
         <td>{% if item.f.turno %}{{ item.f.get_turno_display }}{% if item.f.expediente_inicio %} · {{ item.f.expediente_inicio|time:"H:i" }}–{{ item.f.expediente_fim|time:"H:i" }}{% endif %}{% else %}—{% endif %}</td>
         <td>{{ item.f.admissao|date:"d/m/Y"|default:"—" }}</td>
         <td>
-          {% if item.nivel == 'Gerência' %}<span class="selo selo-ativo">Gerência</span>
-          {% elif item.nivel == 'Operador' %}<span class="selo selo-neutro">Operador</span>
-          {% else %}<span class="selo">Sem login</span>{% endif %}
+          {# Nível de acesso é rótulo de dado, não status. #}
+          {% if item.nivel == 'Gerência' %}<span class="rotulo-dado">Gerência</span>
+          {% elif item.nivel == 'Operador' %}<span class="rotulo-dado">Operador</span>
+          {% else %}<span class="rotulo-dado">Sem login</span>{% endif %}
           {% if item.f.usuario and not item.ativo %}<span class="selo selo-alerta">inativo</span>{% endif %}
         </td>
         <td class="func-chev"><span x-text="open ? '▴' : '▾'"></span></td>

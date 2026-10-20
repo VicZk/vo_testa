@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load moeda %}
 
 {% block titulo %}Histórico de comandas — Restaurante{% endblock %}
 
@@ -13,8 +14,8 @@
 <div class="filtros">
   {% for f in filtros %}
     <a href="{% if f.chave %}?status={{ f.chave }}{% else %}{% url 'restaurante:historico' %}{% endif %}"
-       class="selo {% if filtro == f.chave %}selo-ativo{% endif %}">
-      {{ f.rotulo }} <span class="selo-contador">{{ f.total }}</span>
+       class="filtro-chip"{% if filtro == f.chave %} aria-current="page"{% endif %}>
+      {{ f.rotulo }} <span class="n">{{ f.total }}</span>
     </a>
   {% endfor %}
 </div>
@@ -36,7 +37,7 @@
             {{ c.get_status_display }}
           </span>
         </td>
-        <td class="num">R$ {{ c.total }}</td>
+        <td class="num">{{ c.total|intcomma_brl }}</td>
         <td>
           {% if c.status == 'cancelada' %}
             <span class="dica" data-dica="{{ c.motivo_cancelamento|default:'Sem motivo registrado' }}">Cancelada</span>

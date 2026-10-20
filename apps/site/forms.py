@@ -307,3 +307,10 @@ class PropostaSiteForm(forms.Form):
         if not cleaned.get('tipo_interesse'):
             cleaned['tipo_interesse'] = 'hospedagem'
         return cleaned
+
+
+# Opção vazia dos selects com texto de gente ("Selecione…"), não com o traço
+# default do Django. Ver `apps/nucleo/forms.py`.
+from apps.nucleo.forms import rotular_selects_vazios  # noqa: E402
+
+rotular_selects_vazios(globals())

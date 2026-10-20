@@ -12,6 +12,9 @@
   {# Fontes da marca (antes esta tela caía em Georgia/system) #}
   {% include "componentes/fontes.html" %}
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  {% comment %}Validação em pt-BR: o hóspede preenche a FNRH aqui, e o balão do
+  navegador sai no idioma do aparelho dele, não no da pousada.{% endcomment %}
+  <script src="{% static 'js/form-pt.js' %}" defer></script>
   <style>
     body { background: var(--canvas); margin: 0; padding: 0 0 3rem; }
     .pt-topo { background: var(--noturno); padding: 1.1rem 1rem; text-align: center; }
@@ -20,7 +23,10 @@
     .pt-card { background: var(--superficie); border-radius: var(--raio-g); box-shadow: var(--sombra-1);
                padding: 1.2rem; margin-bottom: 1rem; }
     .pt-card h2 { margin: 0 0 .8rem; font-family: var(--fonte-titulo); font-size: 1.15rem; }
+    /* O saldo saía SEMPRE em verde — inclusive devendo R$ 764,80, e o mesmo
+       valor aparecia em vermelho no CRM. Verde é quitado; âmbar é a pagar. */
     .pt-saldo { font-family: var(--fonte-titulo); font-size: 2.2rem; color: var(--musgo); }
+    .pt-saldo.devendo { color: var(--alerta); }
     .pt-linha { display: flex; justify-content: space-between; gap: 1rem; padding: .4rem 0;
                 border-bottom: 1px solid var(--fio); font-size: .92rem; }
     .pt-linha:last-child { border-bottom: none; }
@@ -36,7 +42,27 @@
     }
     .pt-cardapio-item { min-height: 52px; }
     .pt-acoes { display: grid; gap: .6rem; }
-    .pt-atalhos { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem; margin-top: 1rem; }
+    /* Bloco rotulado para o campo + botão: o "Descreva o problema" era um
+       input de 32px sem rótulo, espremido entre dois botões de 42px. */
+    .pt-pedido { display: grid; gap: .5rem; padding: .8rem; background: var(--superficie-2);
+                 border: 1px solid var(--fio); border-radius: var(--raio); }
+    .pt-pedido label { font-size: .8rem; font-weight: 600; color: var(--tinta); }
+    .pt-pedido input[type=text] {
+      width: 100%; min-height: 44px; padding: .6rem .75rem; font: inherit;
+      color: var(--tinta); background: var(--superficie);
+      border: 1px solid var(--fio-forte); border-radius: var(--raio-p);
+    }
+    /* O portal não tem `.conteudo`, então a regra global de foco dourado do CRM
+       não alcançava estes campos. */
+    .pt-wrap input:focus, .pt-wrap select:focus, .pt-wrap textarea:focus {
+      border-color: var(--lampiao); outline: none;
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--lampiao) 22%, transparent);
+    }
+    .pt-wrap :focus-visible { outline: 3px solid var(--foco-contorno); outline-offset: 2px; }
+    .pt-titulo-ico { width: 20px; height: 20px; vertical-align: -3px; margin-right: .3rem; color: var(--madeira); }
+    /* Grade elástica: com três colunas fixas e um atalho só, dois terços da
+       faixa ficavam vazios e a tela parecia quebrada. */
+    .pt-atalhos { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: .6rem; margin-top: 1rem; }
     .pt-atalho {
       display: flex; flex-direction: column; align-items: center; gap: .35rem;
       padding: .85rem .4rem; text-decoration: none; color: var(--tinta);

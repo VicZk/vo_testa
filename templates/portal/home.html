@@ -1,11 +1,12 @@
 {% extends "portal/base.html" %}
+{% load moeda %}
 
 {% block conteudo %}
 <div class="pt-card">
   <p class="letreiro">Olá, {{ e.hospede }}</p>
   <h2>{{ e.uh }}</h2>
   <p class="subtitulo">Estadia de {{ e.checkin|date:"d/m" }} a {{ e.checkout|date:"d/m/Y" }}.</p>
-  <div class="pt-linha"><span>Saldo da conta</span><strong class="pt-saldo" style="font-size:1.3rem">R$ {{ e.saldo }}</strong></div>
+  <div class="pt-linha"><span>Saldo da conta</span><strong class="pt-saldo{% if e.saldo > 0 %} devendo{% endif %}" style="font-size:1.3rem">{{ e.saldo|intcomma_brl }}</strong></div>
   <div class="pt-acoes" style="margin-top:1rem">
     <a href="{% url 'portal:checkout' token %}" class="botao-primario" style="text-align:center;text-decoration:none">Ver conta & check-out</a>
   </div>
@@ -19,14 +20,14 @@
   </div>
 </div>
 
-{% if cardapio %}
 <div class="pt-card">
-  <h2>Pedir no Restaurante 🍹</h2>
+  <h2><svg class="pt-titulo-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 3v7a3 3 0 0 0 6 0V3M7 10v11M17 3c-1.7 1.2-2.5 3-2.5 5.5S15.3 13 17 13v8"/></svg>Pedir no restaurante</h2>
+  {% if cardapio %}
   <form method="post" action="{% url 'portal:pedir' token %}">
     {% csrf_token %}
     {% for item in cardapio %}
       <div class="pt-cardapio-item">
-        <span class="nome">{{ item.nome }}<br><span class="preco">R$ {{ item.preco }}</span></span>
+        <span class="nome">{{ item.nome }}<br><span class="preco">{{ item.preco|intcomma_brl }}</span></span>
         <input type="number" name="qtd_{{ item.id }}" min="0" value="0" inputmode="numeric">
       </div>
     {% endfor %}
@@ -34,20 +35,27 @@
       <button type="submit" class="botao-primario">Enviar pedido ao quarto</button>
     </div>
   </form>
+  {% else %}
+  {% comment %}Sem cardápio o bloco simplesmente sumia, e a principal função do
+  portal parecia não existir. Agora diz o que está acontecendo.{% endcomment %}
+  <div class="estado-vazio">
+    <p>O cardápio ainda não está disponível neste momento. Fale com a recepção e a gente leva o seu pedido.</p>
+  </div>
+  {% endif %}
 </div>
-{% endif %}
 
 <div class="pt-card">
-  <h2>Precisa de algo? 🧹🔧</h2>
+  <h2><svg class="pt-titulo-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 1-5 5L5 16a2.1 2.1 0 0 0 3 3l4.7-4.7a4 4 0 0 1 5-5l-2.6 2.6"/></svg>Precisa de algo?</h2>
   <div class="pt-acoes">
     <form method="post" action="{% url 'portal:solicitar' token %}">
       {% csrf_token %}<input type="hidden" name="tipo" value="limpeza">
       <button type="submit" class="botao-neutro" style="width:100%">Pedir limpeza extra</button>
     </form>
-    <form method="post" action="{% url 'portal:solicitar' token %}">
+    <form method="post" action="{% url 'portal:solicitar' token %}" class="pt-pedido">
       {% csrf_token %}<input type="hidden" name="tipo" value="manutencao">
-      <input type="text" name="descricao" placeholder="Descreva o problema (ex.: ar não gela)" style="width:100%;margin-bottom:.5rem">
-      <button type="submit" class="botao-neutro" style="width:100%">Chamar a manutenção</button>
+      <label for="pt-descricao">O que precisa de conserto?</label>
+      <input type="text" id="pt-descricao" name="descricao" placeholder="Ex.: o ar-condicionado não está gelando">
+      <button type="submit" class="botao-neutro">Chamar a manutenção</button>
     </form>
   </div>
 </div>

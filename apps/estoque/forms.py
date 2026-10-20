@@ -104,3 +104,10 @@ class AbrirInventarioForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["local"].queryset = LocalEstoque.objects.filter(ativo=True)
+
+
+# Opção vazia dos selects com texto de gente ("Selecione…"), não com o traço
+# default do Django. Ver `apps/nucleo/forms.py`.
+from apps.nucleo.forms import rotular_selects_vazios  # noqa: E402
+
+rotular_selects_vazios(globals())

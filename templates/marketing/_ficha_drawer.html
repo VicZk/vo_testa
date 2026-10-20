@@ -175,7 +175,7 @@ Fecha esvaziando o slot. Todos os formulários re-renderizam a própria gaveta
         {% endif %}
         {% if c.custo_por_resultado is not None %}
         <div><span class="fx-lb" style="display:inline-flex;align-items:center;gap:5px">CUSTO POR RESULTADO{% include "marketing/_info.html" with tip="Gasto ÷ realizado — quanto custou cada lead/seguidor/venda." %}</span>
-          <div class="num" style="font-family:var(--fonte-titulo);font-size:15px;font-weight:700;color:var(--tinta);margin-top:3px">R$ {{ c.custo_por_resultado|intcomma_brl }}</div></div>
+          <div class="num" style="font-family:var(--fonte-titulo);font-size:15px;font-weight:700;color:var(--tinta);margin-top:3px">{{ c.custo_por_resultado|intcomma_brl }}</div></div>
         {% endif %}
       </div>
       {% endif %}

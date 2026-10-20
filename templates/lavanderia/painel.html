@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load moeda %}
 
 {% block titulo %}Lavanderia — CRM Vô Testa{% endblock %}
 
@@ -38,7 +39,7 @@
         <span class="selo {% if o.status == 'pronta' %}selo-limpa{% else %}selo-em_andamento{% endif %}">{{ o.get_status_display }}</span>
       </div>
       <span class="comanda-card-itens">{{ o.itens.count }} item{{ o.itens.count|pluralize }}{% if o.prazo %} · pronto {{ o.prazo|date:"d/m" }}{% endif %}</span>
-      <span class="comanda-card-total">R$ {{ o.total }}</span>
+      <span class="comanda-card-total">{{ o.total|intcomma_brl }}</span>
     </a>
   {% empty %}
     <p class="bloco-vazio">Nenhuma ordem em produção. Abra a primeira acima.</p>

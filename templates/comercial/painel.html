@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load nucleo_extras moeda %}
 
 {% block titulo %}Painel comercial — CRM Vô Testa{% endblock %}
 
@@ -6,16 +7,20 @@
 <p class="pagina-eyebrow letreiro">Comercial</p>
 <div class="pagina-cabecalho">
   <h1>Painel comercial</h1>
-  <a href="{% url 'comercial:funil' %}" class="botao-mini">Ir ao funil</a>
+  {# É a navegação principal da tela: `.botao-mini` fazia parecer um selo. #}
+  <a href="{% url 'comercial:funil' %}" class="botao-neutro">Ir ao funil</a>
 </div>
 <p class="subtitulo">Mês corrente · forecast = ponderado das abertas · realizado = ganhos fechados no mês.</p>
 
-<div class="cartoes-indicadores colunas">
+{% comment %}`.colunas` (duas colunas) vencia `.cartoes` (faixa de 250px), então
+oito KPIs ficavam em dois cartões de 630px — cada número ocupando ~10% do
+cartão.{% endcomment %}
+<div class="cartoes cartoes-indicadores">
   <div class="cartao"><span class="indicador-rotulo letreiro">Oportunidades abertas</span><span class="indicador-valor">{{ abertas }}</span></div>
-  <div class="cartao"><span class="indicador-rotulo letreiro">Valor no funil</span><span class="indicador-valor">R$ {{ valor_funil }}</span></div>
-  <div class="cartao"><span class="indicador-rotulo letreiro">Forecast (ponderado)</span><span class="indicador-valor">R$ {{ gestao.forecast }}</span></div>
-  <div class="cartao"><span class="indicador-rotulo letreiro">Realizado (mês)</span><span class="indicador-valor">R$ {{ gestao.realizado }}</span></div>
-  <div class="cartao"><span class="indicador-rotulo letreiro">Meta / atingimento</span><span class="indicador-valor">R$ {{ gestao.meta }} · {{ gestao.atingimento }}%</span></div>
+  <div class="cartao"><span class="indicador-rotulo letreiro">Valor no funil</span><span class="indicador-valor">{{ valor_funil|intcomma_brl }}</span></div>
+  <div class="cartao"><span class="indicador-rotulo letreiro">Forecast (ponderado)</span><span class="indicador-valor">{{ gestao.forecast|intcomma_brl }}</span></div>
+  <div class="cartao"><span class="indicador-rotulo letreiro">Realizado (mês)</span><span class="indicador-valor">{{ gestao.realizado|intcomma_brl }}</span></div>
+  <div class="cartao"><span class="indicador-rotulo letreiro">Meta / atingimento</span><span class="indicador-valor">{{ gestao.meta|intcomma_brl }} · {{ gestao.atingimento }}%</span></div>
   <div class="cartao"><span class="indicador-rotulo letreiro">Conversão (mês)</span><span class="indicador-valor">{{ dados.conversao }}%</span></div>
   <div class="cartao"><span class="indicador-rotulo letreiro">Ganhas / Perdidas</span><span class="indicador-valor">{{ dados.ganhas }} / {{ dados.perdidas }}</span></div>
   <div class="cartao"><span class="indicador-rotulo letreiro">Score médio (abertas)</span><span class="indicador-valor">{{ gestao.score_medio }}</span></div>
@@ -29,9 +34,9 @@
       <tbody>
         {% for col in colunas %}
           <tr>
-            <td>{{ col.etapa.nome }} <small class="letreiro">{{ col.etapa.probabilidade }}%</small></td>
+            <td>{{ col.etapa.nome }} <small class="letreiro">· {{ col.etapa.probabilidade }}%</small></td>
             <td class="num">{{ col.itens|length }}</td>
-            <td class="num">R$ {{ col.total }}</td>
+            <td class="num">{{ col.total|intcomma_brl }}</td>
           </tr>
         {% empty %}
           <tr><td colspan="3" class="vazio">Nenhuma etapa de funil configurada ainda.</td></tr>
@@ -60,7 +65,7 @@
             <td>{{ o.score }}</td>
             <td><a href="{% url 'comercial:oportunidade' o.pk %}">{{ o.titulo }}</a></td>
             <td>{{ o.pessoa.nome }}</td>
-            <td class="num">R$ {{ o.valor_estimado }}</td>
+            <td class="num">{{ o.valor_estimado|intcomma_brl }}</td>
           </tr>
         {% empty %}
           <tr><td colspan="4" class="vazio">Nenhuma oportunidade aberta.</td></tr>
@@ -73,8 +78,8 @@
     <h2>Meta do mês</h2>
     <form method="post" action="{% url 'comercial:meta' %}" class="form-cartao" style="max-width:none">
       {% csrf_token %}
-      <div class="campo">{{ meta_form.valor_meta.label_tag }}{{ meta_form.valor_meta }}</div>
-      <div class="campo">{{ meta_form.oportunidades_meta.label_tag }}{{ meta_form.oportunidades_meta }}</div>
+      <div class="campo">{{ meta_form.valor_meta|rotulo }}{{ meta_form.valor_meta }}</div>
+      <div class="campo">{{ meta_form.oportunidades_meta|rotulo }}{{ meta_form.oportunidades_meta }}</div>
       <p class="subtitulo" style="font-size:.8rem">Ganhos no mês: {{ gestao.ganhos_qtd }}{% if gestao.meta_qtd %} / meta {{ gestao.meta_qtd }}{% endif %}</p>
       <button type="submit" class="botao-primario botao-largo">Salvar meta</button>
     </form>

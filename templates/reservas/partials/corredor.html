@@ -1,9 +1,10 @@
+{% load moeda %}
 <div class="corredor" aria-label="Mapa de quartos">
   {% for q in quartos %}
     {% if q.reserva %}
       <a href="{% url 'reservas:detalhe' q.reserva.pk %}"
          class="porta sit-{{ q.situacao }} dica"
-         data-dica="- {{ q.label }}&#10;- {{ q.uh.tipo.nome }}{% if q.lotacao %}&#10;- acomoda {{ q.lotacao }}{% endif %}&#10;- {{ q.reserva.hospede.nome }}{% if q.grupo %}&#10;- Grupo: {{ q.grupo }}{% endif %}{% if q.pcd %}&#10;- PCD{% endif %}{% if q.periodo %}&#10;- {{ q.periodo }}{% endif %}{% if q.saldo is not None %}&#10;- saldo R$ {{ q.saldo }}{% endif %}{% if q.limpeza_label %}&#10;- {{ q.limpeza_label }}{% endif %}{% if q.badge %}&#10;- {% if q.badge_alerta %}⚠ {% endif %}{{ q.badge }}{% endif %}{% if arrastar %}{% if q.situacao == 'ocupada' or q.situacao == 'chegada' %}&#10;- arraste para trocar{% endif %}{% endif %}"
+         data-dica="- {{ q.label }}&#10;- {{ q.uh.tipo.nome }}{% if q.lotacao %}&#10;- acomoda {{ q.lotacao }}{% endif %}&#10;- {{ q.reserva.hospede.nome }}{% if q.grupo %}&#10;- Grupo: {{ q.grupo }}{% endif %}{% if q.pcd %}&#10;- PCD{% endif %}{% if q.periodo %}&#10;- {{ q.periodo }}{% endif %}{% if q.saldo is not None %}&#10;- saldo {{ q.saldo|intcomma_brl }}{% endif %}{% if q.limpeza_label %}&#10;- {{ q.limpeza_label }}{% endif %}{% if q.badge %}&#10;- {% if q.badge_alerta %}⚠ {% endif %}{{ q.badge }}{% endif %}{% if arrastar %}{% if q.situacao == 'ocupada' or q.situacao == 'chegada' %}&#10;- arraste para trocar{% endif %}{% endif %}"
          {% if arrastar %}{% if q.situacao == 'ocupada' or q.situacao == 'chegada' %}data-reserva="{{ q.reserva.pk }}" data-nome="{{ q.reserva.hospede.nome }}" data-num="{{ q.uh.numero|cut:'Quarto ' }}"{% endif %}{% endif %}
          {% if filtravel %}x-show="(tipos.length===0 || tipos.includes('{{ q.uh.tipo.pk }}')) && (sits.length===0 || sits.includes('{{ q.situacao }}'))"{% endif %}>
         <span class="porta-topo">
@@ -19,14 +20,16 @@
           </span>
         </span>
         <span class="porta-selo">{{ q.label }}</span>
-        <span class="porta-nome">{{ q.reserva.hospede.nome|truncatechars:16 }}</span>
+        <span class="porta-nome">{{ q.reserva.hospede.nome }}</span>
         {% if q.grupo %}<span class="porta-periodo">Grupo: {{ q.grupo|truncatechars:14 }}</span>
         {% elif q.periodo %}<span class="porta-periodo">{{ q.periodo }}</span>{% endif %}
+        {# Rodapé com papel fixo: estado à esquerda, dinheiro à direita. #}
         <span class="porta-rodape">
+          {% if q.badge and not q.badge_alerta %}<span class="porta-flag">{{ q.badge }}</span>
+          {% elif q.limpeza_cod == 'suja' or q.limpeza_cod == 'em_limpeza' %}<span class="porta-limp limpeza-{{ q.limpeza_cod }}">{{ q.limpeza_label }}</span>{% endif %}
           {% if q.saldo is not None %}
             <span class="porta-saldo {% if q.saldo > 0 %}devendo{% else %}ok{% endif %}">{{ q.saldo_fmt }}</span>
           {% endif %}
-          {% if q.badge and not q.badge_alerta %}<span class="porta-flag">{{ q.badge }}</span>{% endif %}
         </span>
       </a>
     {% elif q.situacao == "livre" %}
@@ -46,8 +49,11 @@
         </span>
         <span class="porta-selo">Livre</span>
         <span class="porta-nome">{{ q.tipo_nome }}</span>
+        {% comment %}Só o que foge do normal aparece: "LIMPO" em 22 dos 24 quartos
+        marcava a regra, não a exceção. Quarto livre e limpo está pronto — é o
+        que a cor do cartão já diz.{% endcomment %}
         <span class="porta-rodape">
-          {% if q.limpeza_label %}<span class="porta-limp limpeza-{{ q.limpeza_cod }}">{{ q.limpeza_label }}</span>{% endif %}
+          {% if q.limpeza_cod == 'suja' or q.limpeza_cod == 'em_limpeza' %}<span class="porta-limp limpeza-{{ q.limpeza_cod }}">{{ q.limpeza_label }}</span>{% endif %}
         </span>
       </button>
     {% else %}
@@ -64,7 +70,7 @@
         <span class="porta-selo">{{ q.label }}</span>
         <span class="porta-nome">{{ q.tipo_nome }}</span>
         <span class="porta-rodape">
-          {% if q.limpeza_label %}<span class="porta-limp limpeza-{{ q.limpeza_cod }}">{{ q.limpeza_label }}</span>{% endif %}
+          {% if q.limpeza_cod == 'suja' or q.limpeza_cod == 'em_limpeza' %}<span class="porta-limp limpeza-{{ q.limpeza_cod }}">{{ q.limpeza_label }}</span>{% endif %}
         </span>
       </div>
     {% endif %}

@@ -3,10 +3,18 @@
 {% block titulo %}{{ titulo }} — Relatórios{% endblock %}
 
 {% block conteudo %}
+{% comment %}As classes escondidas na impressão NÃO EXISTEM (`.app-sidebar`,
+`.app-topbar`, `.app-conteudo`): as reais são `.sidebar`, `.topbar` e
+`.conteudo`. Resultado: imprimir um relatório saía com o menu e a barra de
+busca na folha.{% endcomment %}
 <style media="print">
-  .app-sidebar, .app-topbar, .rel-controles, .botao-neutro, .botao-mini { display: none !important; }
-  .app-conteudo, main { margin: 0 !important; padding: 0 !important; }
-  .cartao { box-shadow: none !important; border: 1px solid #ddd !important; }
+  .sidebar, .topbar, .toasts, .barra-progresso,
+  .rel-controles, .botao-primario, .botao-neutro, .botao-mini { display: none !important; }
+  .app { display: block !important; }
+  .conteudo, .main { margin: 0 !important; padding: 0 !important; max-width: none !important; }
+  .cartao, .quadro, .kpi { box-shadow: none !important; border: 1px solid #ddd !important; }
+  .tabela { page-break-inside: auto; }
+  .tabela tr { page-break-inside: avoid; }
 </style>
 
 <div class="rel-controles">

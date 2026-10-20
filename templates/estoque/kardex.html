@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load moeda %}
 
 {% block titulo %}Kardex — {{ produto.nome }}{% endblock %}
 
@@ -17,11 +18,11 @@
   </div>
   <div class="cartao">
     <span class="indicador-rotulo letreiro">Custo médio</span>
-    <span class="indicador-valor">R$ {{ produto.custo_medio }}</span>
+    <span class="indicador-valor">{{ produto.custo_medio|intcomma_brl }}</span>
   </div>
   <div class="cartao">
     <span class="indicador-rotulo letreiro">Preço de venda</span>
-    <span class="indicador-valor">R$ {{ produto.preco_venda }}</span>
+    <span class="indicador-valor">{{ produto.preco_venda|intcomma_brl }}</span>
   </div>
 </div>
 
@@ -36,7 +37,7 @@
         <td>{{ m.get_tipo_display }}</td>
         <td>{{ m.local.nome }}</td>
         <td class="num {% if m.entrada %}texto-entrada{% else %}texto-alerta{% endif %}">{{ m.quantidade }}</td>
-        <td class="num">R$ {{ m.custo_unitario }}</td>
+        <td class="num">{{ m.custo_unitario|intcomma_brl }}</td>
         <td>{{ m.documento|default:"—" }}{% if m.observacao %} <small class="ajuda">{{ m.observacao }}</small>{% endif %}</td>
       </tr>
     {% empty %}

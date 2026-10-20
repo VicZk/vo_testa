@@ -1,6 +1,9 @@
 {% comment %}Validação + grade. Devolvido tal-qual pelo editor (escala:editar)
 para atualizar a tela após cada arrasto. Elementos com data-* alimentam o DnD.{% endcomment %}
-{% if validacao %}
+{% comment %}Sem turno nenhum não há o que validar: a tela dizia "Cobertura
+completa nos 7 dias" e, na linha de baixo, "Nenhum turno ativo" —
+contradizia a si mesma.{% endcomment %}
+{% if validacao and grade.linhas %}
 <style>
   /* Alerta com várias violações: quebra em lista (1 por linha), sem parede de texto */
   .escala-al .al-texto { line-height: 1.5; }
@@ -86,5 +89,8 @@ para atualizar a tela após cada arrasto. Elementos com data-* alimentam o DnD.{
 </table>
 </div>
 {% else %}
-  <p class="bloco-vazio">Nenhum turno ativo. Cadastre em <a href="{% url 'escala:turnos' %}">Turnos</a>.</p>
+  <div class="estado-vazio">
+    <p>Nenhum turno ativo nesta semana — a grade é montada sobre os turnos do setor.</p>
+    <a href="{% url 'escala:turnos' %}" class="botao-primario">Cadastrar turnos</a>
+  </div>
 {% endif %}

@@ -314,3 +314,40 @@ class EntradaLogbookForm(forms.ModelForm):
                 attrs={"rows": 3, "placeholder": "O que o próximo turno precisa saber?"}
             )
         }
+
+
+# ── "Selecione…" no lugar do "---------" do Django ─────────────────────────────
+# O traço é o rótulo default da opção vazia (`BLANK_CHOICE_DASH` e o
+# `empty_label` do `ModelChoiceField`). Aparecia em sete selects do produto —
+# Quarto no modal de reserva, Forma de pagamento no caixa, Sexo e Tipo de
+# documento na FNRH, natureza fiscal… — e não diz nada a quem está preenchendo.
+# A troca é feita uma vez sobre os campos JÁ declarados da classe
+# (`base_fields`), em vez de repetir `empty_label=` em cada formulário.
+SELECIONE = "Selecione…"
+
+
+def rotular_selects_vazios(escopo):
+    """Troca o rótulo da opção vazia de todo form do módulo.
+
+    Uso, no fim de um `forms.py`: `rotular_selects_vazios(globals())`.
+    """
+    for obj in list(escopo.values()):
+        # `modelformset_factory` cria uma SUBCLASSE do form com campos próprios:
+        # mexer no form original não alcançaria as fichas do formset (era por
+        # isso que o "Sexo" da FNRH continuava com o traço).
+        obj = getattr(obj, "form", obj)
+        campos = getattr(obj, "base_fields", None)
+        if not isinstance(campos, dict):
+            continue
+        for campo in campos.values():
+            if isinstance(campo, forms.ModelChoiceField):
+                if campo.empty_label is not None:
+                    campo.empty_label = SELECIONE
+            elif isinstance(campo, forms.ChoiceField):
+                campo.choices = [
+                    (valor, SELECIONE if valor in ("", None) else texto)
+                    for valor, texto in campo.choices
+                ]
+
+
+rotular_selects_vazios(globals())

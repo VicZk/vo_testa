@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load moeda %}
 
 {% block titulo %}Documento fiscal #{{ doc.pk }}{% endblock %}
 
@@ -17,10 +18,10 @@
     <dl class="ficha">
       <div><dt>Natureza</dt><dd>{{ doc.get_natureza_display }}</dd></div>
       <div><dt>Descrição</dt><dd>{{ doc.descricao }}</dd></div>
-      <div><dt>Valor</dt><dd><strong>R$ {{ doc.valor }}</strong></dd></div>
+      <div><dt>Valor</dt><dd><strong>{{ doc.valor|intcomma_brl }}</strong></dd></div>
       {% if doc.cbs_valor is not None %}
-        <div><dt>CBS ({{ doc.cbs_aliquota|floatformat:"-2" }}%)</dt><dd class="num">R$ {{ doc.cbs_valor }}</dd></div>
-        <div><dt>IBS ({{ doc.ibs_aliquota|floatformat:"-2" }}%)</dt><dd class="num">R$ {{ doc.ibs_valor }}</dd></div>
+        <div><dt>CBS ({{ doc.cbs_aliquota|floatformat:"-2" }}%)</dt><dd class="num">{{ doc.cbs_valor|intcomma_brl }}</dd></div>
+        <div><dt>IBS ({{ doc.ibs_aliquota|floatformat:"-2" }}%)</dt><dd class="num">{{ doc.ibs_valor|intcomma_brl }}</dd></div>
       {% endif %}
       {% if doc.tomador %}<div><dt>Tomador</dt><dd>{{ doc.tomador.nome }}</dd></div>{% endif %}
       <div><dt>Gateway</dt><dd>{{ doc.gateway|default:"—" }} · {{ doc.gateway_id|default:"—" }}</dd></div>

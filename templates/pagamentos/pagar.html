@@ -1,4 +1,4 @@
-{% load static %}
+{% load static moeda %}
 <!doctype html>
 <html lang="pt-br">
 <head>
@@ -76,7 +76,7 @@
     {% else %}
       <span class="selo selo-pg-{{ cobranca.status }}">{{ cobranca.get_status_display }}</span>
     {% endif %}
-    <div class="valor">R$ {{ cobranca.valor }}</div>
+    <div class="valor">{{ cobranca.valor|intcomma_brl }}</div>
     <p class="subtitulo">{{ cobranca.get_metodo_display }}{% if cobranca.metodo == 'cartao' and cobranca.parcelas > 1 %} · {{ cobranca.parcelas }}×{% endif %}</p>
 
     {% if messages %}
@@ -153,7 +153,7 @@
           <label for="cc-doc">CPF do titular</label>
           <input type="text" id="cc-doc" name="documento" inputmode="numeric" placeholder="Somente números">
           <button type="submit" class="botao-primario" style="width:100%;margin-top:1.1rem">
-            <span class="btn-label">Pagar R$ {{ cobranca.valor|floatformat:2 }}</span>
+            <span class="btn-label">Pagar {{ cobranca.valor|intcomma_brl }}</span>
             <span class="btn-spin" aria-hidden="true"></span>
           </button>
           <p class="card-seguro">🔒 Seus dados são enviados com segurança e não ficam guardados aqui.</p>
