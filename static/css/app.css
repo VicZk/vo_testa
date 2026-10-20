@@ -896,27 +896,111 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 .linha-alerta { background: var(--perigo-bg); }
 .linha-alerta:hover { background: var(--perigo-bg) !important; }
 
+/* ═══════════════════════════════════════════════════════════════
+   SELO DE STATUS — nasce discreto (bolinha + texto); cápsula é exceção
+
+   Antes, qualquer texto curto virava cápsula colorida: a tela de Pessoas
+   chegou a 71 pílulas preenchidas, nenhuma delas um status que pedia ação
+   (eram 32 linhas repetindo "PF" e "HÓSPEDE"). Quando tudo grita, nada se
+   destaca — e é essa a saturação que o dono relatou. A regra da casa agora:
+
+     · status neutro/informativo (limpo, confirmada, pago, ativo, concluída)
+       → bolinha de 7 px na cor do estado + texto, SEM fundo e SEM borda;
+     · status que PEDE AÇÃO (a limpar, pendente, vencido, erro, urgente)
+       → cápsula preenchida, no máximo UMA por linha de tabela ou cartão;
+     · rótulo, tipo, papel, canal, categoria, contagem
+       → `.rotulo-dado` (texto em maiúsculas discretas, separador " · ");
+     · filtro clicável → `.filtro-chip`, que tem forma de CONTROLE
+       (borda, cursor, resposta ao toque) e não se confunde com o dado.
+
+   Cada estado só troca `--selo-cor`: a bolinha e, na cápsula, o fundo e o
+   texto saem dela — estado novo é UMA linha, não um bloco de três regras.
+   ═══════════════════════════════════════════════════════════════ */
 .selo {
-  display: inline-flex; align-items: center;
-  padding: .18rem .55rem;
+  --selo-cor: var(--tinta-suave);
+  display: inline-flex; align-items: center; gap: .42rem;
   margin-right: .25rem;
-  font-size: .68rem;
-  font-weight: 700;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  color: var(--musgo);
-  background: var(--sucesso-bg);
-  border: 1px solid rgba(46, 72, 62, .18);
-  border-radius: 99px;
-  text-decoration: none;
+  padding: 0; border: 0; background: none; border-radius: 0;
+  font-size: .8rem; font-weight: 600; letter-spacing: 0;
+  text-transform: none;
+  color: var(--tinta);
+  text-decoration: none; white-space: nowrap;
 }
-.selo-neutro { color: var(--tinta-suave); background: var(--superficie-2); border-color: var(--fio-forte); }
-/* Governança: situações de limpeza e de tarefa */
-.selo-limpa, .selo-concluida { color: var(--sucesso); background: var(--sucesso-bg); border-color: rgba(46,125,91,.25); }
-.selo-inspecionada { color: var(--info); background: var(--info-bg); border-color: rgba(44,110,122,.25); }
-.selo-suja, .selo-pendente { color: var(--alerta); background: var(--alerta-bg); border-color: rgba(176,116,28,.3); }
-.selo-em_limpeza, .selo-em_andamento { color: var(--andamento); background: var(--andamento-bg); border-color: color-mix(in srgb, var(--andamento) 30%, transparent); }
-.selo-alerta { color: var(--perigo); background: var(--perigo-bg); border-color: rgba(166, 64, 44, .28); }
+.selo::before {
+  content: ""; flex: none;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--selo-cor);
+}
+
+/* Cápsula preenchida: SÓ o que pede ação de alguém. `.selo--acao` é o
+   modificador explícito; os estados listados aqui já SÃO pedidos de ação,
+   então nascem em cápsula sem o template precisar dizer. */
+.selo--acao,
+.selo-alerta, .selo-perigo,                        /* erro, cancelado, atrasado */
+.selo-suja, .selo-pendente,                        /* a fazer agora */
+.selo.prioridade-urgente,
+.selo-pg-pendente, .selo-pg-estornado,
+.selo.mapa-cor-cancelada, .selo.mapa-cor-no_show {
+  padding: .2rem .6rem;
+  border-radius: 999px;
+  font-size: .7rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--selo-cor);
+  background: color-mix(in srgb, var(--selo-cor) 12%, var(--superficie));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--selo-cor) 26%, transparent);
+}
+
+/* Um estado = uma cor (a semântica da marca, nunca um hex solto). */
+.selo-neutro, .selo-enc,
+.selo-pg-cancelado, .selo-pg-expirado,
+.selo.mapa-cor-checkout, .selo.mapa-cor-orcamento { --selo-cor: var(--fio-forte); }
+.selo-limpa, .selo-concluida, .selo-ok, .selo-sucesso, .selo-pub,
+.selo-pg-pago, .selo.mapa-cor-confirmada          { --selo-cor: var(--sucesso); }
+.selo-inspecionada, .selo.prioridade-media        { --selo-cor: var(--info); }
+.selo-suja, .selo-pendente, .selo-rasc, .selo-pg-pendente,
+.selo.prioridade-alta, .selo.mapa-cor-pre_reserva { --selo-cor: var(--alerta); }
+.selo-em_limpeza, .selo-em_andamento              { --selo-cor: var(--andamento); }
+.selo-alerta, .selo-perigo, .selo.prioridade-urgente,
+.selo-pg-estornado,
+.selo.mapa-cor-cancelada, .selo.mapa-cor-no_show  { --selo-cor: var(--perigo); }
+.selo-ativo, .selo.mapa-cor-hospedada,
+.selo.prioridade-baixa                            { --selo-cor: var(--musgo); }
+
+/* Rótulo de dado: tipo, papel, canal, categoria, origem. Texto, nunca
+   cápsula — vários na mesma célula se separam por " · ". */
+.rotulo-dado {
+  font-size: .74rem; font-weight: 600; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--tinta-suave); white-space: nowrap;
+}
+.rotulo-dado + .rotulo-dado::before {
+  content: "·"; margin: 0 .34em 0 .18em;
+  letter-spacing: 0; font-weight: 700; color: var(--fio-forte);
+}
+
+/* Filtro clicável — a única cápsula que sobrou por padrão, e ela é um
+   controle: borda, cursor, resposta ao toque e o estado marcado anunciado
+   por aria-pressed (ou aria-current, nas subnavs). */
+.filtro-chip {
+  display: inline-flex; align-items: center; gap: .45rem;
+  min-height: 36px; padding: .34rem .8rem;
+  border: 1px solid var(--fio); border-radius: 999px;
+  background: var(--superficie); color: var(--tinta);
+  font-size: .82rem; font-weight: 600; text-decoration: none; cursor: pointer;
+  transition: border-color .16s ease, background .16s ease, transform .09s ease;
+}
+.filtro-chip:hover { border-color: var(--fio-forte); }
+.filtro-chip:active { transform: scale(.97); }
+.filtro-chip[aria-pressed="true"], .filtro-chip[aria-current="page"] {
+  border-color: var(--lampiao); background: var(--superficie-2);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--lampiao) 18%, transparent);
+}
+.filtro-chip .ponto { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--fio-forte); }
+.filtro-chip .ponto-perigo { background: var(--perigo); }
+.filtro-chip .n { font-variant-numeric: tabular-nums; font-weight: 700; font-size: .76rem; color: var(--tinta-suave); }
+.filtro-chip[aria-pressed="true"] .n, .filtro-chip[aria-current="page"] .n { color: var(--madeira); }
+@media (prefers-reduced-motion: reduce) {
+  .filtro-chip { transition: none; }
+  .filtro-chip:active { transform: none; }
+}
 
 /* Governança — tela única de limpeza: chips-contadores (filtro) + tabela compacta */
 .filtro-limpeza { display: flex; flex-wrap: wrap; gap: 8px; margin: .2rem 0 1.1rem; }
@@ -938,7 +1022,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 .chip-inspecionada .ponto { background: var(--info); }
 
 .tabela-limpeza td { padding-top: .55rem; padding-bottom: .55rem; }
-.tabela-limpeza .selo { min-width: 92px; justify-content: center; }
+.tabela-limpeza .selo { min-width: 112px; }
 .tabela-limpeza .form-inline select { min-width: 150px; }
 .tabela-limpeza .celula-vazia { color: var(--tinta-suave); }
 
@@ -989,8 +1073,6 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 .acoes-limpeza form:last-child { margin-right: 0; }
 .acoes-limpeza .botao-primario, .acoes-limpeza .botao-neutro { padding: .4rem .85rem; font-size: .84rem; }
 .botao-neutro:active { transform: translateY(1px); }
-.selo-ok { color: var(--sucesso); background: var(--sucesso-bg); border-color: rgba(46,125,91,.25); }
-.selo-ativo { color: var(--noturno); background: var(--lampiao-claro); border-color: var(--lampiao); }
 
 /* Equipe & Acessos: grade de checkboxes de módulos/áreas */
 .acessos-grade {
@@ -1109,20 +1191,6 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
    faziam a página inteira rolar na horizontal. */
 .dica:not(:hover):not(:focus-visible)::after,
 .dica:not(:hover):not(:focus-visible)::before { display: none; }
-
-/* Sigla PF/PJ na tabela de pessoas */
-.selo-tipo-fisica { color: var(--musgo); background: rgba(46, 72, 62, .1); border-color: rgba(46, 72, 62, .25); }
-.selo-tipo-juridica { color: var(--madeira); background: rgba(79, 44, 29, .08); border-color: rgba(79, 44, 29, .3); }
-
-.selo-contador {
-  display: inline-block;
-  margin-left: .15rem;
-  padding: 0 .3rem;
-  border-radius: 99px;
-  background: rgba(5, 28, 44, .12);
-  font-size: .62rem;
-}
-.selo-ativo .selo-contador { background: rgba(5, 28, 44, .18); }
 
 .filtros { display: flex; gap: .4rem; margin: .4rem 0 1rem; flex-wrap: wrap; }
 .subnav { margin: .2rem 0 1.4rem; padding-bottom: .9rem; border-bottom: 1px solid var(--fio); }
@@ -1328,12 +1396,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 .mapa-barra.mapa-cor-confirmada { background: color-mix(in srgb, var(--musgo) 28%, transparent); color: var(--musgo); }
 .mapa-barra.mapa-cor-hospedada { background: var(--musgo); color: var(--pergaminho); }
 
-.selo.mapa-cor-pre_reserva { color: var(--alerta); background: color-mix(in srgb, var(--lampiao) 25%, transparent); }
-.selo.mapa-cor-confirmada { color: var(--musgo); background: color-mix(in srgb, var(--musgo) 20%, transparent); }
-.selo.mapa-cor-hospedada { color: var(--pergaminho); background: var(--musgo); border-color: var(--musgo); }
-.selo.mapa-cor-checkout { color: var(--tinta-suave); }
-.selo.mapa-cor-cancelada, .selo.mapa-cor-no_show { color: var(--perigo); border-color: color-mix(in srgb, var(--perigo) 30%, transparent); background: var(--perigo-bg); }
-.selo.mapa-cor-orcamento { color: var(--tinta-suave); border-style: dashed; }
+/* As cores de status de reserva moram na seção SELO (--selo-cor). */
 
 .acoes-reserva { flex-wrap: wrap; margin-bottom: 1.4rem; }
 .acoes-reserva form { display: inline; }
@@ -1912,16 +1975,26 @@ a.modulo-ativo:hover {
 }
 
 /* Central de Módulos */
-.legenda-modulos { display: flex; gap: .6rem; flex-wrap: wrap; margin: .5rem 0 .5rem; }
+/* Legenda e status da Central de Módulos: mesma regra do resto do sistema —
+   "funcionando" (15 dos 20 cartões) é a norma e vira bolinha + texto; só
+   "em construção", que é a exceção e muda o que a pessoa pode esperar,
+   recebe a cápsula. */
+.legenda-modulos { display: flex; gap: 1rem; flex-wrap: wrap; margin: .6rem 0; }
 .selo-status {
-  display: inline-flex; align-items: center; gap: .35rem;
-  font-size: .68rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase;
-  padding: .2rem .55rem; border-radius: 99px;
+  display: inline-flex; align-items: center; gap: .42rem;
+  font-size: .78rem; font-weight: 600; color: var(--tinta);
 }
-.selo-status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-.status-funcionando { color: var(--sucesso); background: var(--sucesso-bg); }
-.status-construcao { color: var(--alerta); background: var(--alerta-bg); }
-.status-disponivel { color: var(--tinta-suave); background: var(--superficie-2); border: 1px solid var(--fio); }
+.selo-status::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--selo-cor, var(--fio-forte)); }
+.status-funcionando { --selo-cor: var(--sucesso); }
+.status-disponivel  { --selo-cor: var(--fio-forte); }
+.status-construcao {
+  --selo-cor: var(--alerta);
+  padding: .2rem .6rem; border-radius: 999px;
+  font-size: .7rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--alerta);
+  background: color-mix(in srgb, var(--alerta) 12%, var(--superficie));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--alerta) 26%, transparent);
+}
 
 .grid-modulos {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
@@ -2457,10 +2530,6 @@ div.porta.dica[data-dica] { cursor: default; }
   border-radius: var(--raio-p); color: var(--alerta); font-size: .9rem; font-weight: 600;
 }
 .aviso-inline .ico { width: 18px; height: 18px; flex: none; }
-.selo.prioridade-baixa   { color: var(--musgo); background: var(--sucesso-bg); border-color: transparent; }
-.selo.prioridade-media   { color: var(--info); background: var(--info-bg); border-color: transparent; }
-.selo.prioridade-alta    { color: var(--alerta); background: var(--alerta-bg); border-color: transparent; }
-.selo.prioridade-urgente { color: var(--perigo); background: var(--perigo-bg); border-color: transparent; }
 .ficha { display: grid; gap: .7rem; margin: 0; }
 .ficha > div { display: grid; grid-template-columns: 130px 1fr; gap: .5rem; align-items: baseline; }
 .ficha dt { color: var(--tinta-suave); font-size: .8rem; }
@@ -2472,11 +2541,7 @@ div.porta.dica[data-dica] { cursor: default; }
 .acao-bloco { margin-top: 1rem; }
 .acao-bloco > summary { cursor: pointer; font-weight: 600; font-size: .9rem; margin-bottom: .5rem; }
 
-/* Pagamentos */
-.selo-pg-pendente  { color: var(--alerta); background: rgba(176,116,28,.14); border-color: transparent; }
-.selo-pg-pago      { color: var(--sucesso); background: rgba(46,125,91,.14); border-color: transparent; }
-.selo-pg-estornado { color: var(--perigo); background: rgba(166,64,44,.14); border-color: transparent; }
-.selo-pg-cancelado, .selo-pg-expirado { color: var(--tinta-suave); background: var(--pergaminho); border-color: transparent; }
+/* Pagamentos — as cores de status moram na seção SELO (--selo-cor). */
 .pix-box { margin-top: 1rem; }
 .pix-box code { display: block; word-break: break-all; background: var(--pergaminho);
   border-radius: var(--raio-p); padding: .7rem; font-size: .78rem; margin-top: .3rem; }
@@ -3121,7 +3186,7 @@ form.filtros:not(.subnav) select:focus {
   .tela-reservas .cartao,
   .tela-reservas .tabela,
   .tela-reservas .form-cartao { border-color: var(--fio-forte); }
-  .tela-reservas .selo { border-width: 1.5px; }
+  .tela-reservas .selo::before { box-shadow: 0 0 0 1px var(--tinta); }
 }
 
 /* Ficha do Funcionário (RH) — blocos lado a lado, campos em grade */
@@ -3514,10 +3579,7 @@ body.escala-dragging .escala-drop { cursor: copy; }
 .prov .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 .dot.meta { background: #1877F2; } .dot.google { background: #EA4335; } .dot.outro { background: var(--tinta-suave); }
 
-/* Selos de publicação da Landing Page */
-.selo-pub { color: var(--sucesso); background: var(--sucesso-bg); border-color: rgba(63, 107, 72, .25); }
-.selo-rasc { color: var(--alerta); background: var(--alerta-bg); border-color: rgba(122, 90, 30, .28); }
-.selo-enc { color: var(--tinta-suave); background: var(--superficie-2); border-color: var(--fio-forte); }
+/* Selos de publicação da Landing Page: cores na seção SELO (--selo-cor). */
 
 /* Campos dentro do cartão elegante (o foco dourado é o global de .conteudo) */
 .eleg input[type=text], .eleg input[type=number], .eleg input[type=date],

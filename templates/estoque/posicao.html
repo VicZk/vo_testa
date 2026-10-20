@@ -16,11 +16,11 @@
 </p>
 
 <div class="filtros">
-  <a href="{% url 'estoque:posicao' %}" class="selo {% if not local and not so_alerta %}selo-ativo{% endif %}">Todos os locais</a>
+  <a href="{% url 'estoque:posicao' %}" class="filtro-chip"{% if not local and not so_alerta %} aria-current="page"{% endif %}>Todos os locais</a>
   {% for lo in locais %}
-    <a href="?local={{ lo.pk }}" class="selo {% if local.pk == lo.pk %}selo-ativo{% endif %}">{{ lo.nome }}</a>
+    <a href="?local={{ lo.pk }}" class="filtro-chip"{% if local.pk == lo.pk %} aria-current="page"{% endif %}>{{ lo.nome }}</a>
   {% endfor %}
-  <a href="?alerta=1{% if local %}&local={{ local.pk }}{% endif %}" class="selo selo-alerta {% if so_alerta %}selo-ativo{% endif %}">Só alertas</a>
+  <a href="?alerta=1{% if local %}&local={{ local.pk }}{% endif %}" class="filtro-chip"{% if so_alerta %} aria-current="page"{% endif %}><span class="ponto ponto-perigo"></span>Só alertas</a>
 </div>
 
 <table class="tabela">

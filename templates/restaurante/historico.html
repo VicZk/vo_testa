@@ -13,8 +13,8 @@
 <div class="filtros">
   {% for f in filtros %}
     <a href="{% if f.chave %}?status={{ f.chave }}{% else %}{% url 'restaurante:historico' %}{% endif %}"
-       class="selo {% if filtro == f.chave %}selo-ativo{% endif %}">
-      {{ f.rotulo }} <span class="selo-contador">{{ f.total }}</span>
+       class="filtro-chip"{% if filtro == f.chave %} aria-current="page"{% endif %}>
+      {{ f.rotulo }} <span class="n">{{ f.total }}</span>
     </a>
   {% endfor %}
 </div>

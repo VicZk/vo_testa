@@ -51,7 +51,7 @@
       <h4 class="letreiro">Acesso ao sistema {% if not gerente %}<span class="ajuda-inline">(só gerência edita)</span>{% endif %}</h4>
       {% if gerente %}
         {% if usuario %}
-          <p class="ajuda">Login <strong>{{ usuario.username }}</strong>{% if usuario.is_superuser %} · <span class="selo selo-ativo">Dono</span>{% endif %}.</p>
+          <p class="ajuda">Login <strong>{{ usuario.username }}</strong>{% if usuario.is_superuser %} · <span class="rotulo-dado">Dono</span>{% endif %}.</p>
           {% if not proprio %}
           <div class="campo">
             <label class="filtro-check"><input type="checkbox" name="gerente" {% if usuario.is_staff or usuario.is_superuser %}checked{% endif %}> É gerência (ações sensíveis)</label>

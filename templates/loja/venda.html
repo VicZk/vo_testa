@@ -9,7 +9,7 @@
 <p class="pagina-eyebrow letreiro">Vendas & Estoque</p>
 <div class="pagina-cabecalho">
   <h1>Venda #{{ venda.pk }}</h1>
-  <span class="selo {% if venda.status == 'cancelada' %}selo-alerta{% else %}selo-ativo{% endif %}">{{ venda.get_status_display }}</span>
+  <span class="selo {% if venda.status == 'cancelada' %}selo-alerta{% else %}selo-ok{% endif %}">{{ venda.get_status_display }}</span>
 </div>
 <p class="subtitulo">
   {{ venda.criado_em|date:"d/m/Y H:i" }} · operador {{ venda.criado_por }} ·

@@ -113,8 +113,10 @@ class KitEleganteTests(TestCase):
         ).read_text(encoding="utf-8")
 
     def test_classes_promovidas(self):
-        for classe in (".cartao-el {", ".quadro {", ".vazio-el {", ".selo-pub {", ".kpi-val {"):
+        for classe in (".cartao-el {", ".quadro {", ".vazio-el {", ".kpi-val {"):
             self.assertIn(classe, self.css, classe)
+        # .selo-pub virou uma linha na lista de cores do selo (ver SelosDiscretosTests).
+        self.assertIn(".selo-pub", self.css)
 
     def test_partial_nao_redefine_mais_botao(self):
         self.assertNotIn(".eleg .botao-primario", self.partial)
@@ -128,3 +130,63 @@ class KitEleganteTests(TestCase):
             and "_estilo_elegante.html" in p.read_text(encoding="utf-8")
         ]
         self.assertEqual(usos, [])
+
+
+class SelosDiscretosTests(TestCase):
+    """A pílula é recurso escasso.
+
+    O dono relatou saturação ("pills demais em tudo") e a medição confirmou:
+    71 cápsulas preenchidas só na tela de Pessoas, nenhuma delas um status que
+    pedisse ação. A regra agora mora na classe-base: `.selo` nasce bolinha +
+    texto; cápsula é modificador; rótulo de dado é texto; filtro é controle.
+    """
+
+    def setUp(self):
+        self.css = CSS.read_text(encoding="utf-8").replace("\r\n", "\n")
+        self.raizes = [
+            Path(settings.BASE_DIR) / "templates",
+            Path(settings.BASE_DIR) / "apps" / "site" / "templates",
+        ]
+
+    def _base_do_selo(self):
+        achado = re.search(r"\n\.selo \{(.*?)\n\}", self.css, re.S)
+        self.assertIsNotNone(achado, "regra-base .selo não encontrada")
+        return achado.group(1)
+
+    def test_selo_nasce_sem_capsula(self):
+        base = self._base_do_selo()
+        self.assertIn("background: none", base)
+        self.assertIn("border: 0", base)
+        self.assertIn("border-radius: 0", base)
+        self.assertIn("text-transform: none", base)
+
+    def test_selo_tem_bolinha_na_cor_do_estado(self):
+        self.assertIn(".selo::before", self.css)
+        self.assertIn("background: var(--selo-cor)", self.css)
+
+    def test_capsula_existe_como_modificador(self):
+        self.assertIn(".selo--acao", self.css)
+
+    def test_rotulo_de_dado_e_filtro_tem_classe_propria(self):
+        self.assertIn(".rotulo-dado {", self.css)
+        self.assertIn(".filtro-chip {", self.css)
+        # O filtro precisa anunciar o estado marcado para quem usa leitor de tela.
+        self.assertIn('.filtro-chip[aria-pressed="true"]', self.css)
+
+    def test_estado_so_troca_a_cor(self):
+        """Estado novo = uma linha (`--selo-cor`), nunca um bloco com fundo."""
+        for estado in (".selo-limpa", ".selo-pendente", ".selo-pg-pago", ".selo-enc"):
+            linha = re.search(rf"^[^\n]*{re.escape(estado)}[^\n]*$", self.css, re.M)
+            self.assertIsNotNone(linha, estado)
+        self.assertNotIn(".selo-limpa, .selo-concluida { color:", self.css)
+
+    def test_templates_nao_usam_mais_capsula_para_rotulo(self):
+        """`.selo-contador` (pílula dentro de pílula) e `.selo-tipo-*`
+        (PF/PJ repetido linha a linha) saíram de cena."""
+        restos = []
+        for raiz in self.raizes:
+            for p in raiz.rglob("*.html"):
+                texto = p.read_text(encoding="utf-8")
+                if "selo-contador" in texto or "selo-tipo-" in texto:
+                    restos.append(str(p.relative_to(settings.BASE_DIR)))
+        self.assertEqual(restos, [])

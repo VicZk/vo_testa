@@ -11,8 +11,8 @@
 <p class="subtitulo">Títulos com vencimento; a baixa gera o lançamento financeiro.</p>
 
 <div class="filtros">
-  <a href="?situacao=abertas" class="selo {% if situacao == 'abertas' %}selo-ativo{% endif %}">Abertas</a>
-  <a href="?situacao=todas" class="selo {% if situacao == 'todas' %}selo-ativo{% endif %}">Todas</a>
+  <a href="?situacao=abertas" class="filtro-chip"{% if situacao == 'abertas' %} aria-current="page"{% endif %}>Abertas</a>
+  <a href="?situacao=todas" class="filtro-chip"{% if situacao == 'todas' %} aria-current="page"{% endif %}>Todas</a>
 </div>
 
 <table class="tabela">

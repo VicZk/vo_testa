@@ -23,8 +23,8 @@
 <div class="filtros">
   {% for f in filtros %}
     <a href="?{% if busca %}q={{ busca|urlencode }}&{% endif %}{% if f.chave %}papel={{ f.chave }}{% endif %}"
-       class="selo {% if papel == f.chave %}selo-ativo{% endif %}">
-      {{ f.rotulo }} <span class="selo-contador">{{ f.total }}</span>
+       class="filtro-chip"{% if papel == f.chave %} aria-current="page"{% endif %}>
+      {{ f.rotulo }} <span class="n">{{ f.total }}</span>
     </a>
   {% endfor %}
 </div>
@@ -38,9 +38,11 @@
     {% for p in pessoas %}
       <tr>
         <td><a href="{% url 'pessoa_editar' p.pk %}">{{ p.nome }}</a></td>
-        <td><span class="selo selo-tipo-{{ p.tipo }} dica" data-dica="{{ p.get_tipo_display }}">{{ p.sigla_tipo }}</span></td>
+        {% comment %}Tipo e papéis são rótulos de dado, não status: texto discreto em vez
+        de cápsula. Eram 64 pílulas repetindo "PF" e "HÓSPEDE" linha a linha.{% endcomment %}
+        <td><span class="rotulo-dado dica" data-dica="{{ p.get_tipo_display }}">{{ p.sigla_tipo }}</span></td>
         <td>
-          {% for papel in p.papeis %}<span class="selo">{{ papel }}</span>{% empty %}<span class="selo selo-neutro">Cliente avulso</span>{% endfor %}
+          {% for papel in p.papeis %}<span class="rotulo-dado">{{ papel }}</span>{% empty %}<span class="rotulo-dado">Cliente avulso</span>{% endfor %}
         </td>
         <td class="num">{{ p.documento|default:"—" }}</td>
         <td>{{ p.telefone|default:"—" }}</td>

@@ -22,9 +22,9 @@
 </div>
 
 <div class="filtros">
-  <a href="{% url 'lancamentos' %}" class="selo {% if not tipo %}selo-ativo{% endif %}">Todos</a>
-  <a href="?tipo=receita" class="selo {% if tipo == 'receita' %}selo-ativo{% endif %}">Receitas</a>
-  <a href="?tipo=despesa" class="selo {% if tipo == 'despesa' %}selo-ativo{% endif %}">Despesas</a>
+  <a href="{% url 'lancamentos' %}" class="filtro-chip"{% if not tipo %} aria-current="page"{% endif %}>Todos</a>
+  <a href="?tipo=receita" class="filtro-chip"{% if tipo == 'receita' %} aria-current="page"{% endif %}>Receitas</a>
+  <a href="?tipo=despesa" class="filtro-chip"{% if tipo == 'despesa' %} aria-current="page"{% endif %}>Despesas</a>
 </div>
 
 <table class="tabela">

@@ -47,11 +47,9 @@
                     <p class="text-pergaminho/70 text-sm mb-3">{{ quarto.descricao_curta }}</p>
                     {% endif %}
                     {% if quarto.qualidades %}
-                    <div class="flex flex-wrap gap-1.5 mb-4">
-                        {% for qual in quarto.qualidades %}
-                        <span class="text-pergaminho/70 text-xs border border-lampiao/20 px-2 py-0.5 rounded-full">{{ qual }}</span>
-                        {% endfor %}
-                    </div>
+                    {% comment %}Qualidades viram texto: nove cartões × três cápsulas era a
+                    maior fonte de saturação da home.{% endcomment %}
+                    <p class="text-pergaminho/70 text-xs uppercase tracking-wider mb-4">{{ quarto.qualidades|join:" · " }}</p>
                     {% endif %}
                     <div class="flex items-center justify-between">
                         <div>
@@ -69,7 +67,6 @@
                             {{ quarto.capacidade }} hóspedes
                         </span>
                         <span class="text-pergaminho/70 text-xs flex items-center gap-1">{{ quarto.metragem }}m²</span>
-                        <span class="text-pergaminho/70 text-xs flex items-center gap-1">★ {{ quarto.nota_avaliacao }}</span>
                     </div>
                 </div>
             </a>
