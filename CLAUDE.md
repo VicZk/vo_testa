@@ -132,6 +132,15 @@ o kit `templates/comercial/_estilo_elegante.html` (telas de painel/lista/detalhe
   alinhada),
   `.botao-primario` (dourado), `.botao-neutro`, `.botao-mini` (nunca sublinhados; com
   `:active`), `.selo`/`.selo-*` (status com bolinha), `.kpi`/`.kpi-destaque` (métrica).
+- **Pílula com parcimônia (pedido do dono: "pills em tudo, saturado demais"):** status
+  neutro = `.selo` (bolinha + texto, sem fundo). Cápsula preenchida só para o que pede
+  ação de alguém (`.selo--acao` e os estados críticos), no máximo uma por linha/cartão.
+  Tipo, papel, canal e categoria são dado, não status: `.rotulo-dado` (texto discreto,
+  separado por " · "). Filtro clicável é controle: `.filtro-chip`. Contagem é número
+  solto, nunca pílula dentro de pílula.
+- **Lista que pode crescer:** `paginar()` (`apps/nucleo/paginacao.py`) na view +
+  `{% include "componentes/paginacao.html" with pagina=pagina %}` abaixo da tabela —
+  nunca cortar em `[:200]`.
 - **Telas de dashboard/lista/detalhe (padrão Comercial):** envolver em `<div class="eleg">`
   e `{% include "comercial/_estilo_elegante.html" %}` — herda KPIs, quadro e botões prontos.
 - **Tipografia (craft):** números sempre com `font-variant-numeric: tabular-nums`;
@@ -139,7 +148,10 @@ o kit `templates/comercial/_estilo_elegante.html` (telas de painel/lista/detalhe
   discretas com leve tracking e tom suave; hierarquia por peso+tamanho, não só tamanho.
 - **Interação:** feedback imediato no toque (`:active`), foco dourado da marca em todos
   os inputs (já global via `.conteudo … :focus`), hover sutil; respeitar
-  `prefers-reduced-motion` (sem slide/spring — cross-fade).
+  `prefers-reduced-motion` (sem slide/spring — cross-fade). Duração e curva só pelos
+  tokens de movimento (`--mov-toque/rapido/padrao/lento`, `--curva`, `--curva-entrada`,
+  `--curva-pop`), que viram 1 ms sob reduced-motion; alvo de toque ≥ 44 px em ponteiro
+  grosso.
 - **Referências de princípio:** skill `apple-design` (resposta, tipografia ótica,
   materiais, simplicidade) e a memória [[design-lampiao]]. Ao mudar o "look" global,
   mexer nos **tokens** (propaga a tudo), não em cada template.
