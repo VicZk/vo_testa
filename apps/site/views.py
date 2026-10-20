@@ -207,11 +207,35 @@ def pedir_proposta(request):
 # Reservas — helpers
 # --------------------------------------------------------------------------- #
 
+_ROTULO_TEMPORADA = {
+    'baixa': 'Baixa Temporada',
+    'media': 'Média Temporada',
+    'alta': 'Alta Temporada',
+    'super_alta': 'Super Alta Temporada',
+    'feriado': 'Feriado / Evento',
+}
+
+
 def _temporada_de(data):
-    """Temporada vigente na data (a de maior multiplicador, se sobrepostas)."""
-    return Temporada.objects.filter(
-        data_inicio__lte=data, data_fim__gte=data,
-    ).order_by('-multiplicador').first()
+    """Selo da temporada vigente na data, vindo do CRM — a mesma classificação que forma
+    o preço. Antes lia a tabela antiga do site (site.Temporada), que não entra no preço:
+    o selo podia dizer "Alta" num dia cobrado como baixa. None = fora de temporada."""
+    from apps.nucleo.models import Temporada as TemporadaCRM
+    from apps.reservas import services as reservas
+
+    classificacao = reservas.classificacao_do_dia(data)
+    if not classificacao:
+        return None
+    vigente = next((
+        t for t in TemporadaCRM.objects.filter(
+            inicio__lte=data, fim__gte=data, classificacao=classificacao)
+        if t.vale_no_dia(data)
+    ), None)
+    rotulo = _ROTULO_TEMPORADA.get(classificacao, classificacao)
+    return SimpleNamespace(
+        classificacao=classificacao, get_tipo_display=rotulo,
+        nome=vigente.nome if vigente else rotulo,
+    )
 
 
 def _qualidades_uh(uh):
@@ -262,6 +286,9 @@ def _vitrines_publicadas():
             uh__tipo__modalidade=TipoUH.Modalidade.HOSPEDAGEM,
         )
         .select_related('uh', 'uh__tipo')
+        # Quarto "duplo" (acréscimo na diária) = mais de uma posição de cama: sem o
+        # prefetch, cada card fazia um COUNT no banco.
+        .prefetch_related('uh__posicoes_cama')
     )
 
 
@@ -277,23 +304,29 @@ def _buscar_unidades(checkin, checkout, hospedes):
     disponiveis_ids = set(reservas.uhs_disponiveis(
         checkin, checkout, adultos=hospedes).values_list('pk', flat=True))
     resultados = []
-    for v in vitrines:
-        disponivel = v.uh_id in disponiveis_ids
-        base = reservas.tarifa_base_unidade(v.uh)
-        preco_noite = reservas.diaria_media_unidade(v.uh, checkin, checkout)
-        resultados.append({
-            'quarto': _card_de_uh(v, base),
-            'eh_unidade': True,
-            'disponivel': disponivel,
-            'preco_base': base,
-            'temporada': _temporada_de(checkin),
-            'tem_ajuste': preco_noite != base,
-            'preco_noite': preco_noite,
-            'noites': noites,
-            'total': preco_noite * noites,
-            'eh_day_use': False,
-            'unidade_preco': 'noite',
-        })
+    # Temporada e tarifas memorizadas no lote: antes eram consultadas de novo para cada
+    # quarto e cada noite (334 consultas para 3 noites, 682 para 7).
+    with reservas.precos_em_lote():
+        temporada = _temporada_de(checkin)
+        vitrines = list(vitrines)
+        reservas.precarregar_tarifas_unidade([v.uh for v in vitrines])
+        for v in vitrines:
+            disponivel = v.uh_id in disponiveis_ids
+            base = reservas.tarifa_base_unidade(v.uh)
+            preco_noite = reservas.diaria_media_unidade(v.uh, checkin, checkout)
+            resultados.append({
+                'quarto': _card_de_uh(v, base),
+                'eh_unidade': True,
+                'disponivel': disponivel,
+                'preco_base': base,
+                'temporada': temporada,
+                'tem_ajuste': preco_noite != base,
+                'preco_noite': preco_noite,
+                'noites': noites,
+                'total': preco_noite * noites,
+                'eh_day_use': False,
+                'unidade_preco': 'noite',
+            })
     resultados.sort(key=lambda r: (not r['disponivel'], r['quarto'].numero))
     return resultados
 
@@ -311,23 +344,25 @@ def _buscar_quartos(checkin, checkout, hospedes, modalidade=""):
         qs = qs.filter(tipo_uh__modalidade=modalidade)
     quartos = list(qs)
     resultados = []
-    for quarto in quartos:
-        disponivel = reservas.tipo_disponivel(
-            quarto.tipo_uh, checkin, checkout, adultos=hospedes)
-        preco_noite = reservas.diaria_media(quarto.tipo_uh, checkin, checkout)
-        day = getattr(quarto.tipo_uh, 'modalidade', '') == 'day_use'
-        resultados.append({
-            'quarto': quarto,
-            'disponivel': disponivel,
-            'preco_base': quarto.preco_base,
-            'temporada': _temporada_de(checkin),
-            'tem_ajuste': preco_noite != quarto.preco_base,
-            'preco_noite': preco_noite,
-            'noites': noites,
-            'total': preco_noite * noites,
-            'eh_day_use': day,
-            'unidade_preco': 'dia' if day else 'noite',
-        })
+    with reservas.precos_em_lote():
+        temporada = _temporada_de(checkin)
+        for quarto in quartos:
+            disponivel = reservas.tipo_disponivel(
+                quarto.tipo_uh, checkin, checkout, adultos=hospedes)
+            preco_noite = reservas.diaria_media(quarto.tipo_uh, checkin, checkout)
+            day = getattr(quarto.tipo_uh, 'modalidade', '') == 'day_use'
+            resultados.append({
+                'quarto': quarto,
+                'disponivel': disponivel,
+                'preco_base': quarto.preco_base,
+                'temporada': temporada,
+                'tem_ajuste': preco_noite != quarto.preco_base,
+                'preco_noite': preco_noite,
+                'noites': noites,
+                'total': preco_noite * noites,
+                'eh_day_use': day,
+                'unidade_preco': 'dia' if day else 'noite',
+            })
     resultados.sort(key=lambda r: (not r['disponivel'], not r['eh_day_use'], r['quarto'].ordem))
     return resultados
 

@@ -1356,3 +1356,41 @@ class DayUseUmDiaTests(ReservasTestsBase):
         with self.assertRaises(ValidationError):
             services.transferir_datas(
                 r, HOJE + timedelta(days=10), HOJE + timedelta(days=12), self.usuario)
+
+
+class PrecosEmLoteTests(TestCase):
+    """`precos_em_lote()` memoriza sem mudar preço, e só dentro do bloco."""
+
+    def setUp(self):
+        from datetime import date
+
+        from apps.nucleo.models import UH, Temporada, TipoUH
+
+        self.tipo = TipoUH.objects.create(nome="Std", tarifa_base=Decimal("200.00"), capacidade=2)
+        self.uh = UH.objects.create(numero="L1", tipo=self.tipo)
+        self.dia = date.today() + timedelta(days=15)
+        Temporada.objects.create(nome="Alta", classificacao="alta",
+                                 inicio=self.dia, fim=self.dia + timedelta(days=5))
+        Tarifa.objects.create(tipo_uh=self.tipo, classificacao="alta", valor=Decimal("260.00"))
+
+    def test_mesmo_preco_dentro_e_fora_do_lote(self):
+        co = self.dia + timedelta(days=4)
+        fora = services.diaria_media_unidade(self.uh, self.dia, co)
+        with services.precos_em_lote():
+            dentro = services.diaria_media_unidade(self.uh, self.dia, co)
+        self.assertEqual(fora, dentro)
+
+    def test_memoria_nao_vaza_para_fora_do_bloco(self):
+        if services.classificacao_do_dia(self.dia) != "alta":
+            self.skipTest("o dia caiu num feriado automático")
+        with services.precos_em_lote():
+            self.assertEqual(services.tarifa_do_dia(self.tipo, self.dia), Decimal("260.00"))
+        Tarifa.objects.filter(tipo_uh=self.tipo).update(valor=Decimal("280.00"))
+        self.assertEqual(services.tarifa_do_dia(self.tipo, self.dia), Decimal("280.00"))
+
+    def test_dentro_do_lote_cada_consulta_acontece_uma_vez(self):
+        co = self.dia + timedelta(days=4)
+        with services.precos_em_lote():
+            services.diaria_media_unidade(self.uh, self.dia, co)
+            with self.assertNumQueries(0):
+                services.diaria_media_unidade(self.uh, self.dia, co)

@@ -6,6 +6,8 @@ lançam consumo na conta SOMENTE por estas funções — nunca importando os
 models internos.
 """
 
+import contextvars
+from contextlib import contextmanager
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
@@ -45,12 +47,46 @@ PRECEDENCIA_TEMPORADA = [
 ]
 
 
+# ---------- Memória de preços por bloco ----------
+#
+# Uma busca do site calcula o preço de ~24 quartos × N noites: sem memória, cada quarto
+# consultava de novo a temporada do dia e as tarifas (334 consultas para 3 noites, 682
+# para 7). Dentro de `precos_em_lote()` cada consulta acontece uma vez por chave; fora
+# dele, nada muda.
+
+_PRECOS_EM_LOTE = contextvars.ContextVar("precos_em_lote", default=None)
+
+
+@contextmanager
+def precos_em_lote():
+    """Memoriza temporada e tarifas durante o bloco — para leituras (busca, vitrine,
+    mapa). Não envolva código que altera tarifas e lê o preço logo em seguida."""
+    token = _PRECOS_EM_LOTE.set({})
+    try:
+        yield
+    finally:
+        _PRECOS_EM_LOTE.reset(token)
+
+
+def _memo(chave, calcular):
+    memoria = _PRECOS_EM_LOTE.get()
+    if memoria is None:
+        return calcular()
+    if chave not in memoria:
+        memoria[chave] = calcular()
+    return memoria[chave]
+
+
 def classificacao_do_dia(dia: date) -> str | None:
     """Classificação de temporada vigente na data (ou None = fora de temporada).
 
     Precedência: feriado automático (calendário nacional + Itá, se ligado) →
     temporadas cadastradas (cada uma só nos seus dias da semana: Seg–Qui = baixa,
     Sex–Dom = alta; sem dias marcados = todos os dias). Feriado sempre vence."""
+    return _memo(("classificacao", dia), lambda: _classificacao_do_dia(dia))
+
+
+def _classificacao_do_dia(dia: date) -> str | None:
     from apps.nucleo.feriados import eh_feriado
     from apps.nucleo.models.cadastros import ConfiguracaoReservas
 
@@ -74,11 +110,13 @@ def tarifa_do_dia(tipo_uh: TipoUH, dia: date) -> Decimal:
     """Diária do tipo na data: tarifa da temporada vigente, senão tarifa base."""
     classificacao = classificacao_do_dia(dia)
     if classificacao:
-        tarifa = Tarifa.objects.filter(
-            tipo_uh=tipo_uh, classificacao=classificacao
-        ).first()
-        if tarifa:
-            return tarifa.valor
+        valor = _memo(
+            ("tarifa_tipo", tipo_uh.pk, classificacao),
+            lambda: Tarifa.objects.filter(tipo_uh=tipo_uh, classificacao=classificacao)
+            .values_list("valor", flat=True).first(),
+        )
+        if valor is not None:
+            return valor
     return tipo_uh.tarifa_base
 
 
@@ -111,7 +149,7 @@ def _tarifa_unidade_sobre(uh: UH, tarifa_tipo: Decimal) -> Decimal:
 
     if uh.tarifa_override is not None:
         return uh.tarifa_override
-    if eh_duplo(uh):
+    if _memo(("duplo", uh.pk), lambda: eh_duplo(uh)):
         fator = Decimal(str(getattr(settings, "ACRESCIMO_TARIFA_DUPLO", 1.6)))
         return _arredonda_dezena(tarifa_tipo * fator)
     return tarifa_tipo
@@ -121,14 +159,39 @@ def tarifa_da_unidade(uh: UH, dia: date) -> Decimal:
     """Diária efetiva da unidade num dia. Precedência:
     preço do QUARTO na temporada (TarifaUnidade) → tarifa própria fixa
     (tarifa_override) → tipo × fator se duplo → tipo."""
-    from .models import TarifaUnidade
-
     classif = classificacao_do_dia(dia)
     if classif:
-        t = TarifaUnidade.objects.filter(uh=uh, classificacao=classif).first()
+        t = _tarifa_unidade(uh, classif)
         if t:
             return t.valor
     return _tarifa_unidade_sobre(uh, tarifa_do_dia(uh.tipo, dia))
+
+
+def precarregar_tarifas_unidade(uhs) -> None:
+    """Dentro de `precos_em_lote()`, busca numa consulta só as TarifaUnidade de todos
+    esses quartos (a busca do site precisa de todas; antes era uma consulta por quarto).
+    Fora do lote não faz nada."""
+    from .models import TarifaUnidade
+
+    memoria = _PRECOS_EM_LOTE.get()
+    if memoria is None:
+        return
+    ids = [uh.pk for uh in uhs]
+    por_chave = {(t.uh_id, t.classificacao): t
+                 for t in TarifaUnidade.objects.filter(uh_id__in=ids)}
+    for uh_id in ids:
+        for classificacao in Temporada.Classificacao.values:
+            memoria[("tarifa_uh", uh_id, classificacao)] = por_chave.get((uh_id, classificacao))
+
+
+def _tarifa_unidade(uh: UH, classificacao: str):
+    """TarifaUnidade do quarto na classificação (ou None), memorizada no lote."""
+    from .models import TarifaUnidade
+
+    return _memo(
+        ("tarifa_uh", uh.pk, classificacao),
+        lambda: TarifaUnidade.objects.filter(uh=uh, classificacao=classificacao).first(),
+    )
 
 
 def diaria_media_unidade(uh: UH, checkin: date, checkout: date) -> Decimal:
@@ -159,7 +222,7 @@ def preco_unidade_noite(uh: UH, dia: date):
 
     `pessoa_adicional` e `meia` seguem a mesma fonte do valor; se a fonte não os
     definir, caem no do tipo / metade do adicional — nada muda até preencher."""
-    from .models import TarifaTemporada, TarifaUnidade
+    from .models import TarifaTemporada
 
     pa_tipo = uh.tipo.pessoa_adicional or Decimal("0.00")
 
@@ -168,18 +231,18 @@ def preco_unidade_noite(uh: UH, dia: date):
         meia = t.meia if t.meia is not None else (adic / 2)
         return t.valor, adic, meia
 
-    especiais = [
+    especiais = _memo(("tarifa_temporada", uh.pk, dia), lambda: [
         t for t in TarifaTemporada.objects.filter(
             uh=uh, temporada__inicio__lte=dia, temporada__fim__gte=dia,
         ).select_related("temporada")
         if t.temporada.vale_no_dia(dia)
-    ]
+    ])
     if especiais:  # período mais curto = mais específico
         return _resolve(min(especiais, key=lambda x: (x.temporada.fim - x.temporada.inicio).days))
 
     classif = classificacao_do_dia(dia)
     if classif:
-        t = TarifaUnidade.objects.filter(uh=uh, classificacao=classif).first()
+        t = _tarifa_unidade(uh, classif)
         if t:
             return _resolve(t)
 
@@ -193,7 +256,8 @@ def tarifa_day_use(dia: date):
 
     classif = classificacao_do_dia(dia)
     if classif:
-        t = TarifaDayUse.objects.filter(classificacao=classif).first()
+        t = _memo(("tarifa_day_use", classif),
+                  lambda: TarifaDayUse.objects.filter(classificacao=classif).first())
         if t:
             meia = t.valor_meia if t.valor_meia is not None else (t.valor_adulto / 2)
             return t.valor_adulto, meia
@@ -308,7 +372,7 @@ def uhs_disponiveis(checkin: date, checkout: date, *, adultos=None, criancas=Non
     livres = colchoes_extra_livres(checkin, checkout)
     min_livre = min(livres.values()) if livres else ColchoesExtra.atual().quantidade
     insuficientes = set()
-    for uh in qs.select_related("config").prefetch_related("posicoes_cama"):
+    for uh in qs.select_related("config", "tipo").prefetch_related("posicoes_cama"):
         if not colchoes.configurado(uh):
             continue
         arr = colchoes.sugerir_arranjo(uh, adultos, criancas or 0)

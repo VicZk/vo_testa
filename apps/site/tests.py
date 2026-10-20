@@ -641,3 +641,69 @@ class ConfirmacaoDepoisDoCommitTests(TestCase):
         mail.outbox.clear()
         call_command("reenviar_confirmacoes_site", stdout=StringIO())
         self.assertEqual(len(mail.outbox), 0)
+
+
+class BuscaSemConsultaPorQuartoTests(TestCase):
+    """A busca do site não faz consultas por quarto × noite (antes: 334 para 3 noites)."""
+
+    def setUp(self):
+        from apps.nucleo.models import Temporada as TemporadaCRM
+        from apps.nucleo.models import TipoUH
+
+        self.tipo = TipoUH.objects.create(nome='Suíte', tarifa_base=Decimal('300.00'),
+                                          capacidade=4)
+        self.ci = date.today() + timedelta(days=30)
+        TemporadaCRM.objects.create(nome='Alta de verão', classificacao='alta',
+                                    inicio=self.ci, fim=self.ci + timedelta(days=10))
+        self._quartos(2)
+
+    def _quartos(self, n):
+        from apps.nucleo.models import UH
+        from apps.reservas.models import TarifaUnidade
+        from apps.site.models import VitrineQuarto
+
+        inicio = UH.objects.count()
+        for i in range(inicio, inicio + n):
+            uh = UH.objects.create(numero=f'Q{i:02d}', tipo=self.tipo)
+            VitrineQuarto.objects.create(uh=uh, publicar=True)
+            TarifaUnidade.objects.create(uh=uh, classificacao='alta', valor=Decimal('450.00'))
+
+    def _consultas(self, noites):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        from apps.site.views import _buscar_unidades
+
+        co = self.ci + timedelta(days=noites)
+        _buscar_unidades(self.ci, co, 2)  # aquece o que só roda uma vez (config, pool)
+        with CaptureQueriesContext(connection) as ctx:
+            resultados = _buscar_unidades(self.ci, co, 2)
+        return len(ctx.captured_queries), resultados
+
+    def test_consultas_nao_crescem_com_o_numero_de_quartos(self):
+        com_2, _ = self._consultas(3)
+        self._quartos(6)
+        com_8, resultados = self._consultas(3)
+        self.assertEqual(len(resultados), 8)
+        self.assertEqual(com_2, com_8)
+
+    def test_cada_noite_a_mais_custa_no_maximo_uma_consulta(self):
+        from apps.reservas import services as reservas
+
+        tres, _ = self._consultas(3)
+        sete, resultados = self._consultas(7)
+        self.assertLessEqual(sete - tres, 4)
+        # O preço é o mesmo do cálculo sem memória (o período pode pegar feriado).
+        uh = resultados[0]['quarto']
+        from apps.nucleo.models import UH
+        esperado = reservas.diaria_media_unidade(
+            UH.objects.get(pk=uh.uh_id), self.ci, self.ci + timedelta(days=7))
+        self.assertEqual(resultados[0]['preco_noite'], esperado)
+
+    def test_selo_da_temporada_vem_do_crm(self):
+        from apps.site.views import _temporada_de
+
+        selo = _temporada_de(self.ci)
+        self.assertEqual(selo.get_tipo_display, 'Alta Temporada')
+        self.assertEqual(selo.nome, 'Alta de verão')
+        self.assertIsNone(_temporada_de(self.ci + timedelta(days=60)))
