@@ -519,6 +519,21 @@ class MinhaReservaTests(TestCase):
         self.assertEqual(r.status_code, 200)  # sem redirect
         self.assertContains(r, 'Não encontramos')
 
+    def test_pedaco_do_nome_nao_acessa(self):
+        # Antes uma letra que aparecesse no nome bastava como "sobrenome".
+        for tentativa in ('e', 'Tes', 'Fulano'):
+            r = self.client.post(reverse('core:minha_reserva'), {
+                'sobrenome': tentativa, 'codigo': self.reserva.codigo,
+            })
+            self.assertEqual(r.status_code, 200, tentativa)
+
+    def test_sobrenome_sem_acento_e_composto(self):
+        from .views import _sobrenome_confere
+        self.assertTrue(_sobrenome_confere('conceicao', 'Maria da Conceição Souza'))
+        self.assertTrue(_sobrenome_confere('Souza', 'Maria da Conceição Souza'))
+        self.assertTrue(_sobrenome_confere('da Conceição Souza', 'Maria da Conceição Souza'))
+        self.assertFalse(_sobrenome_confere('Maria', 'Maria da Conceição Souza'))
+
     def test_codigo_inexistente_nao_vaza(self):
         r = self.client.post(reverse('core:minha_reserva'), {
             'sobrenome': 'Teste', 'codigo': 'VT-000000-0000',

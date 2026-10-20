@@ -1076,6 +1076,25 @@ def reserva_confirmada(request, token):
     })
 
 
+def _palavras(texto):
+    """Palavras do nome sem acento e em minúsculas ("Ângela da Silva" → angela, da, silva)."""
+    import unicodedata
+    sem_acento = unicodedata.normalize('NFKD', texto or '').encode('ascii', 'ignore').decode()
+    return [p for p in sem_acento.lower().replace('-', ' ').split() if p]
+
+
+def _sobrenome_confere(digitado, nome) -> bool:
+    """O sobrenome digitado bate com um sobrenome inteiro do hóspede (qualquer um depois
+    do primeiro nome; sem diferença de acento ou maiúscula). Pedaço de palavra não vale:
+    o sobrenome é o 2º fator do acesso, junto com o código."""
+    partes = _palavras(nome)
+    alvo = ' '.join(_palavras(digitado))
+    if len(partes) < 2 or len(alvo) < 2:
+        return False
+    sobrenomes = partes[1:]
+    return alvo in sobrenomes or alvo == ' '.join(sobrenomes)
+
+
 def minha_reserva(request):
     """Acesso do hóspede à própria reserva — sem senha, por sobrenome + código.
 
@@ -1100,7 +1119,7 @@ def minha_reserva(request):
                 Reserva.objects.select_related('hospede')
                 .filter(codigo__iexact=codigo).first()
             )
-            if reserva and sobrenome.lower() in (reserva.hospede.nome or '').lower():
+            if reserva and _sobrenome_confere(sobrenome, reserva.hospede.nome):
                 return redirect('core:minha_reserva_detalhe', token=reserva.token)
         erro = ('Não encontramos uma reserva com esse sobrenome e código. '
                 'Confira e tente novamente.')
