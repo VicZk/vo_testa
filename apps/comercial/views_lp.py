@@ -90,11 +90,11 @@ def home_root(request):
     return site_views.home(request)
 
 
-@csrf_exempt
-@never_cache
-@require_POST
-def lp_fundador_lead(request):
-    """Recebe o lead da LP (JSON) e joga no funil. Best-effort: nunca quebra a página."""
+def _receber_lead_lp(request, *, slug, origem_padrao, mensagem):
+    """Lead de uma LP (JSON) → funil. Igual para todas as LPs: anti-robô silencioso,
+    limite por IP, validação do WhatsApp, captura com o consentimento que a pessoa
+    marcou (sem o campo, não é consentimento) e o evento Lead na Conversions API
+    (dedupe com o Pixel pelo event_id). Best-effort: nunca quebra a página."""
     try:
         dados = json.loads(request.body or b"{}")
     except (ValueError, TypeError):
@@ -128,6 +128,7 @@ def lp_fundador_lead(request):
         return JsonResponse({"ok": False, "erro": "dados incompletos"}, status=400)
     if whats:
         from django.core.exceptions import ValidationError
+
         from apps.nucleo.validadores import validar_telefone_br
         try:
             whats = validar_telefone_br(whats)  # celular 11 dígitos; normaliza
@@ -135,30 +136,41 @@ def lp_fundador_lead(request):
             return JsonResponse({"ok": False, "erro": e.messages[0]}, status=400)
 
     from .models import PaginaCaptacao
-    pagina = PaginaCaptacao.objects.filter(slug="fundador").first()
+    pagina = PaginaCaptacao.objects.filter(slug=slug).first()
     origem = dict(dados.get("rastreio") or {})
-    origem.setdefault("origem_form", dados.get("origem") or "lp-fundador")
+    origem.setdefault("origem_form", dados.get("origem") or origem_padrao)
+    user_agent = request.META.get("HTTP_USER_AGENT", "")
     try:
         services.capturar_lead_site(
             nome=nome, email=email, telefone=whats,
             tipo_interesse=(pagina.tipo_interesse if pagina else "hospedagem"),
-            pagina=pagina, mensagem="Lista de espera — LP Fundador",
-            origem=origem, aceita_email=dados.get("consent") is True)
+            pagina=pagina, mensagem=mensagem,
+            origem=origem, aceita_email=dados.get("consent") is True,
+            ip=ip, user_agent=user_agent)
     except Exception:  # noqa: BLE001 — captação pública nunca estoura
         pass
 
     # Conversions API (Meta) pelo servidor — dedupe com o Pixel via event_id.
     try:
-        ip = _ip(request)
         services.enviar_capi_lead(
             email=email, telefone=whats,
             event_id=(dados.get("event_id") or ""),
             fbp=(dados.get("fbp") or ""), fbc=(dados.get("fbc") or ""),
             event_source_url=request.META.get("HTTP_REFERER", ""),
-            client_ip=ip, user_agent=request.META.get("HTTP_USER_AGENT", ""))
+            client_ip=ip, user_agent=user_agent)
     except Exception:  # noqa: BLE001
         pass
     return JsonResponse({"ok": True})
+
+
+@csrf_exempt
+@never_cache
+@require_POST
+def lp_fundador_lead(request):
+    """Lead da LP Fundador (JSON) → funil."""
+    return _receber_lead_lp(
+        request, slug="fundador", origem_padrao="lp-fundador",
+        mensagem="Lista de espera — LP Fundador")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -231,67 +243,9 @@ def servir_lp_fundador_2(request):
 @require_POST
 def lp_fundador_2_lead(request):
     """Lead da LP Fundador II (JSON) → funil, etiquetado na campanha fundador-2."""
-    try:
-        dados = json.loads(request.body or b"{}")
-    except (ValueError, TypeError):
-        return JsonResponse({"ok": False, "erro": "json inválido"}, status=400)
-
-    # Anti-bot silencioso: honeypot preenchido ou envio instantâneo → finge sucesso.
-    if (dados.get("empresa") or "").strip():
-        return JsonResponse({"ok": True})
-    try:
-        ms = float(dados.get("ms") or 0)
-    except (TypeError, ValueError):
-        ms = 0
-    if 0 < ms < _MIN_MS:
-        return JsonResponse({"ok": True})
-
-    ip = _ip(request)
-    try:
-        chave = f"lp_lead_rate:{ip}"
-        cache.add(chave, 0, _RATE_JANELA)
-        if cache.incr(chave) > _RATE_MAX:
-            return JsonResponse({"ok": True})  # silencioso
-    except Exception:  # noqa: BLE001 — sem cache, segue sem rate limit
-        pass
-
-    nome = (dados.get("nome") or "").strip()
-    email = (dados.get("email") or "").strip()
-    whats = (dados.get("whatsapp") or dados.get("whats") or "").strip()
-    if not nome or not (email or whats):
-        return JsonResponse({"ok": False, "erro": "dados incompletos"}, status=400)
-    if whats:
-        from django.core.exceptions import ValidationError
-        from apps.nucleo.validadores import validar_telefone_br
-        try:
-            whats = validar_telefone_br(whats)  # celular 11 dígitos; normaliza
-        except ValidationError as e:
-            return JsonResponse({"ok": False, "erro": e.messages[0]}, status=400)
-
-    from .models import PaginaCaptacao
-    pagina = PaginaCaptacao.objects.filter(slug=_LP2_SLUG).first()
-    origem = dict(dados.get("rastreio") or {})
-    origem.setdefault("origem_form", dados.get("origem") or "lp-fundador-2")
-    try:
-        services.capturar_lead_site(
-            nome=nome, email=email, telefone=whats,
-            tipo_interesse=(pagina.tipo_interesse if pagina else "hospedagem"),
-            pagina=pagina, mensagem="Lista de espera — LP Fundador II",
-            origem=origem, aceita_email=dados.get("consent") is True,
-            ip=ip, user_agent=request.META.get("HTTP_USER_AGENT", ""))
-    except Exception:  # noqa: BLE001 — captação pública nunca estoura
-        pass
-
-    try:
-        services.enviar_capi_lead(
-            email=email, telefone=whats,
-            event_id=(dados.get("event_id") or ""),
-            fbp=(dados.get("fbp") or ""), fbc=(dados.get("fbc") or ""),
-            event_source_url=request.META.get("HTTP_REFERER", ""),
-            client_ip=ip, user_agent=request.META.get("HTTP_USER_AGENT", ""))
-    except Exception:  # noqa: BLE001
-        pass
-    return JsonResponse({"ok": True})
+    return _receber_lead_lp(
+        request, slug=_LP2_SLUG, origem_padrao="lp-fundador-2",
+        mensagem="Lista de espera — LP Fundador II")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -334,64 +288,6 @@ def servir_lp_inauguracao(request):
 @require_POST
 def lp_inauguracao_lead(request):
     """Lead (RSVP) da LP Inauguração (JSON) → funil, etiquetado 'inauguracao_31_10_2026'."""
-    try:
-        dados = json.loads(request.body or b"{}")
-    except (ValueError, TypeError):
-        return JsonResponse({"ok": False, "erro": "json inválido"}, status=400)
-
-    # Anti-bot silencioso: honeypot preenchido ou envio instantâneo → finge sucesso.
-    if (dados.get("empresa") or "").strip():
-        return JsonResponse({"ok": True})
-    try:
-        ms = float(dados.get("ms") or 0)
-    except (TypeError, ValueError):
-        ms = 0
-    if 0 < ms < _MIN_MS:
-        return JsonResponse({"ok": True})
-
-    ip = _ip(request)
-    try:
-        chave = f"lp_lead_rate:{ip}"
-        cache.add(chave, 0, _RATE_JANELA)
-        if cache.incr(chave) > _RATE_MAX:
-            return JsonResponse({"ok": True})  # silencioso
-    except Exception:  # noqa: BLE001 — sem cache, segue sem rate limit
-        pass
-
-    nome = (dados.get("nome") or "").strip()
-    email = (dados.get("email") or "").strip()
-    whats = (dados.get("whatsapp") or dados.get("whats") or "").strip()
-    if not nome or not (email or whats):
-        return JsonResponse({"ok": False, "erro": "dados incompletos"}, status=400)
-    if whats:
-        from django.core.exceptions import ValidationError
-        from apps.nucleo.validadores import validar_telefone_br
-        try:
-            whats = validar_telefone_br(whats)  # celular 11 dígitos; normaliza
-        except ValidationError as e:
-            return JsonResponse({"ok": False, "erro": e.messages[0]}, status=400)
-
-    from .models import PaginaCaptacao
-    pagina = PaginaCaptacao.objects.filter(slug=_LPINAUG_SLUG).first()
-    origem = dict(dados.get("rastreio") or {})
-    origem.setdefault("origem_form", dados.get("origem") or "lp-inauguracao-31-10")
-    try:
-        services.capturar_lead_site(
-            nome=nome, email=email, telefone=whats,
-            tipo_interesse=(pagina.tipo_interesse if pagina else "hospedagem"),
-            pagina=pagina, mensagem="Inauguração 31/10 — confirmação de presença",
-            origem=origem, aceita_email=dados.get("consent") is True,
-            ip=ip, user_agent=request.META.get("HTTP_USER_AGENT", ""))
-    except Exception:  # noqa: BLE001 — captação pública nunca estoura
-        pass
-
-    try:
-        services.enviar_capi_lead(
-            email=email, telefone=whats,
-            event_id=(dados.get("event_id") or ""),
-            fbp=(dados.get("fbp") or ""), fbc=(dados.get("fbc") or ""),
-            event_source_url=request.META.get("HTTP_REFERER", ""),
-            client_ip=ip, user_agent=request.META.get("HTTP_USER_AGENT", ""))
-    except Exception:  # noqa: BLE001
-        pass
-    return JsonResponse({"ok": True})
+    return _receber_lead_lp(
+        request, slug=_LPINAUG_SLUG, origem_padrao="lp-inauguracao-31-10",
+        mensagem="Inauguração 31/10 — confirmação de presença")
