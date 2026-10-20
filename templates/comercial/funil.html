@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load moeda %}
 
 {% block titulo %}Funil de vendas — Comercial{% endblock %}
 
@@ -121,8 +122,8 @@
 
   <div class="funil-topo">
     <div class="funil-kpis">
-      <div class="funil-kpi"><span class="valor">R$ {{ valor_total }}</span><span class="rotulo">No funil</span></div>
-      <div class="funil-kpi"><span class="valor">R$ {{ ponderado_total }}</span><span class="rotulo">Previsão ponderada</span></div>
+      <div class="funil-kpi"><span class="valor">{{ valor_total|intcomma_brl }}</span><span class="rotulo">No funil</span></div>
+      <div class="funil-kpi"><span class="valor">{{ ponderado_total|intcomma_brl }}</span><span class="rotulo">Previsão ponderada</span></div>
       <div class="funil-kpi"><span class="valor">{{ qtd_total }}</span><span class="rotulo">Abertas</span></div>
     </div>
     <div class="seg-filtro">
@@ -167,7 +168,7 @@
             <span class="cont">{{ col.itens|length }}</span>
           </div>
           <div class="funil-meter"><span style="width:{{ col.etapa.probabilidade }}%"></span></div>
-          <div class="sub">R$ {{ col.total }} · {{ col.etapa.probabilidade }}%</div>
+          <div class="sub">{{ col.total|intcomma_brl }} · {{ col.etapa.probabilidade }}%</div>
         </div>
         <div class="funil-cards">
           {% for op in col.itens %}
@@ -199,7 +200,7 @@
               {% endif %}
 
               <div class="rodape">
-                <span class="valor">R$ {{ op.valor_estimado }}</span>
+                <span class="valor">{{ op.valor_estimado|intcomma_brl }}</span>
                 <span class="fchip fchip-{{ op.faturamento }}">{{ op.get_faturamento_display }}</span>
               </div>
 

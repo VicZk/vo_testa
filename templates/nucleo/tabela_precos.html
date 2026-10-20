@@ -10,7 +10,7 @@
 </div>
 <p class="subtitulo">Preço por quarto (agrupado por ala) em cada temporada. Cada célula: <strong>base</strong> (2 adultos), <strong>+adulto</strong> (pessoa adicional) e <strong>meia</strong> (criança 6-15). Meia em branco = metade do +adulto; ≤5 não paga. Natal/Ano Novo viram colunas próprias quando você cadastra o feriado.</p>
 
-<form method="post" class="form-cartao" style="overflow-x:auto">
+<form method="post" class="form-cartao precos-form">
   {% csrf_token %}
   <table class="tabela precos-tabela">
     <thead>
@@ -77,9 +77,13 @@
 </form>
 
 <style>
+  /* A grade é larga (3 campos × temporadas): o cartão de formulário padrão limita a
+     620px e espremia cada campo a ~2 dígitos visíveis. Aqui ele ocupa a largura e
+     rola na horizontal só se faltar espaço. */
+  .form-cartao.precos-form { max-width: none; overflow-x: auto; }
   .precos-tabela td, .precos-tabela th { white-space: nowrap; }
   .precos-cel { display: flex; gap: .35rem; justify-content: flex-end; }
-  .precos-cel input { width: 4.5rem; text-align: right; }
+  .form-cartao .precos-cel input { width: 5.75rem; padding: .45rem .55rem; text-align: right; }
   .precos-param { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem; margin: .5rem 0 1.5rem; }
   .precos-param label { display: flex; flex-direction: column; gap: .3rem; font-weight: 600; }
   .precos-param input { max-width: 8rem; }

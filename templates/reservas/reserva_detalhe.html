@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load nucleo_extras %}
+{% load moeda nucleo_extras %}
 
 {% block titulo %}Reserva #{{ reserva.pk }} — CRM Vô Testa{% endblock %}
 {% block conteudo_classe %}tela-reservas{% endblock %}
@@ -17,7 +17,7 @@
   {{ reserva.uh }} · {{ reserva.checkin|date:"d/m/Y" }} → {{ reserva.checkout|date:"d/m/Y" }}
   ({{ reserva.noites }} noite{{ reserva.noites|pluralize }}) ·
   {{ reserva.adultos }} adulto{{ reserva.adultos|pluralize }}{% if reserva.criancas %} + {{ reserva.criancas }} criança{{ reserva.criancas|pluralize }}{% endif %} ·
-  diária R$ {{ reserva.valor_diaria }} · {{ reserva.get_canal_display }}
+  diária {{ reserva.valor_diaria|intcomma_brl }} · {{ reserva.get_canal_display }}
 </p>
 <p class="subtitulo">
   Faturamento: <strong>{{ reserva.get_faturamento_display }}</strong>
@@ -87,7 +87,7 @@
           <thead><tr><th>Data</th><th>Valor</th></tr></thead>
           <tbody>
             {% for a in reserva.adiantamentos.all %}
-              <tr><td>{{ a.criado_em|date:"d/m/Y H:i" }}</td><td>R$ {{ a.valor }}</td></tr>
+              <tr><td>{{ a.criado_em|date:"d/m/Y H:i" }}</td><td>{{ a.valor|intcomma_brl }}</td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -115,12 +115,12 @@
             não se aplica) — devolver 100%.
           {% else %}
             <strong>Fora do prazo.</strong> Reter {{ politica_cancel.retencao_pct|floatformat:"-1" }}%
-            (R$ {{ politica_cancel.retencao_valor }}).
+            ({{ politica_cancel.retencao_valor|intcomma_brl }}).
           {% endif %}
           <div class="politica-valores">
-            <span>Pago: <strong>R$ {{ politica_cancel.pago }}</strong></span>
-            <span>Retém: <strong>R$ {{ politica_cancel.cobranca }}</strong></span>
-            <span>Devolver: <strong>R$ {{ politica_cancel.devolver }}</strong></span>
+            <span>Pago: <strong>{{ politica_cancel.pago|intcomma_brl }}</strong></span>
+            <span>Retém: <strong>{{ politica_cancel.cobranca|intcomma_brl }}</strong></span>
+            <span>Devolver: <strong>{{ politica_cancel.devolver|intcomma_brl }}</strong></span>
           </div>
           <small class="ajuda">A devolução é processada pelo caixa (estorno). Prefira transferir a data.</small>
         </div>
@@ -222,22 +222,22 @@
     {% for natureza, total in conta.total_por_natureza.items %}
       <div class="cartao">
         <span class="indicador-rotulo letreiro">{{ natureza }}</span>
-        <span class="indicador-valor">R$ {{ total }}</span>
+        <span class="indicador-valor">{{ total|intcomma_brl }}</span>
       </div>
     {% endfor %}
     <div class="cartao">
       <span class="indicador-rotulo letreiro">Pago + adiantado</span>
-      <span class="indicador-valor">R$ {{ conta.total_pago|add:conta.total_adiantamentos }}</span>
+      <span class="indicador-valor">{{ conta.total_pago|add:conta.total_adiantamentos|intcomma_brl }}</span>
     </div>
     <div class="cartao">
       <span class="indicador-rotulo letreiro">Saldo a receber</span>
-      <span class="indicador-valor {% if conta.saldo != 0 %}texto-alerta{% endif %}">R$ {{ conta.saldo }}</span>
+      <span class="indicador-valor {% if conta.saldo != 0 %}texto-alerta{% endif %}">{{ conta.saldo|intcomma_brl }}</span>
     </div>
   </div>
 
   <table class="tabela">
     <thead>
-      <tr><th>Data</th><th>Tipo</th><th>Natureza</th><th>Descrição</th><th>Valor</th></tr>
+      <tr><th>Data</th><th>Tipo</th><th>Natureza</th><th>Descrição</th><th class="num">Valor</th></tr>
     </thead>
     <tbody>
       {% for l in conta.lancamentos.all %}
@@ -246,7 +246,7 @@
           <td>{{ l.get_tipo_display }}</td>
           <td>{{ l.get_natureza_display }}</td>
           <td>{{ l.descricao }}</td>
-          <td>{% if l.tipo == "desconto" %}−{% endif %}R$ {{ l.valor }}</td>
+          <td class="num">{% if l.tipo == "desconto" %}−{% endif %}{{ l.valor|intcomma_brl }}</td>
         </tr>
       {% endfor %}
       {% for p in conta.pagamentos.all %}
@@ -255,7 +255,7 @@
           <td>Pagamento</td>
           <td>—</td>
           <td>{{ p.movimento_caixa.forma_pagamento }}{% if p.movimento_caixa.autorizacao %} · NSU {{ p.movimento_caixa.autorizacao }}{% endif %}{% if p.observacao %} · <em>{{ p.observacao }}</em>{% endif %}</td>
-          <td>−R$ {{ p.valor }}</td>
+          <td class="num">−{{ p.valor|intcomma_brl }}</td>
         </tr>
       {% endfor %}
       {% for a in reserva.adiantamentos.all %}
@@ -264,7 +264,7 @@
           <td>Adiantamento</td>
           <td>—</td>
           <td>Crédito de sinal</td>
-          <td>−R$ {{ a.valor }}</td>
+          <td class="num">−{{ a.valor|intcomma_brl }}</td>
         </tr>
       {% endfor %}
     </tbody>
