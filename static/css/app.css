@@ -808,16 +808,28 @@ a.cartao-link:hover, .cartao-link:hover {
 .pagina-cabecalho h1, .pagina-cabecalho h2 { margin-right: auto; }
 
 .form-cartao {
-  max-width: 620px;
+  /* 620px era estreito demais para um formulário de duas colunas: a largura
+     agora acompanha o conteúdo até 820px, e o cartão nunca passa da medida
+     confortável de leitura. */
+  max-width: 820px;
   padding: 1.4rem 1.5rem;
   margin: 1.2rem 0 1.8rem;
   background: var(--superficie);
   border: 1px solid var(--fio);
-  border-radius: var(--raio);
-  box-shadow: var(--sombra-1);
+  border-radius: var(--raio-g);
+  box-shadow: var(--sombra-cartao);
 }
+/* Formulário de coluna única continua na medida antiga. */
+.form-cartao:not(:has(.form-grade)) { max-width: 620px; }
 
 .campo { margin-bottom: .9rem; }
+/* Caixa de marcar: o rótulo vai AO LADO, e a linha não precisa da altura de um
+   campo de texto (numa grade de campos de 42 px, um checkbox sob o rótulo
+   deixava a linha torta e a caixinha solta no meio do nada). */
+.campo-marcador { display: flex; align-items: center; min-height: 42px; }
+.campo-marcador label { margin: 0; }
+/* A alça de redimensionar livre deixava o textarea sair do cartão. */
+textarea { resize: vertical; }
 
 .campo label {
   display: block;
@@ -1627,8 +1639,9 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 .politica-valores .num, .politica-valores span { font-variant-numeric: tabular-nums; }
 .taxas-toggle { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem 1rem; }
 .taxas-toggle .letreiro { flex-basis: 100%; }
-.check-inline { display: inline-flex; align-items: center; gap: .35rem; cursor: pointer; }
-.check-inline input { width: auto; margin: 0; }
+.check-inline { display: inline-flex; align-items: center; gap: .45rem; cursor: pointer; font-size: .88rem; }
+.check-inline input { width: auto; margin: 0; flex: none; }
+.form-cartao .check-inline input[type="checkbox"] { width: 17px; height: 17px; }
 
 /* ---------- Seletor de quartos do bloco (reserva de grupo) ---------- */
 
@@ -3724,3 +3737,18 @@ body.escala-dragging .escala-drop { cursor: copy; }
      sem mudar o desenho — o texto fica onde está. */
   .tabela td > a:not([class]) { display: inline-block; padding-block: .62rem; margin-block: -.62rem; }
 }
+
+/* Título de grupo dentro de um formulário longo. Dez campos seguidos sem
+   divisão viram uma lista para rolar; nomeados em blocos, viram três
+   perguntas curtas. */
+.grupo-campos {
+  margin: 1.4rem 0 .6rem;
+  padding-bottom: .4rem;
+  color: var(--tinta-suave);
+  border-bottom: 1px solid var(--fio);
+}
+.form-cartao > .grupo-campos:first-of-type { margin-top: .2rem; }
+/* Endereço: cidade larga, UF estreita, CEP médio — a largura do campo diz o
+   tamanho do dado que cabe nele. */
+.form-grade-endereco { grid-template-columns: 2fr .7fr 1fr; }
+@media (max-width: 680px) { .form-grade, .form-grade-endereco { grid-template-columns: 1fr; } }

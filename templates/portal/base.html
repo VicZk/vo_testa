@@ -12,6 +12,9 @@
   {# Fontes da marca (antes esta tela caía em Georgia/system) #}
   {% include "componentes/fontes.html" %}
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  {# Validação em pt-BR: o hóspede preenche a FNRH aqui, e o balão do navegador
+     sai no idioma do aparelho dele, não no da pousada. #}
+  <script src="{% static 'js/form-pt.js' %}" defer></script>
   <style>
     body { background: var(--canvas); margin: 0; padding: 0 0 3rem; }
     .pt-topo { background: var(--noturno); padding: 1.1rem 1rem; text-align: center; }

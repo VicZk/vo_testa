@@ -1,3 +1,4 @@
+{% load nucleo_extras %}
 {% comment %}Fichas FNRH de uma reserva, editadas juntas (formset). Reusado pela
 recepção e pelo portal do hóspede — um único aparelho preenche todas.{% endcomment %}
 {{ formset.management_form }}
@@ -26,7 +27,7 @@ recepção e pelo portal do hóspede — um único aparelho preenche todas.{% en
         <div class="form-grade">
           {% for field in campos %}
             <div class="campo{% if field.errors %} campo-erro{% endif %}{% if field.name == 'endereco' or field.name == 'procedencia' or field.name == 'proximo_destino' %} col-2{% endif %}">
-              {{ field.label_tag }}
+              {{ field|rotulo }}
               {{ field }}
               {% if field.errors %}<small class="erro">{{ field.errors|join:" " }}</small>{% endif %}
             </div>

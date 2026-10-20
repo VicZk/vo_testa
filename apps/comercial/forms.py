@@ -282,3 +282,10 @@ class MetaForm(forms.Form):
     oportunidades_meta = forms.IntegerField(
         label="Meta de ganhos (qtd)", min_value=0, required=False, initial=0,
     )
+
+
+# Opção vazia dos selects com texto de gente ("Selecione…"), não com o traço
+# default do Django. Ver `apps/nucleo/forms.py`.
+from apps.nucleo.forms import rotular_selects_vazios  # noqa: E402
+
+rotular_selects_vazios(globals())

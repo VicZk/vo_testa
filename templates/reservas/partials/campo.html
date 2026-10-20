@@ -1,7 +1,12 @@
+{% load nucleo_extras %}
 {# Um campo do grid do modal. `classe` opcional: "col-2" ocupa a linha toda. #}
-<div class="campo {{ classe }} {% if campo.errors %}campo-erro{% endif %}">
-  {{ campo.label_tag }}
-  {{ campo }}
+<div class="campo {{ classe }} {% if campo|eh_checkbox %}campo-marcador{% endif %} {% if campo.errors %}campo-erro{% endif %}">
+  {% if campo|eh_checkbox %}
+    <label class="check-inline">{{ campo }} <span>{{ campo.label }}</span></label>
+  {% else %}
+    {{ campo|rotulo }}
+    {{ campo }}
+  {% endif %}
   {% if campo.help_text %}<small class="ajuda">{{ campo.help_text }}</small>{% endif %}
   {% for erro in campo.errors %}<small class="erro">{{ erro }}</small>{% endfor %}
 </div>

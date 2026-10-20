@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load nucleo_extras %}
 
 {% block titulo %}Painel comercial — CRM Vô Testa{% endblock %}
 
@@ -73,8 +74,8 @@
     <h2>Meta do mês</h2>
     <form method="post" action="{% url 'comercial:meta' %}" class="form-cartao" style="max-width:none">
       {% csrf_token %}
-      <div class="campo">{{ meta_form.valor_meta.label_tag }}{{ meta_form.valor_meta }}</div>
-      <div class="campo">{{ meta_form.oportunidades_meta.label_tag }}{{ meta_form.oportunidades_meta }}</div>
+      <div class="campo">{{ meta_form.valor_meta|rotulo }}{{ meta_form.valor_meta }}</div>
+      <div class="campo">{{ meta_form.oportunidades_meta|rotulo }}{{ meta_form.oportunidades_meta }}</div>
       <p class="subtitulo" style="font-size:.8rem">Ganhos no mês: {{ gestao.ganhos_qtd }}{% if gestao.meta_qtd %} / meta {{ gestao.meta_qtd }}{% endif %}</p>
       <button type="submit" class="botao-primario botao-largo">Salvar meta</button>
     </form>

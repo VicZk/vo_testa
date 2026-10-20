@@ -1,11 +1,20 @@
-{# Renderiza os campos de um form com a marcação padrão do CRM. #}
+{% load nucleo_extras %}
+{# Renderiza os campos de um form com a marcação padrão do CRM.
+   Dois cuidados que o Django não tem por padrão:
+   · o rótulo sai sem o ":" (|rotulo), para casar com os escritos à mão;
+   · caixa de marcar fica com o rótulo AO LADO (.check-inline), e não em cima,
+     senão a linha da grade fica torta e a caixinha solta. #}
 {% if form.non_field_errors %}
   <div class="mensagem error">{{ form.non_field_errors|join:" " }}</div>
 {% endif %}
 {% for campo in form %}
-  <div class="campo {% if campo.errors %}campo-erro{% endif %}">
-    {{ campo.label_tag }}
-    {{ campo }}
+  <div class="campo {% if campo|eh_checkbox %}campo-marcador{% endif %} {% if campo.errors %}campo-erro{% endif %}">
+    {% if campo|eh_checkbox %}
+      <label class="check-inline">{{ campo }} <span>{{ campo.label }}</span></label>
+    {% else %}
+      {{ campo|rotulo }}
+      {{ campo }}
+    {% endif %}
     {% if campo.help_text %}<small class="ajuda">{{ campo.help_text }}</small>{% endif %}
     {% for erro in campo.errors %}<small class="erro">{{ erro }}</small>{% endfor %}
   </div>

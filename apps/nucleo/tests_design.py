@@ -333,3 +333,52 @@ class MovimentoTests(TestCase):
         for token in ("--mov-toque", "--mov-rapido", "--mov-padrao", "--mov-lento"):
             self.assertIn(f"{token}: 1ms", bloco.group(1), token)
         self.assertIn("--desloca: 0px", bloco.group(1))
+
+
+class FormularioEmPortuguesTests(TestCase):
+    """Padrões do Django vazando na interface.
+
+    `Nome:` com dois-pontos ao lado de rótulos escritos à mão sem eles,
+    `---------` como opção vazia, e o balão de validação do Chrome em inglês
+    — na tela de cadastro mais usada do produto.
+    """
+
+    def setUp(self):
+        self.raiz = Path(settings.BASE_DIR) / "templates"
+
+    def test_nenhum_template_usa_label_tag_cru(self):
+        """`label_tag` acrescenta o ":"; o filtro `|rotulo` não."""
+        usos = []
+        for p in self.raiz.rglob("*.html"):
+            texto = p.read_text(encoding="utf-8")
+            if re.search(r"\{\{\s*[\w.]+\.label_tag\s*\}\}", texto):
+                usos.append(str(p.relative_to(settings.BASE_DIR)))
+        self.assertEqual(usos, [])
+
+    def test_opcao_vazia_tem_texto_de_gente(self):
+        from apps.nucleo.forms import SELECIONE, MovimentoCaixaForm
+        from apps.reservas.forms import ReservaForm
+
+        for form in (MovimentoCaixaForm(), ReservaForm()):
+            for nome, campo in form.fields.items():
+                vazio = getattr(campo, "empty_label", None)
+                if vazio is not None:
+                    self.assertEqual(vazio, SELECIONE, f"{form.__class__.__name__}.{nome}")
+                for valor, texto in getattr(campo, "choices", []) or []:
+                    if valor in ("", None):
+                        self.assertNotIn("---", str(texto), f"{form.__class__.__name__}.{nome}")
+
+    def test_validacao_em_portugues_esta_carregada(self):
+        js = Path(settings.BASE_DIR) / "static" / "js" / "form-pt.js"
+        self.assertTrue(js.exists())
+        conteudo = js.read_text(encoding="utf-8")
+        self.assertIn("novalidate", conteudo)
+        self.assertIn("Preencha o campo", conteudo)
+        base = (self.raiz / "base.html").read_text(encoding="utf-8")
+        self.assertIn("js/form-pt.js", base)
+        portal = (self.raiz / "portal" / "base.html").read_text(encoding="utf-8")
+        self.assertIn("js/form-pt.js", portal)
+
+    def test_textarea_nao_redimensiona_para_os_lados(self):
+        css = CSS.read_text(encoding="utf-8")
+        self.assertIn("textarea { resize: vertical; }", css)
