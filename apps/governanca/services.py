@@ -42,6 +42,30 @@ def abrir_faxina(uh, tipo=TarefaGovernanca.Tipo.FAXINA, usuario=None, origem="ma
     return TarefaGovernanca.objects.create(uh=uh, tipo=tipo, origem=origem)
 
 
+def gerar_arrumacoes_do_dia(usuario=None) -> int:
+    """Uma arrumação para cada quarto ocupado em que o hóspede continua (rotina da
+    manhã). Não duplica: quarto com arrumação pendente ou em andamento fica como está.
+    Sem o módulo Reservas não há como saber quem está em casa — nada a fazer."""
+    from apps.nucleo.models import modulo_ativo
+    from apps.nucleo.modulos import Modulo
+
+    if not modulo_ativo(Modulo.RESERVAS):
+        return 0
+    from apps.reservas.services import uhs_em_permanencia
+
+    criadas = 0
+    for uh in uhs_em_permanencia():
+        ja_tem = TarefaGovernanca.objects.filter(
+            uh=uh, tipo=TarefaGovernanca.Tipo.ARRUMACAO,
+            status__in=[TarefaGovernanca.Status.PENDENTE, TarefaGovernanca.Status.EM_ANDAMENTO],
+        ).exists()
+        if not ja_tem:
+            abrir_faxina(uh, tipo=TarefaGovernanca.Tipo.ARRUMACAO, usuario=usuario,
+                         origem="arrumacao_diaria")
+            criadas += 1
+    return criadas
+
+
 def iniciar_tarefa(tarefa, usuario=None):
     if tarefa.status != TarefaGovernanca.Status.PENDENTE:
         return tarefa  # já iniciada/concluída — idempotente

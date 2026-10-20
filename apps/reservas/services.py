@@ -869,6 +869,16 @@ def uh_ocupada(uh: UH) -> bool:
     return Reserva.objects.filter(uh=uh, status=Reserva.Status.HOSPEDADA).exists()
 
 
+def uhs_em_permanencia(dia=None):
+    """Quartos com hóspede que FICA além de `dia` (hoje): os que pedem arrumação diária.
+    Quem sai no dia fica de fora — a faxina dele nasce no check-out. Interface pública
+    (Governança)."""
+    dia = dia or timezone.localdate()
+    ids = (Reserva.objects.filter(status=Reserva.Status.HOSPEDADA, checkout__gt=dia)
+           .values_list("uh_id", flat=True))
+    return UH.objects.filter(pk__in=ids)
+
+
 def pendentes_de_sinal():
     """Reservas que ainda podem receber sinal (orçamento/pré-reserva) — para o
     módulo Pagamentos vincular a cobrança. Retorna [{id, rotulo}]."""

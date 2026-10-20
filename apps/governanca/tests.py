@@ -201,3 +201,46 @@ class PainelHtmxTests(GovernancaBase):
         r = self.client.get(reverse("governanca:painel"))
         # O único quarto está "limpa" por padrão; "a limpar" fica sem ninguém.
         self.assertContains(r, "Nenhum quarto")
+
+
+class ArrumacaoDiariaTests(GovernancaBase):
+    """De manhã, uma arrumação para cada quarto em que o hóspede continua."""
+
+    def _hospedar(self, uh, sai_em_dias):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from apps.nucleo.models import Pessoa
+        from apps.reservas.models import Reserva
+        hoje = timezone.localdate()
+        return Reserva.objects.create(
+            uh=uh, hospede=Pessoa.objects.create(nome=f"Hóspede {uh.numero}"),
+            checkin=hoje - timedelta(days=1), checkout=hoje + timedelta(days=sai_em_dias),
+            status=Reserva.Status.HOSPEDADA, valor_diaria=Decimal("200"),
+            criado_por=self.user)
+
+    def test_gera_para_quem_fica_e_nao_para_quem_sai_hoje(self):
+        fica = self.uh
+        sai = UH.objects.create(numero="Quarto 02", tipo=self.tipo)
+        self._hospedar(fica, sai_em_dias=2)
+        self._hospedar(sai, sai_em_dias=0)
+        self.assertEqual(services.gerar_arrumacoes_do_dia(), 1)
+        tarefa = TarefaGovernanca.objects.get()
+        self.assertEqual((tarefa.uh, tarefa.tipo, tarefa.origem),
+                         (fica, TarefaGovernanca.Tipo.ARRUMACAO, "arrumacao_diaria"))
+
+    def test_rodar_de_novo_nao_duplica(self):
+        self._hospedar(self.uh, sai_em_dias=3)
+        services.gerar_arrumacoes_do_dia()
+        self.assertEqual(services.gerar_arrumacoes_do_dia(), 0)
+        self.assertEqual(TarefaGovernanca.objects.count(), 1)
+
+    def test_comando_da_rotina(self):
+        from io import StringIO
+
+        from django.core.management import call_command
+        self._hospedar(self.uh, sai_em_dias=2)
+        saida = StringIO()
+        call_command("gerar_arrumacoes", stdout=saida)
+        self.assertIn("1 arrumação", saida.getvalue())

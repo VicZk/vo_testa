@@ -39,6 +39,7 @@ GRUPOS = {
         "sincronizar_gastos_midia",
         "backup_banco",
         "purgar_trilha",
+        "gerar_arrumacoes",
     ],
 }
 
