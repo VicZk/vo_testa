@@ -13,7 +13,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.text import slugify
 from django.views.decorators.cache import never_cache
-from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.csrf import csrf_exempt, csrf_protect
 
 from apps.nucleo.models import Pessoa, Prospecto, modulo_ativo
 from apps.nucleo.modulos import Modulo
@@ -829,12 +829,24 @@ def enviar_email_lead(request, pk):
     })
 
 
+# Sem CSRF de propósito: o "descadastrar com um clique" dos provedores (RFC 8058, o
+# cabeçalho List-Unsubscribe-Post dos nossos e-mails) faz um POST sem cookie nem token
+# de formulário. A credencial é o próprio unsub_token da URL (UUID por pessoa).
+@csrf_exempt
 @never_cache
 def descadastrar_email(request, token):
-    """Página pública de descadastro (LGPD) — sem login, achada pelo unsub_token."""
-    pessoa = services.descadastrar_por_token(token)
+    """Descadastro público (LGPD), sem login, achado pelo unsub_token.
+
+    GET só mostra a confirmação: antivírus e pré-visualizações de e-mail abrem links
+    sozinhos, e um GET que descadastrasse tiraria gente da lista sem ela pedir. O
+    descadastro é o POST — do botão da página ou do provedor de e-mail."""
+    if request.method == "POST":
+        pessoa = services.descadastrar_por_token(token)
+        return render(request, "comercial/email/descadastro.html",
+                      {"pessoa": pessoa, "ok": pessoa is not None, "feito": True})
+    pessoa = services.pessoa_do_descadastro(token)
     return render(request, "comercial/email/descadastro.html",
-                  {"pessoa": pessoa, "ok": pessoa is not None})
+                  {"pessoa": pessoa, "ok": pessoa is not None, "feito": False})
 
 
 @requer_modulo(Modulo.COMERCIAL)

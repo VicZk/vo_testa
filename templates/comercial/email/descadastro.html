@@ -15,12 +15,22 @@
     .icone{ width:56px; height:56px; margin:0 auto 1rem; border-radius:50%; display:grid; place-items:center;
       background:#eef5ef; color:#234a3a; font-size:26px; }
     .rodape{ margin-top:1.4rem; font-size:12px; color:#a8a08c; }
+    .botao{ margin-top:1.2rem; padding:.8rem 1.4rem; border:0; border-radius:12px; cursor:pointer;
+      background:#2a251c; color:#fff; font-size:15px; font-weight:600; }
+    .botao:active{ transform:scale(.98); }
+    .botao:focus-visible{ outline:2px solid #b07a2a; outline-offset:2px; }
   </style>
 </head>
 <body>
   <div class="cartao">
     <p class="marca">Pousada Vô Testa</p>
-    {% if ok %}
+    {% if ok and not feito %}
+      <h1>Parar de receber nossos e-mails?</h1>
+      <p>Confirme e não enviaremos mais novidades e ofertas para <b>{{ pessoa.email }}</b>. Avisos da sua reserva continuam chegando.</p>
+      <form method="post">
+        <button type="submit" class="botao">Confirmar descadastro</button>
+      </form>
+    {% elif ok %}
       <div class="icone">✓</div>
       <h1>Pronto, você foi descadastrado</h1>
       <p>{% if pessoa.nome %}{{ pessoa.nome }}, não{% else %}Não{% endif %} enviaremos mais e-mails de novidades e ofertas para <b>{{ pessoa.email }}</b>.</p>

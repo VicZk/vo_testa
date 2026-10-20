@@ -2428,6 +2428,12 @@ def publico_da_campanha(segmento):
     return pessoas.exclude(email__in=ruins).order_by("nome")
 
 
+def pessoa_do_descadastro(token):
+    """A Pessoa dona do link de descadastro (só leitura — não descadastra)."""
+    from apps.nucleo.models import Pessoa
+    return Pessoa.objects.filter(unsub_token=token).first()
+
+
 def descadastrar_por_token(token):
     """Descadastro público (LGPD): desliga aceita_email. Idempotente. Devolve a Pessoa."""
     from apps.nucleo.models import Pessoa

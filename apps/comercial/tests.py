@@ -2133,10 +2133,24 @@ class CampanhaEmailTests(TestCase):
             EnvioEmail.objects.filter(campanha=c, status="enviado").count(), 2)
 
     def test_view_descadastro_publico(self):
-        r = self.client.get(reverse("email_publico:descadastrar",
-                                    args=[self.p1.unsub_token]))
-        self.assertEqual(r.status_code, 200)
+        url = reverse("email_publico:descadastrar", args=[self.p1.unsub_token])
+        # GET só pergunta: antivírus que abre o link não descadastra ninguém.
+        r = self.client.get(url)
+        self.assertContains(r, "Confirmar descadastro")
+        self.p1.refresh_from_db()
+        self.assertTrue(self.p1.aceita_email)
+        r = self.client.post(url)
         self.assertContains(r, "descadastrado")
+        self.p1.refresh_from_db()
+        self.assertFalse(self.p1.aceita_email)
+
+    def test_descadastro_um_clique_do_provedor_sem_csrf(self):
+        from django.test import Client
+
+        provedor = Client(enforce_csrf_checks=True)
+        r = provedor.post(reverse("email_publico:descadastrar", args=[self.p1.unsub_token]),
+                          {"List-Unsubscribe": "One-Click"})
+        self.assertEqual(r.status_code, 200)
         self.p1.refresh_from_db()
         self.assertFalse(self.p1.aceita_email)
 
