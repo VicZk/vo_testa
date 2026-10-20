@@ -261,14 +261,17 @@ def nova(request):
         reserva.criancas = form.cleaned_data.get("criancas", 0)
         # Diária sugerida pela motor de tarifa (Manual §2 — pessoa adicional, single,
         # criança 6-15 meia, não-reembolsável). A gerência pode sobrepor.
-        sugerida = precos.cotacao(
+        cot = precos.cotacao(
             uh=reserva.uh, checkin=reserva.checkin, checkout=reserva.checkout,
             adultos=reserva.adultos, criancas_0_5=reserva.criancas_0_5,
             criancas_6_15=reserva.criancas_6_15,
             nao_reembolsavel=reserva.nao_reembolsavel,
-        )["media_noite"]
-        if not form.cleaned_data.get("valor_diaria"):
+        )
+        sugerida = cot["media_noite"]
+        if not form.cleaned_data.get("valor_diaria") or form.cleaned_data["valor_diaria"] == sugerida:
+            # Diária da tarifa: guarda o total exato, para as noites somarem a cotação.
             reserva.valor_diaria = sugerida
+            reserva.valor_hospedagem = cot["hospedagem"]
         elif reserva.valor_diaria != sugerida and not eh_gerente(request.user):
             form.add_error(
                 "valor_diaria",

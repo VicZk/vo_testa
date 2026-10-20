@@ -274,6 +274,11 @@ class Reserva(models.Model):
         "diária acordada (R$)", max_digits=10, decimal_places=2,
         help_text="Preenchida pela tarifa vigente; alteração manual exige gerência.",
     )
+    valor_hospedagem = models.DecimalField(
+        "hospedagem cotada (R$)", max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text="Soma exata das diárias da cotação. A diária acordada é a média "
+                  "arredondada; as diárias lançadas no check-in somam este valor.",
+    )
     observacoes = models.TextField("observações", blank=True)
     motivo_cancelamento = models.TextField("motivo do cancelamento", blank=True)
     valor_retido = models.DecimalField(
@@ -363,10 +368,31 @@ class Reserva(models.Model):
     def total_hospedes(self) -> int:
         return self.adultos + self.criancas
 
+    def valores_das_diarias(self) -> list[Decimal]:
+        """O valor de cada noite lançado no check-in. A diária acordada é a média
+        arredondada da cotação; quando a reserva guarda o total exato
+        (`valor_hospedagem`), a última noite absorve os centavos do arredondamento e a
+        soma bate com o que foi cotado ao hóspede. Sem total exato (diária definida à
+        mão), ou se ele não combinar mais com a diária, todas as noites valem a diária."""
+        noites = self.noites
+        if noites <= 0:
+            return []
+        diarias = [self.valor_diaria] * noites
+        if self.valor_hospedagem is not None:
+            resto = self.valor_hospedagem - self.valor_diaria * noites
+            # Só arredondamento (até meio centavo por noite) é absorvido.
+            if abs(resto) <= Decimal("0.005") * noites + Decimal("0.005"):
+                diarias[-1] = self.valor_diaria + resto
+        return diarias
+
+    def hospedagem_prevista(self) -> Decimal:
+        """Total das diárias que o check-in vai lançar."""
+        return sum(self.valores_das_diarias(), Decimal("0.00"))
+
     def total_previsto(self) -> Decimal:
         """O que a estadia vai custar no check-in: diárias + ISS + taxa de turismo, pelas
         mesmas regras de `ContaHospedagem.lancar_diarias`/`lancar_taxas`. Sem consumo."""
-        base = self.valor_diaria * self.noites
+        base = self.hospedagem_prevista()
         if not getattr(settings, "PRECO_TAXAS_ATIVAS", True):
             return base
         from apps.reservas.precos import taxas
@@ -885,17 +911,17 @@ class ContaHospedagem(models.Model):
         """
         reserva = reserva or self.reserva
         total = Decimal("0.00")
-        for n in range(reserva.noites):
+        for n, valor in enumerate(reserva.valores_das_diarias()):
             dia = reserva.checkin + timezone.timedelta(days=n)
             LancamentoConta.objects.create(
                 conta=self,
                 tipo=LancamentoConta.Tipo.DIARIA,
                 natureza=NaturezaFiscal.SERVICO,
                 descricao=f"Diária {dia:%d/%m/%Y} — {reserva.uh.numero}",
-                valor=reserva.valor_diaria,
+                valor=valor,
                 criado_por=usuario,
             )
-            total += reserva.valor_diaria
+            total += valor
         return total
 
     def lancar_taxas(self, usuario, reserva=None, base=None):
@@ -912,7 +938,7 @@ class ContaHospedagem(models.Model):
             return
         reserva = reserva or self.reserva
         if base is None:
-            base = reserva.valor_diaria * reserva.noites
+            base = reserva.hospedagem_prevista()
         noites = reserva.noites
         t = taxas(base, cobra_iss=reserva.cobra_iss,
                   cobra_taxa_turismo=reserva.cobra_taxa_turismo, diarias=noites)

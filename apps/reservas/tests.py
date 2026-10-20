@@ -1826,3 +1826,40 @@ class DispensarTaxasExigeGerenciaTests(ReservasTestsBase):
         self._post(self.usuario, cobra_iss=None)
         reserva = Reserva.objects.get()
         self.assertFalse(reserva.cobra_iss)
+
+
+class DiariasSomamACotacaoTests(ReservasTestsBase):
+    """A diária acordada é a média arredondada; as noites lançadas somam o total cotado."""
+
+    def test_ultima_noite_absorve_o_arredondamento(self):
+        r = self.reserva(dias=3)
+        r.valor_diaria, r.valor_hospedagem = Decimal("333.67"), Decimal("1001.00")
+        r.save(update_fields=["valor_diaria", "valor_hospedagem"])
+        conta = r.fazer_checkin(self.usuario)
+        diarias = list(conta.lancamentos.filter(tipo=LancamentoConta.Tipo.DIARIA)
+                       .values_list("valor", flat=True))
+        self.assertEqual(diarias, [Decimal("333.67"), Decimal("333.67"), Decimal("333.66")])
+        self.assertEqual(conta.saldo(), Decimal("1001.00"))
+        self.assertEqual(r.total_previsto(), Decimal("1001.00"))
+
+    def test_total_que_nao_combina_com_a_diaria_e_ignorado(self):
+        # Diária mudada à mão depois: o total antigo não pode virar uma noite estranha.
+        r = self.reserva(dias=3)
+        r.valor_hospedagem = Decimal("750.00")
+        self.assertEqual(r.valores_das_diarias(), [Decimal("300.00")] * 3)
+
+    def test_sem_total_exato_todas_as_noites_valem_a_diaria(self):
+        r = self.reserva(dias=2)
+        self.assertIsNone(r.valor_hospedagem)
+        self.assertEqual(r.hospedagem_prevista(), Decimal("600.00"))
+
+    def test_prereserva_guarda_o_total_da_cotacao(self):
+        from . import precos
+
+        inicio = HOJE + timedelta(days=40)
+        r = services.criar_prereserva(uh=self.uh, checkin=inicio,
+                                      checkout=inicio + timedelta(days=3),
+                                      hospede=self.hospede, usuario=self.usuario)
+        cot = precos.cotacao(uh=self.uh, checkin=inicio, checkout=inicio + timedelta(days=3))
+        self.assertEqual(r.valor_hospedagem, cot["hospedagem"])
+        self.assertEqual(r.hospedagem_prevista(), cot["hospedagem"])

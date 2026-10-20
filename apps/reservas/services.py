@@ -704,13 +704,14 @@ def criar_prereserva(*, tipo_uh=None, uh=None, checkin, checkout, hospede, usuar
         criancas_0_5, criancas_6_15 = (criancas_0_5 or 0), (criancas_6_15 or 0)
     criancas = criancas_0_5 + criancas_6_15
 
+    valor_hospedagem = None
     if valor_diaria is None:
         cot = precos.cotacao(
             uh=uh if por_unidade else None, tipo=None if por_unidade else tipo_uh,
             checkin=checkin, checkout=checkout, adultos=adultos,
             criancas_0_5=criancas_0_5, criancas_6_15=criancas_6_15,
             nao_reembolsavel=nao_reembolsavel)
-        valor_diaria = cot["media_noite"]
+        valor_diaria, valor_hospedagem = cot["media_noite"], cot["hospedagem"]
 
     # Arranjo + trava global de colchões extra por noite (lock serializa a corrida).
     arranjo = _travar_e_resolver_arranjo(
@@ -736,7 +737,8 @@ def criar_prereserva(*, tipo_uh=None, uh=None, checkin, checkout, hospede, usuar
             cobra_iss=cobra_iss, cobra_taxa_turismo=cobra_taxa_turismo,
             usa_berco=usa_berco, nao_reembolsavel=nao_reembolsavel,
             status=Reserva.Status.PRE_RESERVA, canal=canal,
-            valor_diaria=valor_diaria, criado_por=usuario, observacoes=observacoes,
+            valor_diaria=valor_diaria, valor_hospedagem=valor_hospedagem,
+            criado_por=usuario, observacoes=observacoes,
             expira_em=expira, **arranjo, **extra,
         )
     except IntegrityError:
@@ -822,15 +824,17 @@ def transferir_datas(reserva, novo_checkin, novo_checkout, usuario):
         if conf["erros"]:
             raise ValidationError(conf["erros"])
 
-    nova_diaria = precos.cotacao(
+    cot = precos.cotacao(
         uh=reserva.uh, checkin=novo_checkin, checkout=novo_checkout,
         adultos=reserva.adultos, criancas_0_5=reserva.criancas_0_5,
-        criancas_6_15=reserva.criancas_6_15)["media_noite"]
+        criancas_6_15=reserva.criancas_6_15)
+    nova_diaria = cot["media_noite"]
     antigo = (reserva.checkin, reserva.checkout, reserva.valor_diaria)
     reserva.checkin, reserva.checkout, reserva.valor_diaria = (
         novo_checkin, novo_checkout, nova_diaria)
+    reserva.valor_hospedagem = cot["hospedagem"]
     try:
-        reserva.save(update_fields=["checkin", "checkout", "valor_diaria"])
+        reserva.save(update_fields=["checkin", "checkout", "valor_diaria", "valor_hospedagem"])
     except IntegrityError:
         raise ValidationError("O quarto acabou de ser reservado nessas datas.")
     registrar_auditoria(usuario, "transferencia_datas", reserva, {
@@ -1235,13 +1239,15 @@ def adicionar_quarto(grupo, *, uh, hospede, usuario, adultos=2, criancas=0,
         adultos=adultos, criancas=criancas,
         checkin=grupo.checkin, checkout=grupo.checkout)
 
+    valor_hospedagem = None
     if valor_diaria is None:
-        valor_diaria = precos.cotacao(
+        cot = precos.cotacao(
             uh=uh, checkin=grupo.checkin, checkout=grupo.checkout, adultos=adultos,
-            criancas_0_5=criancas_0_5, criancas_6_15=criancas_6_15)["media_noite"]
+            criancas_0_5=criancas_0_5, criancas_6_15=criancas_6_15)
+        valor_diaria, valor_hospedagem = cot["media_noite"], cot["hospedagem"]
     try:
         return Reserva.objects.create(
-            uh=uh, hospede=hospede, grupo=grupo,
+            uh=uh, hospede=hospede, grupo=grupo, valor_hospedagem=valor_hospedagem,
             checkin=grupo.checkin, checkout=grupo.checkout,
             adultos=adultos, criancas=criancas,
             criancas_0_5=criancas_0_5, criancas_6_15=criancas_6_15,

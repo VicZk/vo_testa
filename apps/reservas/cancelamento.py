@@ -33,8 +33,8 @@ def _retencao_pct() -> Decimal:
 
 
 def valor_total(reserva) -> Decimal:
-    """Valor da hospedagem (base da retenção) = diária × noites."""
-    return _q(reserva.valor_diaria * reserva.noites)
+    """Valor da hospedagem (base da retenção) = as diárias que o check-in lança."""
+    return _q(reserva.hospedagem_prevista())
 
 
 def politica_cancelamento(reserva, quando=None) -> dict:
