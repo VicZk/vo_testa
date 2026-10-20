@@ -23,7 +23,19 @@ from django.db import models, transaction
 from django.db.models import F, Func, Q, Sum
 from django.utils import timezone
 
-from apps.nucleo.models import NaturezaFiscal, Temporada, registrar_auditoria
+from apps.nucleo.models import NaturezaFiscal, Temporada, TipoUH, registrar_auditoria
+
+
+def validar_periodo_day_use(tipo_uh, checkin, checkout):
+    """Day use é de um dia só: no banco ele ocupa a unidade de `checkin` até
+    `checkout` = dia seguinte (uma "noite"), como o site já cria. Mais que isso
+    ocuparia a unidade de day use por dias."""
+    if (tipo_uh is not None and checkin and checkout
+            and tipo_uh.modalidade == TipoUH.Modalidade.DAY_USE
+            and (checkout - checkin).days != 1):
+        raise ValidationError(
+            "Day use é de um dia só: a saída precisa ser no dia seguinte à entrada."
+        )
 
 
 class Tarifa(models.Model):
@@ -384,6 +396,8 @@ class Reserva(models.Model):
             raise ValidationError(
                 {"checkout": "A saída (check-out) deve ser depois da entrada (check-in)."}
             )
+        if self.uh_id:
+            validar_periodo_day_use(self.uh.tipo, self.checkin, self.checkout)
         # Pelo menos 1 adulto: 0 hóspedes burlaria a trava de FNRH (len>=0) e zeraria
         # o cálculo de colchão/diária.
         if (self.adultos or 0) < 1:

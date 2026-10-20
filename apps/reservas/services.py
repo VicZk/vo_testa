@@ -612,7 +612,9 @@ def criar_prereserva(*, tipo_uh=None, uh=None, checkin, checkout, hospede, usuar
     vierem vazios, o sistema sugere; a **trava global de colchões extra por noite** é
     validada aqui (lock serializa a corrida)."""
     from apps.reservas import precos
+    from apps.reservas.models import validar_periodo_day_use
 
+    validar_periodo_day_use(uh.tipo if uh is not None else tipo_uh, checkin, checkout)
     expirar_vencidas()  # solta retenções vencidas para não bloquear a constraint
     por_unidade = uh is not None
     if por_unidade:
@@ -732,6 +734,9 @@ def transferir_datas(reserva, novo_checkin, novo_checkout, usuario):
         raise ValidationError("Só dá para transferir a data de uma reserva não iniciada.")
     if (novo_checkout - novo_checkin).days <= 0:
         raise ValidationError("Período inválido: a saída deve ser após a entrada.")
+    from apps.reservas.models import validar_periodo_day_use
+
+    validar_periodo_day_use(reserva.uh.tipo, novo_checkin, novo_checkout)
 
     expirar_vencidas()
     conflito = (reservas_ativas_qs()

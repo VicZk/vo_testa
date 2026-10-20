@@ -1322,3 +1322,37 @@ class CheckoutArredondamentoTests(ReservasTestsBase):
         self.assertEqual(r.status, Reserva.Status.HOSPEDADA)
         self.assertFalse(
             LancamentoConta.objects.filter(conta=conta, tipo=LancamentoConta.Tipo.DESCONTO).exists())
+
+
+class DayUseUmDiaTests(ReservasTestsBase):
+    """Unidade de day use só aceita um dia (saída = dia seguinte à entrada)."""
+
+    def setUp(self):
+        super().setUp()
+        self.day = UH.objects.filter(tipo__modalidade=TipoUH.Modalidade.DAY_USE,
+                                     status=UH.Status.ATIVA).first()
+
+    def test_prereserva_de_varios_dias_em_day_use_e_recusada(self):
+        with self.assertRaises(ValidationError):
+            services.criar_prereserva(
+                uh=self.day, checkin=HOJE + timedelta(days=5),
+                checkout=HOJE + timedelta(days=8), hospede=self.hospede, usuario=self.usuario)
+        self.assertFalse(Reserva.objects.filter(uh=self.day).exists())
+
+    def test_formulario_valida_pelo_clean_do_model(self):
+        r = Reserva(uh=self.day, hospede=self.hospede, checkin=HOJE,
+                    checkout=HOJE + timedelta(days=6), adultos=2,
+                    valor_diaria=Decimal("100.00"), criado_por=self.usuario)
+        with self.assertRaises(ValidationError):
+            r.full_clean()
+        r.checkout = HOJE + timedelta(days=1)
+        r.full_clean()  # um dia: válido
+
+    def test_transferir_day_use_para_varios_dias_e_recusado(self):
+        r = Reserva.objects.create(
+            uh=self.day, hospede=self.hospede, checkin=HOJE + timedelta(days=3),
+            checkout=HOJE + timedelta(days=4), status=Reserva.Status.CONFIRMADA,
+            valor_diaria=Decimal("100.00"), criado_por=self.usuario)
+        with self.assertRaises(ValidationError):
+            services.transferir_datas(
+                r, HOJE + timedelta(days=10), HOJE + timedelta(days=12), self.usuario)
