@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% load static %}
+{% block titulo %}Esqueci minha senha — Pousada Vô Testa{% endblock %}
+{% block conteudo_publico %}
+<div class="login-pagina">
+  <img src="{% static 'img/logotipo-pergaminho-limpo.png' %}" alt="Pousada Vô Testa" class="login-lockup">
+  <div class="login-cartao">
+    <p class="letreiro">Acesso da equipe</p>
+    <h1>Esqueci minha senha</h1>
+    <p>Informe o e-mail do seu cadastro na equipe. Mandamos um link para criar uma senha nova; ele vale por 1 hora.</p>
+    <form method="post">
+      {% csrf_token %}
+      <label for="id_email">E-mail</label>
+      <input type="email" name="email" id="id_email" autocomplete="email" required autofocus>
+      <button type="submit" class="botao-primario">Enviar o link</button>
+    </form>
+    <p><a href="{% url 'login' %}">Voltar para a entrada</a></p>
+  </div>
+</div>
+{% endblock %}

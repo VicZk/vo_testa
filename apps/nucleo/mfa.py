@@ -67,5 +67,19 @@ def qr_svg(uri: str) -> str:
 
 
 def mfa_obrigatorio(usuario) -> bool:
-    """Hoje: obrigatório para superusuários (decisão do dono). Os demais são opt-in."""
-    return bool(getattr(usuario, "is_superuser", False))
+    """A quem o MFA é obrigatório, pela configuração MFA_OBRIGATORIO_PARA:
+    - "superusuario" (padrão — decisão do dono): só superusuários;
+    - "gerencia": também a gerência (staff), que estorna, reabre caixa e dá desconto;
+    - "financeiro": também quem opera dinheiro (áreas Financeiro ou Caixa).
+    Os demais seguem opt-in."""
+    if getattr(usuario, "is_superuser", False):
+        return True
+    from django.conf import settings
+
+    alcance = getattr(settings, "MFA_OBRIGATORIO_PARA", "superusuario")
+    if alcance in ("gerencia", "financeiro") and getattr(usuario, "is_staff", False):
+        return True
+    if alcance == "financeiro":
+        from .areas import Area
+        return any(usuario.pode_area(a) for a in (Area.FINANCEIRO, Area.CAIXA))
+    return False

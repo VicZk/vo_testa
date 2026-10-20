@@ -17,6 +17,33 @@ def client_ip(request) -> str:
     return request.META.get("REMOTE_ADDR", "desconhecido")
 
 
+def _chave_conta(escopo: str, identificador: str) -> str:
+    import hashlib
+
+    resumo = hashlib.sha256((identificador or "").strip().lower().encode()).hexdigest()[:32]
+    return f"rl:{escopo}:conta:{resumo}"
+
+
+def falhas_da_conta(escopo: str, identificador: str) -> int:
+    """Quantas falhas a conta (ex.: o usuário digitado no login) acumula na janela —
+    independe do IP, então trocar de IP não renova as tentativas."""
+    return cache.get(_chave_conta(escopo, identificador), 0)
+
+
+def registrar_falha_da_conta(escopo: str, identificador: str, janela_seg: int) -> int:
+    chave = _chave_conta(escopo, identificador)
+    cache.add(chave, 0, janela_seg)
+    try:
+        return cache.incr(chave)
+    except ValueError:
+        cache.set(chave, 1, janela_seg)
+        return 1
+
+
+def limpar_falhas_da_conta(escopo: str, identificador: str) -> None:
+    cache.delete(_chave_conta(escopo, identificador))
+
+
 def limite_excedido(request, escopo: str, limite: int, janela_seg: int, sufixo: str = "") -> bool:
     """True se o IP passou de `limite` requisições em `janela_seg` para `escopo`.
     `sufixo` permite bucket adicional (ex.: token da cobrança)."""

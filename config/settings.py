@@ -117,6 +117,14 @@ CSP_REPORT_ONLY = os.environ.get("CSP_REPORT_ONLY", "1") == "1"
 # MFA obrigatório p/ superusuário. Desligado em dev por padrão (não travar o local);
 # ligue com MFA_OBRIGATORIO=1 para testar o fluxo. Sempre ligado em produção (DEBUG=0).
 MFA_OBRIGATORIO = os.environ.get("MFA_OBRIGATORIO", "0" if DEBUG else "1") == "1"
+# A quem: "superusuario" (padrão), "gerencia" (+ staff) ou "financeiro" (+ áreas
+# Financeiro/Caixa). Ver apps/nucleo/mfa.py::mfa_obrigatorio.
+MFA_OBRIGATORIO_PARA = os.environ.get("MFA_OBRIGATORIO_PARA", "superusuario")
+# Trava por conta no login (8 senhas erradas → 15 min). Desligada na suíte, como o
+# limite por IP: o cache é compartilhado entre os testes.
+LOGIN_TRAVA_POR_CONTA = not TESTING
+# Link de "Esqueci minha senha" vale 1 hora (o padrão do Django é 3 dias).
+PASSWORD_RESET_TIMEOUT = 60 * 60
 
 ROOT_URLCONF = "config.urls"
 

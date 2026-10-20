@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% load static %}
+{% block titulo %}Link enviado — Pousada Vô Testa{% endblock %}
+{% block conteudo_publico %}
+<div class="login-pagina">
+  <img src="{% static 'img/logotipo-pergaminho-limpo.png' %}" alt="Pousada Vô Testa" class="login-lockup">
+  <div class="login-cartao">
+    <p class="letreiro">Acesso da equipe</p>
+    <h1>Confira seu e-mail</h1>
+    <p>Se o e-mail informado é de alguém da equipe, o link para criar uma senha nova já está a caminho. Ele vale por 1 hora.</p>
+    <p>Não chegou? Veja a caixa de spam ou peça à gerência para conferir o e-mail do seu cadastro.</p>
+    <p><a href="{% url 'login' %}">Voltar para a entrada</a></p>
+  </div>
+</div>
+{% endblock %}

@@ -4,13 +4,13 @@ from django.contrib.auth import views as auth_views
 from django.contrib.sitemaps.views import sitemap
 from django.db import connection
 from django.http import HttpResponse
-from django.urls import include, path, re_path
+from django.urls import include, path, re_path, reverse_lazy
 from django.views.generic import RedirectView
 from django.views.static import serve
 
 from apps.comercial import views_lp
 from apps.nucleo import mfa_views
-from apps.nucleo.auth_views import LoginComLimite
+from apps.nucleo.auth_views import LoginComLimite, RecuperarSenha
 from apps.site import views as site_views
 from apps.site.sitemaps import PaginasEstaticas
 
@@ -72,6 +72,15 @@ urlpatterns = [
     # Sistema (equipe): todo o CRM sob /crm/.
     path("crm/admin/", admin.site.urls),
     path("crm/entrar/", LoginComLimite.as_view(), name="login"),  # S-M1: rate-limit
+    # Esqueci minha senha (link por e-mail, válido por PASSWORD_RESET_TIMEOUT).
+    path("crm/senha/esqueci/", RecuperarSenha.as_view(), name="senha_esqueci"),
+    path("crm/senha/enviada/", auth_views.PasswordResetDoneView.as_view(
+        template_name="registration/senha_enviada.html"), name="senha_enviada"),
+    path("crm/senha/nova/<uidb64>/<token>/", auth_views.PasswordResetConfirmView.as_view(
+        template_name="registration/senha_nova.html",
+        success_url=reverse_lazy("senha_trocada")), name="password_reset_confirm"),
+    path("crm/senha/trocada/", auth_views.PasswordResetCompleteView.as_view(
+        template_name="registration/senha_trocada.html"), name="senha_trocada"),
     path("crm/sair/", auth_views.LogoutView.as_view(), name="logout"),
     # MFA (Fase 4) — desafio no login, ativação (QR) e configuração.
     path("crm/mfa/desafio/", mfa_views.mfa_desafio, name="mfa_desafio"),

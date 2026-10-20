@@ -1,0 +1,8 @@
+Olá{% if user.first_name %}, {{ user.first_name }}{% endif %}!
+
+Alguém (talvez você) pediu uma senha nova para o usuário {{ user.get_username }} no sistema da Pousada Vô Testa.
+
+Para criar a senha nova, abra o link abaixo. Ele vale por 1 hora e só funciona uma vez:
+{{ protocol }}://{{ domain }}{% url 'password_reset_confirm' uidb64=uid token=token %}
+
+Se não foi você, ignore este e-mail: sua senha atual continua valendo.

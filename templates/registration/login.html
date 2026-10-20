@@ -10,9 +10,11 @@
   <div class="login-cartao">
     <p class="letreiro">Acesso da equipe</p>
     <h1>Entrar no sistema</h1>
-    {% if form.errors %}
-      <div class="mensagem error">Usuário ou senha incorretos. Confira e tente de novo.</div>
-    {% endif %}
+    {% for erro in form.non_field_errors %}
+      <div class="mensagem error">{{ erro }}</div>
+    {% empty %}
+      {% if form.errors %}<div class="mensagem error">Usuário ou senha incorretos. Confira e tente de novo.</div>{% endif %}
+    {% endfor %}
     <form method="post">
       {% csrf_token %}
       <label for="id_username">Usuário</label>
@@ -21,6 +23,7 @@
       <input type="password" name="password" id="id_password" autocomplete="current-password" required>
       <button type="submit" class="botao-primario">Entrar</button>
     </form>
+    <p><a href="{% url 'senha_esqueci' %}">Esqueci minha senha</a></p>
   </div>
 
   <a href="{% url 'core:home' %}" style="display:inline-flex;align-items:center;gap:.4rem;color:var(--pergaminho);opacity:.7;font-size:.85rem;text-decoration:none">

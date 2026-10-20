@@ -57,7 +57,8 @@ class MFAObrigatorioMiddleware:
             return self.get_response(request)
         user = getattr(request, "user", None)
         if (user and user.is_authenticated and mfa_obrigatorio(user) and not user.mfa_ativo):
-            livres = {reverse("mfa_ativar"), reverse("login"), reverse("logout")}
+            livres = {reverse("mfa_ativar"), reverse("login"), reverse("logout"),
+                      reverse("senha_esqueci")}
             if (request.path not in livres
                     and not request.path.startswith(("/static/", "/media/"))):
                 messages.warning(request, "Ative o MFA para continuar — é obrigatório na sua conta.")
