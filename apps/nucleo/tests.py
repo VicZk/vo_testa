@@ -1561,3 +1561,44 @@ class PessoasSemConsultaPorLinhaTests(TestCase):
         for i in range(3, 12):
             Pessoa.objects.create(nome=f"Pessoa {i}")
         self.assertEqual(com_3, self._consultas())
+
+
+class CaixaConcorrenciaEEstornoTests(CaixaTestsBase):
+    """Receber e fechar serializados; estorno de sessão fechada vai para a de hoje."""
+
+    def test_fechar_grava_as_observacoes(self):
+        self.sessao.fechar(Decimal("100.00"), self.operador, observacoes="Faltou uma moeda")
+        self.sessao.refresh_from_db()
+        self.assertEqual(self.sessao.observacoes_fechamento, "Faltou uma moeda")
+
+    def test_fechar_pela_outra_aba_recusa_sessao_ja_fechada(self):
+        outra_aba = SessaoCaixa.objects.get(pk=self.sessao.pk)
+        self.sessao.fechar(Decimal("100.00"), self.operador)
+        with self.assertRaises(ValidationError):
+            outra_aba.fechar(Decimal("100.00"), self.operador)
+
+    def test_receber_depois_de_fechado_recusa(self):
+        from .models import receber_no_caixa
+
+        self.sessao.fechar(Decimal("100.00"), self.operador)
+        with self.assertRaises(ValidationError):
+            receber_no_caixa(self.operador, self.dinheiro, Decimal("10.00"), "Diária",
+                             modulo="nucleo")
+
+    def test_estorno_de_sessao_fechada_entra_no_caixa_aberto_do_operador(self):
+        movimento = self.receber("80.00")
+        self.sessao.fechar(Decimal("180.00"), self.operador)  # fundo 100 + 80
+        conferida = SessaoCaixa.objects.get(pk=self.sessao.pk).diferenca
+        hoje = SessaoCaixa.objects.create(operador=self.gerente, modulo="nucleo",
+                                          fundo_troco=Decimal("200.00"))
+        estorno = estornar_movimento(movimento, movimento.sessao, self.gerente,
+                                     "Devolução ao hóspede")
+        self.assertEqual(estorno.sessao, hoje)
+        self.assertEqual(SessaoCaixa.objects.get(pk=self.sessao.pk).diferenca, conferida)
+        self.assertEqual(hoje.esperado_em_dinheiro(), Decimal("120.00"))  # 200 − 80
+
+    def test_estorno_sem_caixa_aberto_explica_o_que_fazer(self):
+        movimento = self.receber("50.00")
+        self.sessao.fechar(Decimal("150.00"), self.operador)
+        with self.assertRaisesMessage(ValidationError, "abra o seu caixa"):
+            estornar_movimento(movimento, movimento.sessao, self.gerente, "Devolução")

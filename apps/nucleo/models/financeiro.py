@@ -159,15 +159,25 @@ class SessaoCaixa(models.Model):
             totais[nome] = totais.get(nome, Decimal("0.00")) + sinal * linha["total"]
         return sorted(totais.items())
 
+    @transaction.atomic
     def fechar(self, valor_contado: Decimal, usuario, observacoes: str = ""):
         """Fechamento com conferência cega: operador informa o contado,
-        o sistema aponta a diferença. Sessão fechada não recebe movimento."""
+        o sistema aponta a diferença. Sessão fechada não recebe movimento.
+
+        Trava a sessão antes de calcular o esperado: um recebimento feito ao mesmo tempo
+        (outra aba do mesmo operador) ou entra antes e conta na conferência, ou chega
+        depois e é recusado por sessão fechada — nunca cai numa sessão já conferida."""
+        from apps.nucleo.sistema import travar
+
+        travar(self)
         if not self.aberta:
             raise ValidationError("Esta sessão de caixa já está fechada.")
         self.valor_contado = valor_contado
         self.diferenca = valor_contado - self.esperado_em_dinheiro()
         self.status = self.Status.FECHADA
         self.fechada_em = timezone.now()
+        if observacoes:
+            self.observacoes_fechamento = observacoes
         self.save()
         registrar_auditoria(
             usuario, "fechamento_caixa", self,
@@ -315,6 +325,7 @@ class MovimentoCaixa(models.Model):
         )
 
 
+@transaction.atomic
 def receber_no_caixa(usuario, forma, valor: Decimal, descricao: str, parcelas: int = 1,
                      modulo: str = CENTRO_NUCLEO, autorizacao: str = ""):
     """
@@ -323,8 +334,9 @@ def receber_no_caixa(usuario, forma, valor: Decimal, descricao: str, parcelas: i
     separada, conferida à parte: o dinheiro da Loja só entra no caixa da Loja.
     Interface pública para os módulos cobrarem no seu próprio caixa.
     `autorizacao` (opcional): NSU/código do comprovante do cartão, p/ conciliação.
+    A sessão é travada (FOR UPDATE): serializa com o fechamento do mesmo caixa.
     """
-    sessao = SessaoCaixa.objects.filter(
+    sessao = SessaoCaixa.objects.select_for_update().filter(
         operador=usuario, modulo=modulo, status=SessaoCaixa.Status.ABERTA
     ).first()
     if not sessao:
@@ -353,11 +365,29 @@ def estornar_movimento(origem: MovimentoCaixa, sessao: SessaoCaixa, usuario, mot
     """
     Cria o movimento inverso de um recebimento (total ou parcial) e audita.
     A permissão de gerência é verificada na view.
+
+    O estorno entra em `sessao` se ela estiver aberta. Se já fechou (ex.: o hóspede pede
+    a devolução no dia seguinte), entra na sessão aberta do operador no mesmo módulo:
+    o dinheiro sai da gaveta de hoje, e a conferência da sessão fechada não muda
+    (antes a única saída era reabrir o caixa, o que apagava a conferência original).
     """
     # Trava a origem p/ serializar estornos parciais concorrentes — sem o lock, dois
     # estornos leem o mesmo "já estornado" e podem passar do valor original.
     from apps.nucleo.sistema import travar
     origem = travar(origem)
+    if sessao is not None:
+        sessao = SessaoCaixa.objects.select_for_update().get(pk=sessao.pk)
+    if sessao is None or not sessao.aberta:
+        modulo = origem.sessao.modulo
+        sessao = SessaoCaixa.objects.select_for_update().filter(
+            operador=usuario, modulo=modulo, status=SessaoCaixa.Status.ABERTA
+        ).first()
+        if sessao is None:
+            nome = dict(centro_choices()).get(modulo, modulo)
+            raise ValidationError(
+                f"A sessão deste recebimento já foi fechada: abra o seu caixa de {nome} "
+                "para registrar o estorno (o dinheiro sai da gaveta de hoje)."
+            )
     estorno = MovimentoCaixa(
         sessao=sessao,
         tipo=MovimentoCaixa.Tipo.ESTORNO,

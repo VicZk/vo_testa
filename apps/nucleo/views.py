@@ -1099,8 +1099,12 @@ def caixa_fechar(request):
         return redirect("caixa")
     form = FecharCaixaForm(request.POST)
     if form.is_valid():
-        sessao.observacoes_fechamento = form.cleaned_data["observacoes"]
-        sessao.fechar(form.cleaned_data["valor_contado"], request.user)
+        try:
+            sessao.fechar(form.cleaned_data["valor_contado"], request.user,
+                          observacoes=form.cleaned_data["observacoes"])
+        except ValidationError as erro:  # ex.: fechada ao mesmo tempo em outra aba
+            messages.error(request, " ".join(erro.messages))
+            return redirect("caixa")
         if sessao.diferenca == Decimal("0.00"):
             messages.success(request, "Caixa fechado sem diferença. 🎉")
         else:
