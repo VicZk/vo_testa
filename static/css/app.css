@@ -223,6 +223,9 @@
   --fonte-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
   --sidebar-w: 258px;
+  /* Altura da barra de cima. Quem gruda abaixo dela (painel do PDV, filtro do
+     BOH, rail de operação) calcula a partir daqui, em vez de repetir "76px". */
+  --topbar-h: 60px;
 }
 
 * { box-sizing: border-box; }
@@ -564,10 +567,29 @@ button.link:hover { color: var(--lampiao); background: rgba(255, 255, 255, .05);
 
 .main { display: flex; flex-direction: column; min-width: 0; }
 
+/* ═══════════════════════════════════════════════════════════════
+   GRADES — o filho não pode crescer além da coluna
+
+   Um item de grid nasce com `min-width: auto`, ou seja: ele não encolhe
+   abaixo do próprio conteúdo. Uma tabela larga dentro de uma coluna faz a
+   PÁGINA rolar para o lado em vez de a tabela rolar dentro do cartão — cinco
+   telas faziam isso no celular (Manutenção estourava 340 px). O projeto já
+   tinha descoberto o problema e corrigido em um único lugar (`.op-layout`);
+   aqui a correção vale para todas as grades de duas colunas da casa.
+   ═══════════════════════════════════════════════════════════════ */
+.colunas > *, .colunas-2-1 > *, .painel-2col > *, .pdv > *,
+.graficos-grid > *, .boh-resumo > *, .ficha-cols > *, .rc-cols > *,
+.cartoes > *, .grid-modulos > *, .comandas-grid > * { min-width: 0; }
+
+/* Barra de ações: com largura apertada, os botões descem de linha em vez de
+   empurrar a página. */
+.acoes, .pagina-acoes, .eleg-acoes, .filtros, .acoes-reserva { flex-wrap: wrap; }
+
+
 .topbar {
   position: sticky; top: 0; z-index: 20;
   display: flex; align-items: center; gap: 1rem;
-  height: 60px; padding: 0 1.6rem;
+  height: var(--topbar-h); padding: 0 1.6rem;
   background: color-mix(in srgb, var(--canvas) 82%, transparent);
   backdrop-filter: saturate(180%) blur(10px);
   border-bottom: 1px solid var(--fio);
@@ -813,7 +835,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 .erro { display: block; color: var(--perigo); font-size: .78rem; margin-top: .25rem; }
 .campo-erro input, .campo-erro select, .campo-erro textarea { border-color: var(--perigo); }
 
-.acoes { display: flex; gap: .7rem; align-items: center; margin-top: 1.2rem; }
+.acoes { display: flex; flex-wrap: wrap; gap: .7rem; align-items: center; margin-top: 1.2rem; }
 
 .botao-neutro {
   display: inline-flex; align-items: center; gap: .4rem;
@@ -1201,7 +1223,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 
 /* BOH: filtro sticky translúcido */
 .boh-filtros {
-  position: sticky; top: 0; z-index: 6;
+  position: sticky; top: var(--topbar-h); z-index: 6;
   padding: .55rem 0; margin: 0 0 .2rem;
   background: color-mix(in srgb, var(--canvas) 80%, transparent);
   backdrop-filter: blur(10px) saturate(150%);
@@ -2413,7 +2435,7 @@ div.porta.dica[data-dica] { cursor: default; }
   display: flex; flex-direction: column;
   background: var(--superficie); border: 1px solid var(--fio); border-radius: var(--raio-g);
   box-shadow: var(--sombra-2);
-  position: sticky; top: 76px; overflow: hidden;
+  position: sticky; top: calc(var(--topbar-h) + 16px); overflow: hidden;
 }
 .pdv-painel-topo {
   display: flex; align-items: baseline; justify-content: space-between;
@@ -2767,7 +2789,7 @@ form.filtros:not(.subnav) select:focus {
   .chip-x:active { transform: none; }
 }
 
-.pagina-acoes { display: flex; gap: .5rem; }
+.pagina-acoes { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
 .tabela .num { text-align: right; font-variant-numeric: tabular-nums; }
 .tabela tr.linha-clique { cursor: pointer; }
 .tabela tr.linha-clique:hover td { background: var(--pergaminho); }
@@ -2891,7 +2913,11 @@ form.filtros:not(.subnav) select:focus {
 .seg-filtro, .segmentado {
   display: inline-flex; gap: .15rem; background: var(--superficie-2);
   border: 1px solid var(--fio); border-radius: 999px; padding: .25rem;
+  /* Com a tela estreita o segmentado rola dentro de si; antes empurrava a
+     página inteira para o lado (o funil estourava 60 px a 390 px). */
+  max-width: 100%; overflow-x: auto; scrollbar-width: none;
 }
+.seg-filtro::-webkit-scrollbar, .segmentado::-webkit-scrollbar { display: none; }
 .seg-filtro a, .segmentado .chip {
   padding: .34rem .9rem; border-radius: 999px; font-size: .84rem;
   font-weight: 500; color: var(--tinta-suave); text-decoration: none;
@@ -3026,7 +3052,7 @@ form.filtros:not(.subnav) select:focus {
 .cartao-cabeca { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: .8rem; }
 .cartao-cabeca h2 { margin: 0; }
 
-.op-rail { position: sticky; top: 1rem; display: flex; flex-direction: column; gap: 1rem; }
+.op-rail { position: sticky; top: calc(var(--topbar-h) + 16px); display: flex; flex-direction: column; gap: 1rem; }
 .op-acoes { padding: 1.05rem 1.15rem; display: flex; flex-direction: column; gap: .75rem; }
 .op-acoes .rot-secao {
   font-size: .64rem; letter-spacing: .09em; text-transform: uppercase;
@@ -3598,4 +3624,26 @@ body.escala-dragging .escala-drop { cursor: copy; }
 }
 @media (prefers-reduced-motion: reduce) {
   .eleg tbody tr.clic, .quadro tbody tr.clic { transition: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ALVOS DE TOQUE — 44 px onde o dedo é o ponteiro
+
+   A recepção e a governança trabalham em tablet e celular, e ali havia 71
+   alvos abaixo de 40 px numa tela só (Quartos & tipos). A regra vale para
+   ponteiro grosso (dedo) e para telas estreitas; no desktop, com mouse, as
+   listas continuam densas — espalhar tudo a 44 px ali só faria rolar mais.
+   ═══════════════════════════════════════════════════════════════ */
+@media (pointer: coarse), (max-width: 820px) {
+  .botao-primario, .botao-neutro, .botao-perigo, .botao-mini,
+  .filtro-chip, .chip-limpeza, .lb-tab, .func-aba, .seg-filtro a, .segmentado .chip,
+  .menu-mobile, .busca-global {
+    min-height: 44px;
+  }
+  .botao-primario, .botao-mini { display: inline-flex; align-items: center; justify-content: center; }
+  .modal-fechar, .toast-x { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+  .conteudo input, .conteudo select, .conteudo textarea { min-height: 44px; }
+  /* Link de texto na tabela: a área de toque cresce para a altura da linha
+     sem mudar o desenho — o texto fica onde está. */
+  .tabela td > a:not([class]) { display: inline-block; padding-block: .62rem; margin-block: -.62rem; }
 }

@@ -190,3 +190,38 @@ class SelosDiscretosTests(TestCase):
                 if "selo-contador" in texto or "selo-tipo-" in texto:
                     restos.append(str(p.relative_to(settings.BASE_DIR)))
         self.assertEqual(restos, [])
+
+
+class GradeResponsivaTests(TestCase):
+    """Cinco telas rolavam para o lado no celular.
+
+    Um item de grid nasce `min-width: auto` e não encolhe abaixo do conteúdo:
+    a tabela larga empurrava a PÁGINA em vez de rolar dentro do cartão.
+    """
+
+    def setUp(self):
+        self.css = CSS.read_text(encoding="utf-8").replace("\r\n", "\n")
+
+    def test_filhos_de_grade_podem_encolher(self):
+        achado = re.search(r"([^\n]*\{ min-width: 0; \})", self.css)
+        self.assertIsNotNone(achado, "regra de min-width:0 das grades sumiu")
+        for grade in (".colunas-2-1 > *", ".painel-2col > *", ".pdv > *",
+                      ".graficos-grid > *", ".boh-resumo > *", ".ficha-cols > *",
+                      ".rc-cols > *"):
+            self.assertIn(grade, self.css, grade)
+
+    def test_barras_de_acao_quebram_linha(self):
+        for regra in (".acoes {", ".pagina-acoes {"):
+            bloco = re.search(rf"{re.escape(regra)}([^}}]*)}}", self.css)
+            self.assertIsNotNone(bloco, regra)
+            self.assertIn("flex-wrap: wrap", bloco.group(1), regra)
+
+    def test_altura_da_topbar_e_token(self):
+        """Quem gruda abaixo da barra calculava a partir de um "76px" solto."""
+        self.assertIn("--topbar-h:", self.css)
+        self.assertNotIn("top: 76px", self.css)
+
+    def test_alvo_de_toque_de_44px_para_dedo(self):
+        self.assertIn("@media (pointer: coarse), (max-width: 820px)", self.css)
+        bloco = self.css[self.css.index("@media (pointer: coarse), (max-width: 820px)"):]
+        self.assertIn("min-height: 44px", bloco)
