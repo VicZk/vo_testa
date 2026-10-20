@@ -638,8 +638,9 @@ continuam pelo `PAGAMENTOS_GATEWAY`.
    (estorno / ajuste / desconto), nunca `UPDATE`/`DELETE`.
 3. **Crédito na conta do hóspede tem origem rastreável.** `PagamentoConta` e
    `Adiantamento` vêm do caixa (`movimento_caixa`), do gateway (`cobranca_id`, único por
-   cobrança — confirmar duas vezes não credita duas vezes) ou de um estorno (`estorno_de`,
-   valor negativo). Check-constraints garantem o sinal: crédito > 0 sem `estorno_de`;
+   cobrança — confirmar duas vezes não credita duas vezes), do faturamento para agência
+   ou empresa (`PagamentoConta.conta_receber`, o título a receber no Financeiro) ou de
+   um estorno (`estorno_de`, valor negativo). Check-constraints garantem o sinal: crédito > 0 sem `estorno_de`;
    estorno < 0 com `estorno_de`. O saldo é sempre a soma, sem `UPDATE`.
 4. **Natureza fiscal obrigatória (a “4ª veia”).** `NaturezaFiscal` (`servico` | `consumo`)
    está em `Produto.natureza` e em `LancamentoConta.natureza` — este **sem default**

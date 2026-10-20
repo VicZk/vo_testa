@@ -51,11 +51,11 @@ preço, grupos (bloco de quartos), FNRH/BOH, estoque de colchões extra e berço
 | `Tarifa` | matriz `TipoUH × classificação de temporada` | `valor`; unique (`tipo_uh`,`classificacao`) |
 | `TarifaUnidade` | preço por **quarto** × classificação | `valor` (base 2 adultos), `pessoa_adicional`; unique (`uh`,`classificacao`) |
 | `TarifaTemporada` | preço por quarto numa **temporada específica** (Natal ≠ Ano Novo) | `valor`, `pessoa_adicional`; unique (`temporada`,`uh`) |
-| `Reserva` | a reserva | ciclo de estados, `canal`, `faturamento`/`titular`, lotação por faixa, arranjo de camas, `expira_em`, bloco FNRH |
+| `Reserva` | a reserva | ciclo de estados, `canal`, `faturamento`/`titular`, lotação por faixa, arranjo de camas, `expira_em`, bloco FNRH; `valor_diaria` (média) + `valor_hospedagem` (total exato cotado); `valor_retido` (cancelamento) |
 | `GrupoReserva` | reserva-mãe (bloco de quartos) | `rotulo`, `titular`, `checkin/checkout`, `expira_em`, `encerrado_em`; status **derivado** das filhas (`situacao()`) |
 | `ContaHospedagem` | folio: ou de um quarto, ou do grupo | `status` aberta/fechada; check-constraint `conta_reserva_xor_grupo` |
-| `LancamentoConta` | item do folio | `tipo` diaria/consumo/servico/desconto × `natureza` SERVIÇO/CONSUMO (obrigatória); imutável |
-| `PagamentoConta` | pagamento do folio | três origens: **caixa** (OneToOne com `nucleo.MovimentoCaixa`), **online** (`cobranca_id`, único — pago no gateway) ou **estorno** (`estorno_de` + valor negativo); check-constraint `pagamento_conta_sinal_coerente` |
+| `LancamentoConta` | item do folio | `tipo` diaria/consumo/servico/taxa/desconto × `natureza` SERVIÇO/CONSUMO (obrigatória); imutável. `taxa` = ISS e taxa de turismo (lançados no check-in; fora da base da NFS-e) |
+| `PagamentoConta` | pagamento do folio | origens: **caixa** (OneToOne com `nucleo.MovimentoCaixa`), **online** (`cobranca_id`, único — pago no gateway), **faturado** (OneToOne com `nucleo.ContaPagarReceber` — título a receber da agência/empresa) ou **estorno** (`estorno_de` + valor negativo); check-constraint `pagamento_conta_sinal_coerente` |
 | `Adiantamento` | sinal/crédito antes do check-in | as mesmas três origens do `PagamentoConta`; abate a conta quando ela abre |
 | `FichaFNRH` | ficha legal por hóspede (Lei 11.771) | choices alinhados 1:1 aos ids oficiais da FNRH Digital; `CAMPOS_OBRIGATORIOS`; unique "um titular por reserva" |
 | `Acompanhante` | lista simples (legado) | superado pela `FichaFNRH` |
@@ -109,6 +109,15 @@ Conta e dinheiro: `contas_abertas()`, `conta_aberta(conta_id)`,
 `receber_pagamento(conta, usuario, forma, valor, parcelas, observacao, autorizacao)`,
 `receber_adiantamento(reserva, usuario, forma, valor, parcelas, autorizacao)`,
 `resumo_fiscal_conta(conta_id)`, `diarias_periodo(inicio, fim)`.
+
+Faturamento: `faturar_conta(conta, usuario, *, valor=None, vencimento=None)` — reserva (ou
+grupo) de agência/empresa com titular: o saldo, ou parte dele, vira `ContaPagarReceber`
+a receber do titular (categoria "Hospedagem faturada", centro Reservas, vencimento padrão
+`FATURAMENTO_PRAZO_DIAS`) e crédito "faturado" na conta, que pode fechar. View
+`reservas:faturar`: gerência ou área Financeiro. `pode_faturar(conta)`.
+
+Diárias: `Reserva.valores_das_diarias()` — a última noite absorve o arredondamento da
+média para a soma bater com `valor_hospedagem`; `hospedagem_prevista()`.
 
 Devolução: `limite_devolucao(reserva)`, `situacao_devolucao(reserva)`,
 `devolver_ao_hospede(reserva, valor, usuario, motivo)`; `Reserva.total_previsto()` (diárias
