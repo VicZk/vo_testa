@@ -1,0 +1,82 @@
+{% comment %}
+Quadro da governança: chips de filtro + a lista dos quartos. É este trecho que
+as ações trocam via HTMX (hx-target="#gov-quadro"), então os contadores dos chips
+chegam certos sem recarregar a página. O `x-data` do filtro fica FORA daqui
+(painel.html), para a escolha da camareira sobreviver à troca.
+
+Sem JavaScript tudo continua funcionando: os formulários têm `action` e `method`,
+e as views redirecionam quando o pedido não vem do HTMX.
+{% endcomment %}
+<div class="filtro-limpeza" role="group" aria-label="Filtrar por situação">
+  <button type="button" class="chip-limpeza" :class="f==='todas' && 'ativo'"
+          :aria-pressed="f==='todas'" @click="filtrar('todas')">Todas <b>{{ linhas|length }}</b></button>
+  <button type="button" class="chip-limpeza chip-suja" :class="f==='suja' && 'ativo'"
+          :aria-pressed="f==='suja'" @click="filtrar('suja')"><span class="ponto"></span>A limpar <b>{{ contagem.suja }}</b></button>
+  <button type="button" class="chip-limpeza chip-em_limpeza" :class="f==='em_limpeza' && 'ativo'"
+          :aria-pressed="f==='em_limpeza'" @click="filtrar('em_limpeza')"><span class="ponto"></span>Em limpeza <b>{{ contagem.em_limpeza }}</b></button>
+  <button type="button" class="chip-limpeza chip-limpa" :class="f==='limpa' && 'ativo'"
+          :aria-pressed="f==='limpa'" @click="filtrar('limpa')"><span class="ponto"></span>Limpas <b>{{ contagem.limpa }}</b></button>
+  <button type="button" class="chip-limpeza chip-inspecionada" :class="f==='inspecionada' && 'ativo'"
+          :aria-pressed="f==='inspecionada'" @click="filtrar('inspecionada')"><span class="ponto"></span>Inspecionadas <b>{{ contagem.inspecionada }}</b></button>
+</div>
+
+<table class="tabela tabela-limpeza tabela-cartoes"
+       hx-target="#gov-quadro" hx-swap="innerHTML" hx-indicator="#gov-quadro">
+  <thead>
+    <tr><th>Quarto</th><th>Situação</th><th>Camareira</th><th class="col-acao">Ação</th></tr>
+  </thead>
+  <tbody>
+    {% for ln in linhas %}
+    <tr x-show="f==='todas' || f==='{{ ln.situacao }}'" x-transition.opacity>
+      <td data-rotulo="Quarto"><strong>{{ ln.uh.numero }}</strong><small class="ajuda">{{ ln.uh.tipo.nome }}</small></td>
+      <td data-rotulo="Situação"><span class="selo selo-{{ ln.situacao }}">{{ ln.situacao_label }}</span></td>
+      <td data-rotulo="Camareira">
+        {% if ln.tarefa and ln.situacao == 'suja' or ln.situacao == 'em_limpeza' and ln.tarefa %}
+          {# Trocar no <select> não envia nada: aparece o "Salvar" e quem decide é a pessoa. #}
+          <form method="post" action="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}" class="form-inline"
+                hx-post="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}"
+                x-data="{ original: '{{ ln.tarefa.camareira_id|default_if_none:'' }}', escolha: '{{ ln.tarefa.camareira_id|default_if_none:'' }}' }">
+            {% csrf_token %}<input type="hidden" name="acao" value="atribuir">
+            <select name="camareira" x-model="escolha" aria-label="Camareira do quarto {{ ln.uh.numero }}">
+              <option value="">— camareira —</option>
+              {% for u in camareiras %}<option value="{{ u.pk }}" {% if ln.tarefa.camareira_id == u.pk %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>{% endfor %}
+            </select>
+            <button type="submit" class="botao-mini" x-show="escolha !== original" x-cloak>Salvar</button>
+          </form>
+        {% else %}
+          <span class="celula-vazia">—</span>
+        {% endif %}
+      </td>
+      <td class="acoes-limpeza col-acao" data-rotulo="Ação">
+        {% if ln.situacao == 'suja' %}
+          {% if ln.tarefa %}
+            <form method="post" action="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}" hx-post="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}">{% csrf_token %}<input type="hidden" name="acao" value="iniciar"><button type="submit" class="botao-primario">Iniciar limpeza</button></form>
+          {% else %}
+            <form method="post" action="{% url 'governanca:nova_tarefa' %}" hx-post="{% url 'governanca:nova_tarefa' %}">{% csrf_token %}<input type="hidden" name="uh" value="{{ ln.uh.pk }}"><input type="hidden" name="tipo" value="faxina_completa"><button type="submit" class="botao-primario">Abrir faxina</button></form>
+          {% endif %}
+        {% elif ln.situacao == 'em_limpeza' %}
+          {% if ln.tarefa %}
+            <form method="post" action="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}" hx-post="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}">{% csrf_token %}<input type="hidden" name="acao" value="concluir"><button type="submit" class="botao-primario">Marcar limpo</button></form>
+          {% else %}
+            <form method="post" action="{% url 'governanca:status_marcar' ln.uh.pk %}" hx-post="{% url 'governanca:status_marcar' ln.uh.pk %}">{% csrf_token %}<input type="hidden" name="situacao" value="limpa"><button type="submit" class="botao-primario">Marcar limpo</button></form>
+          {% endif %}
+        {% elif ln.situacao == 'limpa' %}
+          <form method="post" action="{% url 'governanca:status_marcar' ln.uh.pk %}" hx-post="{% url 'governanca:status_marcar' ln.uh.pk %}">{% csrf_token %}<input type="hidden" name="situacao" value="inspecionada"><button type="submit" class="botao-neutro">Inspecionar</button></form>
+          <form method="post" action="{% url 'governanca:nova_tarefa' %}" hx-post="{% url 'governanca:nova_tarefa' %}">{% csrf_token %}<input type="hidden" name="uh" value="{{ ln.uh.pk }}"><input type="hidden" name="tipo" value="faxina_completa"><button type="submit" class="botao-neutro">Nova faxina</button></form>
+        {% elif ln.situacao == 'inspecionada' %}
+          <form method="post" action="{% url 'governanca:nova_tarefa' %}" hx-post="{% url 'governanca:nova_tarefa' %}">{% csrf_token %}<input type="hidden" name="uh" value="{{ ln.uh.pk }}"><input type="hidden" name="tipo" value="faxina_completa"><button type="submit" class="botao-neutro">Nova faxina</button></form>
+        {% endif %}
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="4" class="vazio">Nenhum quarto cadastrado ainda. Cadastre os quartos em
+      <strong>Cadastros → Quartos &amp; tipos</strong> para a governança começar a acompanhar a limpeza.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{# Filtro sem nenhum quarto: a tabela ficava só com o cabeçalho, sem explicação. #}
+{% for s in situacoes_vazias %}
+<div class="estado-vazio" x-show="f === '{{ s.cod }}'" x-cloak>
+  <p>Nenhum quarto <strong>{{ s.label|lower }}</strong> neste momento.</p>
+</div>
+{% endfor %}
