@@ -30,15 +30,16 @@
 </div>
 {% endif %}
 
-{% comment %}Larguras declaradas: sem elas a tabela usava 1290px para ~700px de
-conteúdo e abria um vão de 275px entre PAPÉIS e DOCUMENTO.{% endcomment %}
-<table class="tabela tabela-fixa">
+{% comment %}Larguras declaradas no CSS (.tabela-pessoas): sem elas a tabela usava
+1290px para ~700px de conteúdo e abria um vão de 275px entre PAPÉIS e DOCUMENTO. No
+celular ficam só Nome e Papéis — o resto está na ficha da pessoa.{% endcomment %}
+<table class="tabela tabela-fixa tabela-pessoas">
   <colgroup>
-    <col style="width:30%"><col style="width:7%"><col style="width:23%">
-    <col style="width:16%"><col style="width:14%"><col style="width:10%">
+    <col class="c-nome"><col class="c-tipo"><col class="c-papeis">
+    <col class="c-doc"><col class="c-tel"><col class="c-sit">
   </colgroup>
   <thead>
-    <tr><th>Nome</th><th>Tipo</th><th>Papéis</th><th class="num">Documento</th><th>Telefone</th><th>Situação</th></tr>
+    <tr><th>Nome</th><th class="c-tipo">Tipo</th><th>Papéis</th><th class="num c-doc">Documento</th><th class="c-tel">Telefone</th><th class="c-sit">Situação</th></tr>
   </thead>
   <tbody>
     {% for p in pessoas %}
@@ -46,17 +47,18 @@ conteúdo e abria um vão de 275px entre PAPÉIS e DOCUMENTO.{% endcomment %}
         <td><a href="{% url 'pessoa_editar' p.pk %}">{{ p.nome }}</a></td>
         {% comment %}Tipo e papéis são rótulos de dado, não status: texto discreto em vez
         de cápsula. Eram 64 pílulas repetindo "PF" e "HÓSPEDE" linha a linha.{% endcomment %}
-        <td><span class="rotulo-dado dica" data-dica="{{ p.get_tipo_display }}">{{ p.sigla_tipo }}</span></td>
+        <td class="c-tipo"><span class="rotulo-dado dica" data-dica="{{ p.get_tipo_display }}">{{ p.sigla_tipo }}</span></td>
         <td>
           {% for papel in p.papeis %}<span class="rotulo-dado">{{ papel }}</span>{% empty %}<span class="rotulo-dado">Cliente avulso</span>{% endfor %}
         </td>
-        <td class="num">{{ p.documento|default:"—" }}</td>
-        <td>{{ p.telefone|default:"—" }}</td>
-        <td>{% if p.ativo %}Ativa{% else %}Inativa{% endif %}</td>
+        <td class="num c-doc">{{ p.documento|default:"—" }}</td>
+        <td class="c-tel">{{ p.telefone|default:"—" }}</td>
+        <td class="c-sit">{% if p.ativo %}Ativa{% else %}Inativa{% endif %}</td>
       </tr>
     {% empty %}
       <tr><td colspan="6" class="vazio">Nenhuma pessoa neste filtro. {% if busca or papel %}<a href="{% url 'pessoas' %}">Limpar filtros</a>{% else %}Comece pela primeira!{% endif %}</td></tr>
     {% endfor %}
   </tbody>
 </table>
+{% include "componentes/paginacao.html" with pagina=pagina %}
 {% endblock %}

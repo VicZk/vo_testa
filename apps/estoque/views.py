@@ -17,6 +17,7 @@ from apps.nucleo.models import (
     transferir,
 )
 from apps.nucleo.modulos import Modulo
+from apps.nucleo.paginacao import paginar
 from apps.nucleo.permissoes import requer_modulo
 
 from .forms import (
@@ -87,13 +88,14 @@ def produto_form(request, pk=None):
 @requer_modulo(Modulo.ESTOQUE)
 def kardex(request, pk):
     produto = get_object_or_404(Produto, pk=pk)
-    movimentos = produto.movimentos.select_related("local")[:300]
+    movimentos = paginar(request, produto.movimentos.select_related("local"), 100)
     return render(
         request,
         "estoque/kardex.html",
         {
             "produto": produto,
             "movimentos": movimentos,
+            "pagina": movimentos,
             "saldo": saldo(produto),
         },
     )

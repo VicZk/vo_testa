@@ -1580,8 +1580,8 @@ publica quem/IP num threadlocal para services sem `request`.
 ### Telas/rotas (`/crm/auditoria/`) — `@requer_modulo(Modulo.AUDITORIA)`
 
 - `auditoria:painel` — KPIs + lista de achados com gravidade e link Resolver.
-- `auditoria:trilha` — filtro por ação, usuário e período (mês/ano), 300 últimos
-  registros, export CSV (até 5.000 linhas) com a coluna descrição.
+- `auditoria:trilha` — filtro por ação, usuário e período (mês/ano), 100 registros por
+  página, export CSV (até 5.000 linhas) com a coluna descrição.
 - `auditoria:fechamentos` — os fechamentos do dia do período (mês/ano): ocupação,
   chegadas, saídas, no-shows, diárias, ADR, serviço, consumo e saldo em aberto, com os
   totais do período no topo; CSV só para a gerência. Lê `reservas.fechamentos()` e

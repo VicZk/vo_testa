@@ -13,6 +13,7 @@ from apps.nucleo.models import (
     saldo,
 )
 from apps.nucleo.modulos import Modulo
+from apps.nucleo.paginacao import paginar
 from apps.nucleo.permissoes import eh_gerente, requer_gerencia, requer_modulo
 from apps.nucleo.seletores import pessoas_agrupadas
 
@@ -115,8 +116,10 @@ def historico(request):
     ]
     if filtro in (Comanda.Status.FECHADA, Comanda.Status.CANCELADA):
         qs = qs.filter(status=filtro)
+    pagina = paginar(request, qs)
     return render(request, "restaurante/historico.html", {
-        "comandas": qs[:200],
+        "comandas": pagina,
+        "pagina": pagina,
         "filtro": filtro,
         "filtros": filtros,
     })

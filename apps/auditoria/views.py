@@ -9,6 +9,7 @@ from django.views.decorators.cache import never_cache
 from apps.nucleo.audit import redigir_sensiveis
 from apps.nucleo.models import TrilhaAuditoria
 from apps.nucleo.modulos import Modulo
+from apps.nucleo.paginacao import paginar
 from apps.nucleo.periodos import periodo, selecao_periodo
 from apps.nucleo.permissoes import eh_gerente, pode_ver_salario, requer_modulo
 
@@ -68,12 +69,14 @@ def trilha(request):
                 _json.dumps(t.detalhe, ensure_ascii=False),
             )])
         return resp
-    registros = list(qs[:300])
+    pagina = paginar(request, qs, 100)
+    registros = list(pagina.object_list)
     if ocultar_sensivel:
         for t in registros:
             t.detalhe = redigir_sensiveis(t.detalhe)
     return render(request, "auditoria/trilha.html", {
         "registros": registros,
+        "pagina": pagina,
         "rotulo": rotulo,
         "acoes": TrilhaAuditoria.objects.order_by("acao").values_list("acao", flat=True).distinct(),
         "usuarios": Usuario.objects.filter(auditorias__isnull=False).distinct(),

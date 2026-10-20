@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.views.decorators.cache import never_cache
 
 from apps.nucleo.modulos import Modulo
+from apps.nucleo.paginacao import paginar
 from apps.nucleo.permissoes import requer_modulo
 from apps.nucleo.ratelimit import limite_excedido
 
@@ -199,6 +200,7 @@ def _qr_svg(url):
 @requer_modulo(Modulo.APPSITE)
 def solicitacoes(request):
     """Painel interno das solicitações vindas do portal."""
+    pagina = paginar(request, SolicitacaoPortal.objects.all())
     return render(request, "portal/solicitacoes.html", {
-        "solicitacoes": SolicitacaoPortal.objects.all()[:100],
+        "solicitacoes": pagina, "pagina": pagina,
     })

@@ -48,6 +48,7 @@ from .models import (
     estornar_movimento,
 )
 from .modulos import APRESENTACAO
+from .paginacao import paginar
 from .permissoes import eh_gerente, pode_ver_salario, requer_area, requer_gerencia
 
 # ---------- Dashboard ----------
@@ -412,8 +413,9 @@ def pessoas(request, perfil=None):
 
     if perfil:  # tela focada: só aquele papel, sem chips de outros
         titulo, chave, novo_papel = PERFIS_PESSOA[perfil]
+        pagina = paginar(request, base.filter(PAPEL_FILTROS[chave][1]))
         return render(request, "nucleo/pessoas.html", {
-            "pessoas": base.filter(PAPEL_FILTROS[chave][1]),
+            "pessoas": pagina, "pagina": pagina,
             "busca": busca, "papel": chave, "perfil": perfil,
             "titulo": titulo, "novo_papel": novo_papel, "filtros": [],
         })
@@ -429,8 +431,10 @@ def pessoas(request, perfil=None):
     if papel in PAPEL_FILTROS:
         lista = lista.filter(PAPEL_FILTROS[papel][1])
 
+    pagina = paginar(request, lista)
     return render(request, "nucleo/pessoas.html", {
-        "pessoas": lista, "busca": busca, "papel": papel, "filtros": filtros,
+        "pessoas": pagina, "pagina": pagina,
+        "busca": busca, "papel": papel, "filtros": filtros,
         "titulo": "Pessoas",
     })
 
@@ -1204,10 +1208,11 @@ def lancamentos(request):
         "receitas": lista.filter(tipo="receita").aggregate(t=Sum("valor"))["t"] or 0,
         "despesas": lista.filter(tipo="despesa").aggregate(t=Sum("valor"))["t"] or 0,
     }
+    pagina = paginar(request, lista, 100)
     return render(
         request,
         "nucleo/lancamentos.html",
-        {"lancamentos": lista[:200], "tipo": tipo, "totais": totais},
+        {"lancamentos": pagina, "pagina": pagina, "tipo": tipo, "totais": totais},
     )
 
 

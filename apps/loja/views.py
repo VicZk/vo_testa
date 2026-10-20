@@ -16,6 +16,7 @@ from apps.nucleo.models import (
     saldo,
 )
 from apps.nucleo.modulos import Modulo
+from apps.nucleo.paginacao import paginar
 from apps.nucleo.permissoes import eh_gerente, requer_gerencia, requer_modulo
 
 from . import services
@@ -111,8 +112,8 @@ def finalizar(request):
 
 @requer_modulo(Modulo.LOJA)
 def vendas(request):
-    lista = Venda.objects.select_related("cliente", "criado_por")[:200]
-    return render(request, "loja/vendas.html", {"vendas": lista})
+    lista = paginar(request, Venda.objects.select_related("cliente", "criado_por"))
+    return render(request, "loja/vendas.html", {"vendas": lista, "pagina": lista})
 
 
 @requer_modulo(Modulo.LOJA)

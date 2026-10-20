@@ -1695,3 +1695,65 @@ class HorariosNaTabelaDePrecosTests(TestCase):
         self.assertEqual((cfg.hora_checkin, cfg.hora_checkout),
                          (datetime.time(13, 30), datetime.time(11, 0)))
         self.assertContains(self.client.get(reverse("tabela_precos")), 'value="13:30"')
+
+
+class PaginacaoTests(TestCase):
+    """Listas paginadas: total real, página estável e busca/filtros que seguem junto
+    (antes cada lista cortava em 200/300 e o resto sumia; a de Pessoas trazia tudo)."""
+
+    def setUp(self):
+        u = Usuario.objects.create_superuser(username="pag", password="senha-forte-123")
+        self.client.force_login(u)
+
+    def test_paginar_desempata_pela_pk(self):
+        # Mesmo nome = mesma posição na ordem por nome: sem desempate, uma pessoa podia
+        # aparecer em duas páginas e outra em nenhuma.
+        from django.test import RequestFactory
+
+        from .paginacao import paginar
+
+        for _ in range(5):
+            Pessoa.objects.create(nome="Mesmo Nome")
+        consulta = Pessoa.objects.filter(nome="Mesmo Nome")
+        vistos = []
+        for numero in (1, 2, 3):
+            pedido = RequestFactory().get("/", {"pagina": numero})
+            vistos += [p.pk for p in paginar(pedido, consulta, 2)]
+        self.assertEqual(sorted(vistos), sorted(consulta.values_list("pk", flat=True)))
+
+    def test_pagina_invalida_ou_alem_do_fim(self):
+        from django.test import RequestFactory
+
+        from .paginacao import paginar
+
+        for i in range(3):
+            Pessoa.objects.create(nome=f"P{i}")
+        pedido = RequestFactory().get("/", {"pagina": "abc"})
+        self.assertEqual(paginar(pedido, Pessoa.objects.all(), 2).number, 1)
+        pedido = RequestFactory().get("/", {"pagina": "99"})
+        self.assertEqual(paginar(pedido, Pessoa.objects.all(), 2).number, 2)
+
+    def test_pessoas_em_paginas_com_a_busca_junto(self):
+        for i in range(60):
+            Pessoa.objects.create(nome=f"Fulano {i:02d}")
+        resp = self.client.get(reverse("pessoas"), {"q": "Fulano"})
+        self.assertEqual(len(resp.context["pessoas"]), 50)
+        self.assertContains(resp, "Página 1 de 2")
+        self.assertContains(resp, "1–50 de 60")
+        self.assertContains(resp, "?q=Fulano&amp;pagina=2")
+        resp = self.client.get(reverse("pessoas"), {"q": "Fulano", "pagina": 2})
+        self.assertEqual(len(resp.context["pessoas"]), 10)
+        self.assertContains(resp, "Fulano 59")
+
+    def test_lista_curta_sem_paginacao(self):
+        Pessoa.objects.create(nome="Sozinha")
+        resp = self.client.get(reverse("pessoas"))
+        self.assertNotContains(resp, 'class="paginacao"')
+
+    def test_milhar(self):
+        from .templatetags.moeda import milhar
+
+        self.assertEqual(milhar(1234567), "1.234.567")
+        self.assertEqual(milhar(950), "950")
+        self.assertEqual(milhar("x"), "x")
+

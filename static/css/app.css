@@ -968,6 +968,25 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 .tabela a { color: var(--madeira); font-weight: 600; text-decoration: none; }
 .tabela a:hover { text-decoration: underline; }
 .vazio { color: var(--tinta-suave); text-align: center; padding: 2rem 1.4rem !important; }
+
+/* Paginação das listas (componentes/paginacao.html): anterior · página · próxima */
+.paginacao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .75rem;
+  margin: 1rem 0 .25rem;
+}
+.paginacao .botao-mini { display: inline-flex; align-items: center; padding: .4rem .9rem; }
+.paginacao .botao-mini[aria-disabled="true"] { opacity: .45; pointer-events: none; }
+.paginacao-info {
+  color: var(--tinta-suave);
+  font-size: .86rem;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 560px) { .paginacao-total { display: none; } }
+
 /* Estado-vazio elegante: ícone discreto + texto centralizado (dashboard, listas, etc.) */
 .estado-vazio { display: flex; flex-direction: column; align-items: center; gap: .5rem; padding: 2rem 1.2rem; color: var(--tinta-suave); text-align: center; }
 .estado-vazio .ico { width: 30px; height: 30px; opacity: .45; }
@@ -1343,6 +1362,19 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 /* Larguras declaradas pelo <colgroup> valem de verdade (e o texto longo corta
    em vez de esticar a coluna). */
 .tabela-fixa { table-layout: fixed; }
+/* Pessoas: larguras por coluna; no celular ficam Nome e Papéis (o resto está na ficha). */
+.tabela-pessoas col.c-nome { width: 30%; }
+.tabela-pessoas col.c-tipo { width: 7%; }
+.tabela-pessoas col.c-papeis { width: 23%; }
+.tabela-pessoas col.c-doc { width: 16%; }
+.tabela-pessoas col.c-tel { width: 14%; }
+.tabela-pessoas col.c-sit { width: 10%; }
+@media (max-width: 600px) {
+  .tabela-pessoas .c-tipo, .tabela-pessoas .c-doc,
+  .tabela-pessoas .c-tel, .tabela-pessoas .c-sit { display: none; }
+  .tabela-pessoas col.c-nome { width: 55%; }
+  .tabela-pessoas col.c-papeis { width: 45%; }
+}
 .tabela-fixa td { overflow: hidden; text-overflow: ellipsis; }
 
 /* BOH: quadros lado a lado */

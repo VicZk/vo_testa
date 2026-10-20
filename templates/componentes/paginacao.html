@@ -1,0 +1,23 @@
+{% comment %}
+Paginação de lista. Uso: {% include "componentes/paginacao.html" with pagina=pagina %}
+(`pagina` = o que `apps.nucleo.paginacao.paginar` devolve). Busca e filtros da URL vão
+junto ao trocar de página (tag `querystring` do Django). Com uma página só, não aparece.
+{% endcomment %}{% load moeda %}
+{% if pagina.has_other_pages %}
+<nav class="paginacao" aria-label="Páginas da lista">
+  {% if pagina.has_previous %}
+    <a class="botao-mini" href="{% querystring pagina=pagina.previous_page_number %}" rel="prev">‹ Anterior</a>
+  {% else %}
+    <span class="botao-mini" aria-disabled="true">‹ Anterior</span>
+  {% endif %}
+  <span class="paginacao-info">
+    Página {{ pagina.number|milhar }} de {{ pagina.paginator.num_pages|milhar }}
+    <span class="paginacao-total">· {{ pagina.start_index|milhar }}–{{ pagina.end_index|milhar }} de {{ pagina.paginator.count|milhar }}</span>
+  </span>
+  {% if pagina.has_next %}
+    <a class="botao-mini" href="{% querystring pagina=pagina.next_page_number %}" rel="next">Próxima ›</a>
+  {% else %}
+    <span class="botao-mini" aria-disabled="true">Próxima ›</span>
+  {% endif %}
+</nav>
+{% endif %}

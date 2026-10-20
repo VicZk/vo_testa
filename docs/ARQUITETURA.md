@@ -136,10 +136,11 @@ Observações importantes:
 `restaurante/`, `lavanderia/`, `governanca/`, `manutencao/`, `pagamentos/`, `fiscal/`,
 `auditoria/`, `relatorios/`, `conciliacao/`, `portal/`, `nps/`), mais:
 
-- `templates/componentes/` — 3 includes reusáveis: `combo_pessoa.html` (combobox de
+- `templates/componentes/` — includes reusáveis: `combo_pessoa.html` (combobox de
   pessoa com busca e agrupamento por papel), `combo_quarto.html` (combobox de quarto
   com seções por ala e recarga via `fetch` quando as datas mudam),
-  `icone_modulo.html` (ícone SVG por código de módulo, usado na sidebar).
+  `icone_modulo.html` (ícone SVG por código de módulo, usado na sidebar) e
+  `paginacao.html` (anterior · página X de Y · próxima, com busca e filtros mantidos).
 - `templates/registration/` — `login.html` e `mfa_desafio.html`.
 - `templates/lp/privacidade.html` — política de privacidade pública.
 
@@ -1466,6 +1467,7 @@ curva da casa é `cubic-bezier(.2,.8,.2,1)`).
 | `combo_pessoa.html` | `dados`, `dados_id`, `campo`, `placeholder`, `valor_id` | Combobox com busca instantânea e grupos sticky (Hóspedes → Prospecção → Clientes avulsos → Agências e empresas → Funcionários → Fornecedores). Dados de `nucleo.seletores.pessoas_agrupadas` via `json_script`; renderiza um `<input type=hidden name=…>` (o `Form` do Django valida igual). Componente Alpine `comboPessoa` registrado global em `base.html`. |
 | `combo_quarto.html` | `dados`, `dados_id`, `campo`, `placeholder`, `valor_id`, `data-url` | Mesmo visual, seções por **ala**; refaz a lista de quartos livres por `fetch` quando as datas do form mudam. |
 | `icone_modulo.html` | `codigo` | SVG do módulo para a sidebar/dashboard. |
+| `paginacao.html` | `pagina` | Paginador de lista: a view chama `apps.nucleo.paginacao.paginar(request, consulta, por_pagina=50)` (lê `?pagina=`, desempata a ordem pelo `pk`, número inválido vira a primeira página e além do fim vira a última) e o template inclui o componente logo abaixo da tabela. Busca e filtros vão junto pela tag `querystring` do Django; com uma página só, não aparece. Totais e contadores da tela continuam somando a consulta inteira, não a página. |
 
 ### 11.5 O kit “eleg” — `templates/comercial/_estilo_elegante.html`
 
@@ -1513,7 +1515,9 @@ npx tailwindcss@3 -i tailwind.src.css -o apps/site/static/site/css/tailwind.css 
    `{{ valor|intcomma_brl }}`.
 5. Cor/raio/sombra **só por token**. Mudança global = mexer no `:root` de `app.css`.
 6. Mensagens via `django.contrib.messages` (viram toasts automaticamente).
-7. Entrada de pessoa/quarto: usar os combos de `templates/componentes/`.
+7. Entrada de pessoa/quarto: usar os combos de `templates/componentes/`. Lista que
+   pode crescer: `paginar()` na view + `componentes/paginacao.html` — nunca cortar em
+   `[:200]`.
 8. Ícone novo: adicionar o `{% elif codigo == '…' %}` em `componentes/icone_modulo.html`.
 
 ---

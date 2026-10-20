@@ -11,6 +11,7 @@ from django.views.decorators.http import require_POST
 
 from apps.nucleo.models import Funcionario
 from apps.nucleo.modulos import Modulo
+from apps.nucleo.paginacao import paginar
 from apps.nucleo.permissoes import eh_gerente, requer_gerencia, requer_modulo
 
 from . import services
@@ -298,8 +299,10 @@ def ausencias(request):
         except ValidationError as erro:
             messages.error(request, " ".join(erro.messages))
         return redirect("escala:ausencias")
+    pagina = paginar(request, Ausencia.objects.select_related("funcionario__pessoa"))
     return render(request, "escala/ausencias.html", {
-        "ausencias": Ausencia.objects.select_related("funcionario__pessoa")[:100],
+        "ausencias": pagina,
+        "pagina": pagina,
         "funcionarios": _funcionarios(),
         "tipos": Ausencia.Tipo.choices,
     })

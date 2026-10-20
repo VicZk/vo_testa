@@ -8,6 +8,7 @@ from django.views.decorators.cache import never_cache
 
 from apps.nucleo.models import FormaPagamento, Pessoa
 from apps.nucleo.modulos import Modulo
+from apps.nucleo.paginacao import paginar
 from apps.nucleo.permissoes import eh_gerente, requer_gerencia, requer_modulo
 from apps.nucleo.seletores import pessoas_agrupadas
 
@@ -159,14 +160,14 @@ def cancelar(request, pk):
 
 @requer_modulo(Modulo.LAVANDERIA)
 def historico(request):
-    ordens = (
+    ordens = paginar(request, (
         OrdemLavanderia.objects.filter(
             status__in=[OrdemLavanderia.Status.ENTREGUE, OrdemLavanderia.Status.CANCELADA]
         )
         .select_related("cliente", "forma_pagamento")
-        .prefetch_related("itens")[:200]
-    )
-    return render(request, "lavanderia/historico.html", {"ordens": ordens})
+        .prefetch_related("itens")
+    ))
+    return render(request, "lavanderia/historico.html", {"ordens": ordens, "pagina": ordens})
 
 
 @requer_modulo(Modulo.LAVANDERIA)

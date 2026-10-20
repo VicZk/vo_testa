@@ -11,6 +11,7 @@ from django.utils import timezone
 
 from apps.nucleo.models import UH, FormaPagamento, Pessoa, Temporada, TipoUH
 from apps.nucleo.modulos import Modulo
+from apps.nucleo.paginacao import paginar
 from apps.nucleo.permissoes import eh_gerente, requer_gerencia, requer_modulo
 from apps.nucleo.seletores import pessoas_agrupadas
 from apps.nucleo.templatetags.moeda import intcomma_brl
@@ -216,11 +217,13 @@ def lista(request):
         v = services.saidas_vencidas()
         alvo = v["com_saldo"] if saida == "vencida_saldo" else v["quitadas"]
         reservas = reservas.filter(pk__in=[r.pk for r in alvo])
+    pagina = paginar(request, reservas)
     return render(
         request,
         "reservas/lista.html",
         {
-            "reservas": reservas[:200],
+            "reservas": pagina,
+            "pagina": pagina,
             "status": status,
             "busca": busca,
             "saida": saida,
@@ -1035,7 +1038,8 @@ def _boh_csv(dados):
 @requer_modulo(Modulo.RESERVAS)
 def grupos(request):
     grupos_qs = GrupoReserva.objects.select_related("titular").prefetch_related("filhas")
-    return render(request, "reservas/grupos.html", {"grupos": grupos_qs[:200]})
+    pagina = paginar(request, grupos_qs)
+    return render(request, "reservas/grupos.html", {"grupos": pagina, "pagina": pagina})
 
 
 @requer_modulo(Modulo.RESERVAS)
