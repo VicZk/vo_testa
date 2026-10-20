@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load moeda %}
 
 {% block titulo %}Documento fiscal #{{ doc.pk }}{% endblock %}
 
@@ -17,7 +18,7 @@
     <dl class="ficha">
       <div><dt>Natureza</dt><dd>{{ doc.get_natureza_display }}</dd></div>
       <div><dt>Descrição</dt><dd>{{ doc.descricao }}</dd></div>
-      <div><dt>Valor</dt><dd><strong>R$ {{ doc.valor }}</strong></dd></div>
+      <div><dt>Valor</dt><dd><strong>{{ doc.valor|intcomma_brl }}</strong></dd></div>
       {% if doc.tomador %}<div><dt>Tomador</dt><dd>{{ doc.tomador.nome }}</dd></div>{% endif %}
       <div><dt>Gateway</dt><dd>{{ doc.gateway|default:"—" }} · {{ doc.gateway_id|default:"—" }}</dd></div>
       {% if doc.numero %}<div><dt>Número/série</dt><dd>{{ doc.numero }} / {{ doc.serie }}</dd></div>{% endif %}

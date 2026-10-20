@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load moeda %}
 
 {% block titulo %}Fechamento de conciliação — CRM Vô Testa{% endblock %}
 
@@ -33,10 +34,10 @@
 
   <div class="kpis" style="margin-top:.3rem">
     <div class="kpi kpi-destaque"><span class="kpi-rotulo letreiro">Extrato conciliado</span><span class="kpi-valor num">{{ dados.extrato.pct }}%</span></div>
-    <div class="kpi"><span class="kpi-rotulo letreiro">Créditos conciliados</span><span class="kpi-valor num">R$ {{ dados.extrato.creditos }}</span></div>
-    <div class="kpi"><span class="kpi-rotulo letreiro">Débitos conciliados</span><span class="kpi-valor num">R$ {{ dados.extrato.debitos }}</span></div>
+    <div class="kpi"><span class="kpi-rotulo letreiro">Créditos conciliados</span><span class="kpi-valor num">{{ dados.extrato.creditos|intcomma_brl }}</span></div>
+    <div class="kpi"><span class="kpi-rotulo letreiro">Débitos conciliados</span><span class="kpi-valor num">{{ dados.extrato.debitos|intcomma_brl }}</span></div>
     <div class="kpi kpi-destaque"><span class="kpi-rotulo letreiro">Cartão conciliado</span><span class="kpi-valor num">{{ dados.cartao.pct }}%</span></div>
-    <div class="kpi"><span class="kpi-rotulo letreiro">Taxa de cartão</span><span class="kpi-valor num">R$ {{ dados.cartao.taxa }}</span></div>
+    <div class="kpi"><span class="kpi-rotulo letreiro">Taxa de cartão</span><span class="kpi-valor num">{{ dados.cartao.taxa|intcomma_brl }}</span></div>
   </div>
 
   {# Gráficos conciliado × pendente #}

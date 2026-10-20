@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load moeda %}
 
 {% block titulo %}Conciliação manual — CRM Vô Testa{% endblock %}
 
@@ -37,7 +38,7 @@
               <select name="escolha" style="max-width:340px">
                 <option value="">— escolher registro do CRM —</option>
                 {% for c in cands %}
-                <option value="{{ c.origem }}:{{ c.id }}">{% if c.exato %}★ {% endif %}{{ c.rotulo }} · R$ {{ c.valor }} · {{ c.data|date:"d/m" }}</option>
+                <option value="{{ c.origem }}:{{ c.id }}">{% if c.exato %}★ {% endif %}{{ c.rotulo }} · {{ c.valor|intcomma_brl }} · {{ c.data|date:"d/m" }}</option>
                 {% endfor %}
               </select>
               <button class="botao-mini" type="submit">Casar</button>
@@ -76,7 +77,7 @@
               <select name="escolha" style="max-width:340px">
                 <option value="">— escolher recebimento —</option>
                 {% for c in cands %}
-                <option value="{{ c.origem }}:{{ c.id }}">{% if c.exato %}★ {% endif %}{{ c.rotulo }} · R$ {{ c.valor }}</option>
+                <option value="{{ c.origem }}:{{ c.id }}">{% if c.exato %}★ {% endif %}{{ c.rotulo }} · {{ c.valor|intcomma_brl }}</option>
                 {% endfor %}
               </select>
               <button class="botao-mini" type="submit">Casar</button>

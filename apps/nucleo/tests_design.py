@@ -505,3 +505,54 @@ class PortalDoHospedeTests(TestCase):
                   / "fnrh_fichas.html").read_text(encoding="utf-8")
         self.assertNotIn("{{ forloop.counter }}", fichas)
         self.assertIn("Acompanhante {{ forloop.counter0 }}", fichas)
+
+
+class UmJeitoSoTests(TestCase):
+    """Um componente por papel, um formatador por tipo de dado."""
+
+    def setUp(self):
+        bruto = CSS.read_text(encoding="utf-8").replace("\r\n", "\n")
+        self.css = bruto
+        # O comentário que explica a limpeza cita os nomes removidos.
+        self.css_sem_comentario = re.sub(r"/\*.*?\*/", "", bruto, flags=re.S)
+        self.raizes = [Path(settings.BASE_DIR) / "templates"]
+
+    def test_dinheiro_sempre_pelo_filtro_unico(self):
+        """`R$ {{ x }}` imprime o Decimal cru — a tela do Comercial mostrava
+        `R$ 690000,00`. O único lugar com o prefixo escrito à mão é o e-mail de
+        proposta, cujas variáveis já chegam formatadas do Python."""
+        sobras = []
+        for raiz in self.raizes:
+            for p in raiz.rglob("*.html"):
+                if p.match("comercial/email/proposta.html"):
+                    continue
+                if re.search(r"R\$\s*\{\{", p.read_text(encoding="utf-8")):
+                    sobras.append(str(p.relative_to(settings.BASE_DIR)))
+        self.assertEqual(sobras, [])
+
+    def test_sem_duplo_rs(self):
+        """`R$ {{ x|intcomma_brl }}` sairia como "R$ R$ 1.234,56"."""
+        sobras = []
+        for raiz in self.raizes:
+            for p in raiz.rglob("*.html"):
+                if re.search(r"R\$\s*\{\{[^}]*intcomma_brl", p.read_text(encoding="utf-8")):
+                    sobras.append(str(p.relative_to(settings.BASE_DIR)))
+        self.assertEqual(sobras, [])
+
+    def test_impressao_esconde_as_classes_que_existem(self):
+        """O @media print escondia `.app-sidebar`/`.app-topbar`, que não
+        existem: imprimir um relatório saía com o menu na folha."""
+        rel = (Path(settings.BASE_DIR) / "templates" / "relatorios"
+               / "relatorio.html").read_text(encoding="utf-8")
+        bloco = re.search(r'<style media="print">(.*?)</style>', rel, re.S)
+        self.assertIsNotNone(bloco)
+        for classe in (".sidebar", ".topbar", ".conteudo"):
+            self.assertIn(classe, bloco.group(1), classe)
+        self.assertNotIn(".app-sidebar", bloco.group(1))
+
+    def test_css_do_mapa_de_portas_antigo_sumiu(self):
+        """~60 linhas que nenhum template usava desde que o corredor virou
+        cartões."""
+        for morta in (".quartos-grid", ".quarto-porta", ".porta-circulo",
+                      ".porta-badge", ".porta-legenda", ".porta-dot", ".porta-ico"):
+            self.assertNotIn(morta, self.css_sem_comentario, morta)

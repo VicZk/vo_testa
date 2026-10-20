@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load moeda %}
 
 {% block titulo %}Estoque — CRM Vô Testa{% endblock %}
 
@@ -35,8 +36,8 @@
         <td>{{ l.produto.categoria.nome }}</td>
         <td class="num">{{ l.saldo }} {{ l.produto.get_unidade_display|lower }}</td>
         <td class="num">{{ l.produto.estoque_minimo }}</td>
-        <td class="num">R$ {{ l.produto.custo_medio }}</td>
-        <td class="num">R$ {{ l.valor }}</td>
+        <td class="num">{{ l.produto.custo_medio|intcomma_brl }}</td>
+        <td class="num">{{ l.valor|intcomma_brl }}</td>
         <td><a href="{% url 'estoque:kardex' l.produto.pk %}" class="botao-neutro">Kardex</a></td>
       </tr>
     {% empty %}

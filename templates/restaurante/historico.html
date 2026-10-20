@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load moeda %}
 
 {% block titulo %}Histórico de comandas — Restaurante{% endblock %}
 
@@ -36,7 +37,7 @@
             {{ c.get_status_display }}
           </span>
         </td>
-        <td class="num">R$ {{ c.total }}</td>
+        <td class="num">{{ c.total|intcomma_brl }}</td>
         <td>
           {% if c.status == 'cancelada' %}
             <span class="dica" data-dica="{{ c.motivo_cancelamento|default:'Sem motivo registrado' }}">Cancelada</span>

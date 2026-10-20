@@ -1,4 +1,5 @@
 {% extends "portal/base.html" %}
+{% load moeda %}
 
 {% block titulo %}Conta & check-out — Pousada Vô Testa{% endblock %}
 
@@ -9,13 +10,13 @@
   {% for l in e.lancamentos %}
     <div class="pt-linha">
       <span>{{ l.descricao }} <small class="opcional">{{ l.natureza }}</small></span>
-      <span>{% if not l.debito %}−{% endif %}R$ {{ l.valor }}</span>
+      <span>{% if not l.debito %}−{% endif %}{{ l.valor|intcomma_brl }}</span>
     </div>
   {% empty %}
     <p class="subtitulo">Nenhum lançamento até agora.</p>
   {% endfor %}
   <div class="pt-linha" style="border-top:2px solid var(--fio);margin-top:.4rem;padding-top:.7rem">
-    <strong>Saldo a pagar</strong><strong class="pt-saldo" style="font-size:1.4rem">R$ {{ e.saldo }}</strong>
+    <strong>Saldo a pagar</strong><strong class="pt-saldo" style="font-size:1.4rem">{{ e.saldo|intcomma_brl }}</strong>
   </div>
 </div>
 
@@ -28,7 +29,7 @@
       <label class="select-wrap"><select name="metodo">
         <option value="pix">Pix</option><option value="cartao">Cartão de crédito</option>
       </select></label>
-      <button type="submit" class="botao-primario">Pagar R$ {{ e.saldo }} e sair</button>
+      <button type="submit" class="botao-primario">Pagar {{ e.saldo|intcomma_brl }} e sair</button>
     </form>
   {% else %}
     <p class="subtitulo">Sua conta está quitada. 🎉</p>

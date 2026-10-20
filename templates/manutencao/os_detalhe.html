@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load moeda %}
 
 {% block titulo %}OS #{{ os.pk }} — Manutenção{% endblock %}
 
@@ -26,7 +27,7 @@
       {% if os.previsto_para %}<div><dt>Previsto para</dt><dd>{{ os.previsto_para|date:"d/m/Y" }}</dd></div>{% endif %}
       {% if os.agendada_para %}<div><dt>Agendada</dt><dd>{{ os.agendada_para|date:"d/m/Y" }}{% if os.recorrencia_meses %} · repete a cada {{ os.recorrencia_meses }} m{% endif %}</dd></div>{% endif %}
       {% if os.concluida_em %}<div><dt>Encerrada</dt><dd>{{ os.concluida_em|date:"d/m/Y H:i" }}</dd></div>{% endif %}
-      <div><dt>Custo</dt><dd>R$ {{ os.custo_total }} <small>(mão de obra R$ {{ os.custo_maodeobra }} + peças R$ {{ os.custo_pecas }})</small></dd></div>
+      <div><dt>Custo</dt><dd>{{ os.custo_total|intcomma_brl }} <small>(mão de obra {{ os.custo_maodeobra|intcomma_brl }} + peças {{ os.custo_pecas|intcomma_brl }})</small></dd></div>
       {% if os.nota_fiscal %}<div><dt>Nota fiscal</dt><dd>{{ os.nota_fiscal }}</dd></div>{% endif %}
       {% if os.garantia_ate %}<div><dt>Garantia até</dt><dd>{{ os.garantia_ate|date:"d/m/Y" }}</dd></div>{% endif %}
     </dl>

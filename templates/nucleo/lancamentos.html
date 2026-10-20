@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load moeda %}
 
 {% block titulo %}Lançamentos — CRM Vô Testa{% endblock %}
 
@@ -13,11 +14,11 @@
 <div class="cartoes cartoes-indicadores">
   <div class="cartao">
     <span class="indicador-rotulo letreiro">Receitas</span>
-    <span class="indicador-valor">R$ {{ totais.receitas }}</span>
+    <span class="indicador-valor">{{ totais.receitas|intcomma_brl }}</span>
   </div>
   <div class="cartao">
     <span class="indicador-rotulo letreiro">Despesas</span>
-    <span class="indicador-valor">R$ {{ totais.despesas }}</span>
+    <span class="indicador-valor">{{ totais.despesas|intcomma_brl }}</span>
   </div>
 </div>
 
@@ -39,7 +40,7 @@
         <td>{{ l.categoria.nome }}</td>
         <td>{{ l.get_centro_display }}</td>
         <td>{{ l.descricao }}</td>
-        <td class="num">R$ {{ l.valor }}</td>
+        <td class="num">{{ l.valor|intcomma_brl }}</td>
       </tr>
     {% empty %}
       <tr><td colspan="6" class="vazio">Nenhum lançamento. Cadastre categorias no admin e registre o primeiro.</td></tr>

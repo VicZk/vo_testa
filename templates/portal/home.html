@@ -1,11 +1,12 @@
 {% extends "portal/base.html" %}
+{% load moeda %}
 
 {% block conteudo %}
 <div class="pt-card">
   <p class="letreiro">Olá, {{ e.hospede }}</p>
   <h2>{{ e.uh }}</h2>
   <p class="subtitulo">Estadia de {{ e.checkin|date:"d/m" }} a {{ e.checkout|date:"d/m/Y" }}.</p>
-  <div class="pt-linha"><span>Saldo da conta</span><strong class="pt-saldo{% if e.saldo > 0 %} devendo{% endif %}" style="font-size:1.3rem">R$ {{ e.saldo }}</strong></div>
+  <div class="pt-linha"><span>Saldo da conta</span><strong class="pt-saldo{% if e.saldo > 0 %} devendo{% endif %}" style="font-size:1.3rem">{{ e.saldo|intcomma_brl }}</strong></div>
   <div class="pt-acoes" style="margin-top:1rem">
     <a href="{% url 'portal:checkout' token %}" class="botao-primario" style="text-align:center;text-decoration:none">Ver conta & check-out</a>
   </div>
@@ -26,7 +27,7 @@
     {% csrf_token %}
     {% for item in cardapio %}
       <div class="pt-cardapio-item">
-        <span class="nome">{{ item.nome }}<br><span class="preco">R$ {{ item.preco }}</span></span>
+        <span class="nome">{{ item.nome }}<br><span class="preco">{{ item.preco|intcomma_brl }}</span></span>
         <input type="number" name="qtd_{{ item.id }}" min="0" value="0" inputmode="numeric">
       </div>
     {% endfor %}

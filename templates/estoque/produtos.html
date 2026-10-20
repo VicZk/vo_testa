@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load moeda %}
 
 {% block titulo %}Produtos — Estoque{% endblock %}
 
@@ -26,8 +27,8 @@
         <td>{{ p.categoria.nome }}</td>
         <td>{{ p.get_unidade_display }}</td>
         <td>{{ p.get_natureza_display }}</td>
-        <td class="num">R$ {{ p.custo_medio }}</td>
-        <td class="num">R$ {{ p.preco_venda }}</td>
+        <td class="num">{{ p.custo_medio|intcomma_brl }}</td>
+        <td class="num">{{ p.preco_venda|intcomma_brl }}</td>
         <td class="num">{{ p.saldo }}</td>
       </tr>
     {% empty %}

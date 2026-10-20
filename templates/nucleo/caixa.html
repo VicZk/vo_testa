@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load moeda %}
 
 {% block titulo %}Caixa — CRM Vô Testa{% endblock %}
 
@@ -19,7 +20,7 @@
 {% else %}
   <p class="subtitulo">
     Caixa <strong>{{ sessao.get_modulo_display }}</strong>, aberto em {{ sessao.aberta_em|date:"d/m/Y H:i" }}
-    com fundo de R$ {{ sessao.fundo_troco }}.
+    com fundo de {{ sessao.fundo_troco|intcomma_brl }}.
   </p>
   {% if sessoes_abertas.count > 1 %}
   <p class="subtitulo" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -38,7 +39,7 @@
     {% for nome, total in sessao.totais_por_forma %}
       <div class="cartao">
         <span class="indicador-rotulo letreiro">{{ nome }}</span>
-        <span class="indicador-valor">R$ {{ total }}</span>
+        <span class="indicador-valor">{{ total|intcomma_brl }}</span>
       </div>
     {% endfor %}
   </div>
@@ -85,7 +86,7 @@
           <td>{{ m.criado_em|date:"H:i" }}</td>
           <td><span class="dica" data-dica="{{ m.tipo_ajuda }}">{{ m.get_tipo_display }}</span></td>
           <td>{{ m.forma_pagamento|default:"Dinheiro" }}</td>
-          <td class="num">R$ {{ m.valor }}</td>
+          <td class="num">{{ m.valor|intcomma_brl }}</td>
           <td>{{ m.descricao }}</td>
         </tr>
       {% empty %}

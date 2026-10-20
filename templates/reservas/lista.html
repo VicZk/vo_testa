@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load moeda %}
 
 {% block titulo %}Reservas — CRM Vô Testa{% endblock %}
 
@@ -38,7 +39,7 @@
         <td>{{ r.uh.numero }}</td>
         <td>{{ r.checkin|date:"d/m/Y" }} → {{ r.checkout|date:"d/m/Y" }}</td>
         <td class="num">{{ r.noites }}</td>
-        <td class="num">R$ {{ r.valor_diaria }}</td>
+        <td class="num">{{ r.valor_diaria|intcomma_brl }}</td>
         <td><span class="selo mapa-cor-{{ r.status }} dica" data-dica="{{ r.status_ajuda }}">{{ r.get_status_display }}</span></td>
       </tr>
     {% empty %}

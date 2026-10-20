@@ -1,3 +1,4 @@
+{% load moeda %}
 <div id="ordem-itens" class="comanda-itens">
   {% if erro %}<div class="mensagem error">{{ erro }}</div>{% endif %}
   {% if ordem.itens.all %}
@@ -6,7 +7,7 @@
         <div class="pdv-item">
           <span class="comanda-qtd">{{ i.quantidade|floatformat:"-3" }}×</span>
           <span class="pdv-item-nome">{{ i.descricao }}</span>
-          <span class="pdv-sub">R$ {{ i.subtotal }}</span>
+          <span class="pdv-sub">{{ i.subtotal|intcomma_brl }}</span>
           {% if ordem.em_producao %}
             <button type="button" class="pdv-x" title="Remover"
                     hx-post="{% url 'lavanderia:remover_item' ordem.pk i.pk %}"
@@ -17,7 +18,7 @@
     </div>
     <div class="comanda-total-linha">
       <span class="letreiro">Total</span>
-      <strong>R$ {{ ordem.total }}</strong>
+      <strong>{{ ordem.total|intcomma_brl }}</strong>
     </div>
   {% else %}
     <div class="pdv-vazio">

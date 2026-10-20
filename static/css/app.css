@@ -2286,59 +2286,22 @@ a.modulo-ativo:hover {
   .quartos-filtro-grupo + .quartos-filtro-grupo { padding-left: 0; border-left: none; padding-top: .7rem; border-top: 1px solid var(--fio); width: 100%; }
 }
 
-.quartos-grid {
-  display: grid; grid-template-columns: repeat(8, 1fr); gap: 1.7rem .5rem;
-}
-@media (max-width: 1100px) { .quartos-grid { grid-template-columns: repeat(6, 1fr); } }
-@media (max-width: 720px) { .quartos-grid { grid-template-columns: repeat(4, 1fr); } }
-.quarto-porta {
-  display: flex; flex-direction: column; align-items: center; gap: .55rem;
-  padding: .2rem; background: none; border: none; cursor: pointer;
-  text-decoration: none; font-family: var(--fonte-ui);
-}
-div.quarto-porta { cursor: default; }
-.porta-circulo {
-  position: relative;
-  display: grid; place-items: center;
-  width: 90px; height: 90px; border-radius: 50%;
-  border: 1px solid var(--fio); background: transparent;
-  transition: transform .14s, box-shadow .14s;
-}
-a.quarto-porta:hover .porta-circulo, button.quarto-porta:hover .porta-circulo {
-  transform: translateY(-2px); box-shadow: var(--sombra-2);
-}
-.porta-ico { width: 42px; height: 54px; }
-.porta-badge {
-  position: absolute; top: 6px; right: 10px;
-  width: 11px; height: 11px; border-radius: 50%;
-  background: var(--perigo); border: 2px solid var(--canvas);
-}
-.porta-legenda { display: flex; align-items: center; gap: .35rem; font-size: .9rem; font-weight: 600; color: var(--tinta-suave); }
-.porta-dot {
-  width: 9px; height: 9px; border-radius: 50%;
-  border: 2.5px solid var(--fio-forte); background: none; box-sizing: border-box; flex-shrink: 0;
-}
-
-/* Cor por situação: porta (fill via currentColor) + anel do número */
-.sit-livre { color: var(--sucesso); }    .sit-livre .porta-dot { border-color: var(--sucesso); }
-.sit-ocupada { color: var(--perigo); }   .sit-ocupada .porta-dot { border-color: var(--perigo); }
+/* Cor por situação do quarto — usada pelos filtros do corredor, pelas portas
+   e pelos chips de legenda do painel.
+   Saíram daqui ~60 linhas do mapa de portas REDONDAS antigo (`.quartos-grid`,
+   `.quarto-porta`, `.porta-circulo`, `.porta-badge`, `.porta-legenda`,
+   `.porta-dot`): nenhum template as usava desde que o corredor virou cartões. */
+.sit-livre { color: var(--sucesso); }
+.sit-ocupada { color: var(--perigo); }
 /* Ouro é PREENCHIMENTO, nunca texto sobre claro: --lampiao sobre branco dá
    2,11:1 (o mínimo é 4,5). O ponto do filtro continua dourado; a palavra usa
    o ouro escurecido. */
-.sit-chegada { color: var(--lampiao-tinta); }  .sit-chegada .porta-dot { border-color: var(--lampiao); }
-.sit-a_limpar { color: var(--alerta); }  .sit-a_limpar .porta-dot { border-color: var(--alerta); }
-.sit-em_limpeza { color: var(--andamento); }      .sit-em_limpeza .porta-dot { border-color: var(--andamento); }
-.sit-bloqueada { color: var(--info); }   .sit-bloqueada .porta-dot { border-color: var(--info); }
-.sit-inativa { color: var(--tinta-suave); } .sit-inativa .porta-dot { border-color: var(--tinta-suave); }
-.sit-inativa .porta-circulo { opacity: .55; }
+.sit-chegada { color: var(--lampiao-tinta); }
+.sit-a_limpar { color: var(--alerta); }
+.sit-em_limpeza { color: var(--andamento); }
+.sit-bloqueada { color: var(--info); }
+.sit-inativa { color: var(--tinta-suave); }
 
-/* Arrastar para trocar de quarto */
-.quarto-porta[data-reserva] { cursor: grab; }
-.quarto-porta.arrastando { opacity: .4; }
-.quarto-porta.drop-alvo .porta-circulo {
-  border-color: var(--sucesso); border-width: 2px;
-  box-shadow: 0 0 0 4px var(--sucesso-bg); transform: translateY(-2px);
-}
 .troca-quarto summary { color: var(--madeira); }
 
 /* ---------- Corredor (herói Operação Lampião) ---------- */
@@ -2888,6 +2851,30 @@ form.filtros:not(.subnav) {
   background: none; border: none; box-shadow: none; padding: 0; margin: 0;
 }
 .filtro-campo { display: flex; flex-direction: column; gap: .35rem; }
+/* Barra de importação da conciliação: dois formulários + as ações, cada bloco
+   com a sua moldura, em vez de 25 estilos inline. */
+.importar-conciliar {
+  display: grid; gap: 1.1rem; margin-top: 1.2rem;
+  padding: 1.2rem 1.3rem;
+  background: var(--superficie); border: 1px solid var(--fio);
+  border-radius: var(--raio-g); box-shadow: var(--sombra-cartao);
+}
+.importar-conciliar .filtro-barra { gap: .85rem 1.4rem; }
+.importar-conciliar .acoes { margin-top: 0; }
+.importar-conciliar .acoes form { margin: 0; }
+.importar-conciliar .acoes .ajuda { margin: 0; max-width: 44ch; }
+/* O <input type=file> nativo não tem como ficar na linguagem da casa: fica
+   escondido atrás do rótulo, que é o botão de verdade. */
+/* O rótulo-botão é um <label>, então herdava as maiúsculas do rótulo de campo. */
+.filtro-campo > label.escolher-arquivo {
+  text-transform: none; letter-spacing: normal; font-size: .9rem; color: var(--tinta);
+}
+.escolher-arquivo { position: relative; overflow: hidden; cursor: pointer; }
+.escolher-arquivo input[type="file"] {
+  position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none;
+}
+.escolher-arquivo:focus-within { outline: 3px solid var(--foco-contorno); outline-offset: 2px; }
+.campo-curto { max-width: 130px; }
 .filtro-campo > label {
   font-size: .68rem; font-weight: 700; letter-spacing: .06em;
   text-transform: uppercase; color: var(--tinta-suave);

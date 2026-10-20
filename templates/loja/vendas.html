@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load moeda %}
 
 {% block titulo %}Vendas da Loja{% endblock %}
 
@@ -20,7 +21,7 @@
         <td>{{ v.criado_em|date:"d/m/Y H:i" }}</td>
         <td>{% if v.destino == 'conta' %}Conta — {{ v.conta_ref }}{% else %}{{ v.forma_pagamento.nome|default:"—" }}{% endif %}</td>
         <td>{{ v.cliente.nome|default:"Avulso" }}</td>
-        <td class="num">R$ {{ v.total }}</td>
+        <td class="num">{{ v.total|intcomma_brl }}</td>
         <td>{{ v.get_status_display }}</td>
       </tr>
     {% empty %}

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load nucleo_extras %}
+{% load nucleo_extras moeda %}
 {% load static %}
 
 {% block titulo %}{{ op.titulo }} — Comercial{% endblock %}
@@ -116,8 +116,8 @@
               <td>{{ c.criado_em|date:"d/m H:i" }}</td>
               <td>{{ c.tipo_uh.nome }}</td>
               <td>{{ c.checkin|date:"d/m" }} → {{ c.checkout|date:"d/m/Y" }}</td>
-              <td class="num">R$ {{ c.valor_diaria }}</td>
-              <td class="num">R$ {{ c.valor_total }}</td>
+              <td class="num">{{ c.valor_diaria|intcomma_brl }}</td>
+              <td class="num">{{ c.valor_total|intcomma_brl }}</td>
               <td>{{ c.validade|date:"d/m/Y" }}</td>
             </tr>
           {% empty %}
@@ -192,8 +192,8 @@
         <div class="l"><span>Origem</span><b>{{ op.get_origem_display }}</b></div>
         {% if op.checkin_previsto %}<div class="l"><span>Datas</span><b>{{ op.checkin_previsto|date:"d/m" }} → {{ op.checkout_previsto|date:"d/m/Y" }}</b></div>{% endif %}
         <div class="l"><span>Pessoas / quartos</span><b>{{ op.hospedes }} / {{ op.quartos }}</b></div>
-        <div class="l"><span>Valor estimado</span><b>R$ {{ op.valor_estimado }}</b></div>
-        <div class="l"><span>Previsão ponderada</span><b>R$ {{ op.valor_ponderado }}</b></div>
+        <div class="l"><span>Valor estimado</span><b>{{ op.valor_estimado|intcomma_brl }}</b></div>
+        <div class="l"><span>Previsão ponderada</span><b>{{ op.valor_ponderado|intcomma_brl }}</b></div>
         <div class="l"><span>Etapa</span><b>{{ op.etapa.nome }}</b></div>
         <div class="l"><span>Responsável</span><b>{% if op.responsavel %}{{ op.responsavel.get_full_name|default:op.responsavel.username }}{% else %}—{% endif %}</b></div>
         <div class="l"><span>Score</span><b>{{ op.score }}/100</b></div>

@@ -1,4 +1,4 @@
-{% load static %}
+{% load static moeda %}
 {# Painel «Quartos para este lead» — parcial recarregável por HTMX. #}
 <div class="pq" id="painel-quartos" x-data="{ editar:false, mostrarTodos:false, sel:[], comparando:false, cmpHtml:'', propostaTexto:'',
   fVista:false, fPet:false, fVaranda:false,
@@ -100,11 +100,11 @@
         </div>
         <div class="pq-preco">
           {% if item.total %}
-            <div class="v num">R$ {{ item.total|floatformat:0 }}</div>
-            <div class="l">{{ item.noites }} noite{{ item.noites|pluralize }} · R$ {{ item.diaria|floatformat:0 }}/noite</div>
-            <div class="pq-venda">Pix <b>R$ {{ item.total_pix|floatformat:0 }}</b> (−{{ item.desconto_pix|floatformat:0 }}%)<br>ou {{ item.parcelas_max }}× R$ {{ item.parcela_valor|floatformat:0 }}</div>
+            <div class="v num">{{ item.total|intcomma_brl }}</div>
+            <div class="l">{{ item.noites }} noite{{ item.noites|pluralize }} · {{ item.diaria|intcomma_brl }}/noite</div>
+            <div class="pq-venda">Pix <b>{{ item.total_pix|intcomma_brl }}</b> (−{{ item.desconto_pix|floatformat:0 }}%)<br>ou {{ item.parcelas_max }}× {{ item.parcela_valor|intcomma_brl }}</div>
           {% else %}
-            <div class="v num">R$ {{ item.diaria|floatformat:0 }}</div>
+            <div class="v num">{{ item.diaria|intcomma_brl }}</div>
             <div class="l">a partir de / noite</div>
           {% endif %}
         </div>
@@ -121,10 +121,10 @@
       {# ficha completa #}
       <div class="pq-ficha" x-show="ficha" x-cloak>
         {% if item.total %}
-        <div class="pq-linha"><span class="k">Hospedagem ({{ item.noites }} noite{{ item.noites|pluralize }})</span><span class="val num">R$ {{ item.hospedagem|floatformat:2 }}</span></div>
-        {% if item.iss %}<div class="pq-linha"><span class="k">ISS</span><span class="val num">R$ {{ item.iss|floatformat:2 }}</span></div>{% endif %}
-        {% if item.taxa_turismo %}<div class="pq-linha"><span class="k">Taxa de turismo</span><span class="val num">R$ {{ item.taxa_turismo|floatformat:2 }}</span></div>{% endif %}
-        <div class="pq-linha pq-linha-total"><span class="k">Total</span><span class="val num">R$ {{ item.total|floatformat:2 }}</span></div>
+        <div class="pq-linha"><span class="k">Hospedagem ({{ item.noites }} noite{{ item.noites|pluralize }})</span><span class="val num">{{ item.hospedagem|intcomma_brl }}</span></div>
+        {% if item.iss %}<div class="pq-linha"><span class="k">ISS</span><span class="val num">{{ item.iss|intcomma_brl }}</span></div>{% endif %}
+        {% if item.taxa_turismo %}<div class="pq-linha"><span class="k">Taxa de turismo</span><span class="val num">{{ item.taxa_turismo|intcomma_brl }}</span></div>{% endif %}
+        <div class="pq-linha pq-linha-total"><span class="k">Total</span><span class="val num">{{ item.total|intcomma_brl }}</span></div>
         {% if item.iss or item.taxa_turismo %}<div class="pq-ficha-nota">ISS e taxa de turismo quitados no check-out.</div>{% endif %}
         {% endif %}
         <div class="pq-linha"><span class="k">Acomodação</span><span class="val">{{ item.camas }}</span></div>

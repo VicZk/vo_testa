@@ -1,3 +1,4 @@
+{% load moeda %}
 {# Tabela comparativa de 2–3 quartos — carregada no modal do painel. #}
 {% if cols %}
 <table class="pq-cmp-tab">
@@ -23,7 +24,7 @@
     <tr class="pq-cmp-preco">
       <td class="pq-cmp-attr">Preço</td>
       {% for c in cols %}
-      <td>{% if c.total %}<b>R$ {{ c.total|floatformat:0 }}</b><span class="pq-cmp-sub">{{ c.noites }} noite{{ c.noites|pluralize }}</span>{% else %}<b>R$ {{ c.diaria|floatformat:0 }}</b><span class="pq-cmp-sub">a partir de / noite</span>{% endif %}</td>
+      <td>{% if c.total %}<b>{{ c.total|intcomma_brl }}</b><span class="pq-cmp-sub">{{ c.noites }} noite{{ c.noites|pluralize }}</span>{% else %}<b>{{ c.diaria|intcomma_brl }}</b><span class="pq-cmp-sub">a partir de / noite</span>{% endif %}</td>
       {% endfor %}
     </tr>
   </tbody>

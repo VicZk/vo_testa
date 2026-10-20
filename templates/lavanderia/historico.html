@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load moeda %}
 
 {% block titulo %}Histórico — Lavanderia{% endblock %}
 
@@ -20,7 +21,7 @@
         <td>{{ o.pk }}</td>
         <td>{{ o.titulo }}</td>
         <td><span class="selo {% if o.status == 'cancelada' %}selo-alerta{% else %}selo-limpa{% endif %}">{{ o.get_status_display }}</span></td>
-        <td class="num">R$ {{ o.total }}</td>
+        <td class="num">{{ o.total|intcomma_brl }}</td>
         <td>{% if o.status == 'cancelada' %}Cancelada{% elif o.conta_ref %}Conta: {{ o.conta_ref }}{% elif o.forma_pagamento %}{{ o.forma_pagamento.nome }}{% else %}—{% endif %}</td>
         <td>{{ o.entregue_em|default:o.recebida_em|date:"d/m H:i" }}</td>
       </tr>

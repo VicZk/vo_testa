@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load moeda %}
 
 {% block titulo %}Restaurante — comandas{% endblock %}
 
@@ -38,7 +39,7 @@
         <span class="comanda-hora">{{ c.aberta_em|date:"H:i" }}</span>
       </div>
       <span class="comanda-card-itens">{{ c.itens.count }} item{{ c.itens.count|pluralize }}</span>
-      <span class="comanda-card-total">R$ {{ c.total }}</span>
+      <span class="comanda-card-total">{{ c.total|intcomma_brl }}</span>
     </a>
   {% empty %}
     <p class="bloco-vazio">Nenhuma comanda aberta. Abra a primeira acima.</p>
