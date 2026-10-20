@@ -48,12 +48,23 @@ class FocoVisivelTests(TestCase):
         self.assertIn(".input-reais:focus-within", self.css)
         self.assertIn(".quarto-card input:focus-visible", self.css)
 
+    def _token(self, nome):
+        achado = re.search(rf"--{nome}:\s*(#[0-9A-Fa-f]{{6}})", self.css)
+        self.assertIsNotNone(achado, f"token --{nome} não encontrado")
+        return achado.group(1)
+
     def test_contorno_do_foco_tem_contraste_de_sobra(self):
-        """O contorno é --madeira; precisa de ≥ 3:1 sobre as superfícies claras."""
-        for fundo in ("#FFFFFF", "#F7F5F1", "#FBF8F2"):
-            self.assertGreaterEqual(_contraste("#3E2418", fundo), 3.0, fundo)
+        """O contorno é --madeira; precisa de ≥ 3:1 sobre as superfícies claras.
+
+        Lê os tokens do CSS: antes os hexes estavam escritos à mão aqui, então
+        o teste passava mesmo que a cor da marca mudasse no `:root`."""
+        madeira = self._token("madeira")
+        for fundo in ("canvas", "superficie", "superficie-2"):
+            self.assertGreaterEqual(_contraste(madeira, self._token(fundo)), 3.0, fundo)
         # Na sidebar noturna o contorno vira dourado claro.
-        self.assertGreaterEqual(_contraste("#F0C97A", "#04151F"), 3.0)
+        self.assertGreaterEqual(
+            _contraste(self._token("lampiao-claro"), self._token("noturno")), 3.0
+        )
         self.assertIn("--foco-contorno-claro", self.css)
 
 
@@ -225,3 +236,100 @@ class GradeResponsivaTests(TestCase):
         self.assertIn("@media (pointer: coarse), (max-width: 820px)", self.css)
         bloco = self.css[self.css.index("@media (pointer: coarse), (max-width: 820px)"):]
         self.assertIn("min-height: 44px", bloco)
+
+
+class TokensUnicosTests(TestCase):
+    """Uma cor da marca = um valor.
+
+    Conviviam três ouros e dois noturnos no mesmo arquivo, e 84% dos usos de
+    ouro com transparência no CRM eram do ouro antigo do site. Agora o token
+    é a verdade e a transparência sai dele por `color-mix`.
+    """
+
+    def setUp(self):
+        bruto = CSS.read_text(encoding="utf-8").replace("\r\n", "\n")
+        self.css = bruto
+        # Comentário não é regra: o texto explicando o que foi trocado não pode
+        # fazer o teste acusar a própria explicação.
+        self.css_sem_comentario = re.sub(r"/\*.*?\*/", "", bruto, flags=re.S)
+
+    def test_nenhum_rgba_de_cor_da_marca(self):
+        """rgba(215,160,72,…) e companhia não voltam: use color-mix do token."""
+        proibidos = {
+            "(215, 160, 72)": "--lampiao", "(226, 168, 74)": "--lampiao",
+            "(200, 145, 47)": "--lampiao", "(5, 28, 44)": "--noturno",
+            "(4, 21, 31)": "--noturno", "(79, 44, 29)": "--madeira",
+            "(239, 219, 178)": "--pergaminho", "(46, 72, 62)": "--musgo",
+        }
+        achados = []
+        sem_espaco = self.css_sem_comentario.replace(" ", "")
+        for rgb, token in proibidos.items():
+            alvo = "rgba" + rgb[:-1] + ","
+            if alvo.replace(" ", "") in sem_espaco:
+                achados.append(f"{alvo}…) deveria ser color-mix de var({token})")
+        self.assertEqual(achados, [])
+
+    def test_marca_tem_o_mesmo_valor_do_site(self):
+        """O site (tailwind.config.js) e o CRM (:root) divergiam nas 5 cores."""
+        tw = (Path(settings.BASE_DIR) / "tailwind.config.js").read_text(encoding="utf-8")
+        for nome in ("noturno", "madeira", "lampiao", "pergaminho", "musgo"):
+            no_css = re.search(rf"--{nome}:\s*(#[0-9A-Fa-f]{{6}})", self.css)
+            no_site = re.search(rf"{nome}:\s*\"(#[0-9A-Fa-f]{{6}})\"", tw)
+            self.assertIsNotNone(no_css, nome)
+            self.assertIsNotNone(no_site, nome)
+            self.assertEqual(no_css.group(1).upper(), no_site.group(1).upper(), nome)
+
+    def test_tokens_usados_existem(self):
+        """Variável sem definição cai no fallback em silêncio — `--fonte-corpo`,
+        `--musgo-bg`, `--alerta-claro` e outras quatro estavam nesse estado."""
+        usadas = set(re.findall(r"var\((--[a-z0-9-]+)", self.css))
+        definidas = set(re.findall(r"(--[a-z0-9-]+)\s*:", self.css))
+        # Tokens que o template define no próprio elemento (cor da etapa do funil).
+        for raiz in (Path(settings.BASE_DIR) / "templates",):
+            for p in raiz.rglob("*.html"):
+                definidas |= set(re.findall(r"(--[a-z0-9-]+)\s*:", p.read_text(encoding="utf-8")))
+        self.assertEqual(sorted(usadas - definidas), [])
+
+    def test_um_unico_bloco_por_componente(self):
+        """`.kpi`, `.kpi-valor`, `.kpi-rotulo`, `.num` e `.mapa-hoje` tinham
+        duas declarações cada; a segunda vencia e desfazia o desenho."""
+        for classe in (".kpi", ".kpi-valor", ".kpi-rotulo", ".num", ".mapa-hoje"):
+            blocos = re.findall(rf"^{re.escape(classe)}\s*(?:,[^{{]*)?\{{", self.css, re.M)
+            self.assertLessEqual(len(blocos), 1, f"{classe} declarada {len(blocos)}x")
+
+    def test_botoes_compartilham_a_mesma_forma(self):
+        base = re.search(
+            r"\.botao-primario, \.botao-neutro, \.botao-perigo \{([^}]*)\}", self.css
+        )
+        self.assertIsNotNone(base, "base compartilhada dos botões sumiu")
+        self.assertIn("min-height: 40px", base.group(1))
+        self.assertIn("inline-flex", base.group(1))
+        # Foco visível nos quatro, não só no primário.
+        foco = re.search(r"([^\n]*):focus-visible,\n([^\n]*),\n([^\n]*) \{", self.css)
+        self.assertIn(".botao-mini:focus-visible", self.css)
+
+    def test_link_sem_classe_nao_fica_azul(self):
+        self.assertRegex(self.css, r"\na \{[^}]*color: var\(--madeira\)")
+
+
+class MovimentoTests(TestCase):
+    """Havia 18 durações diferentes e ~12 hovers com `transform` sem guarda de
+    `prefers-reduced-motion`. Agora são quatro degraus, e zerar os tokens
+    apaga tudo de uma vez."""
+
+    def setUp(self):
+        self.css = CSS.read_text(encoding="utf-8").replace("\r\n", "\n")
+
+    def test_tokens_de_movimento_existem(self):
+        for token in ("--mov-toque", "--mov-rapido", "--mov-padrao", "--mov-lento",
+                      "--curva", "--desloca"):
+            self.assertIn(f"{token}:", self.css, token)
+
+    def test_reduced_motion_zera_os_tokens(self):
+        bloco = re.search(
+            r"@media \(prefers-reduced-motion: reduce\) \{\s*:root \{([^}]*)\}", self.css
+        )
+        self.assertIsNotNone(bloco, "falta o bloco que zera os tokens de movimento")
+        for token in ("--mov-toque", "--mov-rapido", "--mov-padrao", "--mov-lento"):
+            self.assertIn(f"{token}: 1ms", bloco.group(1), token)
+        self.assertIn("--desloca: 0px", bloco.group(1))
