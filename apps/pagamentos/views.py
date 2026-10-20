@@ -424,7 +424,10 @@ def webhook(request):
     gid, status_gw, body = _extrair_webhook(request)
     cobranca = Cobranca.objects.filter(gateway_id=gid).first() if gid else None
     if not cobranca:
-        return _json({"erro": "cobrança não encontrada"}, 404)
+        # Evento de cobrança que não é deste sistema (ex.: venda na maquininha da mesma
+        # conta): responde 200 para o provedor não reenviar por dias, e deixa no log.
+        logger.info("Webhook de pagamento ignorado: gateway_id %r não é nosso.", gid)
+        return _json({"ignorado": True, "motivo": "cobrança não encontrada"}, 200)
     EventoPagamento.objects.create(
         cobranca=cobranca, tipo=EventoPagamento.Tipo.WEBHOOK,
         origem="webhook",

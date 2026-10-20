@@ -1249,7 +1249,12 @@ class ColchoesExtra(models.Model):
     @classmethod
     def atual(cls) -> "ColchoesExtra":
         """Linha única do estoque (cria com os defaults se ainda não existir)."""
-        return cls.objects.first() or cls.objects.create()
+        obj = cls.objects.order_by("pk").first()
+        if obj is None:
+            # pk fixo: duas primeiras chamadas ao mesmo tempo viram uma linha só (a
+            # segunda esbarra na chave e o get_or_create devolve a da primeira).
+            obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
 
 
 class BercoEstoque(models.Model):
@@ -1273,4 +1278,9 @@ class BercoEstoque(models.Model):
     @classmethod
     def atual(cls) -> "BercoEstoque":
         """Linha única do estoque (cria com o default se ainda não existir)."""
-        return cls.objects.first() or cls.objects.create()
+        obj = cls.objects.order_by("pk").first()
+        if obj is None:
+            # pk fixo: duas primeiras chamadas ao mesmo tempo viram uma linha só (a
+            # segunda esbarra na chave e o get_or_create devolve a da primeira).
+            obj, _ = cls.objects.get_or_create(pk=1)
+        return obj

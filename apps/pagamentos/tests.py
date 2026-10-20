@@ -155,8 +155,10 @@ class WebhookTests(PagamentosBase):
         self.assertEqual(c.status, Cobranca.Status.PAGO)
 
     def test_webhook_id_desconhecido(self):
+        # Não é nosso: 200 (o provedor não fica reenviando) e nada é confirmado.
         r = self.client.post(reverse("pagamentos:webhook"), {"gateway_id": "NAO-EXISTE"})
-        self.assertEqual(r.status_code, 404)
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r.json()["ignorado"])
 
     def test_pagina_publica_e_botao_ja_paguei(self):
         c = self.cobranca()
