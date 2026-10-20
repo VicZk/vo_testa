@@ -147,6 +147,28 @@ DATABASES = {
     )
 }
 
+# Cache compartilhado entre os workers: limites de tentativa (login, MFA, cartão, site)
+# e o token da Safrapay. Sem isto o Django usa um cache por processo: com 2 workers cada
+# limite valia o dobro e zerava a cada deploy. Com REDIS_URL (add-on Redis do Railway)
+# usa Redis; sem ele, uma tabela no próprio Postgres, criada pela migration
+# nucleo.0046_tabela_de_cache. Nos testes, memória.
+REDIS_URL = os.environ.get("REDIS_URL", "")
+if TESTING:
+    CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
+elif REDIS_URL:
+    CACHES = {
+        "default": {"BACKEND": "django.core.cache.backends.redis.RedisCache", "LOCATION": REDIS_URL}
+    }
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+            "LOCATION": "nucleo_cache",
+            # O padrão (300) descartaria chaves de limite sob carga, afrouxando o limite.
+            "OPTIONS": {"MAX_ENTRIES": 20000},
+        }
+    }
+
 AUTH_USER_MODEL = "nucleo.Usuario"
 
 # Logs no stdout (o Railway coleta). Sem isto, com DEBUG=0 o Django não imprime os
