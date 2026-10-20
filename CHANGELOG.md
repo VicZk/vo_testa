@@ -9,6 +9,111 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 20/10/2026 — Dinheiro certo na conta do hóspede e primeira polida no front-end
+
+Segundo bloco das correções da auditoria. Duas frentes: o dinheiro que entrava por um
+caminho e não aparecia no outro, e o acabamento das telas que a equipe e o hóspede usam.
+
+### Dinheiro (`421fba7`, `862a220`, `a90eb5e`)
+
+**O que melhorou**
+- **O que o hóspede paga online abate a conta dele.** Pix, cartão ou boleto pagos pelo
+  site, pelo link do Comercial ou pelo portal viram crédito na reserva (ou no folio do
+  grupo). Antes, no check-out ele aparecia devendo o que já tinha pago.
+- **Estorno desfaz o crédito.** Devolver no gateway ou estornar no caixa faz a conta
+  voltar a cobrar o valor devolvido. Antes o dinheiro saía e a conta continuava "paga",
+  e o check-out fechava sem receber. Se a conta já estiver fechada, o estorno é recusado
+  antes de qualquer devolução.
+- **Sinal do lead não some.** O sinal pago num lead do Comercial vira crédito na reserva
+  criada a partir dele, na conversão automática ou na manual, e a manual não gera um
+  segundo sinal.
+- **Adiantamento não passa do total da estadia.** Um valor digitado a mais (3000 em vez
+  de 300) deixava a conta com crédito e o check-out travado.
+- **Devolver ao hóspede** (só gerência), no detalhe da reserva:
+  - devolve o que ele pagou a mais;
+  - executa a política de cancelamento: o cancelamento grava quanto a pousada retém, a
+    tela sugere devolver o resto e a Auditoria cobra até a devolução sair;
+  - o dinheiro sai do caixa de Reservas de quem devolve;
+  - o que entrou online volta pela tela de Pagamentos.
+- **Caixa sem atropelo.** Fechar o caixa e receber ao mesmo tempo não se perdem mais
+  um do outro. O estorno de um recebimento de caixa já fechado entra no caixa aberto de
+  hoje, sem reabrir (e apagar) a conferência antiga.
+
+**O que foi modificado**
+- **Modelos e migrations:**
+  - `reservas.0022`: `PagamentoConta` e `Adiantamento` ganham a base comum
+    `CreditoNaReserva`, com três origens: caixa, online (`cobranca_id`, único) e estorno
+    (`estorno_de`, valor negativo). Check-constraints garantem o sinal do valor. Os dados
+    atuais já cumprem a regra.
+  - `reservas.0023`: `Reserva.valor_retido`.
+- **Serviços novos em Reservas:**
+  - `registrar_pagamento_online`, `verificar_estorno_online`, `estornar_pagamento_online`;
+  - `limite_devolucao`, `situacao_devolucao`, `devolver_ao_hospede`;
+  - `Reserva.total_previsto()`.
+- **Núcleo:** gancho `ao_estornar` no `estornar_movimento`, para Reservas desfazer o
+  crédito na mesma transação sem o núcleo conhecer o módulo. Também as travas no
+  `fechar()`/`receber_no_caixa()`.
+- **Pagamentos:** `confirmar_pagamento` credita; `estornar` trava a cobrança, confere
+  antes e desfaz depois; novo `vincular_reserva`.
+- **Comercial:** a conversão de lead amarra e credita o sinal já pago.
+- **Telas:** folio e adiantamentos mostram a origem e o sinal de cada linha; bloco
+  "Devolver ao hóspede" no detalhe da reserva; nova pendência "cancelada com devolução
+  pendente" na Auditoria.
+- **Documentação:** `docs/MODULOS_E_FLUXOS.md` (Reservas, Pagamentos, Caixa, Comercial) e
+  `docs/ARQUITETURA.md` (motor de caixa e regras de dinheiro).
+
+### Front-end (`1372a9b` a `75e8d04`)
+
+**O que melhorou**
+- **Dá para ver onde está o foco** em todo campo e botão. O laranja de "em andamento"
+  passou a ter contraste legível. O kit de painel do Comercial, que redefinia os botões
+  com outra cor, foi absorvido pelo estilo principal: um botão, um visual.
+- **O balcão opera pelo teclado.** O seletor de pessoa e de quarto vira combobox de
+  verdade (setas, Enter, Esc). No modal de nova reserva o foco nasce no hóspede,
+  Ctrl+Enter cria a pré-reserva e o que raramente se mexe fica em "Mais opções".
+- **As fontes da marca moram no próprio sistema**, sem depender do Google: chegam também
+  ao portal do hóspede e à página de pagamento.
+- **Cache que se renova sozinho.** CSS e JS ganham hash no nome em produção: o navegador
+  guarda, e o deploy troca sem ninguém precisar lembrar de mudar versão.
+- **Mapa de quartos.** Uma troca de quarto que falha mostra o motivo e devolve o quarto
+  ao lugar. Antes a página recarregava e parecia que tinha dado certo.
+- **Governança sem recarregar.** A camareira marca o quarto e a linha muda na hora; o
+  filtro fica guardado; no celular cada quarto vira um cartão.
+- **Site:**
+  - home 640 KB mais leve (logos em WebP no tamanho certo);
+  - o calendário só carrega onde é usado;
+  - Google Analytics e Meta Pixel só depois do "Aceitar" (LGPD), com "Recusar" do mesmo
+    tamanho;
+  - a notificação de "nova reserva" não mostra mais o nome de ninguém;
+  - dados estruturados da pousada para o Google e sitemap com os 24 quartos.
+- **Portal e pagamento com cara de pousada.** Alvos de toque de 44 px, a página do cartão
+  com máscara, bandeira e um bloco de confiança, e as duas fora dos buscadores (têm
+  token na URL).
+
+**O que foi modificado**
+- `static/css/app.css` (foco, tokens, kit promovido); `static/fonts/` (novas);
+  `static/js/tabela-rol.js`, `static/js/consentimento.js` (novos); `templates/base.html`
+  (combobox, foco preso no modal e na paleta, avisos por HTMX).
+- `config/settings.py`: `CompressedManifestStaticFilesStorage` fora de DEBUG e testes.
+- Governança: o quadro virou `templates/governanca/partials/quadro.html`, com ações por
+  `hx-post`.
+- Site: imagens WebP, `componentes/consentimento.html`, JSON-LD, sitemap e prova social
+  anônima com cache.
+
+**Como foi testado**
+- Testes novos nos dois blocos:
+  - dinheiro: crédito online, estornos, sinal do lead, limite do adiantamento,
+    devolução e permissão;
+  - front-end: combobox e rótulos, painel da governança por HTMX, site, portal e página
+    de pagamento.
+- `collectstatic` de produção conferido: 235 arquivos com hash. Todos os `{% static %}`
+  dos templates existem no manifesto, então nenhuma página quebra por arquivo faltando.
+- Suíte completa no Windows antes do push; o CI (Linux + PostgreSQL 16) roda no push.
+
+**Depois do deploy:** nada a fazer além das migrations, que rodam sozinhas no pré-deploy.
+
+---
+
 ## 20/10/2026 — Infraestrutura e desempenho (`7c1394e` a `f1faf57`)
 
 Primeiro bloco das correções da auditoria: o que mantém o sistema de pé em produção e o
