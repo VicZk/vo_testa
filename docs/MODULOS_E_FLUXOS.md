@@ -285,6 +285,12 @@ exige **uma ficha completa por hóspede, com o titular entre elas**; `CAMPOS_OBR
 preenchimento: recepção (`reservas:fnrh`) e pré-check-in pelo portal
 (`portal:checkin`, público por token, funciona antes da hospedagem).
 
+**Menores de idade (ECA, art. 82).** A ficha tem "se menor de 18 anos, está" (com os
+pais, com o responsável legal ou com adulto autorizado por escrito) e, só no formulário
+da recepção (`FichaFNRHRecepcaoForm`), "autorização escrita conferida". `fazer_checkin`
+recusa enquanto `Reserva.menores_pendentes` tiver alguém (idade no dia da entrada);
+`ECA_BLOQUEAR_CHECKIN` (ligado por padrão).
+
 **FNRH Digital (push, "estratégia B").** `enviar_fnrh` é **idempotente** (reusa
 `fnrh_reserva_id`/`fnrh_pessoa_id`/`fnrh_hospede_id`) e **best-effort**: em falha grava
 `fnrh_status=erro` + `fnrh_erro` e não levanta — a recepção não trava. Fluxo do gateway:
@@ -550,7 +556,8 @@ natureza SERVIÇO → NFS-e; CONSUMO → NFC-e. Esqueleto funcional ponta a pont
 ### Interface pública (`apps/fiscal/services.py`)
 
 - `emitir(operador, *, natureza, valor, descricao, tomador=None, referencia="")` — cria o
-  documento, chama o gateway e grava o retorno (autorizada/rejeitada).
+  documento (com IBS e CBS destacados por `ibs_cbs(valor)`, reforma tributária), chama o
+  gateway e grava o retorno (autorizada/rejeitada).
 - `emitir_nfse_da_conta(conta_id, operador)` — **idempotente por conta** (`referencia =
   "conta:<id>"`, ignorando canceladas) e serializada por `select_for_update` na
   `ContaHospedagem`; pega a parte SERVIÇO via `reservas.resumo_fiscal_conta` e anexa os
@@ -1169,7 +1176,10 @@ evento. Alimenta o mapa de quartos e **bloqueia o check-in** em quarto sujo.
 pendente), `iniciar_tarefa` (idempotente; quarto → em limpeza),
 `concluir_tarefa` (idempotente; quarto → limpo, auditado, emite sinal), `inspecionar`,
 `tarefas_ativas()`, `painel_limpeza()` (uma linha por quarto físico, ordenada por
-urgência: sujo → em limpeza → limpo → inspecionado).
+urgência: sujo → em limpeza → limpo → inspecionado),
+**`gerar_arrumacoes_do_dia()`** — uma Arrumação (`origem="arrumacao_diaria"`) para cada
+quarto em que o hóspede fica além de hoje (`reservas.uhs_em_permanencia`), sem
+duplicar; roda no comando `gerar_arrumacoes`, do grupo diário do `rotinas`.
 
 ### Sinais
 

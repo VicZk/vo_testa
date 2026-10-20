@@ -873,6 +873,7 @@ Sem elas, filesystem local — e **o disco do Railway é efêmero**.
 | `PRECO_TAXAS_ATIVAS` | `1` (e **forçado off** sob `TESTING`) | Lança ISS + taxa de turismo na conta no check-in. |
 | `CANCELAMENTO_ARREPENDIMENTO_DIAS` | `7` | Janela de arrependimento (CDC) a partir da confirmação. |
 | `CANCELAMENTO_RETENCAO_PCT` | `10` | % retida depois da janela. |
+| `ECA_BLOQUEAR_CHECKIN` | `1` | Check-in recusado com menor sem os pais/responsável nem autorização conferida (ECA, art. 82). |
 | `FATURAMENTO_PRAZO_DIAS` | `30` | Vencimento padrão do título a receber quando a conta é faturada para agência/empresa. |
 | `COMERCIAL_SINAL_PCT` | `30` | Sinal que o Comercial gera para um lead, em % do valor estimado. |
 
@@ -894,7 +895,13 @@ Sem elas, filesystem local — e **o disco do Railway é efêmero**.
 | `FISCAL_REGIME` | `lucro_presumido` | Regime tributário. |
 | `FISCAL_NFSE_CODIGO_SERVICO` | `090101` | Código do serviço de hospedagem. |
 | `FISCAL_NFSE_ISS_ALIQUOTA` | `4.0` | % de ISS de Itá/SC. |
-| `FISCAL_NFCE_HABILITADA` | `0` | Depende de Inscrição Estadual. |
+| `FISCAL_NFCE_HABILITADA` | `0` | Depende de Inscrição Estadual. Desligada, os PDVs (Loja, comanda) mostram o aviso de venda sem NFC-e. |
+| `FISCAL_BLOQUEAR_VENDA_SEM_NFCE` | `0` | Com `1` e sem NFC-e, a venda de produto (Loja e fechamento de comanda) é recusada. |
+| `FISCAL_IBS_CBS_ATIVO` | `1` | Destaca IBS e CBS no documento fiscal (LC 214/2025). |
+| `FISCAL_CBS_ALIQUOTA` | `0.9` | % de CBS (2026: fase de teste). |
+| `FISCAL_IBS_ALIQUOTA` | `0.1` | % de IBS (2026: fase de teste). |
+| `LGPD_ENCARREGADO_NOME` | `Direção da Pousada Vô Testa` | Encarregado pelos dados, publicado nas políticas de privacidade. |
+| `LGPD_ENCARREGADO_EMAIL` | `comercial@pousadavotesta.com.br` | Contato do encarregado. |
 | `FISCAL_WEBHOOK_TOKEN` | `""` | Segredo compartilhado validado no webhook do Focus. |
 
 ### E-mail
