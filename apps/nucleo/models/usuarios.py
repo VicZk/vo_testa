@@ -1,3 +1,5 @@
+import contextvars
+
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -100,16 +102,52 @@ class ModuloContratado(models.Model):
                 )
 
 
+# Dentro de uma requisição (ModulosPorRequisicaoMiddleware), os módulos ativos são lidos
+# do banco uma vez só: menu, permissões, templates e services perguntavam 7 a 22 vezes por
+# página. Salvar ou apagar um ModuloContratado limpa a memória (ver o receiver abaixo).
+_MODULOS_DA_REQUISICAO = contextvars.ContextVar("modulos_da_requisicao", default=None)
+
+
+def _codigos_ativos() -> set[str]:
+    memoria = _MODULOS_DA_REQUISICAO.get()
+    if memoria is not None and "ativos" in memoria:
+        return memoria["ativos"]
+    ativos = set(
+        ModuloContratado.objects.filter(ativo=True).values_list("codigo", flat=True)
+    )
+    if memoria is not None:
+        memoria["ativos"] = ativos
+    return ativos
+
+
 def modulo_ativo(codigo: str) -> bool:
     """Consulta central de ativação de módulo. Uso: modulo_ativo(Modulo.LOJA)."""
-    return ModuloContratado.objects.filter(codigo=codigo, ativo=True).exists()
+    if _MODULOS_DA_REQUISICAO.get() is None:
+        return ModuloContratado.objects.filter(codigo=codigo, ativo=True).exists()
+    return codigo in _codigos_ativos()
 
 
 def modulos_ativos() -> list[str]:
     """Códigos de todos os módulos ativos, na ordem do catálogo."""
     from ..modulos import APRESENTACAO
 
-    ativos = set(
-        ModuloContratado.objects.filter(ativo=True).values_list("codigo", flat=True)
-    )
-    return sorted(ativos, key=lambda c: APRESENTACAO.get(c, {}).get("ordem", 999))
+    return sorted(_codigos_ativos(), key=lambda c: APRESENTACAO.get(c, {}).get("ordem", 999))
+
+
+class memoria_de_modulos:
+    """Liga a memória dos módulos ativos durante o bloco (uma requisição)."""
+
+    def __enter__(self):
+        self._token = _MODULOS_DA_REQUISICAO.set({})
+        return self
+
+    def __exit__(self, *exc):
+        _MODULOS_DA_REQUISICAO.reset(self._token)
+        return False
+
+
+def esquecer_modulos_ativos(**kwargs) -> None:
+    """Receiver de post_save/post_delete de ModuloContratado: a próxima pergunta relê."""
+    memoria = _MODULOS_DA_REQUISICAO.get()
+    if memoria is not None:
+        memoria.clear()

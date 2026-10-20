@@ -419,9 +419,15 @@ class Modulo(models.TextChoices):   # 17 códigos
 `parametros` JSON) é a **ativação por cliente**. `clean()` recusa ativar um módulo cujas
 dependências não estejam ativas.
 
-`modulo_ativo(codigo)` é a **consulta central** (uma query `exists()`); `modulos_ativos()`
-devolve os códigos ativos ordenados pelo catálogo. **Nunca hard-code um módulo** — menu,
-permissão, integração e degradação graciosa passam por aqui.
+`modulo_ativo(codigo)` é a **consulta central**; `modulos_ativos()` devolve os códigos
+ativos ordenados pelo catálogo. **Nunca hard-code um módulo** — menu, permissão,
+integração e degradação graciosa passam por aqui.
+
+Dentro de uma requisição, o `ModulosPorRequisicaoMiddleware` (`apps/nucleo/middleware.py`)
+liga uma memória: os módulos ativos são lidos do banco **uma vez** e as demais perguntas
+(menu, `@requer_modulo`, `|pode_modulo`, services) vêm dela. Salvar ou apagar um
+`ModuloContratado` limpa a memória (receiver ligado no `NucleoConfig.ready`). Fora de
+requisição (rotinas, shell), cada chamada consulta o banco, como antes.
 
 Ativação inicial por migração *seed*:
 

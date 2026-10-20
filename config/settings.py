@@ -99,6 +99,8 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # Lê os módulos ativos uma vez por requisição (menu, permissões e templates).
+    "apps.nucleo.middleware.ModulosPorRequisicaoMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # CSP (Fase 4) — report-only por padrão; vira bloqueio com CSP_REPORT_ONLY=False.

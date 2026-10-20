@@ -1470,3 +1470,34 @@ class BackupDoBancoTests(TestCase):
         self.assertIn("r2://midia/backups/", saida)
         cliente.delete_objects.assert_called_once_with(
             Bucket="midia", Delete={"Objects": [{"Key": "backups/2026/08/crm-velho.json.gz"}]})
+
+
+class ModulosPorRequisicaoTests(TestCase):
+    """Dentro de uma requisição, os módulos ativos são lidos uma vez."""
+
+    def test_varias_perguntas_uma_consulta(self):
+        from .models.usuarios import memoria_de_modulos
+
+        with memoria_de_modulos():
+            modulo_ativo(Modulo.RESERVAS)
+            with self.assertNumQueries(0):
+                for codigo in (Modulo.RESERVAS, Modulo.LOJA, Modulo.GOVERNANCA):
+                    modulo_ativo(codigo)
+                modulos_ativos()
+
+    def test_ativar_modulo_no_meio_da_requisicao_limpa_a_memoria(self):
+        from .models.usuarios import memoria_de_modulos
+
+        ModuloContratado.objects.filter(codigo=Modulo.LOJA).update(ativo=False)
+        with memoria_de_modulos():
+            self.assertFalse(modulo_ativo(Modulo.LOJA))
+            m = ModuloContratado.objects.get(codigo=Modulo.LOJA)
+            m.ativo = True
+            m.save()
+            self.assertTrue(modulo_ativo(Modulo.LOJA))
+
+    def test_fora_de_requisicao_continua_consultando_o_banco(self):
+        ModuloContratado.objects.filter(codigo=Modulo.LOJA).update(ativo=False)
+        self.assertFalse(modulo_ativo(Modulo.LOJA))
+        ModuloContratado.objects.filter(codigo=Modulo.LOJA).update(ativo=True)
+        self.assertTrue(modulo_ativo(Modulo.LOJA))
