@@ -58,9 +58,11 @@
     <p>Mantemos seus dados enquanto houver relacionamento ou interesse legítimo; após o
     descadastro, deixamos de enviar comunicações de marketing.</p>
 
-    <h2>7. Contato</h2>
-    <p>Dúvidas ou pedidos sobre seus dados:
-    <a href="mailto:comercial@pousadavotesta.com.br">comercial@pousadavotesta.com.br</a>.</p>
+    <h2>7. Contato e encarregado (DPO)</h2>
+    {% load site_contato %}{% encarregado_lgpd as dpo %}
+    <p>Encarregado pelo tratamento de dados: {{ dpo.nome }} —
+    <a href="mailto:{{ dpo.email }}">{{ dpo.email }}</a>. É por esse canal que você exerce
+    seus direitos e tira dúvidas sobre os seus dados.</p>
 
     <p class="rodape">Pousada Vô Testa · Itá, Santa Catarina · a invenção que virou história.</p>
   </div>

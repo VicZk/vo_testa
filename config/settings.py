@@ -513,6 +513,10 @@ META_CRM_NOME = os.environ.get("META_CRM_NOME", "Pousada Vô Testa CRM")
 META_CAPI_VERSION = os.environ.get("META_CAPI_VERSION", "v21.0")
 # Boas-vindas automáticas ao lead que se cadastra (LP/site). Desligável por env.
 LEAD_BOAS_VINDAS = os.environ.get("LEAD_BOAS_VINDAS", "1") == "1"
+# Encarregado pelo tratamento de dados (LGPD, art. 41), publicado na política de
+# privacidade. Troque pelo nome e e-mail reais de quem responde pelos dados.
+LGPD_ENCARREGADO_NOME = os.environ.get("LGPD_ENCARREGADO_NOME", "Direção da Pousada Vô Testa")
+LGPD_ENCARREGADO_EMAIL = os.environ.get("LGPD_ENCARREGADO_EMAIL", "comercial@pousadavotesta.com.br")
 # Teto diário de boas-vindas automáticas (o formulário é público). Uma por pessoa, sempre.
 LEAD_BOAS_VINDAS_MAX_DIA = int(os.environ.get("LEAD_BOAS_VINDAS_MAX_DIA", "100"))
 # GeoIP de CIDADE do lead (opcional, OFFLINE). Aponte para um GeoLite2-City.mmdb

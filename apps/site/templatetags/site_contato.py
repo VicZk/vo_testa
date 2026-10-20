@@ -16,3 +16,15 @@ def contato_pousada():
     from apps.site.models import ConfiguracaoSite
 
     return ConfiguracaoSite.load()
+
+
+@register.simple_tag
+def encarregado_lgpd():
+    """Encarregado pelo tratamento de dados (LGPD, art. 41): nome e e-mail publicados
+    na política de privacidade (configurações LGPD_ENCARREGADO_*)."""
+    from django.conf import settings
+
+    return {
+        "nome": settings.LGPD_ENCARREGADO_NOME,
+        "email": settings.LGPD_ENCARREGADO_EMAIL,
+    }

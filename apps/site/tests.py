@@ -914,3 +914,14 @@ class HorariosDaPousadaTests(TestCase):
         r = self.client.get(reverse('core:reserva_confirmada', args=[self.reserva.token]))
         self.assertContains(r, "a partir das 15:00")
         self.assertContains(r, "até 11:00")
+
+
+class EncarregadoLGPDTests(TestCase):
+    def test_politicas_mostram_o_encarregado_configurado(self):
+        with self.settings(LGPD_ENCARREGADO_NOME="Maria Dados",
+                           LGPD_ENCARREGADO_EMAIL="dados@pousada.test"):
+            site = self.client.get(reverse("core:politica_privacidade"))
+            self.assertContains(site, "Maria Dados")
+            self.assertContains(site, "mailto:dados@pousada.test")
+            lp = self.client.get("/privacidade/")
+            self.assertContains(lp, "Maria Dados")
