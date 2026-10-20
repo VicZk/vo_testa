@@ -284,10 +284,14 @@ class TokensUnicosTests(TestCase):
         `--musgo-bg`, `--alerta-claro` e outras quatro estavam nesse estado."""
         usadas = set(re.findall(r"var\((--[a-z0-9-]+)", self.css))
         definidas = set(re.findall(r"(--[a-z0-9-]+)\s*:", self.css))
-        # Tokens que o template define no próprio elemento (cor da etapa do funil).
-        for raiz in (Path(settings.BASE_DIR) / "templates",):
-            for p in raiz.rglob("*.html"):
-                definidas |= set(re.findall(r"(--[a-z0-9-]+)\s*:", p.read_text(encoding="utf-8")))
+        # Tokens definidos fora do CSS: no próprio elemento pelo template (cor
+        # da etapa do funil) ou em tempo de execução pelo JS (índice do toast).
+        for raiz, padrao in ((Path(settings.BASE_DIR) / "templates", "*.html"),
+                             (Path(settings.BASE_DIR) / "static" / "js", "*.js")):
+            for p in raiz.rglob(padrao):
+                texto = p.read_text(encoding="utf-8")
+                definidas |= set(re.findall(r"(--[a-z0-9-]+)\s*:", texto))
+                definidas |= set(re.findall(r"setProperty\(\s*['\"](--[a-z0-9-]+)", texto))
         self.assertEqual(sorted(usadas - definidas), [])
 
     def test_um_unico_bloco_por_componente(self):
@@ -417,3 +421,41 @@ class CorredorLegivelTests(TestCase):
         achado = re.search(r"--lampiao-tinta:\s*(#[0-9A-Fa-f]{6})", self.css)
         self.assertIsNotNone(achado)
         self.assertGreaterEqual(_contraste(achado.group(1), "#FFFFFF"), 4.5)
+
+
+class MovimentoDaNavegacaoTests(TestCase):
+    """Havia 43 pontos de troca HTMX e nenhum com transição: clicar no menu
+    trocava a página de estalo e a lista da comanda piscava."""
+
+    def setUp(self):
+        self.css = CSS.read_text(encoding="utf-8").replace("\r\n", "\n")
+        self.base = (Path(settings.BASE_DIR) / "templates" / "base.html").read_text(encoding="utf-8")
+
+    def test_view_transitions_ligadas_de_forma_independente_de_ordem(self):
+        """Vai como <meta>: o htmx carrega com `defer`, então um script inline
+        rodaria antes dele e `htmx.config` ainda não existiria."""
+        self.assertIn('name="htmx-config"', self.base)
+        self.assertIn("globalViewTransitions", self.base)
+        self.assertIn("::view-transition-new(root)", self.css)
+
+    def test_existe_plano_b_sem_view_transitions(self):
+        self.assertIn(".htmx-swapping", self.css)
+        self.assertIn(".htmx-settling", self.css)
+
+    def test_toast_nao_cobre_os_botoes_da_pagina(self):
+        bloco = re.search(r"\n\.toasts \{([^}]*)\}", self.css)
+        self.assertIsNotNone(bloco)
+        self.assertIn("bottom:", bloco.group(1))
+        self.assertNotIn("top: 1rem", bloco.group(1))
+
+    def test_toast_tem_icone_e_erro_persistente(self):
+        self.assertIn("toast-ico", self.css)
+        self.assertIn("TOAST_ICO", self.base)
+        # O erro não some sozinho: quem perde a mensagem perde o motivo.
+        self.assertIn("toast-error", self.base)
+        self.assertRegex(self.base, r"classList\.contains\('toast-error'\)\)\s*return;")
+
+    def test_largura_da_sidebar_anima(self):
+        bloco = re.search(r"\n\.app \{([^}]*)\}", self.css)
+        self.assertIsNotNone(bloco)
+        self.assertIn("transition: grid-template-columns", bloco.group(1))

@@ -17,6 +17,16 @@
   <script src="{% static 'js/tabela-rol.js' %}" defer></script>
   {# Validação em pt-BR no lugar do balão em inglês do navegador. #}
   <script src="{% static 'js/form-pt.js' %}" defer></script>
+  {% comment %}Movimento na navegação: esta configuração faz o HTMX usar View
+  Transitions em TODA troca — a navegação da sidebar (hx-boost) e os 43 pontos
+  de troca parcial. Antes, clicar num item do menu trocava a página de estalo e
+  adicionar um item na comanda fazia a lista piscar. O cross-fade em si está no
+  app.css (::view-transition-*); onde o navegador não suporta, as classes
+  .htmx-swapping/.htmx-settling fazem o mesmo. Sob `prefers-reduced-motion` os
+  tokens de duração vão a 1ms e o movimento some sozinho.
+  Vai como <meta> porque o htmx carrega com `defer`: um script inline rodaria
+  antes dele e `htmx.config` ainda não existiria.{% endcomment %}
+  <meta name="htmx-config" content='{"globalViewTransitions": true}'>
   {# HTMX e Alpine servidos pelo próprio sistema (static/vendor/), não pelo unpkg. #}
   <script src="{% static 'vendor/htmx-2.0.4.min.js' %}" defer></script>
   <script>
@@ -549,21 +559,51 @@
   })();
 
   // ---------- Toasts ----------
+  // Ícone por tipo: a cor sozinha carregava o significado, e numa barra de 4px.
+  const TOAST_ICO = {
+    success: '<path d="M20 6 9 17l-5-5"/>',
+    error: '<circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16h.01"/>',
+    warning: '<path d="M10.3 4.3 2 19a1.5 1.5 0 0 0 1.3 2.2h17.4A1.5 1.5 0 0 0 22 19L13.7 4.3a1.5 1.5 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/>',
+    info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
+  };
+  function iconeToast(tipo) {
+    const d = TOAST_ICO[tipo] || TOAST_ICO.info;
+    return '<svg class="toast-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
+         + ' stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+         + d + '</svg>';
+  }
   function toast(msg, tipo) {
     const cont = document.getElementById('toasts');
     const el = document.createElement('div');
-    el.className = 'toast toast-' + (tipo || 'success');
-    el.setAttribute('role', 'status');
-    el.innerHTML = '<span class="toast-txt"></span><button class="toast-x" aria-label="Fechar">&times;</button>';
+    tipo = tipo || 'success';
+    el.className = 'toast toast-' + tipo;
+    // Erro precisa ser ouvido: papel de alerta e leitura imediata.
+    el.setAttribute('role', tipo === 'error' ? 'alert' : 'status');
+    el.innerHTML = iconeToast(tipo)
+      + '<span class="toast-txt"></span><button class="toast-x" aria-label="Fechar">&times;</button>';
     el.querySelector('.toast-txt').textContent = msg;
     el.querySelector('.toast-x').onclick = () => el.remove();
     cont.appendChild(el);
     agendarSaida(el);
   }
   function agendarSaida(el) {
-    setTimeout(() => { el.classList.add('toast-saindo'); setTimeout(() => el.remove(), 400); }, 5000);
+    // Erro NÃO some sozinho: quem perdeu a mensagem perdeu o motivo da falha.
+    if (el.classList.contains('toast-error')) return;
+    setTimeout(() => {
+      el.classList.add('toast-saindo');
+      setTimeout(() => el.remove(), 400);
+    }, 5000);
   }
-  document.querySelectorAll('#toasts .toast').forEach(agendarSaida);
+  // Os que vêm do Django (messages) chegam sem ícone e sem ordem de entrada.
+  document.querySelectorAll('#toasts .toast').forEach((el, i) => {
+    el.style.setProperty('--i', i);
+    if (!el.querySelector('.toast-ico')) {
+      const tipo = (el.className.match(/toast-(success|error|warning|info)/) || [, 'info'])[1];
+      el.insertAdjacentHTML('afterbegin', iconeToast(tipo));
+      if (tipo === 'error') el.setAttribute('role', 'alert');
+    }
+    agendarSaida(el);
+  });
   // Ação via HTMX que troca só um pedaço da tela avisa por aqui (HX-Trigger:
   // {"aviso": {"texto": …, "tipo": …}}) — sem recarregar para ver a mensagem.
   document.body.addEventListener('aviso', e => {

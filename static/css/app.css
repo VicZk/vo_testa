@@ -462,6 +462,8 @@ a:hover { color: var(--lampiao-tinta); }
   display: grid;
   grid-template-columns: var(--sidebar-w) 1fr;
   min-height: 100vh;
+  /* A largura da sidebar mudava em salto ao recolher (⌘\). */
+  transition: grid-template-columns var(--mov-padrao) var(--curva);
 }
 .app.recolhida { --sidebar-w: 72px; }
 
@@ -1798,36 +1800,108 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
    TOASTS · PALETA DE COMANDOS · MICRO-COMPONENTES
    ============================================================ */
 
+/* Aviso (toast). Ficava no ALTO à direita, onde moram os botões da página:
+   uma pilha de três cobria "Filtros e troca" e "Nova reserva". Passou para a
+   base da tela, longe da ação, e ganhou ícone — antes o significado era
+   carregado só por uma barra de 4px, e o brilho dourado era aplicado a todos
+   os tipos, então o erro brilhava de ouro. */
 .toasts {
-  position: fixed; top: 1rem; right: 1rem; z-index: 200;
+  position: fixed; bottom: 1.2rem; right: 1.2rem; z-index: 200;
   display: flex; flex-direction: column; gap: .6rem;
   width: min(380px, calc(100vw - 2rem));
+  pointer-events: none;
 }
 .toast {
+  --toast-cor: var(--lampiao);
+  pointer-events: auto;
   display: flex; align-items: flex-start; gap: .7rem;
   padding: .8rem .9rem .8rem 1rem;
   background: var(--noturno);
-  border: 1px solid color-mix(in srgb, var(--lampiao) 28%, transparent);
-  border-left: 4px solid var(--lampiao);
+  border: 1px solid color-mix(in srgb, var(--toast-cor) 34%, transparent);
+  border-left: 4px solid var(--toast-cor);
   border-radius: var(--raio);
-  box-shadow: var(--glow), var(--sombra-3);
+  box-shadow: var(--sombra-3);
   font-size: .9rem;
-  animation: toast-entra .28s cubic-bezier(.2, .8, .2, 1);
+  animation: toast-entra var(--mov-padrao) var(--curva) backwards;
+  animation-delay: calc(var(--i, 0) * 60ms);
 }
+.toast-ico { flex: none; width: 18px; height: 18px; margin-top: 1px; color: var(--toast-cor); }
 .toast-txt { flex: 1; color: #EAF1F4; }
 .toast-x {
   background: none; border: none; cursor: pointer;
   font-size: 1.2rem; line-height: 1;
-  color: rgba(234, 241, 244, .7); padding: 0 .1rem;
+  color: color-mix(in srgb, #EAF1F4 70%, transparent); padding: 0 .1rem;
 }
 .toast-x:hover { color: var(--lampiao-claro); }
-.toast-success { border-left-color: var(--sucesso); }
-.toast-error { border-left-color: var(--perigo); }
-.toast-warning { border-left-color: var(--alerta); }
-.toast-saindo { animation: toast-sai .4s forwards; }
-@keyframes toast-entra { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: none; } }
-@keyframes toast-sai { to { opacity: 0; transform: translateX(20px); } }
-@media (prefers-reduced-motion: reduce) { .toast, .toast-saindo { animation: none; } }
+/* Cor clara da semântica: sobre o noturno, o tom escuro de --perigo some. */
+.toast-success { --toast-cor: #7FC9A3; box-shadow: var(--sombra-3); }
+.toast-error   { --toast-cor: #F28B6A; }
+.toast-warning { --toast-cor: #E8B07A; }
+.toast-info    { --toast-cor: #8FC2D6; }
+/* Só o sucesso ganha o brilho da marca. */
+.toast-success { box-shadow: var(--glow), var(--sombra-3); }
+.toast-saindo { animation: toast-sai var(--mov-rapido) var(--curva) forwards; }
+@keyframes toast-entra { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes toast-sai { to { opacity: 0; transform: translateY(12px); } }
+@media (prefers-reduced-motion: reduce) {
+  @keyframes toast-entra { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes toast-sai { to { opacity: 0; } }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TROCA DE CONTEÚDO (HTMX) — nada pisca mais
+
+   Havia 43 pontos de troca HTMX e nenhum deles tinha transição: clicar num
+   item do menu trocava a página de estalo, e adicionar um item na comanda
+   fazia a lista piscar. É aí que o produto "não parece produto".
+   Onde o navegador tem View Transitions, a flag em `base.html` cobre tudo;
+   onde não tem, este par de classes faz o cross-fade.
+   ═══════════════════════════════════════════════════════════════ */
+.htmx-swapping { opacity: .35; transition: opacity var(--mov-rapido) var(--curva); }
+.htmx-settling { animation: materializa var(--mov-padrao) var(--curva); }
+@keyframes materializa {
+  from { opacity: 0; transform: translateY(var(--desloca)); }
+  to { opacity: 1; transform: none; }
+}
+::view-transition-old(root) { animation: ct-sai var(--mov-rapido) var(--curva) both; }
+::view-transition-new(root) { animation: ct-entra var(--mov-padrao) var(--curva) both; }
+@keyframes ct-sai { to { opacity: 0; } }
+@keyframes ct-entra { from { opacity: 0; transform: translateY(var(--desloca)); } }
+
+/* Esqueleto para a espera que passa de meio segundo (mapa, grade de escala,
+   ficha do funcionário): um bloco cinza que respira diz "está vindo", e uma
+   tela em branco não diz nada. */
+.esqueleto {
+  border-radius: var(--raio-p);
+  background: linear-gradient(90deg, var(--fio) 25%, var(--superficie-2) 37%, var(--fio) 63%);
+  background-size: 400% 100%;
+  animation: brilho 1.2s linear infinite;
+}
+@keyframes brilho { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .esqueleto { background: var(--fio); animation: none; }
+}
+
+/* Acordeão: `<details>` abria de estalo. Vale para os blocos que SÃO
+   acordeão de conteúdo — não para todo <details> da casa, porque
+   `overflow: hidden` cortaria um menu suspenso dentro de um deles. */
+@supports selector(::details-content) {
+  :root { interpolate-size: allow-keywords; }  /* deixa animar de 0 até auto */
+  .acao-bloco::details-content,
+  .op-det::details-content,
+  .troca-quarto::details-content,
+  .lb-resolver::details-content,
+  .mais-opcoes::details-content {
+    block-size: 0; overflow: hidden;
+    transition: block-size var(--mov-padrao) var(--curva),
+                content-visibility var(--mov-padrao) allow-discrete;
+  }
+  .acao-bloco[open]::details-content,
+  .op-det[open]::details-content,
+  .troca-quarto[open]::details-content,
+  .lb-resolver[open]::details-content,
+  .mais-opcoes[open]::details-content { block-size: auto; }
+}
 
 /* Barra de progresso global das requisições HTMX (base.html). */
 .barra-progresso {
