@@ -30,7 +30,13 @@
 </div>
 {% endif %}
 
-<table class="tabela">
+{% comment %}Larguras declaradas: sem elas a tabela usava 1290px para ~700px de
+conteúdo e abria um vão de 275px entre PAPÉIS e DOCUMENTO.{% endcomment %}
+<table class="tabela tabela-fixa">
+  <colgroup>
+    <col style="width:30%"><col style="width:7%"><col style="width:23%">
+    <col style="width:16%"><col style="width:14%"><col style="width:10%">
+  </colgroup>
   <thead>
     <tr><th>Nome</th><th>Tipo</th><th>Papéis</th><th class="num">Documento</th><th>Telefone</th><th>Situação</th></tr>
   </thead>

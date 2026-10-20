@@ -18,20 +18,20 @@
   letras) e o CEP ocupavam a largura toda, e quem preenchia descia a página para
   achar o próximo dado. Agora são três grupos nomeados, em duas colunas, com o
   campo ocupando a largura do dado que ele guarda.{% endcomment %}
-  <h2 class="letreiro grupo-campos">Identificação</h2>
+  <h2 class="grupo-campos">Identificação</h2>
   <div class="form-grade">
     {% include "reservas/partials/campo.html" with campo=form.nome classe="col-2" %}
     {% include "reservas/partials/campo.html" with campo=form.tipo %}
     {% include "reservas/partials/campo.html" with campo=form.documento %}
   </div>
 
-  <h2 class="letreiro grupo-campos">Contato</h2>
+  <h2 class="grupo-campos">Contato</h2>
   <div class="form-grade">
     {% include "reservas/partials/campo.html" with campo=form.email %}
     {% include "reservas/partials/campo.html" with campo=form.telefone %}
   </div>
 
-  <h2 class="letreiro grupo-campos">Endereço</h2>
+  <h2 class="grupo-campos">Endereço</h2>
   <div class="form-grade form-grade-endereco">
     {% include "reservas/partials/campo.html" with campo=form.endereco classe="col-2" %}
     {% include "reservas/partials/campo.html" with campo=form.cidade %}
