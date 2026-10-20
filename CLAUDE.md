@@ -18,9 +18,17 @@ Pesquisa de mercado: `docs/REFERENCIA_DESBRAVADOR.md`.
 .venv/bin/python manage.py test           # testes (obrigatório antes de commit)
 .venv/bin/python manage.py makemigrations # após mudar models
 .venv/bin/python manage.py migrate
+.venv/bin/ruff check apps/ config/        # lint (config em ruff.toml) — tem que dar zero
 ```
 
 Config por variável de ambiente (`.env` local — ver `.env.example`). `DEBUG=1` no dev.
+
+O CI roda sozinho: `testes.yml` (suíte contra PostgreSQL 16 + `makemigrations --check`,
+em todo push da `main`/`dev` e em PR) e `security.yml` (pip-audit, bandit, ruff de
+segurança e gitleaks, no push da `main`, em PR e toda segunda). Rotinas agendadas:
+`manage.py rotinas --grupo frequentes` (a cada 10 min) e `--grupo diarias` (03:15 de
+Brasília) — dois serviços cron no Railway, configs em `deploy/`. Rotina nova entra no
+grupo certo em `apps/nucleo/management/commands/rotinas.py`.
 
 ## Deploy, commit e push
 
@@ -70,6 +78,30 @@ desenhar o nosso.
   filtros de template `|pode_area:'x'` / `|pode_modulo:'x'`. Gerido na tela **Equipe &
   Acessos** (`configuracoes/equipe/`, `@requer_area(Area.EQUIPE)`), não no admin.
   Superusuário faz bypass; gerentes (is_staff) recebem as áreas por migração seed.
+- **Crédito na conta do hóspede tem origem — uma só.** `PagamentoConta` e `Adiantamento`
+  (base `CreditoNaReserva`) vêm do **caixa** (`movimento_caixa`), do **online**
+  (`cobranca_id`, único), do **faturado** (`conta_receber`, só pagamento) ou são um
+  **estorno** (`estorno_de`, valor negativo); `CheckConstraint`s seguram o sinal no banco.
+  Crédito nasce pelos services (`receber_pagamento`, `receber_adiantamento`,
+  `registrar_pagamento_online`, `faturar_conta`, `devolver_ao_hospede`…), nunca por
+  `objects.create` solto.
+- **Estorno atravessa módulos por gancho, não por import:** `estornar_movimento` (núcleo)
+  chama, na mesma transação, as funções registradas com `ao_estornar()`
+  (`apps/nucleo/models/financeiro.py`). Módulo que guarda espelho do dinheiro registra a
+  sua no `AppConfig.ready()` (ex.: Reservas desfaz o crédito na conta).
+- **Concorrência (duplo clique, duas abas, webhook repetido):** escrita de dinheiro ou
+  estoque roda em `transaction.atomic` e trava a linha com `travar(obj)`
+  (`apps/nucleo/sistema.py`: SELECT … FOR UPDATE + refresh); várias linhas = travar em
+  ordem de `pk`. POST que cobra leva chave de idempotência (ex.: `Venda.chave`): o reenvio
+  devolve a mesma venda em vez de cobrar duas vezes. Confirmação de pagamento é idempotente.
+- **Ação sem login (portal, site, webhook, cron) tem autor:** `usuario_de_sistema()`
+  (`_portal`, `_site`…) assina na trilha. Documento e nascimento entram mascarados no diff
+  (`CAMPOS_PII` em `audit.py`). `QuerySet.update()` e `bulk_create` não disparam signal:
+  registrar à mão com `registrar_auditoria`. Retenção: `TRILHA_RETENCAO_DIAS` +
+  `purgar_trilha` (rotina diária).
+- **Formulário público** (site, LPs, captação) usa o antirrobô do núcleo:
+  `{% campos_antirrobo %}` no template + `parece_robo(request.POST)` na view (armadilha +
+  carimbo assinado), mais limite por IP. Robô recebe "sucesso" calado.
 
 ## Convenções
 
@@ -456,3 +488,11 @@ o kit `templates/comercial/_estilo_elegante.html` (telas de painel/lista/detalhe
 - Fase 1 de módulos concluída. Fase 2 (§8): CRM do Hóspede, Canais/OTAs, Fiscal
   (provider real), integração site↔CRM (cutover), Safrapay.
 - Perguntas de negócio em aberto: §9 da especificação (parâmetros, não bloqueiam).
+- **Auditoria completa de out/2026** (fork `VicZk/vo_testa`, branch `dev`): dinheiro
+  (crédito com origem, devolução ao hóspede, faturamento para agência/empresa, estorno
+  online), recepção (estender estadia, alterar lotação, troca com tarifa nova, ECA,
+  no-show, arrumação diária), segurança e LGPD (trava de login por conta, recuperação de
+  senha, MFA por escopo, CSP com relatório, antirrobô, descadastro em um clique,
+  encarregado de dados, retenção da trilha), fiscal (IBS/CBS, aviso de venda sem NFC-e) e
+  visual. O que mudou e por quê, push a push: `CHANGELOG.md`. Fluxos:
+  `docs/MODULOS_E_FLUXOS.md`. Peças e variáveis de ambiente: `docs/ARQUITETURA.md`.
