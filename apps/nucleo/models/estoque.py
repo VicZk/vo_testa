@@ -305,6 +305,10 @@ def transferir(produto, origem, destino, quantidade, usuario, observacao=""):
         raise ValidationError("Origem e destino não podem ser o mesmo local.")
     if quantidade <= ZERO:
         raise ValidationError("A quantidade transferida deve ser positiva.")
+    # Mesma âncora das entradas e saídas: sem ela, uma venda no meio da transferência
+    # passa pela mesma conferência de saldo e o local fica negativo.
+    from apps.nucleo.sistema import travar
+    produto = travar(produto)
     if saldo(produto, origem) < quantidade:
         raise ValidationError(
             f"Saldo insuficiente em {origem} (disponível: {saldo(produto, origem)})."
@@ -336,6 +340,10 @@ def ajustar(produto, local, nova_quantidade, usuario, motivo=""):
     nova_quantidade = Decimal(nova_quantidade)
     if nova_quantidade < ZERO:
         raise ValidationError("O saldo ajustado não pode ser negativo.")
+    # A diferença é calculada sobre o saldo lido COM o produto travado: uma venda
+    # entre a leitura e a gravação faria o ajuste apagar a baixa dela.
+    from apps.nucleo.sistema import travar
+    produto = travar(produto)
     diferenca = nova_quantidade - saldo(produto, local)
     if diferenca == ZERO:
         return None
@@ -347,6 +355,28 @@ def ajustar(produto, local, nova_quantidade, usuario, motivo=""):
         usuario, "ajuste_estoque", mov,
         {"produto": produto.pk, "local": local.pk,
          "diferenca": str(diferenca), "motivo": motivo},
+    )
+    return mov
+
+
+@transaction.atomic
+def devolver_ao_estoque(produto, local, quantidade, usuario, motivo=""):
+    """Devolve `quantidade` ao local (cancelamento de venda, item tirado da comanda):
+    soma ao saldo de agora, sem mexer no custo médio. Ao contrário de
+    `ajustar(saldo_lido + quantidade)`, não depende de um saldo lido antes da trava."""
+    quantidade = Decimal(quantidade)
+    if quantidade <= ZERO:
+        raise ValidationError("A quantidade devolvida deve ser positiva.")
+    from apps.nucleo.sistema import travar
+    produto = travar(produto)
+    mov = _novo_movimento(
+        produto, local, MovimentoEstoque.Tipo.AJUSTE, quantidade, usuario,
+        custo_unitario=produto.custo_medio, observacao=motivo,
+    )
+    registrar_auditoria(
+        usuario, "ajuste_estoque", mov,
+        {"produto": produto.pk, "local": local.pk,
+         "diferenca": str(quantidade), "motivo": motivo},
     )
     return mov
 

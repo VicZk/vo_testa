@@ -155,3 +155,24 @@ class PermissaoTests(EstoqueBase):
         )
         self.assertRedirects(resposta, reverse("estoque:posicao"))
         self.assertEqual(saldo(self.produto, self.almox), Decimal("12.000"))
+
+
+class DevolverAoEstoqueTests(EstoqueBase):
+    """Devolução (cancelamento de venda/comanda) soma ao saldo de agora, sem ler antes."""
+
+    def test_soma_ao_saldo_atual_sem_mexer_no_custo_medio(self):
+        from apps.nucleo.models import devolver_ao_estoque
+
+        registrar_entrada(self.produto, self.almox, 10, Decimal("3.00"), self.user)
+        registrar_saida(self.produto, self.almox, 4, self.user)
+        custo = Produto.objects.get(pk=self.produto.pk).custo_medio
+        mov = devolver_ao_estoque(self.produto, self.almox, 2, self.user, motivo="Cancelamento")
+        self.assertEqual(mov.tipo, MovimentoEstoque.Tipo.AJUSTE)
+        self.assertEqual(saldo(self.produto, self.almox), Decimal("8"))
+        self.assertEqual(Produto.objects.get(pk=self.produto.pk).custo_medio, custo)
+
+    def test_quantidade_precisa_ser_positiva(self):
+        from apps.nucleo.models import devolver_ao_estoque
+
+        with self.assertRaises(ValidationError):
+            devolver_ao_estoque(self.produto, self.almox, 0, self.user)

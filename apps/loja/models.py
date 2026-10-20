@@ -54,6 +54,11 @@ class Venda(models.Model):
     status = models.CharField(
         "status", max_length=10, choices=Status.choices, default=Status.FECHADA
     )
+    chave = models.UUIDField(
+        "chave do carrinho", null=True, blank=True, unique=True, editable=False,
+        help_text="Gerada pelo PDV para cada carrinho: o mesmo envio duas vezes não "
+                  "vira duas vendas.",
+    )
     criado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
         related_name="vendas_loja", verbose_name="operador",

@@ -106,7 +106,7 @@
     </label>
     {% endif %}
 
-    <button type="button" class="botao-primario pdv-finalizar" :disabled="!cart.length" @click="finalizar()">
+    <button type="button" class="botao-primario pdv-finalizar" :disabled="!cart.length || enviando" @click="finalizar()">
       Finalizar venda · <span x-text="reais(total())"></span>
     </button>
   </aside>
@@ -117,7 +117,11 @@
     return {
       produtos: JSON.parse('{{ produtos_json|escapejs }}'),
       cart: [], filtro: '', desconto: 0, destino: 'caixa',
-      forma_id: '', cliente_id: '', conta_id: '',
+      forma_id: '', cliente_id: '', conta_id: '', enviando: false,
+      // Uma chave por carrinho: se o envio repetir (clique duplo, conexão que cai),
+      // o servidor devolve a mesma venda em vez de cobrar de novo.
+      chave: (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+        : 'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g, () => (Math.random() * 16 | 0).toString(16)),
       reais(v) { return 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 }); },
       produtosFiltrados() {
         const f = this.filtro.toLowerCase();
@@ -134,7 +138,7 @@
       subtotal() { return this.cart.reduce((s, i) => s + i.preco * i.qtd, 0); },
       total() { return Math.max(0, this.subtotal() - (this.desconto || 0)); },
       async finalizar() {
-        if (!this.cart.length) return;
+        if (!this.cart.length || this.enviando) return;
         if (this.destino === 'caixa' && !this.forma_id) { toast('Escolha a forma de pagamento.', 'error'); return; }
         if (this.destino === 'conta' && !this.conta_id) { toast('Escolha a conta do quarto.', 'error'); return; }
         const body = {
@@ -144,17 +148,22 @@
           cliente_id: this.cliente_id || null,
           desconto: this.desconto || 0,
           itens: this.cart.map(i => ({ produto_id: i.id, quantidade: i.qtd })),
+          chave: this.chave,
         };
         const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        this.enviando = true;
         try {
           const r = await fetch('{{ url_finalizar }}', {
             method: 'POST', headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
           });
           const d = await r.json();
-          if (!r.ok) { toast(d.erro || 'Não foi possível finalizar.', 'error'); return; }
+          if (!r.ok) { toast(d.erro || 'Não foi possível finalizar.', 'error'); this.enviando = false; return; }
           window.location.href = d.url;
-        } catch (e) { toast('Falha de conexão.', 'error'); }
+        } catch (e) {
+          toast('Falha de conexão. Tente de novo: a venda não sai em dobro.', 'error');
+          this.enviando = false;
+        }
       },
     };
   }

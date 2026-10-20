@@ -3,12 +3,12 @@
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from apps.nucleo.models import (
     Produto,
-    ajustar,
+    devolver_ao_estoque,
     estornar_movimento,
     receber_no_caixa,
     registrar_auditoria,
@@ -21,13 +21,35 @@ from .models import ItemVenda, Venda
 ZERO = Decimal("0.00")
 
 
-@transaction.atomic
 def finalizar_venda(operador, local, itens, destino, forma=None, cliente=None,
-                    conta_id=None, desconto=ZERO):
+                    conta_id=None, desconto=ZERO, chave=None):
     """
     itens: lista de dicts {produto_id, quantidade}. Valida saldo, baixa estoque
     e cobra pelo destino escolhido (caixa OU conta do quarto).
+
+    `chave` (UUID que o PDV gera para cada carrinho) torna a venda idempotente: o
+    clique duplo, ou o reenvio depois de a conexão cair, devolve a venda já feita em
+    vez de baixar o estoque e cobrar de novo.
     """
+    if chave:
+        existente = Venda.objects.filter(chave=chave).first()
+        if existente:
+            return existente
+    try:
+        return _finalizar_venda(operador, local, itens, destino, forma, cliente,
+                                conta_id, desconto, chave)
+    except IntegrityError:
+        # Dois envios da mesma chave ao mesmo tempo: o segundo esbarra na unicidade
+        # quando o primeiro grava; devolve a venda do primeiro.
+        existente = Venda.objects.filter(chave=chave).first() if chave else None
+        if existente:
+            return existente
+        raise
+
+
+@transaction.atomic
+def _finalizar_venda(operador, local, itens, destino, forma, cliente, conta_id,
+                     desconto, chave):
     desconto = Decimal(desconto or 0)
     if not itens:
         raise ValidationError("Adicione ao menos um item à venda.")
@@ -54,6 +76,9 @@ def finalizar_venda(operador, local, itens, destino, forma=None, cliente=None,
     if desconto < 0 or desconto > subtotal:
         raise ValidationError("Desconto inválido.")
     total = subtotal - desconto
+    # Travas sempre na mesma ordem (por produto, depois o caixa): duas vendas com os
+    # mesmos itens em ordens diferentes não se bloqueiam uma à outra.
+    linhas.sort(key=lambda linha: linha[0].pk)
 
     if destino == Venda.Destino.CAIXA and not forma:
         raise ValidationError("Escolha a forma de pagamento.")
@@ -65,7 +90,7 @@ def finalizar_venda(operador, local, itens, destino, forma=None, cliente=None,
 
     venda = Venda.objects.create(
         local=local, destino=destino, cliente=cliente, forma_pagamento=forma,
-        desconto=desconto, total=total, criado_por=operador,
+        desconto=desconto, total=total, criado_por=operador, chave=chave,
     )
     for produto, qtd, valor in linhas:
         ItemVenda.objects.create(
@@ -110,6 +135,8 @@ def finalizar_venda(operador, local, itens, destino, forma=None, cliente=None,
 @transaction.atomic
 def cancelar_venda(venda, usuario, motivo):
     """Cancela uma venda de pagamento imediato: devolve estoque e estorna o caixa."""
+    from apps.nucleo.sistema import travar
+    venda = travar(venda)  # dois cancelamentos juntos não devolvem o estoque 2×
     if venda.status != Venda.Status.FECHADA:
         raise ValidationError("Esta venda não está aberta para cancelamento.")
     if not motivo.strip():
@@ -118,11 +145,10 @@ def cancelar_venda(venda, usuario, motivo):
         raise ValidationError(
             "Venda lançada na conta do quarto — ajuste pela conta da hospedagem."
         )
-    # Devolve o estoque (ajuste, sem mexer no custo médio).
-    for item in venda.itens.select_related("produto"):
-        atual = saldo(item.produto, venda.local)
-        ajustar(item.produto, venda.local, atual + item.quantidade, usuario,
-                motivo=f"Cancelamento venda Loja #{venda.pk}")
+    # Devolve o estoque (sem mexer no custo médio), travando na mesma ordem da venda.
+    for item in venda.itens.select_related("produto").order_by("produto_id"):
+        devolver_ao_estoque(item.produto, venda.local, item.quantidade, usuario,
+                            motivo=f"Cancelamento venda Loja #{venda.pk}")
     # Estorna o recebimento no caixa (exige o caixa aberto).
     if venda.movimento_caixa:
         estornar_movimento(

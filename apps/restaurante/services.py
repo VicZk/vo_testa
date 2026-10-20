@@ -7,7 +7,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.nucleo.models import (
-    ajustar,
+    devolver_ao_estoque,
     receber_no_caixa,
     registrar_auditoria,
     registrar_saida,
@@ -66,11 +66,12 @@ def adicionar_item(comanda, produto, quantidade, operador):
 @transaction.atomic
 def remover_item(item, operador):
     """Remove um item da comanda e devolve o estoque (ajuste)."""
-    if not item.comanda.aberta:
+    from apps.nucleo.sistema import travar
+    comanda = travar(item.comanda)  # não remove item de comanda sendo fechada
+    if not comanda.aberta:
         raise ValidationError("Esta comanda já foi fechada.")
-    atual = saldo(item.produto, item.comanda.local)
-    ajustar(item.produto, item.comanda.local, atual + item.quantidade, operador,
-            motivo=f"Remoção de item — comanda #{item.comanda.pk}")
+    devolver_ao_estoque(item.produto, comanda.local, item.quantidade, operador,
+                        motivo=f"Remoção de item — comanda #{comanda.pk}")
     item.delete()
 
 
@@ -126,14 +127,17 @@ def fechar_comanda(comanda, operador, destino, forma=None, conta_id=None, descon
 @transaction.atomic
 def cancelar_comanda(comanda, usuario, motivo):
     """Cancela a comanda aberta e devolve todo o estoque consumido."""
+    from apps.nucleo.sistema import travar
+    comanda = travar(comanda)  # dois cancelamentos juntos não devolvem o estoque 2×
     if not comanda.aberta:
         raise ValidationError("Só comandas abertas podem ser canceladas.")
     if not motivo.strip():
         raise ValidationError("Informe o motivo do cancelamento.")
-    for item in comanda.itens.select_related("produto"):
-        atual = saldo(item.produto, comanda.local)
-        ajustar(item.produto, comanda.local, atual + item.quantidade, usuario,
-                motivo=f"Cancelamento comanda #{comanda.pk}")
+    # Ordem fixa (por produto) nas travas: duas operações com os mesmos itens em
+    # ordens diferentes não se bloqueiam uma à outra.
+    for item in comanda.itens.select_related("produto").order_by("produto_id"):
+        devolver_ao_estoque(item.produto, comanda.local, item.quantidade, usuario,
+                            motivo=f"Cancelamento comanda #{comanda.pk}")
     comanda.status = Comanda.Status.CANCELADA
     comanda.fechada_em = timezone.now()
     comanda.motivo_cancelamento = motivo

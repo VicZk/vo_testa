@@ -180,3 +180,55 @@ class PermissaoTests(LojaBase):
         self.assertEqual(r.status_code, 200)
         self.assertTrue(r.json()["ok"])
         self.assertEqual(saldo(self.produto, self.local), Decimal("18.000"))
+
+
+class VendaIdempotenteTests(LojaBase):
+    """O mesmo carrinho enviado duas vezes (clique duplo, conexão que cai) é uma venda só."""
+
+    def test_mesma_chave_devolve_a_mesma_venda(self):
+        import uuid
+
+        sessao = self.abrir_caixa()
+        chave = uuid.uuid4()
+        v1 = services.finalizar_venda(self.op, self.local, self.itens(2), "caixa",
+                                      forma=self.dinheiro, chave=chave)
+        v2 = services.finalizar_venda(self.op, self.local, self.itens(2), "caixa",
+                                      forma=self.dinheiro, chave=chave)
+        self.assertEqual(v1.pk, v2.pk)
+        self.assertEqual(Venda.objects.count(), 1)
+        self.assertEqual(saldo(self.produto, self.local), Decimal("18.000"))
+        self.assertEqual(sessao.esperado_em_dinheiro(), Decimal("14.00"))
+
+    def test_view_repetida_com_a_mesma_chave_nao_cobra_duas_vezes(self):
+        import uuid
+
+        self.abrir_caixa()
+        self.client.force_login(self.op)
+        corpo = json.dumps({
+            "local_id": self.local.pk, "destino": "caixa", "forma_id": self.dinheiro.pk,
+            "itens": self.itens(1), "chave": str(uuid.uuid4()),
+        })
+        r1 = self.client.post(reverse("loja:finalizar"), corpo, content_type="application/json")
+        r2 = self.client.post(reverse("loja:finalizar"), corpo, content_type="application/json")
+        self.assertEqual(r1.json()["url"], r2.json()["url"])
+        self.assertEqual(Venda.objects.count(), 1)
+
+    def test_chave_invalida_e_ignorada(self):
+        self.abrir_caixa()
+        self.client.force_login(self.op)
+        corpo = json.dumps({
+            "local_id": self.local.pk, "destino": "caixa", "forma_id": self.dinheiro.pk,
+            "itens": self.itens(1), "chave": "nao-e-uuid",
+        })
+        r = self.client.post(reverse("loja:finalizar"), corpo, content_type="application/json")
+        self.assertEqual(r.status_code, 200)
+        self.assertIsNone(Venda.objects.get().chave)
+
+    def test_cancelar_duas_vezes_devolve_o_estoque_uma_vez(self):
+        self.abrir_caixa()
+        venda = services.finalizar_venda(self.op, self.local, self.itens(3), "caixa",
+                                         forma=self.dinheiro)
+        services.cancelar_venda(venda, self.op, "Cliente desistiu")
+        with self.assertRaises(ValidationError):
+            services.cancelar_venda(venda, self.op, "Clique duplo")
+        self.assertEqual(saldo(self.produto, self.local), Decimal("20.000"))

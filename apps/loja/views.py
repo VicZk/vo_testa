@@ -1,4 +1,5 @@
 import json
+import uuid
 from decimal import Decimal
 
 from django.contrib import messages
@@ -69,6 +70,14 @@ def pdv(request):
     })
 
 
+def _chave_valida(valor):
+    """A chave do carrinho, se for um UUID; qualquer outra coisa é ignorada."""
+    try:
+        return uuid.UUID(str(valor)) if valor else None
+    except ValueError:
+        return None
+
+
 @requer_modulo(Modulo.LOJA)
 def finalizar(request):
     if request.method != "POST":
@@ -91,6 +100,7 @@ def finalizar(request):
             destino=dados.get("destino"), forma=forma, cliente=cliente,
             conta_id=dados.get("conta_id"),
             desconto=Decimal(str(dados.get("desconto") or 0)),
+            chave=_chave_valida(dados.get("chave")),
         )
     except ValidationError as erro:
         return JsonResponse({"erro": " ".join(erro.messages)}, status=400)
