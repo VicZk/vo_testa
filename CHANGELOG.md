@@ -9,6 +9,102 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 20/10/2026 — Visual sem excesso de pílulas, fechamento do dia e base em dia (`e40ab34` a `f971a4d`)
+
+Sexto bloco: o pedido do dono sobre o visual saturado de pílulas, o último item "alto" da
+auditoria de Reservas (diárias e fechamento do dia) e a manutenção da base (dependências,
+CI, linter e documentação).
+
+**O que melhorou**
+- **Menos pílulas, visual mais limpo** (pedido do dono: "pills em tudo, saturado demais"):
+  - status neutro virou bolinha + texto; cápsula preenchida só no que pede ação;
+  - tipo, papel, canal e categoria viraram texto discreto; filtros viraram controles;
+  - pílulas preenchidas nas telas do CRM: **252 → 28** (Pessoas 78 → 1, Auditoria
+    26 → 0, lista de Reservas 24 → 0, Governança 25 → 1, Central de Módulos 20 → 1,
+    Marketing 25 → 8).
+- **Polimento do visual inteiro:**
+  - nenhuma tela rola para o lado no celular, e os botões têm 44 px no toque;
+  - as cinco cores da marca têm um valor só no CRM e no site, e há uma forma única de
+    botão;
+  - formulários sem "Nome:", sem "---------" e com as mensagens de validação em
+    português;
+  - corredor da recepção legível (nome inteiro, dinheiro à direita);
+  - movimento suave: transição entre telas, esqueleto de carregamento e avisos na base
+    da tela com ícone. Tudo desligado para quem pede menos movimento no aparelho;
+  - fichas e listas com hierarquia. No site, o botão do funil volta a ser dourado e os
+    rótulos ficam legíveis. No portal do hóspede, a FNRH abre uma ficha por vez;
+  - dinheiro em pt-BR em 88 lugares que ainda mostravam o número cru.
+- **Fechamento do dia (auditoria noturna).** Toda madrugada a rotina grava o retrato do
+  dia anterior, que nunca muda: ocupação, chegadas, saídas, no-shows, diárias, ADR,
+  consumo e saldo em aberto. Fica em Auditoria → Fechamentos do dia, com os totais do
+  mês e CSV para a gerência.
+- **Diária conta pela noite.**
+  - A receita dos relatórios entra no mês da noite, não no do check-in: antes, uma
+    estadia de 28/10 a 03/11 caía inteira em outubro.
+  - As diárias já lançadas foram acertadas pela data que está na descrição.
+- **Ocupação só de quartos.** O relatório de ocupação e o gráfico do painel deixam o day
+  use de fora. Antes, as unidades de day use contavam como quartos: a taxa ficava menor
+  do que a real e o preço do day use entrava no ADR.
+- **Listas paginadas.**
+  - Pessoas carregava a base inteira; as outras listas cortavam em 100, 200 ou 300 sem
+    avisar. Agora todas mostram 50 por página (a trilha, o kardex e os lançamentos,
+    100), com busca e filtros mantidos.
+  - No celular, Pessoas mostra nome e papéis inteiros.
+- **Segurança e manutenção:**
+  - Django 6.0.9 (quatro correções de segurança) e gunicorn 26.2.0 (cabeçalhos HTTP
+    mais rígidos);
+  - a checagem de segurança do CI volta a passar. Estava vermelha desde 19/10 por um
+    alarme falso das ferramentas do próprio CI;
+  - ações do GitHub em Node 24; linter (ruff) zerado e cobrado no CI;
+  - `CLAUDE.md` com as regras novas: dinheiro, concorrência, autoria das ações,
+    formulários públicos, pílulas, paginação e movimento.
+
+**O que foi modificado**
+- **Migrations:**
+  - `reservas.0028`: competência do lançamento, com o acerto das diárias antigas;
+  - `reservas.0029`: fechamento do dia.
+- **Serviços e comandos:**
+  - Reservas: `fechar_dia`, `fechamentos` e `lancar_na_conta(..., competencia=)`;
+  - comando `fechar_dia`, o primeiro do grupo diário do `rotinas`;
+  - núcleo: `apps/nucleo/paginacao.py` (`paginar`) + `templates/componentes/paginacao.html`
+    e o filtro `milhar`.
+- **Tela nova:** `auditoria:fechamentos`.
+- **CSS:** `.selo--acao`, `.rotulo-dado`, `.filtro-chip`, `.paginacao`; tokens de
+  movimento `--mov-*` e `--curva*`.
+- **CI:**
+  - `security.yml`: pip-audit só no `requirements.txt`; ações v7/v3;
+  - `testes.yml`: passo do ruff.
+- **Dependências:** Django 6.0.9, gunicorn 26.2.0, psycopg 3.3.6, python-dotenv 1.2.4,
+  boto3 1.43.116.
+- **Documentação:** `CLAUDE.md`, `docs/MODULOS_E_FLUXOS.md`, `docs/ARQUITETURA.md`.
+
+**Como foi testado**
+- **Visual:**
+  - as apps mexidas a cada lote e a suíte inteira no fim do ramo;
+  - 192 capturas do "depois" (desktop, tablet e celular) e contagem automática das
+    pílulas por tela.
+- **Testes novos**, entre eles:
+  - estadia que vira o mês e ADR calculado com as mesmas noites;
+  - day use fora da ocupação;
+  - fechamento do dia: os números, não refaz, não edita, e o comando;
+  - tela dos fechamentos: a gerência exporta, o operador não;
+  - paginação: página estável, página inválida, busca mantida;
+  - regras de design: selo, movimento e botões.
+- **Suíte e checagens:**
+  - suíte completa no Windows: 1.150 testes, só a falha conhecida do ambiente
+    (`test_webhook_audio_baixa_e_salva_arquivo`, que só falha no Windows);
+  - dependências novas testadas num ambiente separado;
+  - `pip-audit -r requirements.txt` sem vulnerabilidade;
+  - bandit e ruff de segurança limpos;
+  - `check --deploy` sem aviso.
+
+**Depois do deploy (no Railway)**
+- Nada obrigatório: as migrations rodam sozinhas e o `fechar_dia` já faz parte do cron
+  diário. O fechamento só aparece se o serviço de cron das rotinas diárias estiver
+  criado (config em `deploy/railway.rotinas-diarias.json`).
+
+---
+
 ## 20/10/2026 — Operação da recepção, fiscal e limpeza de código (`2cc35b1` a `f0441b0`)
 
 Quinto bloco: o que faltava da operação de Reservas, a preparação fiscal e a limpeza de
