@@ -1,10 +1,10 @@
 """Webhook público do WhatsApp Cloud API (Meta) — fora do /crm, sem login.
 
 - GET: handshake de verificação (hub.challenge) usando WHATSAPP_VERIFY_TOKEN.
-- POST: eventos (mensagens recebidas + status de entrega) → services.processar_webhook.
-
-Best-effort: sempre responde 200 rápido para a Meta não reenfileirar; erros são
-engolidos e logados (a Meta reentrega em caso de não-2xx).
+- POST: eventos (mensagens recebidas + status de entrega). O corpo é gravado num
+  WebhookWhatsApp ANTES de processar: se o processamento falhar, o registro guarda o erro
+  e o `reprocessar_webhooks_whatsapp` (rotinas) tenta de novo — nada se perde e a resposta
+  200 é honesta. Se nem a gravação der certo, devolve 500 e a Meta reentrega.
 """
 import hashlib
 import hmac
@@ -58,7 +58,8 @@ def webhook(request):
         return HttpResponseForbidden("assinatura inválida")
     try:
         payload = json.loads(request.body or b"{}")
-        services.processar_webhook_whatsapp(payload)
-    except Exception:  # noqa: BLE001 — nunca devolve erro pra Meta reenfileirar em loop
-        logger.exception("Falha ao processar webhook do WhatsApp")
+    except ValueError:
+        logger.warning("Webhook do WhatsApp com corpo que não é JSON; ignorado.")
+        return JsonResponse({"ok": True})
+    services.registrar_e_processar_webhook_whatsapp(payload)
     return JsonResponse({"ok": True})

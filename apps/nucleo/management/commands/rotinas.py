@@ -3,7 +3,8 @@
 Grupos:
 - frequentes (a cada 10 min): expira pré-reservas e recibos do site vencidos, reenvia à
   FNRH o que ficou pendente, dispara as campanhas de e-mail agendadas e reenvia as
-  confirmações do site e os e-mails do Comercial que não saíram;
+  confirmações do site e os e-mails do Comercial que não saíram, e reprocessa os
+  webhooks do WhatsApp que falharam;
 - diarias (madrugada): conversões de mídia pendentes e gasto das campanhas.
 
 Cada tarefa roda isolada: se uma falha, o erro vai para o log e as outras seguem. Ao fim,
@@ -30,6 +31,7 @@ GRUPOS = {
         "enviar_campanhas_email",
         "reenviar_confirmacoes_site",
         "reenviar_emails_pendentes",
+        "reprocessar_webhooks_whatsapp",
     ],
     "diarias": [
         "enviar_conversoes_pendentes",

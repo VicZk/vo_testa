@@ -907,6 +907,31 @@ class MensagemWhatsApp(models.Model):
         return f"{self.get_direcao_display()}: {self.texto[:40]}"
 
 
+class WebhookWhatsApp(models.Model):
+    """Corpo de cada POST do webhook da Meta, gravado antes de processar.
+
+    Se o processamento falhar (bug, banco instável), o evento não se perde: o
+    `reprocessar_webhooks_whatsapp` (rotinas) tenta de novo. Reprocessar é seguro porque
+    cada mensagem é única pelo `wamid` (MensagemWhatsApp.id_externo). Os já processados
+    são apagados depois de 30 dias.
+    """
+
+    payload = models.JSONField("corpo")
+    recebido_em = models.DateTimeField("recebido em", auto_now_add=True, db_index=True)
+    processado_em = models.DateTimeField("processado em", null=True, blank=True)
+    tentativas = models.PositiveSmallIntegerField("tentativas", default=0)
+    erro = models.TextField("erro", blank=True)
+
+    class Meta:
+        ordering = ["-recebido_em"]
+        verbose_name = "webhook do WhatsApp"
+        verbose_name_plural = "webhooks do WhatsApp"
+
+    def __str__(self):
+        situacao = "processado" if self.processado_em else f"pendente ({self.tentativas})"
+        return f"Webhook {self.recebido_em:%d/%m %H:%M} — {situacao}"
+
+
 class EnvioEmail(models.Model):
     """Livro-razão (append-only) de cada e-mail enviado a um destinatário.
 

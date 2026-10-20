@@ -2149,6 +2149,36 @@ def _atualizar_status_mensagem(id_externo, status_meta):
             status=MensagemWhatsApp.Status.ENVIADA)
 
 
+def registrar_e_processar_webhook_whatsapp(payload: dict):
+    """Grava o corpo do webhook e o processa.
+
+    Se o processamento falhar, o registro guarda o erro e o `reprocessar_webhooks_whatsapp`
+    (rotinas) tenta de novo. Se nem a gravação der certo (banco fora), o erro sobe: a view
+    devolve 500 e a Meta reentrega o evento."""
+    from .models import WebhookWhatsApp
+
+    registro = WebhookWhatsApp.objects.create(payload=payload)
+    processar_registro_webhook(registro)
+    return registro
+
+
+def processar_registro_webhook(registro) -> bool:
+    """Processa um WebhookWhatsApp guardado. Nunca levanta: marca como processado ou
+    guarda o erro (o reprocessamento é seguro, a mensagem é única pelo wamid)."""
+    registro.tentativas += 1
+    try:
+        processar_webhook_whatsapp(registro.payload)
+    except Exception as erro:  # noqa: BLE001 — o registro guarda; o rotinas reprocessa
+        logger.exception("Falha ao processar o webhook do WhatsApp %s", registro.pk)
+        registro.erro = f"{type(erro).__name__}: {erro}"[:2000]
+        registro.save(update_fields=["tentativas", "erro"])
+        return False
+    registro.processado_em = timezone.now()
+    registro.erro = ""
+    registro.save(update_fields=["tentativas", "processado_em", "erro"])
+    return True
+
+
 def processar_webhook_whatsapp(payload: dict) -> dict:
     """Processa o corpo do webhook da Meta: mensagens recebidas + status de entrega.
 

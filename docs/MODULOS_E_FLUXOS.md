@@ -702,6 +702,8 @@ confirmado, não prometa").
 - **WhatsApp:** `abrir_conversa_whatsapp`, `receber_mensagem_whatsapp`,
   `enviar_mensagem_whatsapp`, `enviar_audio_whatsapp`, `enviar_imagem_whatsapp`,
   `enviar_template_whatsapp`, `reabrir_conversa_whatsapp`,
+  `registrar_e_processar_webhook_whatsapp(payload)` (grava o corpo num
+  `WebhookWhatsApp` antes de processar), `processar_registro_webhook(registro)`,
   `processar_webhook_whatsapp(payload)`, `disparar_campanha_whatsapp`,
   `respostas_rapidas_para`, `aplicar_variaveis_resposta`.
 - **E-mail:** `montar_proposta_email`, `enviar_email`, `salvar_template_email`,
@@ -1828,8 +1830,9 @@ sequenceDiagram
      origem=UTM+fbclid/gclid, aceita_email=consent)`.
    - **LPs bespoke:** `/lp/fundador/lead/` etc. — honeypot, rejeição de envio instantâneo,
      rate-limit por IP e Meta CAPI pelo servidor (dedupe com o Pixel por `event_id`).
-   - **WhatsApp:** `/whatsapp/webhook/` → `processar_webhook_whatsapp` →
-     `receber_mensagem_whatsapp`: número desconhecido **cria** lead
+   - **WhatsApp:** `/whatsapp/webhook/` → grava o corpo (`WebhookWhatsApp`) →
+     `processar_webhook_whatsapp` → `receber_mensagem_whatsapp`; se falhar, o
+     `reprocessar_webhooks_whatsapp` do `rotinas` tenta de novo. Número desconhecido **cria** lead
      (`origem=whatsapp`); lead perdido é **reativado** no mesmo card; lead ganho gera card
      de recompra.
 2. **Nascimento do card.** `capturar_lead_site` resolve/cria a `Pessoa` (dedupe por

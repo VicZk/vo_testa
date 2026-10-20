@@ -2758,3 +2758,75 @@ class ReenvioDeEmailsTests(TestCase):
         self._pendente(30, status=EnvioEmail.Status.ERRO, tentativas=3)
         self._rodar()
         self.assertEqual(len(mail.outbox), 0)
+
+
+class WebhookWhatsAppGuardadoTests(TestCase):
+    """O corpo do webhook é gravado antes de processar: falha não perde a mensagem."""
+
+    def setUp(self):
+        from django.utils import timezone
+
+        self.payload = {"object": "whatsapp_business_account", "entry": [{"id": "WABA", "changes": [{
+            "field": "messages", "value": {"messaging_product": "whatsapp", "messages": [{
+                "from": "5549999887766", "id": "wamid.GUARDA1",
+                "timestamp": str(int(timezone.now().timestamp())),
+                "type": "text", "text": {"body": "Quero reservar para o dia 31"}}]}}]}]}
+
+    def _post(self):
+        import json
+
+        return self.client.post(reverse("whatsapp:webhook"), data=json.dumps(self.payload),
+                                content_type="application/json")
+
+    def test_webhook_grava_e_marca_processado(self):
+        from .models import MensagemWhatsApp, WebhookWhatsApp
+
+        self.assertEqual(self._post().status_code, 200)
+        registro = WebhookWhatsApp.objects.get()
+        self.assertIsNotNone(registro.processado_em)
+        self.assertEqual(registro.tentativas, 1)
+        self.assertTrue(MensagemWhatsApp.objects.filter(id_externo="wamid.GUARDA1").exists())
+
+    def test_falha_no_processamento_guarda_o_erro_e_o_rotinas_reprocessa(self):
+        from datetime import timedelta
+        from io import StringIO
+        from unittest import mock
+
+        from django.core.management import call_command
+        from django.utils import timezone
+
+        from .models import MensagemWhatsApp, WebhookWhatsApp
+
+        with mock.patch.object(services, "processar_webhook_whatsapp",
+                               side_effect=RuntimeError("regressão no Comercial")), \
+                self.assertLogs("apps.comercial.services", "ERROR"):
+            self.assertEqual(self._post().status_code, 200)
+        registro = WebhookWhatsApp.objects.get()
+        self.assertIsNone(registro.processado_em)
+        self.assertIn("regressão", registro.erro)
+        self.assertFalse(MensagemWhatsApp.objects.exists())
+
+        WebhookWhatsApp.objects.update(recebido_em=timezone.now() - timedelta(minutes=5))
+        call_command("reprocessar_webhooks_whatsapp", stdout=StringIO())
+        registro.refresh_from_db()
+        self.assertIsNotNone(registro.processado_em)
+        self.assertEqual(registro.tentativas, 2)
+        self.assertTrue(MensagemWhatsApp.objects.filter(id_externo="wamid.GUARDA1").exists())
+
+    def test_reprocessar_respeita_tentativas_e_apaga_antigos(self):
+        from datetime import timedelta
+        from io import StringIO
+
+        from django.core.management import call_command
+        from django.utils import timezone
+
+        from .models import WebhookWhatsApp
+
+        esgotado = WebhookWhatsApp.objects.create(payload=self.payload, tentativas=5)
+        antigo = WebhookWhatsApp.objects.create(
+            payload={}, processado_em=timezone.now() - timedelta(days=31))
+        WebhookWhatsApp.objects.update(recebido_em=timezone.now() - timedelta(minutes=5))
+        call_command("reprocessar_webhooks_whatsapp", stdout=StringIO())
+        esgotado.refresh_from_db()
+        self.assertIsNone(esgotado.processado_em)
+        self.assertFalse(WebhookWhatsApp.objects.filter(pk=antigo.pk).exists())

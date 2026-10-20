@@ -1266,6 +1266,7 @@ do web e o arquivo de config-as-code `deploy/railway.rotinas.json` (`*/10 * * * 
 | `enviar_fnrh_pendentes` | `reservas` | frequentes | Reenvia à FNRH Digital as reservas `pendente`/`erro` (backstop do envio best-effort do check-in). |
 | `enviar_campanhas_email` | `comercial` | frequentes | Dispara campanhas de e-mail agendadas cujo horário chegou (`--id N` força uma). |
 | `reenviar_confirmacoes_site` | `site` | frequentes | Manda a confirmação das `site.Reserva` ativas de 10 min a 2 dias atrás que estão sem `confirmacao_enviada_em` (a thread de envio morreu ou o SMTP falhou), até 100 por rodada. |
+| `reprocessar_webhooks_whatsapp` | `comercial` | frequentes | Reprocessa os `WebhookWhatsApp` não processados (com mais de 2 min, até 5 tentativas), na ordem de chegada, e apaga os processados há mais de 30 dias. Seguro porque a mensagem é única pelo `wamid`. |
 | `reenviar_emails_pendentes` | `comercial` | frequentes | Reenvia `EnvioEmail` (fora de campanha, últimos 2 dias) pendente há mais de 10 min ou com erro e menos de 3 tentativas. O conteúdo fica guardado no `EnvioEmail` só até o e-mail sair. |
 | `enviar_conversoes_pendentes` | `comercial` | diarias | Reprocessa conversões de mídia pendentes (idempotente, best-effort). |
 | `sincronizar_gastos_midia` | `comercial` | diarias | Puxa o gasto das plataformas para as campanhas com `id_externo` (`--dias N`). No-op com `MIDIA_GATEWAY=simulado`. |
