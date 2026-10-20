@@ -184,3 +184,23 @@ class PermissaoTests(RestauranteBase):
         )
         self.assertEqual(r.status_code, 200)
         self.assertEqual(saldo(self.cerveja, self.local), Decimal("18.000"))
+
+
+class ComandaConcorrenciaTests(RestauranteBase):
+    """Lançamento trava a comanda (mesma âncora do fechamento)."""
+
+    def test_garcom_com_instancia_antiga_soma_sobre_a_quantidade_atual(self):
+        c = self.comanda()
+        outra_tela = Comanda.objects.get(pk=c.pk)
+        services.adicionar_item(c, self.cerveja, 2, self.op)
+        services.adicionar_item(outra_tela, self.cerveja, 1, self.op)
+        item = c.itens.get()
+        self.assertEqual(item.quantidade, 3)
+
+    def test_nao_lanca_em_comanda_que_outra_tela_fechou(self):
+        c = self.comanda()
+        tela_do_garcom = Comanda.objects.get(pk=c.pk)  # ainda "aberta" em memória
+        Comanda.objects.filter(pk=c.pk).update(status=Comanda.Status.FECHADA)
+        with self.assertRaises(ValidationError):
+            services.adicionar_item(tela_do_garcom, self.cerveja, 1, self.op)
+        self.assertFalse(c.itens.exists())

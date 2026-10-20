@@ -29,7 +29,13 @@ def abrir_comanda(operador, local, mesa=None, cliente=None, rotulo=""):
 
 @transaction.atomic
 def adicionar_item(comanda, produto, quantidade, operador):
-    """Lança um item na comanda e baixa o estoque na hora (o produto saiu)."""
+    """Lança um item na comanda e baixa o estoque na hora (o produto saiu).
+
+    Trava a comanda (mesma âncora de `fechar_comanda`): dois garçons lançando ao
+    mesmo tempo entram em fila, e nenhum item entra numa comanda que está fechando."""
+    from apps.nucleo.sistema import travar
+
+    comanda = travar(comanda)
     if not comanda.aberta:
         raise ValidationError("Esta comanda já foi fechada.")
     quantidade = Decimal(str(quantidade))
@@ -43,6 +49,8 @@ def adicionar_item(comanda, produto, quantidade, operador):
         produto, comanda.local, quantidade, operador,
         documento=f"Comanda #{comanda.pk}",
     )
+    # Lido depois da trava: a quantidade é a atual, nunca a de antes do lançamento
+    # concorrente (que somaria em cima de um valor velho e perderia itens).
     item = comanda.itens.filter(produto=produto).first()
     if item:
         item.quantidade += quantidade
