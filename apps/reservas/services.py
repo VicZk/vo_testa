@@ -731,20 +731,26 @@ def criar_prereserva(*, tipo_uh=None, uh=None, checkin, checkout, hospede, usuar
         extra["faturamento"] = faturamento
     if titular:
         extra["titular"] = titular
+    reserva = Reserva(
+        uh=uh, hospede=hospede, checkin=checkin, checkout=checkout,
+        adultos=adultos, criancas=criancas,
+        criancas_0_5=criancas_0_5, criancas_6_15=criancas_6_15,
+        cobra_iss=cobra_iss, cobra_taxa_turismo=cobra_taxa_turismo,
+        usa_berco=usa_berco, nao_reembolsavel=nao_reembolsavel,
+        status=Reserva.Status.PRE_RESERVA, canal=canal,
+        valor_diaria=valor_diaria, valor_hospedagem=valor_hospedagem,
+        criado_por=usuario, observacoes=observacoes,
+        expira_em=expira, **arranjo, **extra,
+    )
+    # As mesmas regras do formulário (1 adulto, titular no faturado, day use de um dia):
+    # site, Comercial e API criam por aqui, sem passar pelo formulário.
+    reserva.clean()
     try:
-        return Reserva.objects.create(
-            uh=uh, hospede=hospede, checkin=checkin, checkout=checkout,
-            adultos=adultos, criancas=criancas,
-            criancas_0_5=criancas_0_5, criancas_6_15=criancas_6_15,
-            cobra_iss=cobra_iss, cobra_taxa_turismo=cobra_taxa_turismo,
-            usa_berco=usa_berco, nao_reembolsavel=nao_reembolsavel,
-            status=Reserva.Status.PRE_RESERVA, canal=canal,
-            valor_diaria=valor_diaria, valor_hospedagem=valor_hospedagem,
-            criado_por=usuario, observacoes=observacoes,
-            expira_em=expira, **arranjo, **extra,
-        )
+        with transaction.atomic():
+            reserva.save()
     except IntegrityError:
         raise ValidationError("Este quarto acabou de ser reservado. Tente novamente.")
+    return reserva
 
 
 def criar_reserva_site(*, tipo_uh, checkin, checkout, hospede, usuario,
@@ -1252,19 +1258,23 @@ def adicionar_quarto(grupo, *, uh, hospede, usuario, adultos=2, criancas=0,
             uh=uh, checkin=grupo.checkin, checkout=grupo.checkout, adultos=adultos,
             criancas_0_5=criancas_0_5, criancas_6_15=criancas_6_15)
         valor_diaria, valor_hospedagem = cot["media_noite"], cot["hospedagem"]
+    reserva = Reserva(
+        uh=uh, hospede=hospede, grupo=grupo, valor_hospedagem=valor_hospedagem,
+        checkin=grupo.checkin, checkout=grupo.checkout,
+        adultos=adultos, criancas=criancas,
+        criancas_0_5=criancas_0_5, criancas_6_15=criancas_6_15,
+        cobra_iss=cobra_iss, cobra_taxa_turismo=cobra_taxa_turismo,
+        status=Reserva.Status.PRE_RESERVA, canal=grupo.canal,
+        faturamento=grupo.faturamento, titular=grupo.titular,
+        valor_diaria=valor_diaria, criado_por=usuario, **arranjo,
+    )
+    reserva.clean()  # mesmas regras do formulário
     try:
-        return Reserva.objects.create(
-            uh=uh, hospede=hospede, grupo=grupo, valor_hospedagem=valor_hospedagem,
-            checkin=grupo.checkin, checkout=grupo.checkout,
-            adultos=adultos, criancas=criancas,
-            criancas_0_5=criancas_0_5, criancas_6_15=criancas_6_15,
-            cobra_iss=cobra_iss, cobra_taxa_turismo=cobra_taxa_turismo,
-            status=Reserva.Status.PRE_RESERVA, canal=grupo.canal,
-            faturamento=grupo.faturamento, titular=grupo.titular,
-            valor_diaria=valor_diaria, criado_por=usuario, **arranjo,
-        )
+        with transaction.atomic():
+            reserva.save()
     except IntegrityError:
         raise ValidationError("Este quarto acabou de ser reservado. Tente outro.")
+    return reserva
 
 
 @transaction.atomic

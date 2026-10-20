@@ -2051,3 +2051,21 @@ class AjustesPequenosReservasTests(ReservasTestsBase):
         grupo = services.criar_grupo(rotulo="Evento", titular=self.hospede, checkin=HOJE,
                                      checkout=HOJE + timedelta(days=1), usuario=self.usuario)
         self.assertIsNone(services.resumo_fiscal_conta(grupo.folio.pk))
+
+
+class ValidacaoNosServicosTests(ReservasTestsBase):
+    """Quem cria reserva sem o formulário (site, Comercial, grupo) segue as mesmas regras."""
+
+    def test_prereserva_sem_adulto_e_recusada(self):
+        inicio = HOJE + timedelta(days=50)
+        with self.assertRaisesMessage(ValidationError, "ao menos 1 adulto"):
+            services.criar_prereserva(uh=self.uh, checkin=inicio, checkout=inicio + timedelta(days=2),
+                                      hospede=self.hospede, usuario=self.usuario, adultos=0)
+        self.assertFalse(Reserva.objects.exists())
+
+    def test_faturamento_de_agencia_sem_titular_e_recusado(self):
+        inicio = HOJE + timedelta(days=50)
+        with self.assertRaisesMessage(ValidationError, "exige o titular"):
+            services.criar_prereserva(uh=self.uh, checkin=inicio, checkout=inicio + timedelta(days=2),
+                                      hospede=self.hospede, usuario=self.usuario,
+                                      faturamento=Reserva.Faturamento.AGENCIA)
