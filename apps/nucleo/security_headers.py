@@ -9,7 +9,16 @@ imagens de qualquer https p/ fotos de quarto e tour 360º). `'unsafe-inline'` em
 é necessário hoje (muitos inline + Alpine `x-...`); o passo seguinte do hardening é migrar
 para nonce e remover o unsafe-inline.
 """
+import json
+import logging
+import re
+
 from django.conf import settings
+from django.http import HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+
+logger = logging.getLogger("csp")
 
 _POLITICA = "; ".join([
     "default-src 'self'",
@@ -24,7 +33,50 @@ _POLITICA = "; ".join([
     "base-uri 'self'",
     "frame-ancestors 'self'",           # anti-clickjacking (complementa X-Frame-Options)
     "form-action 'self'",
+    # O navegador manda cada violação para cá (também em report-only): é o que diz se
+    # dá para trocar para bloqueio sem quebrar tela.
+    "report-uri /csp/relatorio/",
 ])
+
+# Tokens na URL (portal do hóspede, link de pagamento) não vão para o log.
+_TOKEN = re.compile(r"[0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12}")
+
+
+def _limpa(url) -> str:
+    texto = str(url or "")[:300].split("?")[0].split("#")[0]
+    return _TOKEN.sub("<token>", texto)
+
+
+@csrf_exempt  # o navegador envia sem cookie nem token de formulário
+@require_POST
+def relatorio_csp(request):
+    """Recebe as violações de CSP e registra uma linha por violação no log ("csp"):
+    diretiva, o que foi barrado e em que página. Corpo limitado e IP com limite de
+    envio; tokens das URLs mascarados."""
+    from .ratelimit import limite_excedido
+
+    if limite_excedido(request, "csp", limite=60, janela_seg=300):
+        return HttpResponse(status=204)
+    corpo = request.body[:20_000]
+    try:
+        dados = json.loads(corpo or b"{}")
+    except ValueError:
+        return HttpResponse(status=400)
+    # Formato antigo ({"csp-report": {...}}) e Reporting API ([{"body": {...}}]).
+    itens = dados if isinstance(dados, list) else [dados]
+    for item in itens[:20]:
+        if not isinstance(item, dict):
+            continue
+        rel = item.get("csp-report") or item.get("body") or item
+        if not isinstance(rel, dict):
+            continue
+        logger.warning(
+            "CSP: %s barrou %s em %s",
+            rel.get("violated-directive") or rel.get("effectiveDirective") or "?",
+            _limpa(rel.get("blocked-uri") or rel.get("blockedURL")),
+            _limpa(rel.get("document-uri") or rel.get("documentURL")),
+        )
+    return HttpResponse(status=204)
 
 
 class CSPMiddleware:

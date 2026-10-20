@@ -67,6 +67,36 @@ class HeadersSegurancaTests(TestCase):
         r = self.client.get(reverse("login"))
         self.assertEqual(r.headers.get("X-Content-Type-Options"), "nosniff")
 
+    def test_csp_aponta_o_relatorio(self):
+        r = self.client.get(reverse("login"))
+        self.assertIn("report-uri /csp/relatorio/", r.headers["Content-Security-Policy-Report-Only"])
+
+    def test_relatorio_csp_registra_sem_token_e_sem_csrf(self):
+        import json
+
+        from django.test import Client
+
+        corpo = {"csp-report": {
+            "violated-directive": "script-src",
+            "blocked-uri": "https://evil.example/x.js?k=1",
+            "document-uri": "https://pousada/hospede/3f2b6c1e-8a1d-4c1e-9b2a-1c2d3e4f5a6b/?a=b",
+        }}
+        with self.assertLogs("csp", level="WARNING") as log:
+            r = Client(enforce_csrf_checks=True).post(
+                reverse("csp_relatorio"), json.dumps(corpo),
+                content_type="application/csp-report")
+        self.assertEqual(r.status_code, 204)
+        linha = log.output[0]
+        self.assertIn("script-src", linha)
+        self.assertIn("https://evil.example/x.js", linha)
+        self.assertIn("/hospede/<token>/", linha)
+        self.assertNotIn("3f2b6c1e", linha)
+
+    def test_relatorio_csp_com_lixo_nao_quebra(self):
+        r = self.client.post(reverse("csp_relatorio"), "não é json",
+                             content_type="application/csp-report")
+        self.assertEqual(r.status_code, 400)
+
 
 class AlcanceMFAObrigatorioTests(TestCase):
     """MFA_OBRIGATORIO_PARA escolhe de quem o MFA é obrigatório; o padrão segue o dono."""

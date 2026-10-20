@@ -11,6 +11,7 @@ from django.views.static import serve
 from apps.comercial import views_lp
 from apps.nucleo import mfa_views
 from apps.nucleo.auth_views import LoginComLimite, RecuperarSenha
+from apps.nucleo.security_headers import relatorio_csp
 from apps.site import views as site_views
 from apps.site.sitemaps import PaginasEstaticas
 
@@ -72,6 +73,7 @@ urlpatterns = [
     # Sistema (equipe): todo o CRM sob /crm/.
     path("crm/admin/", admin.site.urls),
     path("crm/entrar/", LoginComLimite.as_view(), name="login"),  # S-M1: rate-limit
+    path("csp/relatorio/", relatorio_csp, name="csp_relatorio"),
     # Esqueci minha senha (link por e-mail, válido por PASSWORD_RESET_TIMEOUT).
     path("crm/senha/esqueci/", RecuperarSenha.as_view(), name="senha_esqueci"),
     path("crm/senha/enviada/", auth_views.PasswordResetDoneView.as_view(
