@@ -459,3 +459,49 @@ class MovimentoDaNavegacaoTests(TestCase):
         bloco = re.search(r"\n\.app \{([^}]*)\}", self.css)
         self.assertIsNotNone(bloco)
         self.assertIn("transition: grid-template-columns", bloco.group(1))
+
+
+class PortalDoHospedeTests(TestCase):
+    """É a primeira experiência digital do hóspede — e era a tela mais fraca.
+
+    Um formulário de quase 4.000 px com ~40 campos, grade de atalhos de três
+    colunas com um item, campo sem rótulo entre dois botões e o saldo DEVEDOR
+    em verde (o mesmo valor saía vermelho no CRM).
+    """
+
+    def setUp(self):
+        self.raiz = Path(settings.BASE_DIR) / "templates" / "portal"
+        self.base = (self.raiz / "base.html").read_text(encoding="utf-8")
+        self.home = (self.raiz / "home.html").read_text(encoding="utf-8")
+
+    def test_saldo_devedor_nao_fica_verde(self):
+        self.assertIn(".pt-saldo.devendo", self.base)
+        self.assertIn("devendo", self.home)
+
+    def test_grade_de_atalhos_e_elastica(self):
+        self.assertIn("repeat(auto-fit, minmax(96px, 1fr))", self.base)
+        self.assertNotIn("grid-template-columns: repeat(3, 1fr)", self.base)
+
+    def test_campo_de_manutencao_tem_rotulo_e_foco(self):
+        self.assertIn('for="pt-descricao"', self.home)
+        self.assertIn(".pt-wrap input:focus", self.base)
+
+    def test_sem_emoji_nos_titulos(self):
+        """O resto do produto usa SVG; emoji muda de desenho a cada aparelho."""
+        import unicodedata
+        achados = [c for c in self.home
+                   if unicodedata.category(c) == "So" or 0x1F300 <= ord(c) <= 0x1FAFF]
+        self.assertEqual(achados, [])
+
+    def test_fnrh_e_uma_ficha_por_vez(self):
+        fichas = (Path(settings.BASE_DIR) / "templates" / "reservas" / "partials"
+                  / "fnrh_fichas.html").read_text(encoding="utf-8")
+        self.assertIn('<details class="fnrh-ficha" name="fnrh"', fichas)
+        self.assertIn("<summary", fichas)
+
+    def test_numeracao_do_acompanhante_bate_com_o_circulo(self):
+        """O círculo dizia \"2\" e o título, \"Acompanhante 1\"."""
+        fichas = (Path(settings.BASE_DIR) / "templates" / "reservas" / "partials"
+                  / "fnrh_fichas.html").read_text(encoding="utf-8")
+        self.assertNotIn("{{ forloop.counter }}", fichas)
+        self.assertIn("Acompanhante {{ forloop.counter0 }}", fichas)

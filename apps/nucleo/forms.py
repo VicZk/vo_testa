@@ -332,6 +332,10 @@ def rotular_selects_vazios(escopo):
     Uso, no fim de um `forms.py`: `rotular_selects_vazios(globals())`.
     """
     for obj in list(escopo.values()):
+        # `modelformset_factory` cria uma SUBCLASSE do form com campos próprios:
+        # mexer no form original não alcançaria as fichas do formset (era por
+        # isso que o "Sexo" da FNRH continuava com o traço).
+        obj = getattr(obj, "form", obj)
         campos = getattr(obj, "base_fields", None)
         if not isinstance(campos, dict):
             continue

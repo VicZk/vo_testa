@@ -5,12 +5,18 @@ recepção e pelo portal do hóspede — um único aparelho preenche todas.{% en
 {% if formset.non_form_errors %}
   <div class="mensagem error">{{ formset.non_form_errors|join:" " }}</div>
 {% endif %}
+{% comment %}Uma ficha por vez. Era um formulário único de quase 4.000px com ~40
+campos (dois hóspedes × vinte), em coluna única e sem divisão: a primeira
+experiência digital do hóspede. `name="fnrh"` faz o navegador manter só uma
+aberta — acordeão nativo, sem JavaScript; onde não houver suporte, cada ficha
+abre e fecha por conta própria. Tudo continua no DOM, então o formset envia
+igual, e a validação em pt-BR abre a ficha do campo com erro.{% endcomment %}
 {% for form in formset %}
-  <section class="fnrh-ficha">
-    <header class="fnrh-ficha-cab">
+  <details class="fnrh-ficha" name="fnrh"{% if forloop.first %} open{% endif %}>
+    <summary class="fnrh-ficha-cab">
       <h3>
         <span class="fnrh-ficha-ico" aria-hidden="true">
-          {% if form.instance.titular %}★{% else %}{{ forloop.counter }}{% endif %}
+          {% if form.instance.titular %}★{% else %}{{ forloop.counter0 }}{% endif %}
         </span>
         {% if form.instance.titular %}Hóspede responsável{% else %}Acompanhante {{ forloop.counter0 }}{% endif %}
       </h3>
@@ -19,7 +25,7 @@ recepção e pelo portal do hóspede — um único aparelho preenche todas.{% en
       {% else %}
         <span class="selo selo-alerta">pendente</span>
       {% endif %}
-    </header>
+    </summary>
     {{ form.id }}
     {% for titulo, campos in form.grupos %}
       <fieldset class="fnrh-grupo">
@@ -35,5 +41,5 @@ recepção e pelo portal do hóspede — um único aparelho preenche todas.{% en
         </div>
       </fieldset>
     {% endfor %}
-  </section>
+  </details>
 {% endfor %}

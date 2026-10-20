@@ -1172,10 +1172,23 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
   padding: 1.1rem 1.2rem 1.3rem;
   margin-bottom: 1rem;
 }
+/* O cabeçalho é o <summary> do acordeão: some o marcador nativo e entra um
+   chevron que gira — a ficha inteira vira um alvo de toque confortável. */
 .fnrh-ficha-cab {
   display: flex; align-items: center; justify-content: space-between; gap: 1rem;
   margin-bottom: .3rem;
+  cursor: pointer; list-style: none; min-height: 44px;
 }
+.fnrh-ficha-cab::-webkit-details-marker { display: none; }
+.fnrh-ficha-cab::after {
+  content: ""; flex: none; width: 10px; height: 10px; margin-left: .2rem;
+  border-right: 2px solid var(--tinta-suave); border-bottom: 2px solid var(--tinta-suave);
+  transform: rotate(45deg); transition: transform var(--mov-rapido) var(--curva);
+}
+.fnrh-ficha[open] > .fnrh-ficha-cab::after { transform: rotate(-135deg); }
+.fnrh-ficha-cab:hover h3 { color: var(--madeira); }
+.fnrh-ficha-cab:focus-visible { outline: 3px solid var(--foco-contorno); outline-offset: 2px; border-radius: var(--raio-p); }
+.fnrh-ficha-cab .selo { margin-left: auto; }
 .fnrh-ficha-cab h3 {
   margin: 0; font-size: 1.05rem; letter-spacing: -.01em;
   display: flex; align-items: center; gap: .55rem;
