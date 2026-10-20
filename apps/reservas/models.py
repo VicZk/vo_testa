@@ -19,7 +19,7 @@ from django.contrib.postgres.constraints import ExclusionConstraint
 from django.contrib.postgres.fields import DateRangeField, RangeOperators
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
-from django.db import models
+from django.db import models, transaction
 from django.db.models import F, Func, Q, Sum
 from django.utils import timezone
 
@@ -428,7 +428,14 @@ class Reserva(models.Model):
             self.confirmada_em = timezone.now()  # marca a janela de arrependimento
         self.save()
 
+    @transaction.atomic
     def fazer_checkin(self, usuario):
+        # Atômico + trava da reserva: se uma diária/taxa falhar, nada fica pela
+        # metade (reserva hospedada com conta incompleta); clique duplo ou duas
+        # recepções ao mesmo tempo esbarram no status já relido do banco.
+        from apps.nucleo.sistema import travar
+
+        travar(self)
         self._exige_status(self.Status.CONFIRMADA, self.Status.PRE_RESERVA)
         # FNRH obrigatória: ficha completa de cada hóspede antes de hospedar.
         if getattr(settings, "FNRH_BLOQUEAR_CHECKIN", True) and not self.fnrh_pronta:
@@ -467,9 +474,16 @@ class Reserva(models.Model):
         acomodacao.lancar_taxas(usuario, reserva=self, base=total_diarias)
         return conta
 
+    @transaction.atomic
     def fazer_checkout(self, usuario):
+        # Trava reserva e conta antes de conferir o saldo: um consumo lançado ao
+        # mesmo tempo (lancar_na_conta também trava a conta) ou entra antes e
+        # aparece no saldo, ou chega depois e é recusado por conta fechada.
+        from apps.nucleo.sistema import travar
+
+        travar(self)
         self._exige_status(self.Status.HOSPEDADA)
-        conta = self.conta
+        conta = travar(self.conta)
         # Único bloqueio de check-out é o dinheiro: saldo tem que estar zerado.
         # (A pousada não trabalha com consumo de frigobar, então não há trava de
         # conferência na saída.)

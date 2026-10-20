@@ -1247,3 +1247,42 @@ class SinaisIsoladosTests(ReservasTestsBase):
             r.fazer_checkout(self.usuario)
         r.refresh_from_db()
         self.assertEqual(r.status, Reserva.Status.CHECKOUT)
+
+
+class CheckinCheckoutAtomicosTests(ReservasTestsBase):
+    """Check-in/check-out atômicos e com trava; consumo nunca entra em conta fechada."""
+
+    def test_falha_no_meio_do_checkin_nao_deixa_reserva_pela_metade(self):
+        from unittest import mock
+
+        from .models import ContaHospedagem
+
+        r = self.reserva(status=Reserva.Status.CONFIRMADA)
+        with mock.patch.object(ContaHospedagem, "lancar_taxas",
+                               side_effect=ValidationError("falha nas taxas")):
+            with self.assertRaises(ValidationError):
+                r.fazer_checkin(self.usuario)
+        r.refresh_from_db()
+        self.assertEqual(r.status, Reserva.Status.CONFIRMADA)
+        self.assertFalse(ContaHospedagem.objects.filter(reserva=r).exists())
+        self.assertFalse(LancamentoConta.objects.filter(conta__reserva=r).exists())
+
+    def test_checkin_em_dobro_com_instancia_antiga_e_recusado(self):
+        r1 = self.reserva(status=Reserva.Status.CONFIRMADA)
+        r2 = Reserva.objects.get(pk=r1.pk)  # segunda aba/recepção, ainda "confirmada"
+        r1.fazer_checkin(self.usuario)
+        with self.assertRaises(ValidationError):
+            r2.fazer_checkin(self.usuario)
+        self.assertEqual(LancamentoConta.objects.filter(conta__reserva=r1).count(), 2)
+
+    def test_consumo_nao_entra_em_conta_que_acabou_de_fechar(self):
+        from .models import ContaHospedagem
+
+        r = self.reserva(status=Reserva.Status.CONFIRMADA)
+        conta_antiga = r.fazer_checkin(self.usuario)  # instância que o PDV tem em mãos
+        ContaHospedagem.objects.filter(pk=conta_antiga.pk).update(
+            status=ContaHospedagem.Status.FECHADA)  # outra recepção fechou a conta
+        with self.assertRaises(ValidationError):
+            services.lancar_na_conta(
+                conta_antiga, "consumo", "consumo", "Cerveja", Decimal("12.00"), self.usuario)
+        self.assertFalse(LancamentoConta.objects.filter(descricao="Cerveja").exists())

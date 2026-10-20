@@ -1005,6 +1005,7 @@ def confirmar_reserva(reserva_id, usuario) -> bool:
     return True
 
 
+@transaction.atomic
 def lancar_na_conta(
     conta: ContaHospedagem,
     tipo: str,
@@ -1013,7 +1014,14 @@ def lancar_na_conta(
     valor: Decimal,
     usuario,
 ) -> LancamentoConta:
-    """Lança item na conta do quarto. É por aqui que os PDVs vão lançar consumo."""
+    """Lança item na conta do quarto. É por aqui que os PDVs vão lançar consumo.
+
+    Trava a conta antes de lançar: serializa com o check-out (que também trava) e
+    relê o status do banco, então um consumo nunca entra numa conta que acabou de
+    fechar — mesmo se o chamador tiver uma instância antiga da conta em mãos."""
+    from apps.nucleo.sistema import travar
+
+    conta = travar(conta)
     return LancamentoConta.objects.create(
         conta=conta,
         tipo=tipo,
@@ -1243,7 +1251,6 @@ def total_grupo(grupo) -> dict:
     }
 
 
-@transaction.atomic
 @transaction.atomic
 def receber_folio_grupo(grupo, usuario, forma: FormaPagamento, valor: Decimal,
                         parcelas: int = 1, observacao: str = "",
