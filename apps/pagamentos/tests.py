@@ -753,9 +753,13 @@ class PaginaPublicaPagarTests(PagamentosBase):
         cfg = ConfiguracaoSite.load()
         cfg.whatsapp = "5549999990000"
         cfg.save()
-        html = self.html()
-        self.assertIn("não guarda o número do seu cartão", html)
-        self.assertIn("wa.me/5549999990000", html)
+        cartao = self.html(metodo="cartao")
+        self.assertIn("não guarda o número do seu cartão", cartao)
+        self.assertIn("wa.me/5549999990000", cartao)
+        # No Pix não há cartão: a frase some, o contato da recepção fica.
+        pix = self.html(metodo="pix")
+        self.assertNotIn("não guarda o número do seu cartão", pix)
+        self.assertIn("wa.me/5549999990000", pix)
 
     def test_mascara_e_bandeira_no_cartao(self):
         """Com gateway real a captura de cartão aparece; a máscara e a bandeira
