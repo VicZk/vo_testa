@@ -207,7 +207,8 @@ class GatewaySafrapay:
         """Telefone no formato Safrapay; fallback de HML se o pagador não tiver."""
         phone = "".join(c for c in (getattr(cobranca.pagador, "telefone", "") or "") if c.isdigit())
         if len(phone) < 10:
-            phone = "49991438813"  # fallback demo (área 49)
+            # Sem telefone do pagador: o comercial da pousada (público), nunca o de alguém.
+            phone = getattr(settings, "PAGAMENTOS_TELEFONE_PADRAO", "4920550005")
         return {
             "countryCode": "55",
             "areaCode": phone[-11:-9] if len(phone) >= 11 else phone[:2],

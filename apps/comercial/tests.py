@@ -142,10 +142,10 @@ class CapturaSiteTests(TestCase):
 
     def test_dedupe_por_telefone_sem_email(self):
         """LP manda só nome + WhatsApp: o mesmo número não pode virar contato novo."""
-        a = services.capturar_lead_site(nome="Gefferson Vivan", telefone="49991338813")
-        b = services.capturar_lead_site(nome="Gefferson Vivan", telefone="49991338813")
+        a = services.capturar_lead_site(nome="Hóspede Teste", telefone="49999990002")
+        b = services.capturar_lead_site(nome="Hóspede Teste", telefone="49999990002")
         self.assertEqual(a.pessoa_id, b.pessoa_id)
-        self.assertEqual(Pessoa.objects.filter(nome__icontains="Gefferson").count(), 1)
+        self.assertEqual(Pessoa.objects.filter(nome__icontains="Hóspede Teste").count(), 1)
 
     def test_dedupe_por_telefone_tolera_mascara_e_ddi(self):
         """Mesmo número gravado com máscara/+55 casa com o enviado só em dígitos."""

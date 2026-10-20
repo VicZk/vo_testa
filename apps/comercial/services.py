@@ -394,7 +394,7 @@ def _norm_nome(s):
 
 
 def _norm_tel(s):
-    """Só dígitos, sem o DDI do Brasil (55). Ex.: '(49) 99143-8813' → '49991438813'.
+    """Só dígitos, sem o DDI do Brasil (55). Ex.: '(49) 99999-0000' → '49999990000'.
 
     Serve p/ casar o mesmo número gravado com/sem máscara, DDD ou +55.
     """
@@ -415,7 +415,7 @@ def _pessoa_por_telefone(telefone, nome):
         return None
     # Pré-filtra no banco pelos últimos 4 dígitos (sempre contíguos, mesmo com máscara)
     # e confirma em Python o casamento dos 8 dígitos — o `__contains` sozinho falha
-    # entre '(49) 99143-8813' e '49991438813'.
+    # entre '(49) 99999-0000' e '49999990000'.
     cand = Pessoa.objects.filter(telefone__contains=chave[-4:], ativo=True)
     for c in cand.iterator():
         if _norm_tel(c.telefone)[-8:] == chave and _nomes_compativeis(c.nome, nome):

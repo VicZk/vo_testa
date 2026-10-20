@@ -39,7 +39,7 @@ def _parametros_template(variaveis):
 def normalizar_telefone(telefone: str) -> str:
     """Número em formato E.164 (só dígitos) para a API. Assume Brasil (55) se faltar.
 
-    Aceita '(49) 99143-8813', '49991438813', '5549...' → devolve '5549...'.
+    Aceita '(49) 99999-0000', '49999990000', '5549...' → devolve '5549...'.
     """
     num = "".join(c for c in (telefone or "") if c.isdigit())
     if not num:

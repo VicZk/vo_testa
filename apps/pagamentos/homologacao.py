@@ -38,7 +38,7 @@ def _customer_demo():
         "phone": {
             "countryCode": "55",
             "areaCode": "49",
-            "number": "991438813",
+            "number": "20550005",  # comercial da pousada
             "type": 5,
         },
     }

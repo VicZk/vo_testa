@@ -475,13 +475,13 @@ class CadastroRapidoTests(TestCase):
     def test_cria_hospede_e_devolve_json(self):
         resposta = self.client.post(
             reverse("pessoa_nova_rapida"),
-            {"nome": "Peterson", "documento": "043.015.359-77",
-             "telefone": "(49) 99143-8813"},
+            {"nome": "Hóspede Rápido", "documento": "529.982.247-25",
+             "telefone": "(49) 99999-0000"},
         )
         self.assertEqual(resposta.status_code, 200)
         dados = resposta.json()
         pessoa = Pessoa.objects.get(pk=dados["id"])
-        self.assertEqual(dados["nome"], "Peterson")
+        self.assertEqual(dados["nome"], "Hóspede Rápido")
         self.assertTrue(hasattr(pessoa, "hospede"))
 
     def test_nome_obrigatorio(self):

@@ -95,14 +95,14 @@ class CpfTests(TestCase):
 
     def test_cpf_invalido_digitos(self):
         form = DadosHospedeForm(data={
-            'nome': 'X', 'email': 'a@a.com', 'telefone': '49991438813', 'cpf': '123.456.789-00',
+            'nome': 'X', 'email': 'a@a.com', 'telefone': '49999990000', 'cpf': '123.456.789-00',
         })
         self.assertFalse(form.is_valid())
         self.assertIn('cpf', form.errors)
 
     def test_cpf_repetido_invalido(self):
         form = DadosHospedeForm(data={
-            'nome': 'X', 'email': 'a@a.com', 'telefone': '49991438813', 'cpf': '111.111.111-11',
+            'nome': 'X', 'email': 'a@a.com', 'telefone': '49999990000', 'cpf': '111.111.111-11',
         })
         self.assertFalse(form.is_valid())
 
@@ -135,7 +135,7 @@ class FluxoReservaViewTests(TestCase):
         dados = {
             'quarto_id': self.quarto.id, 'checkin': self.ci, 'checkout': self.co,
             'hospedes': 2, 'metodo_pagamento': 'pix', 'nome': 'Maria Teste',
-            'email': 'maria@ex.com', 'telefone': '49991438813', 'cpf': CPF_VALIDO,
+            'email': 'maria@ex.com', 'telefone': '49999990000', 'cpf': CPF_VALIDO,
             'observacoes': '',
         }
         dados.update(over)
@@ -205,7 +205,7 @@ class FluxoReservaViewTests(TestCase):
         resp = self.client.post(reverse('core:finalizar_reserva'), {
             'uh_id': self.uh.id, 'checkin': self.ci, 'checkout': self.co,
             'hospedes': 2, 'metodo_pagamento': 'pix', 'nome': 'João Teste',
-            'email': 'joao@ex.com', 'telefone': '49991438813', 'cpf': CPF_VALIDO,
+            'email': 'joao@ex.com', 'telefone': '49999990000', 'cpf': CPF_VALIDO,
             'observacoes': '',
         })
         self.assertEqual(resp.status_code, 302)
@@ -247,7 +247,7 @@ class FluxoReservaViewTests(TestCase):
         resp = self.client.post(reverse('core:resumo_reserva'), {
             'quarto_id': self.quarto.id, 'checkin': self.ci, 'checkout': self.co,
             'hospedes': 2, 'metodo_pagamento': 'pix', 'nome': 'Maria Teste',
-            'email': 'maria@ex.com', 'telefone': '49991438813',
+            'email': 'maria@ex.com', 'telefone': '49999990000',
             'cpf': CPF_VALIDO, 'observacoes': '',
         })
         self.assertEqual(resp.status_code, 200)
@@ -276,8 +276,8 @@ class FluxoReservaViewTests(TestCase):
         )
         resp = self.client.post(reverse('core:resumo_reserva'), {
             'quarto_id': self.quarto.id, 'checkin': self.ci, 'checkout': self.co,
-            'hospedes': 2, 'metodo_pagamento': 'pix', 'nome': 'Gefferson Novo',
-            'email': 'geffersonvivan@gmail.com', 'telefone': '49991438813',
+            'hospedes': 2, 'metodo_pagamento': 'pix', 'nome': 'Hóspede Novo',
+            'email': 'hospede.teste@exemplo.com', 'telefone': '49999990000',
             'cpf': '11144477735', 'observacoes': 'Teste',
         })
         self.assertEqual(resp.status_code, 200)
@@ -287,19 +287,19 @@ class FluxoReservaViewTests(TestCase):
 
         # Finalizar atualiza o cadastro existente (mesmo CPF).
         resp = self._post_finalizar(
-            nome='Gefferson Novo', email='geffersonvivan@gmail.com',
-            telefone='49991438813', cpf='11144477735',
+            nome='Hóspede Novo', email='hospede.teste@exemplo.com',
+            telefone='49999990000', cpf='11144477735',
         )
         self.assertEqual(resp.status_code, 302)
         self.assertEqual(Hospede.objects.count(), 1)
         h = Hospede.objects.get(cpf='111.444.777-35')
-        self.assertEqual(h.email, 'geffersonvivan@gmail.com')
-        self.assertEqual(h.nome, 'Gefferson Novo')
+        self.assertEqual(h.email, 'hospede.teste@exemplo.com')
+        self.assertEqual(h.nome, 'Hóspede Novo')
 
     def test_email_e_cpf_em_cadastros_diferentes_unifica(self):
         """Bug real: e-mail num hóspede (CPF lixo) e CPF noutro — Continuar unifica."""
         legado = Hospede.objects.create(
-            nome='Legado Email', email='geffersonvivan@gmail.com',
+            nome='Legado Email', email='hospede.teste@exemplo.com',
             telefone='49990000000', cpf='vivan',
         )
         por_cpf = Hospede.objects.create(
@@ -316,8 +316,8 @@ class FluxoReservaViewTests(TestCase):
         )
         resp = self.client.post(reverse('core:resumo_reserva'), {
             'quarto_id': self.quarto.id, 'checkin': self.ci, 'checkout': self.co,
-            'hospedes': 2, 'metodo_pagamento': 'pix', 'nome': 'Gefferson Vivan',
-            'email': 'geffersonvivan@gmail.com', 'telefone': '49991438813',
+            'hospedes': 2, 'metodo_pagamento': 'pix', 'nome': 'Hóspede Teste',
+            'email': 'hospede.teste@exemplo.com', 'telefone': '49999990000',
             'cpf': '11144477735', 'observacoes': 'teste 02',
         })
         self.assertEqual(resp.status_code, 200)
@@ -331,14 +331,14 @@ class FluxoReservaViewTests(TestCase):
         # Finalizar grava o e-mail correto no cadastro do CPF.
         form = DadosHospedeForm(
             data={
-                'nome': 'Gefferson Vivan', 'email': 'geffersonvivan@gmail.com',
-                'telefone': '49991438813', 'cpf': '11144477735', 'observacoes': '',
+                'nome': 'Hóspede Teste', 'email': 'hospede.teste@exemplo.com',
+                'telefone': '49999990000', 'cpf': '11144477735', 'observacoes': '',
             },
             instance=por_cpf,
         )
         self.assertTrue(form.is_valid(), form.errors)
         h = form.save()
-        self.assertEqual(h.email, 'geffersonvivan@gmail.com')
+        self.assertEqual(h.email, 'hospede.teste@exemplo.com')
         self.assertEqual(h.pk, por_cpf.pk)
 
     def test_finalizar_envia_email_de_confirmacao(self):
@@ -402,7 +402,7 @@ class FluxoReservaViewTests(TestCase):
         resp = self.client.post(reverse('core:finalizar_reserva'), {
             'quarto_id': quarto.id, 'checkin': ci, 'checkout': co,
             'hospedes': 2, 'modalidade': 'day_use', 'metodo_pagamento': 'pix',
-            'nome': 'Day User', 'email': 'day@ex.com', 'telefone': '49991438813',
+            'nome': 'Day User', 'email': 'day@ex.com', 'telefone': '49999990000',
             'cpf': CPF_VALIDO, 'observacoes': '',
         })
         self.assertEqual(resp.status_code, 302)
