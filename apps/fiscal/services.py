@@ -23,6 +23,21 @@ def _tipo_por_natureza(natureza):
 
 
 @transaction.atomic
+def ibs_cbs(valor) -> dict:
+    """IBS e CBS a destacar no documento (reforma tributária, LC 214/2025), pelas
+    alíquotas configuradas — em 2026, fase de teste: CBS 0,9% e IBS 0,1%. Vazio se o
+    destaque estiver desligado (FISCAL_IBS_CBS_ATIVO=0)."""
+    if not getattr(settings, "FISCAL_IBS_CBS_ATIVO", True):
+        return {}
+    centavo = Decimal("0.01")
+    cbs = Decimal(str(settings.FISCAL_CBS_ALIQUOTA))
+    ibs = Decimal(str(settings.FISCAL_IBS_ALIQUOTA))
+    return {
+        "cbs_aliquota": cbs, "cbs_valor": (valor * cbs / 100).quantize(centavo),
+        "ibs_aliquota": ibs, "ibs_valor": (valor * ibs / 100).quantize(centavo),
+    }
+
+
 def emitir(operador, *, natureza, valor, descricao, tomador=None, referencia=""):
     """Cria e emite um documento fiscal pelo gateway ativo (idempotência por origem
     fica para a fase 2). Retorna o DocumentoFiscal com o status do fisco."""
@@ -37,6 +52,7 @@ def emitir(operador, *, natureza, valor, descricao, tomador=None, referencia="")
         descricao=descricao, valor=valor, tomador=tomador,
         referencia=referencia, criado_por=operador,
         status=DocumentoFiscal.Status.PROCESSANDO,
+        **ibs_cbs(valor),
     )
     EventoFiscal.objects.create(documento=doc, tipo="emissao",
                                 detalhe={"gateway": getattr(get_gateway(), "nome", "")})

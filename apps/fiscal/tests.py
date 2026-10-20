@@ -45,6 +45,25 @@ class EmissaoTests(TestCase):
         self.assertTrue(TrilhaAuditoria.objects.filter(acao="cancelamento_fiscal").exists())
 
 
+class IbsCbsTests(TestCase):
+    """Reforma tributária: IBS e CBS destacados pelas alíquotas configuradas."""
+
+    def setUp(self):
+        self.op = get_user_model().objects.create_superuser(username="fis2", password="x-1")
+
+    def test_destaca_cbs_e_ibs_da_fase_de_teste(self):
+        doc = services.emitir(self.op, natureza="servico", valor=Decimal("1000.00"),
+                              descricao="Hospedagem")
+        self.assertEqual((doc.cbs_aliquota, doc.cbs_valor), (Decimal("0.90"), Decimal("9.00")))
+        self.assertEqual((doc.ibs_aliquota, doc.ibs_valor), (Decimal("0.10"), Decimal("1.00")))
+
+    def test_destaque_desligado(self):
+        with self.settings(FISCAL_IBS_CBS_ATIVO=False):
+            doc = services.emitir(self.op, natureza="servico", valor=Decimal("1000.00"),
+                                  descricao="Hospedagem")
+        self.assertIsNone(doc.cbs_valor)
+
+
 class NfseDaDiariaTests(TestCase):
     def setUp(self):
         from datetime import timedelta

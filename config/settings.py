@@ -452,6 +452,11 @@ FISCAL_REGIME = os.environ.get("FISCAL_REGIME", "lucro_presumido")
 FISCAL_NFSE_CODIGO_SERVICO = os.environ.get("FISCAL_NFSE_CODIGO_SERVICO", "090101")  # hospedagem
 FISCAL_NFSE_ISS_ALIQUOTA = os.environ.get("FISCAL_NFSE_ISS_ALIQUOTA", "4.0")  # % ISS Itá
 FISCAL_NFCE_HABILITADA = os.environ.get("FISCAL_NFCE_HABILITADA", "0") == "1"  # depende da IE
+# Reforma tributária (LC 214/2025): IBS/CBS destacados nos documentos. 2026 = fase de
+# teste (CBS 0,9% + IBS 0,1%, compensáveis com PIS/COFINS). Confirme com o contador.
+FISCAL_IBS_CBS_ATIVO = os.environ.get("FISCAL_IBS_CBS_ATIVO", "1") == "1"
+FISCAL_CBS_ALIQUOTA = os.environ.get("FISCAL_CBS_ALIQUOTA", "0.9")  # %
+FISCAL_IBS_ALIQUOTA = os.environ.get("FISCAL_IBS_ALIQUOTA", "0.1")  # %
 # Sem NFC-e, os PDVs avisam; com 1, recusam a venda de produto (decisão do contador).
 FISCAL_BLOQUEAR_VENDA_SEM_NFCE = os.environ.get("FISCAL_BLOQUEAR_VENDA_SEM_NFCE", "0") == "1"
 # Segredo compartilhado com o Focus (campo "Chave de Autorização" do webhook). O Focus

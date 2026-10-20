@@ -58,6 +58,16 @@ class DocumentoFiscal(models.Model):
         "nucleo.Pessoa", on_delete=models.PROTECT, null=True, blank=True,
         related_name="documentos_fiscais", verbose_name="tomador/destinatário",
     )
+    # Reforma tributária (LC 214/2025): IBS e CBS destacados no documento. Em 2026 é a
+    # fase de teste (CBS 0,9% e IBS 0,1%, compensáveis); alíquotas em settings.
+    cbs_aliquota = models.DecimalField("CBS (%)", max_digits=5, decimal_places=2,
+                                       null=True, blank=True)
+    cbs_valor = models.DecimalField("CBS (R$)", max_digits=12, decimal_places=2,
+                                    null=True, blank=True)
+    ibs_aliquota = models.DecimalField("IBS (%)", max_digits=5, decimal_places=2,
+                                       null=True, blank=True)
+    ibs_valor = models.DecimalField("IBS (R$)", max_digits=12, decimal_places=2,
+                                    null=True, blank=True)
     # Origem no sistema (conta/venda/comanda) — referência solta para não acoplar models.
     referencia = models.CharField("origem", max_length=120, blank=True)
 
