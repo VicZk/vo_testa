@@ -359,6 +359,20 @@ def receber_no_caixa(usuario, forma, valor: Decimal, descricao: str, parcelas: i
     return movimento
 
 
+# Módulos que guardam um "espelho" de recebimentos do caixa (ex.: o pagamento na conta do
+# hóspede, em Reservas) registram aqui uma função chamada DENTRO da transação de todo
+# estorno, para desfazer o espelho junto. Se ela levantar ValidationError, o estorno não
+# acontece. O núcleo não conhece os módulos: eles se registram no AppConfig.ready().
+_AO_ESTORNAR = []
+
+
+def ao_estornar(funcao):
+    """Registra `funcao(origem=, estorno=, usuario=)` para rodar em todo estorno."""
+    if funcao not in _AO_ESTORNAR:
+        _AO_ESTORNAR.append(funcao)
+    return funcao
+
+
 @transaction.atomic
 def estornar_movimento(origem: MovimentoCaixa, sessao: SessaoCaixa, usuario, motivo: str,
                        valor: Decimal | None = None) -> MovimentoCaixa:
@@ -399,6 +413,8 @@ def estornar_movimento(origem: MovimentoCaixa, sessao: SessaoCaixa, usuario, mot
         criado_por=usuario,
     )
     estorno.save()
+    for funcao in list(_AO_ESTORNAR):
+        funcao(origem=origem, estorno=estorno, usuario=usuario)
     registrar_auditoria(
         usuario, "estorno", estorno,
         {"movimento_origem": origem.pk, "valor": str(estorno.valor), "motivo": motivo},

@@ -2340,6 +2340,38 @@ class SinalPagoGanhaTests(TestCase):
         reserva = Reserva.objects.get(pk=op.reserva_id)
         self.assertEqual(reserva.status, Reserva.Status.CONFIRMADA)
 
+    def test_sinal_pago_vira_credito_na_reserva_criada(self):
+        # O sinal foi pago antes de a reserva existir: tem de abater a conta dela.
+        from apps.reservas.models import Adiantamento
+        op = services.criar_oportunidade(
+            usuario=self.u, pessoa=self.pessoa, titulo="Crédito do sinal",
+            valor_estimado=Decimal("585.00"))
+        services.registrar_cotacao(
+            oportunidade=op, usuario=self.u, tipo_uh=self.tipo,
+            checkin=self.hoje + timedelta(days=5), checkout=self.hoje + timedelta(days=7))
+        op.refresh_from_db()
+        cob = self._cobranca_paga(op)
+        op.refresh_from_db()
+        cob.refresh_from_db()
+        self.assertEqual(cob.reserva_id, op.reserva_id)
+        credito = Adiantamento.objects.get(reserva_id=op.reserva_id)
+        self.assertEqual(credito.valor, cob.valor)
+        self.assertEqual(credito.cobranca_id, cob.pk)
+
+    def test_conversao_manual_credita_o_sinal_e_nao_cobra_outro(self):
+        from apps.pagamentos.models import Cobranca
+        from apps.reservas.models import Adiantamento
+        op = services.criar_oportunidade(
+            usuario=self.u, pessoa=self.pessoa, titulo="Sinal antes das datas",
+            valor_estimado=Decimal("300.00"))
+        cob = self._cobranca_paga(op)  # sem datas: não converte sozinho
+        op.refresh_from_db()
+        reserva = services.converter_em_reserva(
+            op, tipo_uh=self.tipo, checkin=self.hoje + timedelta(days=5),
+            checkout=self.hoje + timedelta(days=7), usuario=self.u, criar_sinal=True)
+        self.assertEqual(Adiantamento.objects.get(reserva=reserva).valor, cob.valor)
+        self.assertEqual(Cobranca.objects.filter(finalidade=Cobranca.Finalidade.SINAL).count(), 1)
+
     def test_quarto_indisponivel_no_pagamento_nao_quebra_o_pagamento(self):
         # Entre a cotação e o pagamento, o único quarto do tipo é reservado por outro
         # canal. Pagar o sinal NÃO pode derrubar a confirmação do pagamento.

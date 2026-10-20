@@ -84,10 +84,14 @@
       </form>
       {% if reserva.adiantamentos.exists %}
         <table class="tabela">
-          <thead><tr><th>Data</th><th>Valor</th></tr></thead>
+          <thead><tr><th>Data</th><th>Origem</th><th class="num">Valor</th></tr></thead>
           <tbody>
             {% for a in reserva.adiantamentos.all %}
-              <tr><td>{{ a.criado_em|date:"d/m/Y H:i" }}</td><td>{{ a.valor|intcomma_brl }}</td></tr>
+              <tr>
+                <td>{{ a.criado_em|date:"d/m/Y H:i" }}</td>
+                <td>{% if a.eh_estorno %}Estorno{% elif a.cobranca_id %}Online{% else %}{{ a.movimento_caixa.forma_pagamento }}{% endif %}{% if a.observacao %} · <em>{{ a.observacao }}</em>{% endif %}</td>
+                <td class="num">{% if a.eh_estorno %}−{% endif %}{{ a.valor_absoluto|intcomma_brl }}</td>
+              </tr>
             {% endfor %}
           </tbody>
         </table>
@@ -252,19 +256,20 @@
       {% for p in conta.pagamentos.all %}
         <tr>
           <td>{{ p.criado_em|date:"d/m H:i" }}</td>
-          <td>Pagamento</td>
+          <td>{% if p.eh_estorno %}Estorno de pagamento{% else %}Pagamento{% endif %}</td>
           <td>—</td>
-          <td>{{ p.movimento_caixa.forma_pagamento }}{% if p.movimento_caixa.autorizacao %} · NSU {{ p.movimento_caixa.autorizacao }}{% endif %}{% if p.observacao %} · <em>{{ p.observacao }}</em>{% endif %}</td>
-          <td class="num">−{{ p.valor|intcomma_brl }}</td>
+          <td>{% if p.movimento_caixa_id %}{{ p.movimento_caixa.forma_pagamento }}{% if p.movimento_caixa.autorizacao %} · NSU {{ p.movimento_caixa.autorizacao }}{% endif %}{% elif p.cobranca_id %}Online{% endif %}{% if p.observacao %} · <em>{{ p.observacao }}</em>{% endif %}</td>
+          {# Pagamento abate a conta (−); o estorno dele volta a cobrar (+). #}
+          <td class="num">{% if p.eh_estorno %}+{% else %}−{% endif %}{{ p.valor_absoluto|intcomma_brl }}</td>
         </tr>
       {% endfor %}
       {% for a in reserva.adiantamentos.all %}
         <tr>
           <td>{{ a.criado_em|date:"d/m H:i" }}</td>
-          <td>Adiantamento</td>
+          <td>{% if a.eh_estorno %}Estorno de adiantamento{% else %}Adiantamento{% endif %}</td>
           <td>—</td>
-          <td>Crédito de sinal</td>
-          <td class="num">−{{ a.valor|intcomma_brl }}</td>
+          <td>{% if a.observacao %}{{ a.observacao }}{% elif a.cobranca_id %}Sinal pago online{% else %}Crédito de sinal{% endif %}</td>
+          <td class="num">{% if a.eh_estorno %}+{% else %}−{% endif %}{{ a.valor_absoluto|intcomma_brl }}</td>
         </tr>
       {% endfor %}
     </tbody>

@@ -112,6 +112,7 @@ def confirmar_pagamento(cobranca, usuario=None, origem="webhook"):
     cobranca.pago_em = timezone.now()
     cobranca.save(update_fields=["status", "pago_em"])
     EventoPagamento.objects.create(cobranca=cobranca, tipo="paga", origem=origem)
+    _creditar_na_reserva(cobranca)
 
     # Sinal pago → confirma a reserva (ou o grupo inteiro), se Reservas ativo.
     if cobranca.finalidade == Cobranca.Finalidade.SINAL and modulo_ativo(Modulo.RESERVAS):
@@ -134,6 +135,33 @@ def confirmar_pagamento(cobranca, usuario=None, origem="webhook"):
     return cobranca
 
 
+def _creditar_na_reserva(cobranca):
+    """O dinheiro entrou pelo gateway, não pela gaveta: vira crédito na reserva (ou no
+    folio do grupo), senão a conta cobra de novo no check-out. Idempotente."""
+    if (cobranca.reserva_id or cobranca.grupo_id) and modulo_ativo(Modulo.RESERVAS):
+        from apps.reservas.services import registrar_pagamento_online
+        registrar_pagamento_online(
+            cobranca_id=cobranca.pk, valor=cobranca.valor,
+            descricao=f"{cobranca.get_metodo_display()} online — cobrança #{cobranca.pk}",
+            reserva_id=cobranca.reserva_id, grupo_id=cobranca.grupo_id,
+        )
+
+
+@transaction.atomic
+def vincular_reserva(cobranca, reserva_id):
+    """Amarra à reserva uma cobrança criada antes dela existir (o sinal pago sobre um
+    lead do Comercial). Se já está paga, o valor vira crédito na reserva agora.
+    Interface pública para quem cria a reserva depois do pagamento."""
+    from apps.nucleo.sistema import travar
+    cobranca = travar(cobranca)
+    if cobranca.reserva_id != reserva_id:
+        cobranca.reserva_id = reserva_id
+        cobranca.save(update_fields=["reserva_id"])
+    if cobranca.status == Cobranca.Status.PAGO:
+        _creditar_na_reserva(cobranca)
+    return cobranca
+
+
 def _sincronizar_recibo_site(cobranca):
     """Atualiza o recibo do canal (site.Reserva) quando o sinal CRM é pago."""
     try:
@@ -153,13 +181,25 @@ def _sincronizar_recibo_site(cobranca):
 
 @transaction.atomic
 def estornar(cobranca, operador):
+    from apps.nucleo.sistema import travar
+    cobranca = travar(cobranca)  # dois cliques em "Estornar" não devolvem duas vezes
     if cobranca.status != Cobranca.Status.PAGO:
         raise ValidationError("Só é possível estornar uma cobrança paga.")
+    credito_na_reserva = (cobranca.reserva_id or cobranca.grupo_id) and modulo_ativo(Modulo.RESERVAS)
+    if credito_na_reserva:
+        # Confere ANTES de devolver no gateway: depois do dinheiro devolvido não dá para
+        # descobrir que a conta da hospedagem já estava fechada.
+        from apps.reservas.services import verificar_estorno_online
+        verificar_estorno_online(cobranca.pk)
     resultado = get_gateway().estornar(cobranca)
     cobranca.status = Cobranca.Status.ESTORNADO
     cobranca.save(update_fields=["status"])
     EventoPagamento.objects.create(cobranca=cobranca, tipo="estornada",
                                    origem="gateway", detalhe=resultado)
+    if credito_na_reserva:
+        from apps.reservas.services import estornar_pagamento_online
+        estornar_pagamento_online(cobranca_id=cobranca.pk,
+                                  motivo=f"cobrança #{cobranca.pk} estornada no gateway")
     registrar_auditoria(operador, "estorno_pagamento", cobranca,
                         {"valor": str(cobranca.valor)})
     return cobranca

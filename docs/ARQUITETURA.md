@@ -307,7 +307,11 @@ estornar_movimento(origem, sessao, usuario, motivo, valor=None)  # @transaction.
 ```
 
 Trava a linha de origem (`apps.nucleo.sistema.travar` → `SELECT … FOR UPDATE`) para
-serializar estornos parciais concorrentes, cria o movimento inverso e audita.
+serializar estornos parciais concorrentes, cria o movimento inverso e audita. Antes de
+auditar, chama as funções registradas com `ao_estornar(funcao)`: é como um módulo que
+guarda um espelho do recebimento desfaz o espelho na mesma transação sem o núcleo
+conhecê-lo (Reservas registra `desfazer_credito_do_estorno` no `ready()`; se a função
+levanta `ValidationError`, nada é estornado).
 
 **Classificação e títulos:** `CategoriaFinanceira` (receita|despesa),
 `LancamentoFinanceiro` (tipo + categoria + `centro` = módulo + data de competência),
@@ -632,15 +636,20 @@ continuam pelo `PAGAMENTOS_GATEWAY`.
    `TrilhaAuditoria`. Os três primeiros implementam explicitamente
    `save()`/`delete()` que levantam `ValidationError`: correção é **movimento inverso**
    (estorno / ajuste / desconto), nunca `UPDATE`/`DELETE`.
-3. **Natureza fiscal obrigatória (a “4ª veia”).** `NaturezaFiscal` (`servico` | `consumo`)
+3. **Crédito na conta do hóspede tem origem rastreável.** `PagamentoConta` e
+   `Adiantamento` vêm do caixa (`movimento_caixa`), do gateway (`cobranca_id`, único por
+   cobrança — confirmar duas vezes não credita duas vezes) ou de um estorno (`estorno_de`,
+   valor negativo). Check-constraints garantem o sinal: crédito > 0 sem `estorno_de`;
+   estorno < 0 com `estorno_de`. O saldo é sempre a soma, sem `UPDATE`.
+4. **Natureza fiscal obrigatória (a “4ª veia”).** `NaturezaFiscal` (`servico` | `consumo`)
    está em `Produto.natureza` e em `LancamentoConta.natureza` — este **sem default**
    (`clean()` exige). Diária e serviços → SERVIÇO (NFS-e/ISS); produto consumido →
    CONSUMO (NF-e/NFC-e/ICMS). `fiscal.services.emitir` roteia por natureza
    (`_tipo_por_natureza`) e `reservas.services.resumo_fiscal_conta` separa a conta nas
    duas naturezas para a emissão.
-4. **Um só formatador** (`moeda.intcomma_brl`) e **um único ponto de recebimento**
+5. **Um só formatador** (`moeda.intcomma_brl`) e **um único ponto de recebimento**
    (`receber_no_caixa`), por módulo.
-5. **Travas de concorrência** onde há read-modify-write de dinheiro/saldo:
+6. **Travas de concorrência** onde há read-modify-write de dinheiro/saldo:
    `estornar_movimento`, `registrar_entrada`, `registrar_saida`, arranjo de camas
    (`_travar_e_resolver_arranjo`) — todas via `apps.nucleo.sistema.travar`.
 

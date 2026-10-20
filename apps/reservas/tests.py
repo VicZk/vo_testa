@@ -1460,3 +1460,119 @@ class MapaSemConsultaPorQuartoTests(ReservasTestsBase):
         ocupados = [q for q in dados["quartos"] if q["situacao"] == "ocupada"]
         self.assertEqual(len(ocupados), 6)
         self.assertTrue(all(q["saldo"] == Decimal("600.00") for q in ocupados))
+
+
+class PagamentoOnlineNaContaTests(ReservasTestsBase):
+    """O que é pago pelo gateway vira crédito na reserva; estornos desfazem o crédito."""
+
+    def _cobranca_paga(self, *, reserva=None, grupo=None, valor="300.00", finalidade=None):
+        from apps.pagamentos.models import Cobranca
+        from apps.pagamentos.services import confirmar_pagamento, criar_cobranca
+
+        c = criar_cobranca(
+            self.usuario, valor=Decimal(valor), metodo="pix", descricao="Teste",
+            finalidade=finalidade or Cobranca.Finalidade.SINAL,
+            reserva_id=reserva.pk if reserva else None,
+            grupo_id=grupo.pk if grupo else None,
+        )
+        return confirmar_pagamento(c, self.usuario)
+
+    def test_sinal_online_antes_do_checkin_vira_adiantamento_uma_vez_so(self):
+        from apps.pagamentos.services import confirmar_pagamento
+
+        from .models import Adiantamento
+
+        r = self.reserva(dias=2, status=Reserva.Status.PRE_RESERVA)
+        c = self._cobranca_paga(reserva=r)
+        confirmar_pagamento(c, self.usuario)  # o webhook pode chegar duas vezes
+        credito = Adiantamento.objects.get(reserva=r)
+        self.assertEqual(credito.valor, Decimal("300.00"))
+        self.assertEqual(credito.cobranca_id, c.pk)
+        self.assertIsNone(credito.movimento_caixa)
+        conta = r.fazer_checkin(self.usuario)  # 600 de diárias
+        self.assertEqual(conta.saldo(), Decimal("300.00"))
+
+    def test_saldo_pago_online_libera_o_checkout(self):
+        from apps.pagamentos.models import Cobranca
+
+        r = self.reserva(dias=2)
+        conta = r.fazer_checkin(self.usuario)
+        self._cobranca_paga(reserva=r, valor="600.00",
+                            finalidade=Cobranca.Finalidade.SALDO)
+        conta.refresh_from_db()
+        self.assertEqual(conta.saldo(), Decimal("0.00"))
+        r.fazer_checkout(self.usuario)
+        r.refresh_from_db()
+        self.assertEqual(r.status, Reserva.Status.CHECKOUT)
+
+    def test_pagamento_online_do_grupo_cai_no_folio(self):
+        hoje = timezone.localdate()
+        grupo = services.criar_grupo(rotulo="Casamento", titular=self.hospede, checkin=hoje,
+                                     checkout=hoje + timedelta(days=2), usuario=self.usuario)
+        self._cobranca_paga(grupo=grupo, valor="500.00")
+        self.assertEqual(grupo.folio.total_pago(), Decimal("500.00"))
+
+    def test_estorno_no_gateway_volta_a_cobrar(self):
+        from apps.pagamentos.services import estornar
+
+        r = self.reserva(dias=2)
+        conta = r.fazer_checkin(self.usuario)
+        c = self._cobranca_paga(reserva=r, valor="200.00")
+        self.assertEqual(conta.saldo(), Decimal("400.00"))
+        estornar(c, self.usuario)
+        self.assertEqual(conta.saldo(), Decimal("600.00"))
+
+    def test_estorno_no_caixa_desfaz_o_pagamento_da_conta(self):
+        from apps.nucleo.models import estornar_movimento
+
+        from .models import PagamentoConta
+
+        r = self.reserva(dias=2)
+        conta = r.fazer_checkin(self.usuario)
+        sessao = self.abrir_caixa()
+        pagamento = services.receber_pagamento(conta, self.usuario, self.dinheiro, Decimal("600.00"))
+        self.assertEqual(conta.saldo(), Decimal("0.00"))
+        estornar_movimento(pagamento.movimento_caixa, sessao, self.usuario, "Devolução",
+                           valor=Decimal("150.00"))
+        self.assertEqual(conta.saldo(), Decimal("150.00"))
+        estorno = PagamentoConta.objects.get(estorno_de=pagamento)
+        self.assertEqual(estorno.valor, Decimal("-150.00"))
+
+    def test_estorno_no_caixa_de_conta_fechada_e_recusado_sem_mexer_em_nada(self):
+        from apps.nucleo.models import MovimentoCaixa, estornar_movimento
+
+        r = self.reserva(dias=2)
+        conta = r.fazer_checkin(self.usuario)
+        sessao = self.abrir_caixa()
+        pagamento = services.receber_pagamento(conta, self.usuario, self.dinheiro, Decimal("600.00"))
+        r.fazer_checkout(self.usuario)
+        with self.assertRaisesMessage(ValidationError, "já fechada"):
+            estornar_movimento(pagamento.movimento_caixa, sessao, self.usuario, "Devolução")
+        self.assertFalse(MovimentoCaixa.objects.filter(tipo=MovimentoCaixa.Tipo.ESTORNO).exists())
+        self.assertEqual(conta.saldo(), Decimal("0.00"))
+
+    def test_estorno_no_caixa_de_adiantamento_desfaz_o_credito(self):
+        from apps.nucleo.models import estornar_movimento
+
+        r = self.reserva(dias=2, offset=5)
+        sessao = self.abrir_caixa()
+        adiantamento = services.receber_adiantamento(r, self.usuario, self.dinheiro,
+                                                     Decimal("200.00"))
+        estornar_movimento(adiantamento.movimento_caixa, sessao, self.usuario, "Desistiu")
+        conta = r.fazer_checkin(self.usuario)
+        self.assertEqual(conta.saldo(), Decimal("600.00"))
+
+    def test_sinal_estornado_volta_a_contar_como_sem_sinal(self):
+        from apps.nucleo.models import estornar_movimento
+
+        r = self.reserva(dias=2, offset=1)
+        sessao = self.abrir_caixa()
+        adiantamento = services.receber_adiantamento(r, self.usuario, self.dinheiro,
+                                                     Decimal("200.00"))
+
+        def sem_sinal():
+            return [a for a in services.pendencias_auditoria() if a["tipo"] == "sem_sinal"]
+
+        self.assertEqual(sem_sinal(), [])
+        estornar_movimento(adiantamento.movimento_caixa, sessao, self.usuario, "Desistiu")
+        self.assertEqual(len(sem_sinal()), 1)

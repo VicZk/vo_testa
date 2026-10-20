@@ -993,6 +993,7 @@ def converter_em_reserva(oportunidade, *, tipo_uh=None, uh=None, checkin, checko
         _abrir_permanencia(oportunidade, etapa_ganho)
         _fechar_permanencia(oportunidade)
     _limpar_prospecto(oportunidade.pessoa)
+    sinal_pago = _amarrar_sinal_pago(oportunidade, reserva, usuario)
     registrar_auditoria(usuario, "oportunidade_convertida", oportunidade,
                         {"reserva_id": reserva.pk})
     # Devolve o evento Compra (com valor) ao provedor de mídia (Fase B), após gravar.
@@ -1002,7 +1003,7 @@ def converter_em_reserva(oportunidade, *, tipo_uh=None, uh=None, checkin, checko
     # Evento de estágio 'ganho' p/ a integração de leads qualificados (CAPI CRM).
     transaction.on_commit(lambda: enviar_evento_crm(oportunidade, "ganho"))
 
-    if criar_sinal and modulo_ativo(Modulo.PAGAMENTOS):
+    if criar_sinal and not sinal_pago and modulo_ativo(Modulo.PAGAMENTOS):
         from apps.pagamentos.models import Cobranca
         from apps.pagamentos.services import criar_cobranca
         valor = valor_sinal
@@ -1100,6 +1101,29 @@ def resumo_da_conversa(oportunidade, limite=8):
         "texto": m.texto,
         "quando": m.horario,
     } for m in msgs]
+
+
+def _amarrar_sinal_pago(oportunidade, reserva, usuario):
+    """Sinal pago sobre o lead antes de a reserva existir: amarra a cobrança à reserva
+    e o valor vira crédito nela — senão o hóspede pagaria o sinal de novo no check-out.
+    Devolve a cobrança amarrada (ou None)."""
+    if not (oportunidade.cobranca_sinal_id and modulo_ativo(Modulo.PAGAMENTOS)):
+        return None
+    from apps.pagamentos.models import Cobranca
+    from apps.pagamentos.services import vincular_reserva
+    cobranca = Cobranca.objects.filter(
+        pk=oportunidade.cobranca_sinal_id, status=Cobranca.Status.PAGO,
+        reserva_id__isnull=True, grupo_id__isnull=True,
+    ).first()
+    if cobranca is None:
+        return None
+    vincular_reserva(cobranca, reserva.pk)
+    registrar_atividade(
+        oportunidade=oportunidade, usuario=usuario, tipo=AtividadeComercial.Tipo.SISTEMA,
+        descricao=f"Sinal já pago (cobrança #{cobranca.pk}, R$ {cobranca.valor}) "
+                  f"creditado na reserva #{reserva.pk}.",
+    )
+    return cobranca
 
 
 def _link_sinal_da_oportunidade(oportunidade):
@@ -2719,9 +2743,8 @@ def ganhar_por_sinal(oportunidade, cobranca, usuario=None):
                       f"({'; '.join(e.messages)}). Converter manualmente.")
         return None
 
-    # Amarra o sinal já pago à reserva recém-criada e confirma a reserva.
-    from apps.pagamentos.models import Cobranca
-    Cobranca.objects.filter(pk=cobranca.pk).update(reserva_id=reserva.pk)
+    # O converter_em_reserva já amarrou o sinal pago (e creditou o valor); falta
+    # confirmar a reserva.
     from apps.reservas.services import confirmar_reserva
     confirmada = confirmar_reserva(reserva.pk, usuario)
     registrar_atividade(

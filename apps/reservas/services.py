@@ -7,6 +7,7 @@ models internos.
 """
 
 import contextvars
+import logging
 from contextlib import contextmanager
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
@@ -46,6 +47,8 @@ PRECEDENCIA_TEMPORADA = [
     Temporada.Classificacao.BAIXA,
 ]
 
+
+logger = logging.getLogger(__name__)
 
 # ---------- Memória de preços por bloco ----------
 #
@@ -973,6 +976,7 @@ def relatorio_reservas(inicio: date, fim: date) -> dict:
 
 def pendencias_auditoria():
     """Inconsistências operacionais de Reservas para a Auditoria (read-only)."""
+    from django.db.models import Sum
     from django.urls import reverse
     achados = []
     hoje = timezone.localdate()
@@ -1007,9 +1011,11 @@ def pendencias_auditoria():
         })
 
     prox = hoje + timedelta(days=3)
+    # Sinal líquido: um adiantamento estornado não conta como pago.
     for r in (Reserva.objects.filter(status=Reserva.Status.CONFIRMADA, checkin__lte=prox)
-              .select_related("uh", "hospede")):
-        if not r.adiantamentos.exists():
+              .select_related("uh", "hospede")
+              .annotate(sinal=Sum("adiantamentos__valor"))):
+        if not r.sinal or r.sinal <= 0:
             achados.append({
                 "area": "Reservas", "tipo": "sem_sinal", "gravidade": "baixa",
                 "descricao": f"{r.uh.numero} — {r.hospede.nome}: confirmada p/ {r.checkin:%d/%m} sem sinal.",
@@ -1473,6 +1479,110 @@ def trocar_quarto(reserva, novo_uh, usuario, motivo=""):
         origem="troca",
     )
     return reserva
+
+
+# ---------- Pagamento online e estornos (crédito na reserva sem passar pela gaveta) ----------
+
+
+def _credito_da_cobranca(cobranca_id):
+    """O crédito (PagamentoConta ou Adiantamento) gerado por uma cobrança online."""
+    return (PagamentoConta.objects.filter(cobranca_id=cobranca_id).first()
+            or Adiantamento.objects.filter(cobranca_id=cobranca_id).first())
+
+
+@transaction.atomic
+def registrar_pagamento_online(*, cobranca_id, valor, descricao, reserva_id=None,
+                               grupo_id=None):
+    """Credita na reserva (ou no grupo) um pagamento que entrou pelo gateway — Pix,
+    cartão ou boleto pagos online, sem passar pela gaveta. Interface pública para
+    Pagamentos, chamada na confirmação da cobrança.
+
+    - Reserva com conta aberta (hospedada): PagamentoConta na conta.
+    - Reserva antes do check-in: Adiantamento (abate a conta quando ela abrir).
+    - Grupo: PagamentoConta no folio-mãe.
+    Idempotente pela cobrança: confirmar de novo não credita duas vezes.
+    Devolve o crédito criado (ou None, se já existia ou não há a quem creditar)."""
+    valor = Decimal(str(valor))
+    if valor <= 0 or _credito_da_cobranca(cobranca_id):
+        return None
+    observacao = (descricao or "Pagamento online")[:120]
+    if grupo_id and not reserva_id:
+        grupo = GrupoReserva.objects.filter(pk=grupo_id).first()
+        folio = getattr(grupo, "folio", None) if grupo else None
+        if folio is None:
+            return None
+        from apps.nucleo.sistema import travar
+        travar(folio)
+        return PagamentoConta.objects.create(conta=folio, valor=valor, cobranca_id=cobranca_id,
+                                             observacao=observacao)
+    reserva = Reserva.objects.select_for_update().filter(pk=reserva_id).first()
+    if reserva is None:
+        return None
+    try:
+        conta = reserva.conta
+    except ContaHospedagem.DoesNotExist:
+        conta = None
+    if conta is not None:
+        if not conta.aberta:
+            # Pago depois do check-out: o crédito fica registrado (o dinheiro entrou) e a
+            # conta mostra o saldo a devolver.
+            logger.warning("Pagamento online da cobrança %s caiu na conta fechada %s.",
+                           cobranca_id, conta.pk)
+        return PagamentoConta.objects.create(conta=conta, valor=valor, cobranca_id=cobranca_id,
+                                             observacao=observacao)
+    return Adiantamento.objects.create(reserva=reserva, valor=valor, cobranca_id=cobranca_id,
+                                       observacao=observacao)
+
+
+def verificar_estorno_online(cobranca_id) -> None:
+    """Levanta ValidationError se o crédito desta cobrança não pode mais ser desfeito
+    (conta já fechada). Pagamentos chama ANTES de devolver o dinheiro no gateway."""
+    credito = _credito_da_cobranca(cobranca_id)
+    if isinstance(credito, PagamentoConta) and not credito.conta.aberta:
+        raise ValidationError(
+            "A conta desta hospedagem já foi fechada (check-out feito): o estorno a deixaria "
+            "devendo. Faça a devolução pela conta da hospedagem."
+        )
+
+
+@transaction.atomic
+def estornar_pagamento_online(*, cobranca_id, motivo):
+    """Desfaz o crédito de uma cobrança estornada no gateway: lança o crédito negativo
+    ligado ao original, e a conta volta a cobrar o valor. Idempotente."""
+    credito = _credito_da_cobranca(cobranca_id)
+    if credito is None or credito.estornos.exists():
+        return None
+    verificar_estorno_online(cobranca_id)
+    campos = {"valor": -credito.valor, "estorno_de": credito,
+              "observacao": f"Estorno online: {motivo}"[:120]}
+    if isinstance(credito, PagamentoConta):
+        return PagamentoConta.objects.create(conta=credito.conta, **campos)
+    return Adiantamento.objects.create(reserva=credito.reserva, **campos)
+
+
+def desfazer_credito_do_estorno(*, origem, estorno, usuario):
+    """Ligado em `nucleo.ao_estornar`: o estorno no caixa de um recebimento que virou
+    crédito na reserva lança o crédito negativo na mesma transação. Sem isto, o
+    dinheiro era devolvido e a conta continuava "paga" — o check-out saía sem receber."""
+    from apps.nucleo.sistema import travar
+
+    pagamento = PagamentoConta.objects.filter(movimento_caixa=origem).first()
+    if pagamento is not None:
+        conta = travar(pagamento.conta)
+        if not conta.aberta:
+            raise ValidationError(
+                "Este pagamento é de uma conta já fechada (check-out feito): o estorno a "
+                "deixaria devendo. Faça a devolução pela conta da hospedagem."
+            )
+        PagamentoConta.objects.create(
+            conta=conta, movimento_caixa=estorno, valor=-estorno.valor, estorno_de=pagamento,
+            observacao=f"Estorno: {estorno.motivo}"[:120])
+        return
+    adiantamento = Adiantamento.objects.filter(movimento_caixa=origem).first()
+    if adiantamento is not None:
+        Adiantamento.objects.create(
+            reserva=adiantamento.reserva, movimento_caixa=estorno, valor=-estorno.valor,
+            estorno_de=adiantamento, observacao=f"Estorno: {estorno.motivo}"[:120])
 
 
 def contas_abertas():

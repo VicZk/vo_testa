@@ -107,7 +107,7 @@ class LancamentoContaAdmin(admin.ModelAdmin):
 
 @admin.register(PagamentoConta)
 class PagamentoContaAdmin(admin.ModelAdmin):
-    list_display = ["criado_em", "conta", "valor", "movimento_caixa"]
+    list_display = ["criado_em", "conta", "valor", "movimento_caixa", "cobranca_id", "estorno_de"]
 
     def has_add_permission(self, request):
         return False
@@ -121,7 +121,7 @@ class PagamentoContaAdmin(admin.ModelAdmin):
 
 @admin.register(Adiantamento)
 class AdiantamentoAdmin(admin.ModelAdmin):
-    list_display = ["criado_em", "reserva", "valor", "movimento_caixa"]
+    list_display = ["criado_em", "reserva", "valor", "movimento_caixa", "cobranca_id", "estorno_de"]
 
     def has_add_permission(self, request):
         return False

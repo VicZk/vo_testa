@@ -55,8 +55,8 @@ preço, grupos (bloco de quartos), FNRH/BOH, estoque de colchões extra e berço
 | `GrupoReserva` | reserva-mãe (bloco de quartos) | `rotulo`, `titular`, `checkin/checkout`, `expira_em`, `encerrado_em`; status **derivado** das filhas (`situacao()`) |
 | `ContaHospedagem` | folio: ou de um quarto, ou do grupo | `status` aberta/fechada; check-constraint `conta_reserva_xor_grupo` |
 | `LancamentoConta` | item do folio | `tipo` diaria/consumo/servico/desconto × `natureza` SERVIÇO/CONSUMO (obrigatória); imutável |
-| `PagamentoConta` | pagamento do folio | OneToOne com `nucleo.MovimentoCaixa` |
-| `Adiantamento` | sinal recebido antes do check-in | OneToOne com `MovimentoCaixa`; crédito na conta |
+| `PagamentoConta` | pagamento do folio | três origens: **caixa** (OneToOne com `nucleo.MovimentoCaixa`), **online** (`cobranca_id`, único — pago no gateway) ou **estorno** (`estorno_de` + valor negativo); check-constraint `pagamento_conta_sinal_coerente` |
+| `Adiantamento` | sinal/crédito antes do check-in | as mesmas três origens do `PagamentoConta`; abate a conta quando ela abre |
 | `FichaFNRH` | ficha legal por hóspede (Lei 11.771) | choices alinhados 1:1 aos ids oficiais da FNRH Digital; `CAMPOS_OBRIGATORIOS`; unique "um titular por reserva" |
 | `Acompanhante` | lista simples (legado) | superado pela `FichaFNRH` |
 | `ColchoesExtra` | pool **global** de colchões extra (singleton) | `quantidade` (default 10), `alerta_minimo` |
@@ -109,6 +109,15 @@ Conta e dinheiro: `contas_abertas()`, `conta_aberta(conta_id)`,
 `receber_pagamento(conta, usuario, forma, valor, parcelas, observacao, autorizacao)`,
 `receber_adiantamento(reserva, usuario, forma, valor, parcelas, autorizacao)`,
 `resumo_fiscal_conta(conta_id)`, `diarias_periodo(inicio, fim)`.
+
+Pagamento online (chamados por Pagamentos):
+`registrar_pagamento_online(*, cobranca_id, valor, descricao, reserva_id, grupo_id)` —
+credita na conta aberta, no adiantamento (antes do check-in) ou no folio do grupo;
+idempotente pela cobrança. `verificar_estorno_online(cobranca_id)` recusa o estorno de
+crédito numa conta já fechada; `estornar_pagamento_online(*, cobranca_id, motivo)` lança o
+crédito negativo. `desfazer_credito_do_estorno` fica registrado no gancho
+`nucleo.ao_estornar` (`ReservasConfig.ready()`): o estorno de caixa de um pagamento ou
+adiantamento desfaz o crédito na mesma transação.
 
 Grupos: `criar_grupo`, `adicionar_quarto`, `confirmar_grupo`, `checkin_grupo`,
 `cancelar_grupo`, `remover_do_grupo`, `total_grupo`, `receber_folio_grupo`,
@@ -309,12 +318,17 @@ conciliação de recebimentos.
 - `criar_cobranca(operador, *, valor, metodo, descricao, finalidade, pagador, reserva_id,
   grupo_id, parcelas)` — cria e chama o gateway (ou o Pix direto).
 - `confirmar_pagamento(cobranca, usuario=None, origem="webhook")` — **idempotente**, com
-  `select_for_update` na linha; se `finalidade=sinal` e Reservas ativo chama
+  `select_for_update` na linha; credita o valor na reserva ou no folio do grupo
+  (`reservas.registrar_pagamento_online`); se `finalidade=sinal` e Reservas ativo chama
   `reservas.confirmar_reserva` (ou `confirmar_grupo`), sincroniza o recibo do site e
   emite `pagamento_confirmado` por `emitir()` (receiver que falha vai para o log e nunca
   desfaz a confirmação).
-- `estornar(cobranca, operador)` (só paga, auditado), `cancelar(cobranca, operador)` (só
-  pendente), `conciliacao()` (resumo por status).
+- `vincular_reserva(cobranca, reserva_id)` — amarra à reserva uma cobrança criada antes
+  dela (o sinal pago sobre um lead); se já paga, credita o valor nela.
+- `estornar(cobranca, operador)` (só paga, trava a linha, auditado; recusa **antes** de
+  chamar o gateway se o crédito caiu numa conta já fechada; depois lança o crédito
+  negativo), `cancelar(cobranca, operador)` (só pendente), `conciliacao()` (resumo por
+  status).
 - `registrar_liquidacao(cobranca, *, valor_liquido, taxa, data_liquidacao, id_liquidacao,
   origem)` — idempotente; deriva taxa↔líquido quando só um vem.
 - `recebimentos(*, inicio, fim, metodo, status, liquidacao)` → `(lista, totais)` para a
@@ -388,8 +402,9 @@ manual** (`pagamentos:confirmar_recebimento`). Cartão/boleto seguem pelo gatewa
   após o pacote de evidências** (tela `pagamentos:safrapay` + `homologacao.py`).
 - `_extrair_liquidacao` aceita vários nomes de campo candidatos — os nomes definitivos do
   Safrapay/Aditum ficam para a homologação.
-- Não há lançamento financeiro automático do dinheiro online fora do caixa
-  (adiantamento/folio) nem estorno integrado ao Financeiro.
+- O dinheiro online abate a conta do hóspede (crédito sem caixa, ligado à cobrança) e o
+  estorno no gateway desfaz esse crédito. A entrada no banco é conferida pela liquidação
+  e pela Conciliação; não há `LancamentoFinanceiro` automático para ela.
 - `services._sincronizar_recibo_site` importa `apps.site.models` diretamente (app `core`,
   não um módulo contratável).
 
@@ -1633,7 +1648,8 @@ sequenceDiagram
    vinha de orçamento, limpa `expira_em` e grava `confirmada_em`.
    Para sinal **online**, o painel de Pagamentos cria a cobrança com
    `finalidade=sinal` + `reserva_id` (`pendentes_de_sinal()` alimenta o seletor) e o
-   pagamento confirma a reserva sozinho.
+   pagamento confirma a reserva sozinho e vira **crédito** nela (`Adiantamento` com
+   `cobranca_id`, sem caixa), que abate a conta no check-out.
 5. **Grupo (bloco de quartos).** `reservas:grupo_novo` → `criar_grupo` (abre a reserva-mãe
    + o folio-mãe) → `grupo_adicionar_quarto` → `adicionar_quarto` por UH escolhida →
    `grupo_sinal` (uma cobrança com `grupo_id`) → `confirmar_grupo` (idempotente) →
@@ -1752,7 +1768,10 @@ flowchart LR
 5. **Estorno (gerência).** `estorno` → `estornar_movimento(origem, sessao, usuario,
    motivo, valor)`: trava o movimento original (estornos parciais concorrentes não passam
    do total), exige **motivo**, só estorna recebimento, cria o movimento inverso e audita
-   `"estorno"`. Nada é editado ou apagado.
+   `"estorno"`. Nada é editado ou apagado. Se o recebimento era pagamento de conta ou
+   adiantamento, o gancho `ao_estornar` (registrado por Reservas) lança o crédito
+   negativo na mesma transação — a conta volta a cobrar o valor devolvido; numa conta já
+   fechada o estorno é recusado (a devolução é feita pela conta).
 6. **Reabertura (gerência).** `caixa_reabrir` → `SessaoCaixa.reabrir(usuario, motivo)`:
    exige motivo, recusa se o operador já tem outra sessão aberta no módulo, zera
    contado/diferença e audita `"reabertura_caixa"`.
@@ -1785,13 +1804,16 @@ flowchart LR
    `consultar_status`** e ignora o status do corpo; em "produção-simulado" não confirma
    nada.
 6. **Confirmação idempotente.** `confirmar_pagamento`: `select_for_update`; já pago →
-   retorna; marca `pago` + `pago_em`; evento `paga`; se `finalidade=sinal` e Reservas
-   ativo → `confirmar_reserva(reserva_id)` (ou `confirmar_grupo(grupo_id)`) e
+   retorna; marca `pago` + `pago_em`; evento `paga`; o valor vira **crédito na reserva**
+   (conta aberta → `PagamentoConta`; antes do check-in → `Adiantamento`; grupo → folio-mãe;
+   um crédito por cobrança); se `finalidade=sinal` e Reservas ativo →
+   `confirmar_reserva(reserva_id)` (ou `confirmar_grupo(grupo_id)`) e
    `_sincronizar_recibo_site`; emite `pagamento_confirmado` por **`emitir()`** (falha de
    receiver vai para o log).
-7. **Estorno.** `pagamentos:estornar` (**gerência**) → `estornar`: só paga, chama o
-   gateway, status `estornado`, evento `estornada` e `registrar_auditoria
-   ("estorno_pagamento")`.
+7. **Estorno.** `pagamentos:estornar` (**gerência**) → `estornar`: trava a cobrança, só
+   paga; confere em Reservas se o crédito ainda pode ser desfeito (conta fechada recusa
+   **antes** de devolver no gateway); chama o gateway, status `estornado`, evento
+   `estornada`, crédito negativo na reserva e `registrar_auditoria("estorno_pagamento")`.
 8. **Liquidação e conciliação.** `registrar_liquidacao` (webhook no sandbox, ou
    `pagamentos:liquidar` por conferência) grava `valor_liquido`, `taxa`,
    `data_liquidacao`, `id_liquidacao`; `pagamentos:conciliacao` mostra recebido × a
@@ -1862,10 +1884,12 @@ sequenceDiagram
      (fallback de quarto se o cotado foi ocupado), marca a oportunidade **ganha**, limpa o
      `Prospecto`, audita e, com `criar_sinal`, gera a cobrança;
    - **automático:** o sinal "solto" é pago → `pagamento_confirmado` →
-     `on_sinal_pago` → `ganhar_por_sinal`: converte usando a última cotação, amarra a
-     cobrança à reserva (`Cobranca.reserva_id`) e chama `confirmar_reserva`. Se faltarem
-     datas/quarto, registra atividade pedindo conversão manual — **sem quebrar o
-     pagamento**.
+     `on_sinal_pago` → `ganhar_por_sinal`: converte usando a última cotação e chama
+     `confirmar_reserva`. Se faltarem datas/quarto, registra atividade pedindo conversão
+     manual — **sem quebrar o pagamento**.
+   - Nos dois caminhos, um sinal **já pago** sobre o lead é amarrado à reserva
+     (`pagamentos.vincular_reserva`) e vira crédito nela; a conversão manual não gera
+     um segundo sinal.
 8. **Hand-off.** Check-out (`quarto_liberado origem=checkout`) → atividade de hand-off +
    tarefa de NPS/retorno. Cancelamento/no-show (`reserva_encerrada`) → atividade e, se o
    card estava ganho, tarefa de reabordagem em 48 h (o ganho histórico não é desfeito).

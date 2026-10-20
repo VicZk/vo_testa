@@ -1050,10 +1050,47 @@ class LancamentoConta(models.Model):
         )
 
 
-class PagamentoConta(models.Model):
+class CreditoNaReserva(models.Model):
+    """Base de PagamentoConta e Adiantamento: dinheiro que abate a conta do hóspede.
+
+    Três origens:
+    - **caixa** — `movimento_caixa` (a veia do dinheiro na gaveta do operador);
+    - **online** — `cobranca_id`, a cobrança de Pagamentos paga pelo gateway (Pix,
+      cartão, boleto). Não passa pela gaveta; único por cobrança (idempotência);
+    - **estorno** — `estorno_de` aponta o crédito desfeito e o valor é NEGATIVO (a
+      conta volta a cobrar o que foi devolvido). Vem do estorno do movimento de caixa
+      ou do estorno da cobrança no gateway.
     """
-    Pagamento da conta: sempre atrelado a um movimento do caixa do operador
-    (a veia do dinheiro). Estorno = estorno do movimento no caixa.
+
+    cobranca_id = models.PositiveIntegerField(
+        "cobrança online", null=True, blank=True, unique=True,
+        help_text="Cobrança de Pagamentos que gerou este crédito (pago pelo gateway).",
+    )
+    valor = models.DecimalField("valor (R$)", max_digits=10, decimal_places=2)
+    criado_em = models.DateTimeField("registrado em", auto_now_add=True)
+
+    class Meta:
+        abstract = True
+
+    @property
+    def eh_estorno(self) -> bool:
+        return self.valor < 0
+
+    @property
+    def valor_absoluto(self) -> Decimal:
+        return abs(self.valor)
+
+    @property
+    def origem(self) -> str:
+        if self.eh_estorno:
+            return "estorno"
+        return "online" if self.cobranca_id else "caixa"
+
+
+class PagamentoConta(CreditoNaReserva):
+    """
+    Pagamento da conta: pela gaveta (movimento de caixa do operador), online (cobrança
+    paga no gateway) ou o estorno de um dos dois (valor negativo). Ver CreditoNaReserva.
     """
 
     conta = models.ForeignKey(
@@ -1061,43 +1098,64 @@ class PagamentoConta(models.Model):
         related_name="pagamentos", verbose_name="conta",
     )
     movimento_caixa = models.OneToOneField(
-        "nucleo.MovimentoCaixa", on_delete=models.PROTECT,
+        "nucleo.MovimentoCaixa", on_delete=models.PROTECT, null=True, blank=True,
         related_name="pagamento_conta", verbose_name="movimento de caixa",
     )
-    valor = models.DecimalField("valor (R$)", max_digits=10, decimal_places=2)
+    estorno_de = models.ForeignKey(
+        "self", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="estornos", verbose_name="estorno do pagamento",
+    )
     observacao = models.CharField(
         "pagador / observação", max_length=120, blank=True,
         help_text="Quem pagou esta parte (ex.: 'Casal A', 'cartão do João') — para rateio.",
     )
-    criado_em = models.DateTimeField("registrado em", auto_now_add=True)
 
     class Meta:
         verbose_name = "pagamento da conta"
         verbose_name_plural = "pagamentos da conta"
         ordering = ["criado_em"]
+        constraints = [
+            # Crédito positivo; estorno negativo e sempre apontando o crédito desfeito.
+            models.CheckConstraint(
+                condition=(Q(valor__gt=0, estorno_de__isnull=True)
+                           | Q(valor__lt=0, estorno_de__isnull=False)),
+                name="pagamento_conta_sinal_coerente",
+            ),
+        ]
 
     def __str__(self):
         return f"Pagamento R$ {self.valor} — conta #{self.conta_id}"
 
 
-class Adiantamento(models.Model):
-    """Valor recebido antes do check-in, vinculado à reserva; crédito na conta."""
+class Adiantamento(CreditoNaReserva):
+    """Valor recebido antes do check-in, vinculado à reserva; crédito na conta. Pela
+    gaveta, online (sinal pago no site) ou o estorno de um dos dois (valor negativo)."""
 
     reserva = models.ForeignKey(
         Reserva, on_delete=models.PROTECT,
         related_name="adiantamentos", verbose_name="reserva",
     )
     movimento_caixa = models.OneToOneField(
-        "nucleo.MovimentoCaixa", on_delete=models.PROTECT,
+        "nucleo.MovimentoCaixa", on_delete=models.PROTECT, null=True, blank=True,
         related_name="adiantamento", verbose_name="movimento de caixa",
     )
-    valor = models.DecimalField("valor (R$)", max_digits=10, decimal_places=2)
-    criado_em = models.DateTimeField("recebido em", auto_now_add=True)
+    estorno_de = models.ForeignKey(
+        "self", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="estornos", verbose_name="estorno do adiantamento",
+    )
+    observacao = models.CharField("observação", max_length=120, blank=True)
 
     class Meta:
         verbose_name = "adiantamento"
         verbose_name_plural = "adiantamentos"
         ordering = ["criado_em"]
+        constraints = [
+            models.CheckConstraint(
+                condition=(Q(valor__gt=0, estorno_de__isnull=True)
+                           | Q(valor__lt=0, estorno_de__isnull=False)),
+                name="adiantamento_sinal_coerente",
+            ),
+        ]
 
     def __str__(self):
         return f"Adiantamento R$ {self.valor} — reserva #{self.reserva_id}"
