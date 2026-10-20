@@ -13,11 +13,13 @@ from apps.nucleo.models import UH, FormaPagamento, Pessoa, Temporada, TipoUH
 from apps.nucleo.modulos import Modulo
 from apps.nucleo.permissoes import eh_gerente, requer_gerencia, requer_modulo
 from apps.nucleo.seletores import pessoas_agrupadas
+from apps.nucleo.templatetags.moeda import intcomma_brl
 
 from . import services
 from .forms import (
     AcompanhanteForm,
     CancelamentoForm,
+    DevolucaoForm,
     FichaFNRHFormSet,
     GrupoForm,
     LancamentoContaForm,
@@ -461,6 +463,7 @@ def detalhe(request, pk):
     if reserva.ativa:
         from apps.reservas import cancelamento
         politica_cancel = cancelamento.resumo_cancelamento(reserva)
+    devolucao = services.situacao_devolucao(reserva)
 
     return render(
         request,
@@ -475,6 +478,13 @@ def detalhe(request, pk):
             "form_acompanhante": AcompanhanteForm(),
             "quartos_livres": quartos_livres,
             "politica_cancel": politica_cancel,
+            "devolucao": devolucao,
+            # Valor já no formato da máscara ("1.234,56"): com "240.00" o envio tiraria o
+            # ponto como se fosse milhar e mandaria 24000.
+            "form_devolucao": DevolucaoForm(initial={
+                "valor": (intcomma_brl(devolucao["sugerido"]).removeprefix("R$ ")
+                          if devolucao and devolucao["sugerido"] else None),
+            }),
             "eh_gerente": eh_gerente(request.user),
             "aviso_checkin": aviso_checkin,
             "fnrh_pronta": reserva.fnrh_pronta,
@@ -574,6 +584,8 @@ def cancelar(request, pk):
 
         resumo = cancelamento.resumo_cancelamento(reserva)
         nota = _nota_politica(resumo)
+        # Grava o que a pousada fica: a tela da reserva cancelada sugere devolver o resto.
+        reserva.valor_retido = resumo["cobranca"]
         reserva.cancelar(request.user, f"{form.cleaned_data['motivo']} — {nota}")
         registrar_auditoria(request.user, "politica_cancelamento", reserva, {
             "cenario": resumo["cenario"],
@@ -721,6 +733,30 @@ def adiantamento_novo(request, pk):
             messages.error(request, " ".join(erro.messages))
     else:
         messages.error(request, "Confira forma e valor do adiantamento.")
+    return redirect("reservas:detalhe", pk=pk)
+
+
+@requer_modulo(Modulo.RESERVAS)
+def devolver(request, pk):
+    """Devolve ao hóspede o excedente da conta ou o valor da política de cancelamento
+    (estorno no caixa do operador). Só gerência: é saída de dinheiro."""
+    reserva = get_object_or_404(Reserva, pk=pk)
+    if request.method != "POST":
+        return redirect("reservas:detalhe", pk=pk)
+    if not eh_gerente(request.user):
+        messages.error(request, "Devolver dinheiro ao hóspede exige permissão de gerência.")
+        return redirect("reservas:detalhe", pk=pk)
+    form = DevolucaoForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, "Informe o valor e o motivo da devolução.")
+        return redirect("reservas:detalhe", pk=pk)
+    try:
+        valor = services.devolver_ao_hospede(
+            reserva, form.cleaned_data["valor"], request.user, form.cleaned_data["motivo"])
+        messages.success(
+            request, f"Devolução de {intcomma_brl(valor)} registrada no seu caixa de Reservas.")
+    except ValidationError as erro:
+        messages.error(request, " ".join(erro.messages))
     return redirect("reservas:detalhe", pk=pk)
 
 

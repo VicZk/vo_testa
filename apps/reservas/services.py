@@ -1011,6 +1011,22 @@ def pendencias_auditoria():
         })
 
     prox = hoje + timedelta(days=3)
+    # Cancelada com devolução da política ainda não feita.
+    from .cancelamento import total_pago
+    for r in (Reserva.objects.filter(status=Reserva.Status.CANCELADA,
+                                     valor_retido__isnull=False)
+              .select_related("uh", "hospede")
+              .annotate(pago=Sum("adiantamentos__valor"))):
+        if (r.pago or 0) > r.valor_retido:
+            falta = total_pago(r) - r.valor_retido
+            if falta > 0:
+                achados.append({
+                    "area": "Reservas", "tipo": "devolucao_pendente", "gravidade": "media",
+                    "descricao": f"{r.uh.numero} — {r.hospede.nome}: cancelada, falta "
+                                 f"devolver R$ {falta} (política).",
+                    "url": reverse("reservas:detalhe", args=[r.pk]),
+                })
+
     # Sinal líquido: um adiantamento estornado não conta como pago.
     for r in (Reserva.objects.filter(status=Reserva.Status.CONFIRMADA, checkin__lte=prox)
               .select_related("uh", "hospede")
@@ -1585,6 +1601,121 @@ def desfazer_credito_do_estorno(*, origem, estorno, usuario):
             estorno_de=adiantamento, observacao=f"Estorno: {estorno.motivo}"[:120])
 
 
+# ---------- Devolução ao hóspede (excedente da conta ou cancelamento) ----------
+
+
+def limite_devolucao(reserva) -> Decimal:
+    """Quanto pode ser devolvido ao hóspede nesta reserva agora:
+    - hospedada: o crédito da conta aberta (pagou mais do que o total);
+    - antes do check-in: o que foi pago acima do total previsto da estadia;
+    - cancelada ou no-show: tudo o que ele pagou e ainda não foi devolvido (a política
+      sugere quanto; a gerência decide)."""
+    from .cancelamento import total_pago
+
+    zero = Decimal("0.00")
+    S = Reserva.Status
+    if reserva.status == S.HOSPEDADA:
+        try:
+            conta = reserva.conta
+        except ContaHospedagem.DoesNotExist:
+            return zero
+        return max(zero, -conta.saldo()) if conta.aberta else zero
+    pago = total_pago(reserva)
+    if reserva.status in (S.CANCELADA, S.NO_SHOW):
+        return max(zero, pago)
+    if reserva.status in (S.ORCAMENTO, S.PRE_RESERVA, S.CONFIRMADA):
+        return max(zero, pago - reserva.total_previsto())
+    return zero
+
+
+def _creditos_do_caixa(reserva):
+    """Créditos da reserva que passaram pela gaveta e ainda têm saldo a estornar, do
+    mais recente ao mais antigo: [(credito, livre)]."""
+    from django.db.models import Sum
+
+    creditos = list(Adiantamento.objects.filter(
+        reserva=reserva, movimento_caixa__isnull=False, estorno_de__isnull=True))
+    try:
+        conta = reserva.conta
+    except ContaHospedagem.DoesNotExist:
+        conta = None
+    if conta is not None:
+        creditos += list(PagamentoConta.objects.filter(
+            conta=conta, movimento_caixa__isnull=False, estorno_de__isnull=True))
+    creditos.sort(key=lambda c: c.criado_em, reverse=True)
+    saida = []
+    for credito in creditos:
+        estornado = credito.estornos.aggregate(t=Sum("valor"))["t"] or Decimal("0.00")
+        livre = credito.valor + estornado  # estornos são negativos
+        if livre > 0:
+            saida.append((credito, livre))
+    return saida
+
+
+def situacao_devolucao(reserva):
+    """Para a tela: há o que devolver? Quanto a política sugere e quanto entrou online
+    (que só volta pelo gateway). None quando não há nada a devolver."""
+    limite = limite_devolucao(reserva)
+    if limite <= 0:
+        return None
+    from .cancelamento import total_pago
+
+    no_caixa = sum((livre for _c, livre in _creditos_do_caixa(reserva)), Decimal("0.00"))
+    sugerido = limite
+    S = Reserva.Status
+    if reserva.status == S.CANCELADA and reserva.valor_retido is not None:
+        sugerido = min(limite, max(Decimal("0.00"), total_pago(reserva) - reserva.valor_retido))
+    elif reserva.status == S.NO_SHOW:
+        sugerido = Decimal("0.00")  # no-show: a pousada fica com o sinal, salvo decisão
+    return {
+        "limite": limite,
+        "sugerido": sugerido,
+        "no_caixa": min(no_caixa, limite),
+        "online": max(Decimal("0.00"), limite - no_caixa),
+    }
+
+
+@transaction.atomic
+def devolver_ao_hospede(reserva, valor, usuario, motivo: str) -> Decimal:
+    """Devolve ao hóspede parte do que ele pagou nesta reserva — o excedente da conta
+    ou o que a política de cancelamento manda devolver.
+
+    Desfaz créditos que passaram pela gaveta, do mais recente ao mais antigo, com
+    estorno (parcial) no caixa de Reservas do operador: o dinheiro sai da gaveta de
+    hoje e o gancho `ao_estornar` lança o crédito negativo na reserva. O que entrou
+    online só volta pelo gateway (Pagamentos → Estornar): se o valor depender dele,
+    nada é feito e o erro diz quanto. Tudo ou nada; auditado."""
+    from apps.nucleo.models import estornar_movimento
+    from apps.nucleo.sistema import travar
+
+    reserva = travar(reserva)
+    valor = Decimal(str(valor or 0)).quantize(Decimal("0.01"))
+    motivo = (motivo or "").strip()
+    if valor <= 0:
+        raise ValidationError("Informe o valor a devolver.")
+    if not motivo:
+        raise ValidationError("Informe o motivo da devolução.")
+    limite = limite_devolucao(reserva)
+    if valor > limite:
+        raise ValidationError(f"Valor acima do que pode ser devolvido (R$ {limite}).")
+    restante = valor
+    for credito, livre in _creditos_do_caixa(reserva):
+        parte = min(livre, restante)
+        estornar_movimento(credito.movimento_caixa, None, usuario,
+                           f"Devolução ao hóspede: {motivo}", valor=parte)
+        restante -= parte
+        if restante == 0:
+            break
+    if restante > 0:
+        raise ValidationError(
+            f"R$ {restante} deste valor foi pago online: a devolução dele é feita pela "
+            "cobrança, em Pagamentos (estorno no gateway)."
+        )
+    registrar_auditoria(usuario, "devolucao_hospede", reserva,
+                        {"valor": str(valor), "motivo": motivo})
+    return valor
+
+
 def contas_abertas():
     """Contas de hospedagem abertas de QUARTO (para PDVs lançarem consumo na conta).
     Exclui os folios-mãe de grupo (que não têm reserva/quarto — só diárias)."""
@@ -1613,13 +1744,32 @@ def receber_adiantamento(
     reserva: Reserva, usuario, forma: FormaPagamento, valor: Decimal, parcelas: int = 1,
     autorizacao: str = "",
 ) -> Adiantamento:
-    """Adiantamento/sinal antes do check-in — vira crédito na conta."""
+    """Adiantamento/sinal antes do check-in — vira crédito na conta. Não passa do que
+    falta pagar da estadia (diárias + taxas − o que já foi pago): um adiantamento a
+    mais deixaria a conta com crédito e travaria o check-out."""
+    from apps.nucleo.sistema import travar
+
+    from .cancelamento import total_pago
+
+    reserva = travar(reserva)  # dois cliques não passam juntos pelo limite
     if reserva.status not in (
         Reserva.Status.ORCAMENTO,
         Reserva.Status.PRE_RESERVA,
         Reserva.Status.CONFIRMADA,
     ):
         raise ValidationError("Adiantamento só antes da entrada (check-in).")
+    if reserva.grupo_id:
+        # As diárias de quarto de grupo caem no folio-mãe: um adiantamento aqui só
+        # abateria o consumo deste quarto.
+        raise ValidationError(
+            "Esta reserva é de um grupo: o sinal é cobrado no grupo (sinal do grupo).")
+    valor = Decimal(str(valor or 0))
+    if valor <= 0:
+        raise ValidationError("O valor do adiantamento deve ser positivo.")
+    falta = reserva.total_previsto() - total_pago(reserva)
+    if valor > falta:
+        raise ValidationError(
+            f"Valor acima do que falta pagar da estadia (R$ {max(falta, Decimal('0.00'))}).")
     movimento = _receber_no_caixa(
         usuario, forma, valor,
         f"Adiantamento reserva #{reserva.pk} — {reserva.hospede.nome}",

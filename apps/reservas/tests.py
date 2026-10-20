@@ -1576,3 +1576,111 @@ class PagamentoOnlineNaContaTests(ReservasTestsBase):
         self.assertEqual(sem_sinal(), [])
         estornar_movimento(adiantamento.movimento_caixa, sessao, self.usuario, "Desistiu")
         self.assertEqual(len(sem_sinal()), 1)
+
+
+class DevolucaoAoHospedeTests(ReservasTestsBase):
+    """Adiantamento não passa do total; crédito a mais e cancelamento voltam pelo caixa."""
+
+    def test_adiantamento_nao_passa_do_total_da_estadia(self):
+        r = self.reserva(dias=2, offset=5)  # 600 (taxas desligadas nos testes)
+        self.abrir_caixa()
+        with self.assertRaisesMessage(ValidationError, "acima do que falta pagar"):
+            services.receber_adiantamento(r, self.usuario, self.dinheiro, Decimal("600.01"))
+        services.receber_adiantamento(r, self.usuario, self.dinheiro, Decimal("400.00"))
+        with self.assertRaisesMessage(ValidationError, "R$ 200.00"):
+            services.receber_adiantamento(r, self.usuario, self.dinheiro, Decimal("250.00"))
+        services.receber_adiantamento(r, self.usuario, self.dinheiro, Decimal("200.00"))
+
+    def test_adiantamento_em_quarto_de_grupo_vai_para_o_sinal_do_grupo(self):
+        inicio = HOJE + timedelta(days=5)
+        grupo = services.criar_grupo(rotulo="Família", titular=self.hospede, checkin=inicio,
+                                     checkout=inicio + timedelta(days=2), usuario=self.usuario)
+        filha = services.adicionar_quarto(grupo, uh=self.uh, hospede=self.hospede,
+                                          usuario=self.usuario)
+        self.abrir_caixa()
+        with self.assertRaisesMessage(ValidationError, "grupo"):
+            services.receber_adiantamento(filha, self.usuario, self.dinheiro, Decimal("100.00"))
+
+    def test_credito_a_mais_na_conta_trava_a_saida_ate_devolver(self):
+        from apps.nucleo.models import MovimentoCaixa, NaturezaFiscal
+
+        r = self.reserva(dias=2)
+        conta = r.fazer_checkin(self.usuario)
+        sessao = self.abrir_caixa()
+        services.receber_pagamento(conta, self.usuario, self.dinheiro, Decimal("600.00"))
+        LancamentoConta.objects.create(conta=conta, tipo=LancamentoConta.Tipo.DESCONTO,
+                                       natureza=NaturezaFiscal.SERVICO, descricao="Cortesia",
+                                       valor=Decimal("100.00"), criado_por=self.usuario)
+        with self.assertRaisesMessage(ValidationError, "R$ 100.00 de crédito"):
+            r.fazer_checkout(self.usuario)
+        self.assertEqual(services.situacao_devolucao(r)["sugerido"], Decimal("100.00"))
+        services.devolver_ao_hospede(r, Decimal("100.00"), self.usuario, "Cortesia")
+        self.assertEqual(conta.saldo(), Decimal("0.00"))
+        estorno = MovimentoCaixa.objects.get(tipo=MovimentoCaixa.Tipo.ESTORNO)
+        self.assertEqual((estorno.sessao, estorno.valor), (sessao, Decimal("100.00")))
+        r.fazer_checkout(self.usuario)
+        self.assertIsNone(services.situacao_devolucao(r))
+
+    def test_cancelamento_grava_a_retencao_e_sugere_devolver_o_resto(self):
+        r = self.reserva(dias=2, offset=30)  # 600; retenção de 10% = 60
+        self.abrir_caixa()
+        services.receber_adiantamento(r, self.usuario, self.dinheiro, Decimal("300.00"))
+        # Confirmada há 10 dias: fora da janela de arrependimento.
+        Reserva.objects.filter(pk=r.pk).update(confirmada_em=timezone.now() - timedelta(days=10))
+        self.client.force_login(self.usuario)
+        self.client.post(reverse("reservas:cancelar", args=[r.pk]), {"motivo": "Desistiu"})
+        r.refresh_from_db()
+        self.assertEqual(r.status, Reserva.Status.CANCELADA)
+        self.assertEqual(r.valor_retido, Decimal("60.00"))
+        self.assertEqual(services.situacao_devolucao(r)["sugerido"], Decimal("240.00"))
+        pendentes = [a for a in services.pendencias_auditoria() if a["tipo"] == "devolucao_pendente"]
+        self.assertEqual(len(pendentes), 1)
+        detalhe = self.client.get(reverse("reservas:detalhe", args=[r.pk]))
+        self.assertContains(detalhe, "Devolver ao hóspede")
+        self.assertContains(detalhe, 'value="240,00"')  # no formato da máscara de reais
+
+        resposta = self.client.post(reverse("reservas:devolver", args=[r.pk]),
+                                    {"valor": "240.00", "motivo": "Política: fora do prazo"})
+        self.assertRedirects(resposta, reverse("reservas:detalhe", args=[r.pk]),
+                             fetch_redirect_response=False)
+        from .cancelamento import total_pago
+        self.assertEqual(total_pago(r), Decimal("60.00"))
+        self.assertEqual(services.situacao_devolucao(r)["sugerido"], Decimal("0.00"))
+        self.assertFalse([a for a in services.pendencias_auditoria()
+                          if a["tipo"] == "devolucao_pendente"])
+
+    def test_devolucao_do_que_entrou_online_e_recusada_sem_mexer_em_nada(self):
+        from .cancelamento import total_pago
+
+        r = self.reserva(dias=2, offset=30)
+        services.registrar_pagamento_online(cobranca_id=4242, valor=Decimal("300.00"),
+                                            descricao="Pix online", reserva_id=r.pk)
+        self.abrir_caixa()
+        r.cancelar(self.usuario, "Desistiu")
+        situacao = services.situacao_devolucao(r)
+        self.assertEqual((situacao["online"], situacao["no_caixa"]),
+                         (Decimal("300.00"), Decimal("0.00")))
+        with self.assertRaisesMessage(ValidationError, "pago online"):
+            services.devolver_ao_hospede(r, Decimal("300.00"), self.usuario, "Desistiu")
+        self.assertEqual(total_pago(r), Decimal("300.00"))
+
+    def test_devolver_acima_do_limite_e_recusado(self):
+        r = self.reserva(dias=2, offset=5)
+        self.abrir_caixa()
+        services.receber_adiantamento(r, self.usuario, self.dinheiro, Decimal("300.00"))
+        # Ativa e sem nada pago a mais: não há o que devolver.
+        with self.assertRaisesMessage(ValidationError, "R$ 0.00"):
+            services.devolver_ao_hospede(r, Decimal("10.00"), self.usuario, "Teste")
+
+    def test_devolver_exige_gerencia(self):
+        r = self.reserva(dias=2, offset=30)
+        self.abrir_caixa()
+        services.receber_adiantamento(r, self.usuario, self.dinheiro, Decimal("300.00"))
+        r.cancelar(self.usuario, "Desistiu")
+        operadora = Usuario.objects.create_user(username="op-dev", password="senha-forte-123")
+        operadora.modulos.add(ModuloContratado.objects.get(codigo=Modulo.RESERVAS))
+        self.client.login(username="op-dev", password="senha-forte-123")
+        self.client.post(reverse("reservas:devolver", args=[r.pk]),
+                         {"valor": "300.00", "motivo": "Tentativa"})
+        from .cancelamento import total_pago
+        self.assertEqual(total_pago(r), Decimal("300.00"))

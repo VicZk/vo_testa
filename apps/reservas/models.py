@@ -276,6 +276,11 @@ class Reserva(models.Model):
     )
     observacoes = models.TextField("observações", blank=True)
     motivo_cancelamento = models.TextField("motivo do cancelamento", blank=True)
+    valor_retido = models.DecimalField(
+        "retido no cancelamento (R$)", max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text="O que a política de cancelamento deixa com a pousada (diárias usadas + "
+                  "retenção), gravado no cancelamento. O resto do que foi pago é devolvido.",
+    )
     expira_em = models.DateTimeField(
         "retenção até", null=True, blank=True,
         help_text="Pré-reserva de canal (site) segura o quarto só até aqui; depois expira.",
@@ -357,6 +362,18 @@ class Reserva(models.Model):
     @property
     def total_hospedes(self) -> int:
         return self.adultos + self.criancas
+
+    def total_previsto(self) -> Decimal:
+        """O que a estadia vai custar no check-in: diárias + ISS + taxa de turismo, pelas
+        mesmas regras de `ContaHospedagem.lancar_diarias`/`lancar_taxas`. Sem consumo."""
+        base = self.valor_diaria * self.noites
+        if not getattr(settings, "PRECO_TAXAS_ATIVAS", True):
+            return base
+        from apps.reservas.precos import taxas
+
+        t = taxas(base, cobra_iss=self.cobra_iss,
+                  cobra_taxa_turismo=self.cobra_taxa_turismo, diarias=self.noites)
+        return base + t["iss"] + t["taxa_turismo"]
 
     @property
     def colchoes_consumidos(self) -> int:
@@ -523,6 +540,11 @@ class Reserva(models.Model):
                 usuario, "ajuste_arredondamento", self, {"valor": str(saldo)}
             )
             saldo = conta.saldo()
+        if saldo < 0:
+            raise ValidationError(
+                f"O hóspede tem R$ {-saldo} de crédito nesta conta (pagou mais do que o "
+                "total): devolva a diferença em \"Devolver ao hóspede\" antes de fechar."
+            )
         if saldo != Decimal("0.00"):
             raise ValidationError(
                 f"A conta tem saldo de R$ {saldo} — receba ou ajuste antes."

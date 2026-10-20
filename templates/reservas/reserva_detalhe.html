@@ -296,4 +296,35 @@
     </div>
   {% endif %}
 {% endif %}
+
+{# ---------- Devolução ao hóspede (excedente da conta ou cancelamento) ---------- #}
+{% if devolucao %}
+  <section class="cartao devolucao">
+    <h2>Devolver ao hóspede</h2>
+    <p>
+      {% if reserva.status == "hospedada" %}
+        O hóspede pagou {{ devolucao.limite|intcomma_brl }} a mais do que o total da conta. A saída só fecha depois da devolução.
+      {% elif reserva.status == "cancelada" %}
+        Reserva cancelada com {{ devolucao.limite|intcomma_brl }} pagos e ainda não devolvidos.
+        {% if reserva.valor_retido is not None %}Pela política, a pousada fica com {{ reserva.valor_retido|intcomma_brl }}: devolver {{ devolucao.sugerido|intcomma_brl }}.{% endif %}
+      {% elif reserva.status == "no_show" %}
+        Não comparecimento: o pago fica com a pousada. Devolva só se a gerência decidir.
+      {% else %}
+        O que já foi pago passa do total previsto da estadia em {{ devolucao.limite|intcomma_brl }}.
+      {% endif %}
+    </p>
+    {% if devolucao.online %}
+      <p class="ajuda">{{ devolucao.online|intcomma_brl }} entrou online e só volta pela cobrança, em Pagamentos (estorno no gateway). Pelo caixa dá para devolver até {{ devolucao.no_caixa|intcomma_brl }}.</p>
+    {% endif %}
+    {% if eh_gerente %}
+      <form method="post" action="{% url 'reservas:devolver' reserva.pk %}" class="form-cartao">
+        {% csrf_token %}
+        {% include "nucleo/partials/campos.html" with form=form_devolucao %}
+        <div class="acoes"><button type="submit" class="botao-primario">Devolver pelo meu caixa</button></div>
+      </form>
+    {% else %}
+      <p class="ajuda">A devolução é feita pela gerência.</p>
+    {% endif %}
+  </section>
+{% endif %}
 {% endblock %}

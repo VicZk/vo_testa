@@ -149,6 +149,19 @@ class RecebimentoForm(forms.Form):
     )
 
 
+class DevolucaoForm(forms.Form):
+    valor = forms.DecimalField(
+        label="Valor a devolver (R$)", min_value=Decimal("0.01"), decimal_places=2,
+        widget=forms.TextInput(attrs={
+            "class": "mascara-reais", "inputmode": "numeric", "placeholder": "0,00",
+        }),
+    )
+    motivo = forms.CharField(
+        label="Motivo", max_length=200,
+        widget=forms.TextInput(attrs={"placeholder": "Ex.: cancelamento no prazo, saída antecipada"}),
+    )
+
+
 class CancelamentoForm(forms.Form):
     motivo = forms.CharField(
         label="Motivo do cancelamento", widget=forms.Textarea(attrs={"rows": 2})

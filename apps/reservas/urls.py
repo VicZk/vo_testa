@@ -34,6 +34,7 @@ urlpatterns = [
     path("<int:pk>/lancamento/", views.lancamento_novo, name="lancamento_novo"),
     path("<int:pk>/pagamento/", views.pagamento_novo, name="pagamento_novo"),
     path("<int:pk>/adiantamento/", views.adiantamento_novo, name="adiantamento_novo"),
+    path("<int:pk>/devolver/", views.devolver, name="devolver"),
     path("<int:pk>/acompanhante/", views.acompanhante_novo, name="acompanhante_novo"),
     path("<int:pk>/fnrh/", views.fnrh, name="fnrh"),
     path("<int:pk>/fnrh/reenviar/", views.fnrh_reenviar, name="fnrh_reenviar"),
