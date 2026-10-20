@@ -1281,3 +1281,46 @@ class HealthzTests(TestCase):
         with mock.patch("config.urls._banco_ok", return_value=False):
             r = self.client.get("/healthz/")
         self.assertEqual(r.status_code, 503)
+
+
+class EstruturaInicialTests(TestCase):
+    """`manage.py estrutura_inicial` monta a estrutura física num banco novo."""
+
+    def _rodar(self, *args):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        call_command("estrutura_inicial", *args, stdout=StringIO(), stderr=StringIO())
+
+    def test_cria_tipos_e_24_quartos_sem_duplicar(self):
+        from apps.nucleo.models import UH, TipoUH
+
+        self._rodar()
+        self._rodar()  # idempotente
+        quartos = UH.objects.filter(numero__startswith="Quarto ")
+        self.assertEqual(quartos.count(), 24)
+        self.assertEqual(
+            TipoUH.objects.filter(nome__in=["Padrão", "Intermediário",
+                                            "Cabana Intermediária", "Cabana Hobbit"]).count(), 4)
+        self.assertEqual(UH.objects.get(numero="Quarto 22").tipo.nome, "Cabana Hobbit")
+        self.assertTrue(UH.objects.get(numero="Quarto 04").pcd)
+
+    def test_nao_altera_quarto_existente(self):
+        from decimal import Decimal
+
+        from apps.nucleo.models import UH, TipoUH
+
+        outro = TipoUH.objects.create(nome="Suíte Especial", tarifa_base=Decimal("900"))
+        UH.objects.create(numero="Quarto 01", tipo=outro)
+        self._rodar()
+        self.assertEqual(UH.objects.get(numero="Quarto 01").tipo, outro)
+
+    def test_completo_aplica_camas_tarifas_e_vitrine(self):
+        from apps.nucleo.models import UH, PosicaoCama
+        from apps.reservas.models import TarifaUnidade
+
+        self._rodar("--completo")
+        self.assertTrue(PosicaoCama.objects.filter(uh__numero="Quarto 16").exists())
+        self.assertTrue(TarifaUnidade.objects.filter(uh__numero="Quarto 22").exists())
+        self.assertEqual(UH.objects.filter(numero__startswith="Quarto ").count(), 24)

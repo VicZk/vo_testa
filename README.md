@@ -138,36 +138,18 @@ python manage.py createsuperuser
 O `migrate` já cria os módulos ativos, as formas de pagamento, o almoxarifado central, o
 tipo "Dia na Pousada" com as unidades `DAY-0N` e as áreas de acesso dos gerentes.
 
-> **Lacuna conhecida:** nenhuma migration nem comando cria os **tipos de quarto de
-> pernoite e os 24 quartos**. Em produção eles já existem; num banco novo é preciso
-> criá-los pela tela *Quartos & tipos* (`/crm/estrutura/`), pelo admin, ou com o trecho
-> abaixo. Os seeds de preço e camas dependem exatamente destes nomes.
+Depois, a estrutura física da pousada:
 
 ```bash
-python manage.py shell -c "
-from decimal import Decimal as D
-from apps.nucleo.models import TipoUH, UH
-tipos = {'Padrão': (2, D('250')), 'Intermediário': (4, D('350')),
-         'Cabana Intermediária': (6, D('490')), 'Cabana Hobbit': (6, D('650'))}
-for nome, (cap, base) in tipos.items():
-    TipoUH.objects.get_or_create(nome=nome, defaults={'capacidade': cap, 'tarifa_base': base})
-mapa = {**{n: 'Padrão' for n in (3,4,5,6,7,8,10,11,12,13,14)},
-        **{n: 'Intermediário' for n in (1,2,9,15)},
-        **{n: 'Cabana Intermediária' for n in range(16,22)},
-        **{n: 'Cabana Hobbit' for n in (22,23,24)}}
-for n, t in mapa.items():
-    UH.objects.get_or_create(numero=f'Quarto {n:02d}', defaults={'tipo': TipoUH.objects.get(nome=t), 'pcd': n in (4,14)})
-print(UH.objects.count(), 'unidades')
-"
+python manage.py estrutura_inicial --completo
 ```
 
-Depois, a estrutura derivada, os preços e a vitrine do site:
-
-```bash
-python manage.py configurar_camas       # posições de cama, sofás, pool de colchões extras
-python manage.py carregar_tarifas       # tabela de preços aprovada (por tipo e por quarto)
-python manage.py sincronizar_vitrine    # vitrine do site, um card por quarto (9 destaques)
-```
+O comando cria os 4 tipos de quarto de pernoite e os 24 quartos (`Quarto 01` a
+`Quarto 24`, só o que faltar, sem alterar nada que já exista) e, com `--completo`, roda
+em seguida `configurar_camas` (posições de cama, sofás e pool de colchões extras),
+`carregar_tarifas` (tabela de preços aprovada) e `sincronizar_vitrine` (um card por
+quarto no site, com 9 destaques). Os seeds de preço e camas dependem exatamente
+desses nomes de tipos e quartos.
 
 **Dados de demonstração (opcional).** Os seeds não acompanharam todas as regras novas:
 

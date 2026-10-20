@@ -977,10 +977,11 @@ unidades `DAY-01..08` (`DAY-05..08` já inativas) e a verba de Marketing.
 > - `popular_demo` faz `UH.objects.get(numero=f"Quarto {num:02d}")` → `DoesNotExist`;
 > - `popular_lotacao` simplesmente não encontra quartos para ocupar.
 >
-> Num banco vazio, portanto, os 4 tipos e os 24 quartos têm de ser criados **à mão**,
-> pelo admin (`/crm/admin/`) ou pelas telas `Quartos & tipos`
-> (`/crm/estrutura/tipos/novo/` e `/crm/estrutura/uhs/nova/`), ou por um `loaddata` de
-> um dump existente. Em produção eles já existem (vieram do histórico/dump migrado).
+> **Resolvido pelo comando `estrutura_inicial`** (`apps/nucleo/management/commands/`):
+> cria os 4 tipos e os 24 quartos (só o que faltar, sem alterar o que existe) e, com
+> `--completo`, roda `configurar_camas`, `carregar_tarifas` e `sincronizar_vitrine`.
+> Em produção eles já existem (vieram do histórico/dump migrado); o comando é seguro lá
+> porque não sobrescreve nada.
 
 Ordem recomendada para chegar a um dataset utilizável:
 
@@ -991,8 +992,8 @@ python manage.py migrate
 # 1) superusuário
 python manage.py createsuperuser
 
-# 2) *** MANUAL ***: criar os 4 TipoUH de pernoite e as 24 UH "Quarto 01..24"
-#    (admin ou /crm/estrutura/) — ou carregar um dump.
+# 2) tipos de pernoite + os 24 quartos (e, com --completo, os passos 3 a 5 abaixo)
+python manage.py estrutura_inicial --completo
 
 # 3) estrutura derivada: posições de cama, sofá, colchões e estoque global de extras
 python manage.py configurar_camas          # (reservas) + singleton ColchoesExtra
