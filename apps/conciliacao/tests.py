@@ -445,3 +445,35 @@ class DedupeOfxSemContaTests(TestCase):
         self.assertEqual(n1, 2)
         services.importar_ofx(conteudo=OFX_EXEMPLO, conta="")  # reimporta o mesmo
         self.assertEqual(LancamentoExtrato.objects.count(), 2)  # dedupe por FITID
+
+
+class UploadDaConciliacaoTests(TestCase):
+    """Arquivo grande ou de outro tipo é recusado antes de ser lido."""
+
+    def setUp(self):
+        self.u = Usuario.objects.create_superuser(username="fin", password="senha-forte-123")
+        self.client.force_login(self.u)
+
+    def _enviar(self, rota, nome, conteudo):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from django.urls import reverse
+
+        arquivo = SimpleUploadedFile(nome, conteudo)
+        return self.client.post(reverse(rota), {"arquivo": arquivo}, follow=True)
+
+    def test_arquivo_grande_demais(self):
+        from apps.conciliacao import views
+
+        grande = b"0" * (views.LIMITE_ARQUIVO + 1)
+        r = self._enviar("conciliacao:importar_ofx", "extrato.ofx", grande)
+        self.assertContains(r, "Arquivo grande demais")
+        self.assertFalse(LancamentoExtrato.objects.exists())
+
+    def test_tipo_errado(self):
+        r = self._enviar("conciliacao:importar_cartao", "vendas.exe", b"MZ")
+        self.assertContains(r, "Envie um arquivo .csv ou .txt")
+
+    def test_ofx_valido_importa(self):
+        r = self._enviar("conciliacao:importar_ofx", "extrato.ofx", OFX_EXEMPLO.encode("latin-1"))
+        self.assertContains(r, "Extrato importado")
+        self.assertEqual(LancamentoExtrato.objects.count(), 2)

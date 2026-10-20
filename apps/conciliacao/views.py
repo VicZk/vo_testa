@@ -1,5 +1,6 @@
 """Telas da conciliação (área Financeiro): painel + importar + conciliar + manual + fechamento."""
 import csv
+import logging
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
@@ -14,6 +15,21 @@ from apps.nucleo.permissoes import requer_area
 
 from . import services
 from .models import ExtratoBancario, LancamentoExtrato, LoteCartao, TransacaoCartao
+
+logger = logging.getLogger(__name__)
+
+# Um extrato mensal ou o CSV de vendas do mês têm poucas centenas de KB; 5 MB dá folga
+# e impede que um arquivo enorme trave o servidor lendo tudo na memória.
+LIMITE_ARQUIVO = 5 * 1024 * 1024
+
+
+def _arquivo_recusado(arquivo, extensoes) -> str:
+    """Motivo para recusar o upload antes de ler, ou "" se está ok."""
+    if arquivo.size > LIMITE_ARQUIVO:
+        return "Arquivo grande demais (máximo 5 MB). Exporte um período menor."
+    if not arquivo.name.lower().endswith(extensoes):
+        return f"Envie um arquivo {' ou '.join(extensoes)}."
+    return ""
 
 
 @never_cache
@@ -44,6 +60,10 @@ def importar_ofx(request):
     if not arquivo:
         messages.error(request, "Selecione um arquivo OFX.")
         return redirect("conciliacao:painel")
+    motivo = _arquivo_recusado(arquivo, (".ofx",))
+    if motivo:
+        messages.error(request, motivo)
+        return redirect("conciliacao:painel")
     try:
         r = services.importar_ofx(conteudo=arquivo.read(), conta=conta,
                                   arquivo_nome=arquivo.name, usuario=request.user)
@@ -51,8 +71,11 @@ def importar_ofx(request):
             request,
             f"Extrato importado: {r['novos']} novas linhas"
             + (f" ({r['ignorados']} já existiam)." if r["ignorados"] else "."))
-    except Exception as e:  # noqa: BLE001 — mostra o erro ao operador
-        messages.error(request, f"Falha ao importar OFX: {e}")
+    except ValidationError as e:
+        messages.error(request, f"Falha ao importar OFX: {' '.join(e.messages)}")
+    except Exception:  # noqa: BLE001 — o detalhe vai ao log, não à tela
+        logger.exception("Falha ao importar OFX %s", arquivo.name)
+        messages.error(request, "Falha ao importar OFX: o arquivo não pôde ser lido.")
     return redirect("conciliacao:painel")
 
 
@@ -64,12 +87,19 @@ def importar_cartao(request):
     if not arquivo:
         messages.error(request, "Selecione o CSV de vendas da SafraPay.")
         return redirect("conciliacao:painel")
+    motivo = _arquivo_recusado(arquivo, (".csv", ".txt"))
+    if motivo:
+        messages.error(request, motivo)
+        return redirect("conciliacao:painel")
     try:
         r = services.importar_cartao_csv(conteudo=arquivo.read(),
                                          arquivo_nome=arquivo.name, usuario=request.user)
         messages.success(request, f"Vendas importadas: {r['novos']} transações.")
-    except Exception as e:  # noqa: BLE001
-        messages.error(request, f"Falha ao importar CSV: {e}")
+    except ValidationError as e:
+        messages.error(request, f"Falha ao importar CSV: {' '.join(e.messages)}")
+    except Exception:  # noqa: BLE001 — o detalhe vai ao log, não à tela
+        logger.exception("Falha ao importar CSV %s", arquivo.name)
+        messages.error(request, "Falha ao importar CSV: o arquivo não pôde ser lido.")
     return redirect("conciliacao:painel")
 
 
