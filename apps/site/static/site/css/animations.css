@@ -35,13 +35,17 @@ html {
 
 /* Fade in ao scroll.
    O opacity:0 só vale com JS ativo (html.js, setado logo no <head>): sem JS o
-   IntersectionObserver não roda e o conteúdo precisa nascer visível. */
+   IntersectionObserver não roda e o conteúdo precisa nascer visível.
+
+   O deslocamento era de 40px em 0,8s em TODA seção — o padrão genérico de
+   página gerada, que faz o conteúdo "montar" enquanto a pessoa rola. 12px em
+   0,45s ainda mostra que algo chegou, sem atrapalhar a leitura. */
 .fade-section {
-    transition: opacity 0.8s ease, transform 0.8s ease;
+    transition: opacity 0.45s ease, transform 0.45s ease;
 }
 html.js .fade-section {
     opacity: 0;
-    transform: translateY(40px);
+    transform: translateY(12px);
 }
 /* Precisa casar a especificidade do esconder (html.js …) senão o reveal NUNCA vence:
    html.js .fade-section = (0,2,1) > .fade-section.visible = (0,2,0). Escopado em html.js
@@ -62,8 +66,13 @@ html.js .fade-section.visible {
 html.js .fade-section:not(.visible) {
     animation: fade-section-failsafe 0.8s ease 2s forwards;
 }
+/* Quem pediu menos movimento vê a seção aparecer de uma vez: antes só as
+   animações decorativas e o failsafe eram desligados, e o reveal continuava
+   deslizando. */
 @media (prefers-reduced-motion: reduce) {
     html.js .fade-section:not(.visible) { animation-duration: 0.01s; }
+    .fade-section { transition: none; }
+    html.js .fade-section { transform: none; }
 }
 
 /* Badge flutuante — prova social */

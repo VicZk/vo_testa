@@ -24,7 +24,8 @@
         <!-- Acessos + CTA Desktop -->
         <div class="hidden lg:flex items-center gap-4 xl:gap-5 text-sm whitespace-nowrap shrink-0">
             <a href="{% url 'core:minha_reserva' %}" class="text-pergaminho/80 hover:text-lampiao transition">Minha reserva</a>
-            <a href="{% url 'login' %}" class="text-pergaminho/45 hover:text-lampiao transition">Acesso da equipe</a>
+            {# /45 sobre o noturno dava ~2,2:1 — texto ilegível, não "discreto". #}
+            <a href="{% url 'login' %}" class="text-pergaminho/70 hover:text-lampiao transition">Acesso da equipe</a>
             <a href="{% url 'core:reservar' %}" class="inline-flex items-center gap-2 bg-lampiao text-noturno font-semibold px-5 py-2.5 rounded-full hover:bg-lampiao/90 transition pulse-btn">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                 Fazer Reserva
@@ -54,7 +55,7 @@
         <a href="{% url 'core:home' %}#eventos" class="mobile-link text-pergaminho/80 text-lg py-3 border-b border-pergaminho/10 hover:text-lampiao transition">Eventos</a>
         <a href="{% url 'core:home' %}#contato" class="mobile-link text-pergaminho/80 text-lg py-3 border-b border-pergaminho/10 hover:text-lampiao transition">Contato</a>
         <a href="{% url 'core:minha_reserva' %}" class="mobile-link text-pergaminho/80 text-lg py-3 border-b border-pergaminho/10 hover:text-lampiao transition">Minha reserva</a>
-        <a href="{% url 'login' %}" class="mobile-link text-pergaminho/50 text-lg py-3 border-b border-pergaminho/10 hover:text-lampiao transition">Acesso da equipe</a>
+        <a href="{% url 'login' %}" class="mobile-link text-pergaminho/70 text-lg py-3 border-b border-pergaminho/10 hover:text-lampiao transition">Acesso da equipe</a>
     </div>
     <a href="{% url 'core:reservar' %}" class="mobile-link mt-6 w-full inline-flex items-center justify-center gap-2 bg-lampiao text-noturno font-semibold text-sm px-5 py-3 rounded-full">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>

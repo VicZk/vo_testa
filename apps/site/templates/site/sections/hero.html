@@ -40,7 +40,8 @@
                     <input type="number" id="hero-hospedes" name="hospedes" min="1" value="2" required
                            class="w-full bg-noturno/50 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-pergaminho text-xs sm:text-sm border border-pergaminho/10 focus:border-lampiao">
                 </div>
-                <button type="submit" class="bg-lampiao text-noturno font-bold text-xs sm:text-sm px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg hover:bg-lampiao/90 transition pulse-btn flex items-center justify-center gap-2">
+                {# `whitespace-nowrap`: o rótulo quebrava em duas linhas e deixava o botão mais alto que os três campos ao lado. #}
+                <button type="submit" class="bg-lampiao text-noturno font-bold text-xs sm:text-sm px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg hover:bg-lampiao/90 transition pulse-btn flex items-center justify-center gap-2 whitespace-nowrap">
                     <svg class="w-4 sm:w-5 h-4 sm:h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     Ver Disponibilidade
                 </button>

@@ -68,9 +68,15 @@
             {% endfor %}
         </div>
 
-        <div class="text-center mt-14">
-            <a href="{% url 'core:reservar' %}" class="inline-block bg-lampiao text-noturno font-bold px-8 py-3 rounded-full hover:bg-lampiao/90 transition text-sm">
-                Ver disponibilidade e reservar
+    </div>
+
+    {% comment %}Barra fixa: eram 5.138px de rolagem até o único botão de reserva,
+    lá no fim da página. Agora o caminho para reservar acompanha quem olha.{% endcomment %}
+    <div class="sticky bottom-0 z-40 mt-14 border-t border-lampiao/20 bg-noturno/90 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+            <p class="text-pergaminho/70 text-xs sm:text-sm">{{ quartos|length }} quartos — a disponibilidade e o preço aparecem ao informar as datas.</p>
+            <a href="{% url 'core:reservar' %}" class="shrink-0 bg-lampiao text-noturno font-bold px-6 py-2.5 rounded-full hover:bg-lampiao/90 transition text-sm whitespace-nowrap">
+                Ver disponibilidade
             </a>
         </div>
     </div>

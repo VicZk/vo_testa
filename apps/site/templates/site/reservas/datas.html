@@ -29,7 +29,10 @@
     {% endif %}
 </div>
 
-<form method="get" action="{% url 'core:reservar' %}" id="form-datas" class="grid md:grid-cols-2 gap-6">
+{% comment %}`items-start`: sem isso as duas colunas esticavam para a mesma
+altura e o cartão do calendário ficava com 390px de branco embaixo — o
+calendário ocupa só os 270px do topo.{% endcomment %}
+<form method="get" action="{% url 'core:reservar' %}" id="form-datas" class="grid md:grid-cols-2 gap-6 items-start">
     <input type="hidden" name="checkin" id="f-checkin">
     <input type="hidden" name="checkout" id="f-checkout">
     <input type="hidden" name="hospedes" id="f-hospedes" value="2">
@@ -40,7 +43,7 @@
 
     <div class="bg-white rounded-2xl p-5 shadow-sm border border-madeira/5">
         <div id="calendario-inline" data-info-url="{% url 'core:info_datas' %}" data-day-use="{% if eh_day_use %}1{% else %}0{% endif %}"></div>
-        <div class="mt-3 flex gap-4 text-[10px] text-madeira/40">
+        <div class="mt-3 flex gap-4 text-[10px] text-madeira/70">
             <span class="flex items-center gap-1"><span class="w-3 h-3 bg-madeira rounded"></span> Selecionado</span>
             {% if not eh_day_use %}
             <span class="flex items-center gap-1"><span class="w-3 h-3 bg-madeira/10 rounded border border-madeira/10"></span> Período</span>
@@ -54,27 +57,27 @@
             <div class="space-y-4">
                 <div class="flex justify-between items-center py-3 border-b border-pergaminho">
                     <div>
-                        <p class="text-madeira/40 text-xs uppercase tracking-wider">{% if eh_day_use %}Data{% else %}Check-in{% endif %}</p>
+                        <p class="text-madeira/80 text-xs uppercase tracking-wider">{% if eh_day_use %}Data{% else %}Check-in{% endif %}</p>
                         <p class="text-madeira font-semibold" id="lbl-checkin">Selecione no calendário</p>
                     </div>
-                    <svg class="w-5 h-5 text-madeira/30" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    <svg class="w-5 h-5 text-madeira/50" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                 </div>
                 {% if not eh_day_use %}
                 <div class="flex justify-between items-center py-3 border-b border-pergaminho">
                     <div>
-                        <p class="text-madeira/40 text-xs uppercase tracking-wider">Check-out</p>
+                        <p class="text-madeira/80 text-xs uppercase tracking-wider">Check-out</p>
                         <p class="text-madeira font-semibold" id="lbl-checkout">—</p>
                     </div>
-                    <svg class="w-5 h-5 text-madeira/30" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    <svg class="w-5 h-5 text-madeira/50" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                 </div>
                 {% else %}
                 <input type="hidden" id="lbl-checkout" value="">
-                <p class="text-madeira/40 text-xs py-2">Um dia na estrutura — piscina, mirantes e passeio (sem pernoite).</p>
+                <p class="text-madeira/70 text-xs py-2">Um dia na estrutura — piscina, mirantes e passeio (sem pernoite).</p>
                 {% endif %}
                 <div class="flex justify-between items-center py-3 border-b border-pergaminho">
                     <div>
-                        <p class="text-madeira/40 text-xs uppercase tracking-wider">Pessoas</p>
-                        <p class="text-madeira font-semibold"><span id="lbl-hospedes">2</span> pessoa(s)</p>
+                        <p class="text-madeira/80 text-xs uppercase tracking-wider">Pessoas</p>
+                        <p class="text-madeira font-semibold"><span id="lbl-hospedes">2</span> <span id="lbl-hospedes-palavra">pessoas</span></p>
                     </div>
                     <div class="flex items-center gap-2">
                         <button type="button" id="hosp-menos" class="w-7 h-7 rounded-full border border-madeira/15 text-madeira/50 flex items-center justify-center hover:border-madeira hover:text-madeira transition">−</button>
@@ -84,8 +87,8 @@
                 </div>
                 <div class="flex justify-between items-center py-3 border-b border-pergaminho">
                     <div>
-                        <p class="text-madeira/40 text-xs uppercase tracking-wider">Crianças 6–15</p>
-                        <p class="text-madeira/40 text-[11px]">Pagam meia</p>
+                        <p class="text-madeira/80 text-xs uppercase tracking-wider">Crianças 6–15</p>
+                        <p class="text-madeira/70 text-[11px]">Pagam meia</p>
                     </div>
                     <div class="flex items-center gap-2">
                         <button type="button" data-ch="c615" data-d="-1" class="ch-btn w-7 h-7 rounded-full border border-madeira/15 text-madeira/50 flex items-center justify-center hover:border-madeira hover:text-madeira transition">−</button>
@@ -95,8 +98,8 @@
                 </div>
                 <div class="flex justify-between items-center py-3 border-b border-pergaminho">
                     <div>
-                        <p class="text-madeira/40 text-xs uppercase tracking-wider">Crianças até 5</p>
-                        <p class="text-madeira/40 text-[11px]">Não pagam</p>
+                        <p class="text-madeira/80 text-xs uppercase tracking-wider">Crianças até 5</p>
+                        <p class="text-madeira/70 text-[11px]">Não pagam</p>
                     </div>
                     <div class="flex items-center gap-2">
                         <button type="button" data-ch="c05" data-d="-1" class="ch-btn w-7 h-7 rounded-full border border-madeira/15 text-madeira/50 flex items-center justify-center hover:border-madeira hover:text-madeira transition">−</button>
@@ -108,8 +111,11 @@
             </div>
         </div>
 
+        {% comment %}Dourado como os outros CTAs do funil ("Fazer Reserva",
+        "Reservar", "Ver Disponibilidade"): este era o único marrom, e justo o
+        botão mais importante do caminho da reserva.{% endcomment %}
         <button type="submit" id="btn-ver-quartos" disabled
-                class="mt-6 bg-madeira text-pergaminho font-bold px-8 py-3 rounded-xl hover:bg-madeira/90 transition flex items-center justify-center gap-2 shadow-lg shadow-madeira/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none">
+                class="mt-6 bg-lampiao text-noturno font-bold px-8 py-3 rounded-xl hover:bg-lampiao/90 transition flex items-center justify-center gap-2 shadow-lg shadow-madeira/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none">
             {% if eh_day_use %}Ver disponibilidade{% else %}Ver Quartos Disponíveis{% endif %}
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
         </button>
@@ -136,6 +142,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var lblCheckin = document.getElementById('lbl-checkin');
     var lblCheckout = document.getElementById('lbl-checkout');
     var lblHospedes = document.getElementById('lbl-hospedes');
+    var lblHospedesPalavra = document.getElementById('lbl-hospedes-palavra');
     var cntHospedes = document.getElementById('cnt-hospedes');
     var btn = document.getElementById('btn-ver-quartos');
     var infoUrl = el.dataset.infoUrl;
@@ -182,6 +189,8 @@ document.addEventListener('DOMContentLoaded', function () {
     function setHospedes(v) {
         v = Math.min(dayUse ? 20 : 10, Math.max(1, v));
         fHospedes.value = v; lblHospedes.textContent = v; cntHospedes.textContent = v;
+        // "1 pessoa(s)" é jeito de máquina de escrever: a palavra concorda com o número.
+        if (lblHospedesPalavra) lblHospedesPalavra.textContent = v === 1 ? 'pessoa' : 'pessoas';
         atualizarInfo();
     }
     document.getElementById('hosp-menos').addEventListener('click', function () { setHospedes(parseInt(fHospedes.value, 10) - 1); });
