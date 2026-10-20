@@ -1,6 +1,8 @@
 {# Conteúdo do modal de nova reserva (carregado e revalidado via HTMX). #}
 <form hx-post="{% url 'reservas:nova' %}" hx-target="this" hx-swap="outerHTML" class="modal-form"
-      x-data="{ fat: '{{ form.faturamento.value|default:'particular' }}' }">
+      x-data="{ fat: '{{ form.faturamento.value|default:'particular' }}' }"
+      @keydown.ctrl.enter.prevent="$el.requestSubmit()"
+      @keydown.meta.enter.prevent="$el.requestSubmit()">
   {% csrf_token %}
   <header class="modal-cabecalho">
     <h2>Nova reserva</h2>
@@ -15,7 +17,7 @@
       <div class="campo col-2 {% if form.hospede.errors %}campo-erro{% endif %}">
         {{ form.hospede.label_tag }}
         <div class="campo-com-acao">
-          {% include "componentes/combo_pessoa.html" with dados=hospedes_data dados_id="hospedes-data" campo="hospede" placeholder="Buscar hóspede/cliente…" valor_id=form.hospede.value %}
+          {% include "componentes/combo_pessoa.html" with dados=hospedes_data dados_id="hospedes-data" campo="hospede" placeholder="Buscar hóspede/cliente…" valor_id=form.hospede.value autofocus=1 %}
           <button type="button" class="botao-mini" onclick="abrirNovoHospede()">+ Novo</button>
         </div>
         {% for erro in form.hospede.errors %}<small class="erro">{{ erro }}</small>{% endfor %}
@@ -45,18 +47,7 @@
       {% include "reservas/partials/campo.html" with campo=form.adultos %}
       {% include "reservas/partials/campo.html" with campo=form.criancas_6_15 %}
       {% include "reservas/partials/campo.html" with campo=form.criancas_0_5 %}
-      {% include "reservas/partials/campo.html" with campo=form.casais %}
-      {% include "reservas/partials/campo.html" with campo=form.solteiros %}
-      {% include "reservas/partials/campo.html" with campo=form.usa_sofa_cama %}
-      {% include "reservas/partials/campo.html" with campo=form.usa_berco %}
-      <div id="colchoes-hint" class="tarifa-hint col-2"></div>
       {% include "reservas/partials/campo.html" with campo=form.canal %}
-      <div class="campo col-2 taxas-toggle">
-        <span class="letreiro">Taxas (inclusas no total)</span>
-        <label class="check-inline">{{ form.cobra_iss }} {{ form.cobra_iss.label }}</label>
-        <label class="check-inline">{{ form.cobra_taxa_turismo }} {{ form.cobra_taxa_turismo.label }}</label>
-        <label class="check-inline">{{ form.nao_reembolsavel }} {{ form.nao_reembolsavel.label }} <small>(−12%, sem cancelamento)</small></label>
-      </div>
       {% include "reservas/partials/campo.html" with campo=form.valor_diaria %}
       <div id="tarifa-hint" class="tarifa-hint col-2" data-url="{% url 'reservas:tarifa_preview' %}"></div>
       {% include "reservas/partials/campo.html" with campo=form.faturamento classe="col-2" %}
@@ -67,12 +58,32 @@
           {% for erro in form.titular.errors %}<small class="erro">{{ erro }}</small>{% endfor %}
         </div>
       </div>
-      {% include "reservas/partials/campo.html" with campo=form.observacoes classe="col-2" %}
+
+      {# O balcão só precisa de hóspede, quarto, datas e gente. Camas, taxas e #}
+      {# observações ficam a um clique — nenhum campo foi removido, e o <details> #}
+      {# abre sozinho quando algum deles está com erro ou já tem conteúdo. #}
+      <details class="mais-opcoes col-2"{% if form.casais.errors or form.solteiros.errors or form.usa_sofa_cama.errors or form.usa_berco.errors or form.cobra_iss.errors or form.cobra_taxa_turismo.errors or form.nao_reembolsavel.errors or form.observacoes.errors or form.observacoes.value %} open{% endif %}>
+        <summary>Mais opções <small>camas, taxas e observações</small></summary>
+        <div class="form-grade">
+          {% include "reservas/partials/campo.html" with campo=form.casais %}
+          {% include "reservas/partials/campo.html" with campo=form.solteiros %}
+          {% include "reservas/partials/campo.html" with campo=form.usa_sofa_cama %}
+          {% include "reservas/partials/campo.html" with campo=form.usa_berco %}
+          <div id="colchoes-hint" class="tarifa-hint col-2"></div>
+          <div class="campo col-2 taxas-toggle">
+            <span class="letreiro">Taxas (inclusas no total)</span>
+            <label class="check-inline">{{ form.cobra_iss }} {{ form.cobra_iss.label }}</label>
+            <label class="check-inline">{{ form.cobra_taxa_turismo }} {{ form.cobra_taxa_turismo.label }}</label>
+            <label class="check-inline">{{ form.nao_reembolsavel }} {{ form.nao_reembolsavel.label }} <small>(−12%, sem cancelamento)</small></label>
+          </div>
+          {% include "reservas/partials/campo.html" with campo=form.observacoes classe="col-2" %}
+        </div>
+      </details>
     </div>
   </div>
 
   <footer class="modal-acoes">
-    <button type="submit" class="botao-primario">Criar pré-reserva</button>
+    <button type="submit" class="botao-primario" title="Ctrl+Enter">Criar pré-reserva</button>
     <button type="submit" name="orcamento" value="1" class="botao-neutro">Salvar como orçamento</button>
     <button type="button" class="botao-neutro" onclick="fecharModal()">Cancelar</button>
   </footer>

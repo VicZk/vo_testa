@@ -49,7 +49,10 @@
   const LIMIAR = 10;               // histerese antes de virar arraste (§10)
   const csrfEl = () => document.querySelector('[name=csrfmiddlewaretoken]');
 
-  async function enviarTroca(rid, uh, num) {
+  // Recarrega só quando a troca DEU certo, e voltando para a mesma altura da
+  // página. No erro a porta volta para a vaga de origem e o aviso fica na tela —
+  // recarregar no erro apagava a mensagem e parecia que tinha funcionado.
+  async function enviarTroca(rid, uh, num, desfazer) {
     const fd = new FormData();
     fd.append('novo_uh', uh); fd.append('motivo', 'Troca pelo mapa de quartos');
     try {
@@ -57,9 +60,16 @@
         method: 'POST', headers: { 'X-CSRFToken': csrfEl().value, 'X-Requested-With': 'fetch' }, body: fd,
       });
       const d = await r.json();
-      if (d.ok) { toast('Quarto trocado para o ' + num + '. A conta foi junto.', 'success'); setTimeout(() => location.reload(), 420); }
-      else { toast(d.erro || 'Não foi possível trocar.', 'error'); location.reload(); }
-    } catch (err) { toast('Falha de conexão.', 'error'); location.reload(); }
+      if (d.ok) {
+        toast('Quarto trocado para o ' + num + '. A conta foi junto.', 'success');
+        setTimeout(() => recarregarNoLugar(), 420);
+        return;
+      }
+      toast(d.erro || 'Não foi possível trocar.', 'error');
+    } catch (err) {
+      toast('Falha de conexão — o quarto não foi trocado.', 'error');
+    }
+    if (desfazer) desfazer();
   }
 
   document.querySelectorAll('.porta[data-reserva]').forEach(porta => {
@@ -107,11 +117,13 @@
       const destino = alvo; limparAlvo();
       const vel = track.velocity();
 
+      // A porta assentada na vaga nova volta para a de origem (troca recusada).
+      const encerra = () => { porta.style.transform = ''; porta.classList.remove('arrastando'); };
       const voltar = () => Fluid.spring2d({
         fromX: dx, fromY: dy, toX: 0, toY: 0, velocityX: vel.x, velocityY: vel.y,
         response: 0.4, bounce: 0.28,
         onUpdate: (x, y) => { porta.style.transform = 'translate(' + x + 'px,' + y + 'px)'; },
-        onComplete: () => { porta.style.transform = ''; porta.classList.remove('arrastando'); }
+        onComplete: encerra
       });
 
       if (!destino) { voltar(); return; }
@@ -126,7 +138,7 @@
         toX: dx + (rD.left - rP.left), toY: dy + (rD.top - rP.top),
         velocityX: vel.x, velocityY: vel.y, response: 0.35, bounce: 0.12,
         onUpdate: (x, y) => { porta.style.transform = 'translate(' + x + 'px,' + y + 'px)'; },
-        onComplete: () => enviarTroca(porta.dataset.reserva, uh, num)
+        onComplete: () => enviarTroca(porta.dataset.reserva, uh, num, encerra)
       });
     });
 

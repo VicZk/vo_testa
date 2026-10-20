@@ -1356,3 +1356,74 @@ class DayUseUmDiaTests(ReservasTestsBase):
         with self.assertRaises(ValidationError):
             services.transferir_datas(
                 r, HOJE + timedelta(days=10), HOJE + timedelta(days=12), self.usuario)
+
+
+class ModalNovaReservaTests(ReservasTestsBase):
+    """O modal é a tela mais usada do balcão: rótulo ligado ao campo, foco no
+    hóspede e o que raramente se mexe recolhido em "Mais opções"."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="recepcao", password="senha-forte-123")
+
+    def html(self):
+        """O modal só é servido para o HTMX (sem o header vem a página inteira)."""
+        r = self.client.get(reverse("reservas:nova"), headers={"hx-request": "true"})
+        return r.content.decode()
+
+    def test_rotulo_do_hospede_aponta_para_o_campo_visivel(self):
+        """O label_tag do Django aponta `for="id_hospede"`; o combobox não tinha
+        esse id em nenhum elemento — clicar no rótulo não focava nada."""
+        html = self.html()
+        self.assertIn('for="id_hospede"', html)
+        self.assertIn('id="id_hospede"', html)
+        self.assertIn('for="id_titular"', html)
+        self.assertIn('id="id_titular"', html)
+
+    def test_combobox_anuncia_como_combobox(self):
+        html = self.html()
+        self.assertIn('role="combobox"', html)
+        self.assertIn('role="listbox"', html)
+        self.assertIn('role="option"', html)
+        self.assertIn("aria-activedescendant", html)
+
+    def test_foco_nasce_no_hospede(self):
+        self.assertIn("autofocus", self.html())
+
+    def test_mais_opcoes_recolhe_sem_perder_campo(self):
+        html = self.html()
+        self.assertIn("Mais opções", html)
+        # Nenhum campo saiu do formulário — só mudou de lugar.
+        for campo in ("casais", "solteiros", "usa_sofa_cama", "usa_berco",
+                      "cobra_iss", "cobra_taxa_turismo", "nao_reembolsavel",
+                      "observacoes"):
+            self.assertIn(f'name="{campo}"', html, campo)
+
+    def test_ctrl_enter_envia(self):
+        self.assertIn("keydown.ctrl.enter", self.html())
+
+
+class MapaSemRecarregarNoErroTests(ReservasTestsBase):
+    """Arrastar e errar não pode recarregar a página: o toast explicando o
+    motivo era apagado junto, e parecia que a troca tinha dado certo."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="recepcao", password="senha-forte-123")
+
+    def test_mapa_recarrega_preservando_a_rolagem_so_no_sucesso(self):
+        html = self.client.get(reverse("reservas:mapa")).content.decode()
+        self.assertIn("recarregarNoLugar(['.mapa-rolagem'])", html)
+        self.assertNotIn("setTimeout(() => location.reload()", html)
+        self.assertIn("a reserva não foi movida", html)
+
+    def test_mapa_de_quartos_tambem(self):
+        html = self.client.get(reverse("reservas:mapa_quartos")).content.decode()
+        self.assertIn("recarregarNoLugar()", html)
+        self.assertNotIn("setTimeout(() => location.reload()", html)
+        self.assertIn("o quarto não foi trocado", html)
+
+    def test_mapa_sem_quarto_explica(self):
+        UH.objects.all().delete()
+        html = self.client.get(reverse("reservas:mapa")).content.decode()
+        self.assertIn("Nenhum quarto cadastrado", html)
