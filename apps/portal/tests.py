@@ -282,3 +282,22 @@ class PedidoValidacaoTests(PedidoTests):
         token = services.get_acesso(self.reserva.pk).token
         r = self.client.post(reverse("portal:pedir", args=[token]), {"qtd_abc": "1"})
         self.assertEqual(r.status_code, 302)
+
+
+class NovoQRTests(PortalBase):
+    def test_novo_qr_invalida_o_antigo(self):
+        antigo = services.get_acesso(self.reserva.pk).token
+        self.client.force_login(self.op)
+        r = self.client.post(reverse("portal:qr_novo", args=[self.reserva.pk]))
+        self.assertRedirects(r, reverse("portal:qr", args=[self.reserva.pk]))
+        novo = services.get_acesso(self.reserva.pk).token
+        self.assertNotEqual(antigo, novo)
+        self.assertIsNone(services.resolver(antigo))
+        self.assertEqual(self.client.get(reverse("portal:home", args=[antigo])).status_code, 404)
+        self.assertEqual(self.client.get(reverse("portal:home", args=[novo])).status_code, 200)
+
+    def test_get_nao_troca(self):
+        antigo = services.get_acesso(self.reserva.pk).token
+        self.client.force_login(self.op)
+        self.client.get(reverse("portal:qr_novo", args=[self.reserva.pk]))
+        self.assertEqual(services.get_acesso(self.reserva.pk).token, antigo)

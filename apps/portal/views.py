@@ -156,8 +156,20 @@ def qr(request, reserva_id):
     acesso = services.get_acesso(reserva_id)
     url = request.build_absolute_uri(reverse("portal:home", args=[acesso.token]))
     return render(request, "portal/qr.html", {
-        "url": url, "svg": _qr_svg(url), "reserva_id": reserva_id,
+        "url": url, "svg": _qr_svg(url), "reserva_id": reserva_id, "voltar": "portal:qr",
     })
+
+
+@requer_modulo(Modulo.APPSITE)
+def qr_novo(request, reserva_id):
+    """Gera um token novo para o portal da reserva; o QR antigo deixa de valer."""
+    if request.method == "POST":
+        services.rotacionar_acesso(reserva_id, request.user)
+        messages.success(request, "QR novo gerado. O anterior não abre mais o portal.")
+    destino = request.POST.get("voltar") or "portal:qr"
+    if destino not in ("portal:qr", "portal:qr_fnrh"):
+        destino = "portal:qr"
+    return redirect(destino, reserva_id=reserva_id)
 
 
 @requer_modulo(Modulo.APPSITE)
@@ -171,7 +183,7 @@ def qr_fnrh(request, reserva_id):
     url = request.build_absolute_uri(reverse("portal:checkin", args=[acesso.token]))
     return render(request, "portal/qr.html", {
         "url": url, "svg": _qr_svg(url), "reserva_id": reserva_id,
-        "finalidade": "FNRH (check-in online)",
+        "finalidade": "FNRH (check-in online)", "voltar": "portal:qr_fnrh",
     })
 
 

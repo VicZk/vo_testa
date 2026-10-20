@@ -8,6 +8,7 @@ urlpatterns = [
     # Recepção (staff)
     path("recepcao/<int:reserva_id>/qr/", views.qr, name="qr"),
     path("recepcao/<int:reserva_id>/fnrh-qr/", views.qr_fnrh, name="qr_fnrh"),
+    path("recepcao/<int:reserva_id>/qr/novo/", views.qr_novo, name="qr_novo"),
     path("recepcao/solicitacoes/", views.solicitacoes, name="solicitacoes"),
     # Hóspede (público, por token)
     path("<uuid:token>/", views.home, name="home"),

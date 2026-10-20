@@ -24,6 +24,20 @@ def get_acesso(reserva_id) -> AcessoPortal:
     return AcessoPortal.objects.get_or_create(reserva_id=reserva_id)[0]
 
 
+def rotacionar_acesso(reserva_id, usuario=None) -> AcessoPortal:
+    """Troca o token do portal da reserva: o QR/link anterior para de funcionar na
+    hora (ex.: foi encaminhado num grupo). Auditado."""
+    import uuid
+
+    from apps.nucleo.models import registrar_auditoria
+
+    acesso = get_acesso(reserva_id)
+    acesso.token = uuid.uuid4()
+    acesso.save(update_fields=["token"])
+    registrar_auditoria(usuario, "portal_novo_qr", acesso, {"reserva_id": reserva_id})
+    return acesso
+
+
 def resolver(token):
     """Token → dados da estadia (ou None se inválido / estadia encerrada)."""
     from apps.reservas.services import dados_estadia
