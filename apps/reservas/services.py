@@ -423,7 +423,7 @@ def colchoes_extra_por_noite(checkin: date, checkout: date, excluir_id=None) -> 
     usados = {n: 0 for n in noites}
     qs = (reservas_ativas_qs()
           .filter(checkin__lt=checkout, checkout__gt=checkin)
-          .select_related("uh")
+          .select_related("uh", "uh__tipo", "uh__config")
           .prefetch_related("uh__posicoes_cama"))
     if excluir_id:
         qs = qs.exclude(pk=excluir_id)
@@ -591,7 +591,7 @@ def montagem_do_dia(dia: date) -> list:
 
     qs = (reservas_ativas_qs()
           .filter(checkin=dia)
-          .select_related("uh", "hospede")
+          .select_related("uh", "uh__tipo", "uh__config", "hospede")
           .prefetch_related("uh__posicoes_cama")
           .order_by("uh__numero"))
     linhas = []
@@ -985,8 +985,10 @@ def pendencias_auditoria():
             "url": reverse("reservas:detalhe", args=[r.pk]),
         })
 
-    for c in contas_abertas():
-        s = c.saldo()
+    abertas = list(contas_abertas())
+    saldos = ContaHospedagem.saldos(abertas)
+    for c in abertas:
+        s = saldos[c.pk]
         if s > 0:
             achados.append({
                 "area": "Reservas", "tipo": "conta_com_saldo", "gravidade": "media",
@@ -1622,10 +1624,21 @@ def mapa_quartos_hoje(*, ler_limpeza: bool = True) -> dict:
 
         manutencao_hoje = motivos_bloqueio()
 
+    # Saldo de todos os quartos ocupados em 4 consultas (antes: 4 por quarto).
+    contas_ocupadas = []
+    for r in hospedadas.values():
+        try:
+            contas_ocupadas.append(r.conta)
+        except ContaHospedagem.DoesNotExist:
+            pass
+    saldos = ContaHospedagem.saldos(contas_ocupadas)
+
     quartos, contagem = [], {k: 0 for k in SITUACOES_QUARTO}
     # Mapa operacional = só hospedagem (24 quartos). Day use tem fluxo próprio.
+    # config + camas pré-carregadas: a lotação de cada quarto não consulta o banco.
     for uh in (
-        UH.objects.select_related("tipo")
+        UH.objects.select_related("tipo", "config")
+        .prefetch_related("posicoes_cama")
         .exclude(tipo__modalidade=TipoUH.Modalidade.DAY_USE)
         .order_by("numero")
     ):
@@ -1664,10 +1677,7 @@ def mapa_quartos_hoje(*, ler_limpeza: bool = True) -> dict:
         if reserva:
             periodo = f"{reserva.checkin:%d/%m}→{reserva.checkout:%d/%m}"
             if situacao == "ocupada" and hasattr(reserva, "conta"):
-                try:
-                    saldo = reserva.conta.saldo()
-                except ContaHospedagem.DoesNotExist:
-                    saldo = None
+                saldo = saldos.get(reserva.conta.pk)
 
         contagem[situacao] += 1
         quartos.append({

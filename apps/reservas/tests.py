@@ -1394,3 +1394,69 @@ class PrecosEmLoteTests(TestCase):
             services.diaria_media_unidade(self.uh, self.dia, co)
             with self.assertNumQueries(0):
                 services.diaria_media_unidade(self.uh, self.dia, co)
+
+
+class SaldosEmLoteTests(ReservasTestsBase):
+    """`ContaHospedagem.saldos()` dá o mesmo que `saldo()` de cada conta, em 4 consultas."""
+
+    def test_saldos_em_lote_iguais_ao_saldo_de_cada_conta(self):
+        from apps.nucleo.models import NaturezaFiscal
+
+        from .models import ContaHospedagem
+
+        uh2 = UH.objects.create(numero="T2", tipo=self.tipo)
+        uh3 = UH.objects.create(numero="T3", tipo=self.tipo)
+        self.abrir_caixa()
+        # Conta 1: diárias + consumo + desconto + pagamento parcial.
+        r1 = self.reserva(dias=3)
+        c1 = r1.fazer_checkin(self.usuario)
+        services.lancar_na_conta(c1, LancamentoConta.Tipo.CONSUMO, NaturezaFiscal.CONSUMO,
+                                 "Cerveja", Decimal("18.50"), self.usuario)
+        LancamentoConta.objects.create(conta=c1, tipo=LancamentoConta.Tipo.DESCONTO,
+                                       natureza=NaturezaFiscal.SERVICO, descricao="Cortesia",
+                                       valor=Decimal("25.00"), criado_por=self.usuario)
+        services.receber_pagamento(c1, self.usuario, self.dinheiro, Decimal("100.00"))
+        # Conta 2: com adiantamento antes do check-in.
+        r2 = self.reserva(dias=2, uh=uh2)
+        services.receber_adiantamento(r2, self.usuario, self.dinheiro, Decimal("150.00"))
+        c2 = r2.fazer_checkin(self.usuario)
+        # Conta 3: só diárias.
+        c3 = self.reserva(dias=1, uh=uh3).fazer_checkin(self.usuario)
+
+        contas = [c1, c2, c3]
+        with self.assertNumQueries(4):
+            em_lote = ContaHospedagem.saldos(contas)
+        self.assertEqual(em_lote, {c.pk: c.saldo() for c in contas})
+        self.assertEqual(em_lote[c2.pk], Decimal("450.00"))  # 600 − 150
+
+
+class MapaSemConsultaPorQuartoTests(ReservasTestsBase):
+    """O mapa de quartos (dashboard) não consulta o banco por quarto ocupado."""
+
+    def _ocupar(self, n):
+        for _ in range(n):
+            uh = UH.objects.create(numero=f"M{UH.objects.count():02d}", tipo=self.tipo)
+            Reserva.objects.create(
+                uh=uh, hospede=self.hospede, checkin=HOJE, checkout=HOJE + timedelta(days=2),
+                status=Reserva.Status.CONFIRMADA, valor_diaria=Decimal("300.00"),
+                criado_por=self.usuario,
+            ).fazer_checkin(self.usuario)
+
+    def _consultas(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        services.mapa_quartos_hoje()  # aquece o que só roda uma vez
+        with CaptureQueriesContext(connection) as ctx:
+            dados = services.mapa_quartos_hoje()
+        return len(ctx.captured_queries), dados
+
+    def test_consultas_nao_crescem_com_os_quartos_ocupados(self):
+        self._ocupar(2)
+        com_2, _ = self._consultas()
+        self._ocupar(4)
+        com_6, dados = self._consultas()
+        self.assertEqual(com_2, com_6)
+        ocupados = [q for q in dados["quartos"] if q["situacao"] == "ocupada"]
+        self.assertEqual(len(ocupados), 6)
+        self.assertTrue(all(q["saldo"] == Decimal("600.00") for q in ocupados))

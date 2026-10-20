@@ -304,6 +304,12 @@ class Reserva(models.Model):
         verbose_name = "reserva"
         verbose_name_plural = "reservas"
         ordering = ["-checkin"]
+        # Chegadas, saídas e hospedados do dia (mapa, dashboard, Auditoria) filtram por
+        # situação + data; sem índice, cada tela varre a tabela inteira.
+        indexes = [
+            models.Index(fields=["status", "checkin"], name="reserva_status_checkin_idx"),
+            models.Index(fields=["status", "checkout"], name="reserva_status_checkout_idx"),
+        ]
         constraints = [
             models.CheckConstraint(
                 condition=Q(checkout__gt=F("checkin")),
@@ -945,6 +951,36 @@ class ContaHospedagem(models.Model):
         """O que falta receber: lançamentos − pagamentos − adiantamentos."""
         return self.total_lancamentos() - self.total_pago() - self.total_adiantamentos()
 
+    @classmethod
+    def saldos(cls, contas) -> dict:
+        """{conta.pk: saldo} de várias contas com 4 consultas no total, e não 4 por conta.
+        Mesma regra de `saldo()` (há teste comparando as duas). Para telas que mostram o
+        saldo de cada quarto (mapa, pendências da Auditoria)."""
+        contas = list(contas)
+        if not contas:
+            return {}
+        ids = [c.pk for c in contas]
+        reservas_ids = [c.reserva_id for c in contas if c.reserva_id]
+
+        def somas(qs, campo):
+            return {
+                linha[campo]: linha["t"] or Decimal("0.00")
+                for linha in qs.order_by().values(campo).annotate(t=Sum("valor"))
+            }
+
+        debitos = somas(LancamentoConta.objects.filter(
+            conta_id__in=ids, tipo__in=LancamentoConta.TIPOS_DEBITO), "conta_id")
+        descontos = somas(LancamentoConta.objects.filter(
+            conta_id__in=ids, tipo=LancamentoConta.Tipo.DESCONTO), "conta_id")
+        pagos = somas(PagamentoConta.objects.filter(conta_id__in=ids), "conta_id")
+        adiantados = somas(Adiantamento.objects.filter(reserva_id__in=reservas_ids), "reserva_id")
+        zero = Decimal("0.00")
+        return {
+            c.pk: debitos.get(c.pk, zero) - descontos.get(c.pk, zero) - pagos.get(c.pk, zero)
+            - (adiantados.get(c.reserva_id, zero) if c.reserva_id else zero)
+            for c in contas
+        }
+
 
 class LancamentoConta(models.Model):
     """
@@ -983,6 +1019,8 @@ class LancamentoConta(models.Model):
         verbose_name = "lançamento da conta"
         verbose_name_plural = "lançamentos da conta"
         ordering = ["criado_em"]
+        # Relatórios de produção e faturamento filtram por período de lançamento.
+        indexes = [models.Index(fields=["criado_em"], name="lancamento_criado_em_idx")]
         constraints = [
             models.CheckConstraint(
                 condition=Q(valor__gt=0), name="lancamento_conta_valor_positivo"
