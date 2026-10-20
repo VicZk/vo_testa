@@ -1115,6 +1115,15 @@ class BOHTests(ReservasTestsBase):
         r.fazer_checkin(self.usuario)  # base tem a trava desligada
         return r
 
+    def test_ficha_vazia_fica_fora_do_boletim(self):
+        r = self._hospeda_com_fnrh()
+        from .models import FichaFNRH
+        FichaFNRH.objects.create(reserva=r, nome="Acompanhante sem dados")
+        boh = services.boh_mensal(HOJE.year, HOJE.month)
+        self.assertEqual(boh["total_hospedes"], 2)
+        self.assertEqual(boh["fichas_incompletas"], 1)
+        self.assertNotIn("Não informado", dict(boh["motivo"]))
+
     def test_agrega_procedencia_motivo_transporte(self):
         self._hospeda_com_fnrh()
         boh = services.boh_mensal(HOJE.year, HOJE.month)
@@ -1967,3 +1976,22 @@ class FaturarParaAgenciaTests(ReservasTestsBase):
         self.assertEqual((titulo.pessoa, titulo.valor), (self.agencia, saldo))
         self.assertIn("grupo", titulo.descricao)
         self.assertEqual(grupo.folio.saldo(), Decimal("0.00"))
+
+
+class AjustesPequenosReservasTests(ReservasTestsBase):
+    def test_quarto_de_grupo_solta_pre_reserva_vencida(self):
+        inicio = HOJE + timedelta(days=12)
+        vencida = self.reserva(dias=2, offset=12, status=Reserva.Status.PRE_RESERVA)
+        Reserva.objects.filter(pk=vencida.pk).update(expira_em=timezone.now() - timedelta(minutes=5))
+        grupo = services.criar_grupo(rotulo="Família", titular=self.hospede, checkin=inicio,
+                                     checkout=inicio + timedelta(days=2), usuario=self.usuario)
+        filha = services.adicionar_quarto(grupo, uh=self.uh, hospede=self.hospede,
+                                          usuario=self.usuario)
+        vencida.refresh_from_db()
+        self.assertEqual(vencida.status, Reserva.Status.CANCELADA)
+        self.assertEqual(filha.uh, self.uh)
+
+    def test_resumo_fiscal_de_folio_de_grupo_nao_quebra(self):
+        grupo = services.criar_grupo(rotulo="Evento", titular=self.hospede, checkin=HOJE,
+                                     checkout=HOJE + timedelta(days=1), usuario=self.usuario)
+        self.assertIsNone(services.resumo_fiscal_conta(grupo.folio.pk))

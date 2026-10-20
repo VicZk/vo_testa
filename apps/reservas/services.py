@@ -1056,6 +1056,8 @@ def resumo_fiscal_conta(conta_id):
     )
     if not conta:
         return None
+    if not conta.reserva_id:
+        return None  # folio de grupo: a nota sai pelas contas dos quartos/titular
     por_nat = conta.total_por_natureza()  # {"Serviço": x, "Consumo": y}
     # ISS e taxa de turismo entram na conta do hóspede, mas não são serviço prestado
     # pela pousada: saem da base da NFS-e (o ISS não incide sobre ele mesmo).
@@ -1223,6 +1225,9 @@ def adicionar_quarto(grupo, *, uh, hospede, usuario, adultos=2, criancas=0,
 
     if grupo.encerrado_em:
         raise ValidationError("Este grupo já foi encerrado.")
+    # A disponibilidade já ignora pré-reserva vencida, mas a constraint do banco ainda
+    # a vê ativa: sem soltar antes, o quarto "livre" na tela dava erro ao salvar.
+    expirar_vencidas()
     if not uh_disponivel(uh, grupo.checkin, grupo.checkout):
         raise ValidationError(
             f"O quarto {uh.numero} não está livre no período do grupo."
@@ -2250,7 +2255,13 @@ def boh_mensal(ano: int, mes: int) -> dict:
     nacional, internacional = Counter(), Counter()
     motivo, transporte, sexo = Counter(), Counter(), Counter()
     total_hospedes = 0
+    fichas_incompletas = 0
     for f in fichas:
+        # Ficha criada mas não preenchida (acompanhante sem dados, reserva antiga) não
+        # entra no boletim: só inflaria o "Não informado". Fica contada à parte.
+        if not f.completa:
+            fichas_incompletas += 1
+            continue
         total_hospedes += 1
         pais = (f.pais or "").strip()
         eh_estrangeiro = bool(pais) and pais.lower() not in ("brasil", "brazil")
@@ -2293,6 +2304,7 @@ def boh_mensal(ano: int, mes: int) -> dict:
         "ano": ano, "mes": mes,
         "periodo": (primeiro, ultimo),
         "total_hospedes": total_hospedes,
+        "fichas_incompletas": fichas_incompletas,
         "total_chegadas": len(chegadas),
         "uh_noites_disponiveis": uh_noites_disponiveis,
         "uh_noites_ocupadas": uh_noites_ocupadas,

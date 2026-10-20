@@ -2,6 +2,7 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -256,3 +257,28 @@ class AparenciaPortalTests(PortalBase):
 
     def test_alvo_de_toque_minimo(self):
         self.assertIn("min-height: 44px", self.html())
+
+
+class PedidoValidacaoTests(PedidoTests):
+    """Pedido do quarto: só itens do cardápio, quantidades de quarto, sem erro 500."""
+
+    def test_item_fora_do_cardapio_e_recusado_sem_abrir_comanda(self):
+        from apps.restaurante.models import Comanda
+        p = self._estoque_restaurante()
+        Produto.objects.filter(pk=p.pk).update(ativo=False)
+        with self.assertRaisesMessage(ValidationError, "não está mais no cardápio"):
+            services.pedir_restaurante(self.estadia, [(p.pk, 1)])
+        self.assertFalse(Comanda.objects.exists())
+
+    def test_quantidade_invalida_ou_grande_demais(self):
+        p = self._estoque_restaurante()
+        with self.assertRaisesMessage(ValidationError, "Pedido inválido"):
+            services.pedir_restaurante(self.estadia, [(p.pk, "dois")])
+        with self.assertRaisesMessage(ValidationError, "Até 20 unidades"):
+            services.pedir_restaurante(self.estadia, [(p.pk, 21)])
+
+    def test_post_com_lixo_volta_com_mensagem_e_nao_500(self):
+        self._estoque_restaurante()
+        token = services.get_acesso(self.reserva.pk).token
+        r = self.client.post(reverse("portal:pedir", args=[token]), {"qtd_abc": "1"})
+        self.assertEqual(r.status_code, 302)

@@ -300,6 +300,9 @@ def nova(request):
             return render(request, template, contexto)
         if "orcamento" in request.POST:
             reserva.status = Reserva.Status.ORCAMENTO
+        else:
+            # Pré-reserva vencida ainda trava a constraint até ser expirada.
+            services.expirar_vencidas()
         try:
             with transaction.atomic():
                 # Trava global de colchões extra por noite (orçamento não consome pool).

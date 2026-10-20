@@ -36,6 +36,9 @@
     <div class="cartao"><span class="indicador-rotulo letreiro">Chegadas</span><span class="indicador-valor num">{{ boh.total_chegadas }}</span></div>
     <div class="cartao"><span class="indicador-rotulo letreiro">Permanência média</span><span class="indicador-valor num">{{ boh.permanencia_media }}<small> noites</small></span></div>
   </div>
+  {% if boh.fichas_incompletas %}
+    <p class="ajuda">{{ boh.fichas_incompletas }} ficha{{ boh.fichas_incompletas|pluralize }} sem preenchimento ficou fora do boletim. Complete na reserva para entrar no mês.</p>
+  {% endif %}
 </div>
 
 <div class="boh-quadros">

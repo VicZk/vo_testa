@@ -47,6 +47,9 @@ def _local_restaurante():
     )
 
 
+MAX_ITENS_POR_PEDIDO = 20
+
+
 def cardapio():
     """Produtos vendáveis com saldo, para o hóspede pedir no restaurante."""
     local = _local_restaurante()
@@ -70,20 +73,31 @@ def pedir_restaurante(estadia, pedidos):
     local = _local_restaurante()
     if not local:
         raise ValidationError("Restaurante indisponível.")
+    # Só o que está no cardápio (ativo, com preço) e em quantidade de pedido de quarto;
+    # entrada inválida vira mensagem, não erro 500.
+    itens = []
+    for produto_id, qtd in pedidos:
+        try:
+            produto_id, qtd = int(produto_id), int(str(qtd or 0).strip() or 0)
+        except (TypeError, ValueError):
+            raise ValidationError("Pedido inválido: confira as quantidades.")
+        if qtd <= 0:
+            continue
+        if qtd > MAX_ITENS_POR_PEDIDO:
+            raise ValidationError(
+                f"Até {MAX_ITENS_POR_PEDIDO} unidades por item. Para mais, fale com a recepção.")
+        produto = Produto.objects.filter(pk=produto_id, ativo=True, preco_venda__gt=0).first()
+        if produto is None:
+            raise ValidationError("Um dos itens não está mais no cardápio.")
+        itens.append((produto, qtd))
+    if not itens:
+        raise ValidationError("Escolha ao menos um item.")
     op = _usuario_sistema()
     comanda = restaurante.abrir_comanda(op, local, rotulo=f"{estadia['uh']} · app")
     total_itens = 0
-    for produto_id, qtd in pedidos:
-        qtd = int(qtd or 0)
-        if qtd <= 0:
-            continue
-        produto = Produto.objects.filter(pk=produto_id).first()
-        if produto:
-            restaurante.adicionar_item(comanda, produto, qtd, op)
-            total_itens += qtd
-    if total_itens == 0:
-        comanda.delete()
-        raise ValidationError("Escolha ao menos um item.")
+    for produto, qtd in itens:
+        restaurante.adicionar_item(comanda, produto, qtd, op)
+        total_itens += qtd
     SolicitacaoPortal.objects.create(
         reserva_id=estadia["reserva_id"], uh_numero=estadia["uh"],
         tipo=SolicitacaoPortal.Tipo.RESTAURANTE,
