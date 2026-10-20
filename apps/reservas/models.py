@@ -919,7 +919,7 @@ class ContaHospedagem(models.Model):
 
         if t["iss"] > 0:
             LancamentoConta.objects.create(
-                conta=self, tipo=LancamentoConta.Tipo.SERVICO,
+                conta=self, tipo=LancamentoConta.Tipo.TAXA,
                 natureza=NaturezaFiscal.SERVICO,
                 descricao=f"ISS {t['iss_aliquota'].normalize()}% — {reserva.uh.numero}",
                 valor=t["iss"], criado_por=usuario,
@@ -927,7 +927,7 @@ class ContaHospedagem(models.Model):
         if t["taxa_turismo"] > 0:
             rotulo = "diária" if noites == 1 else "diárias"
             LancamentoConta.objects.create(
-                conta=self, tipo=LancamentoConta.Tipo.SERVICO,
+                conta=self, tipo=LancamentoConta.Tipo.TAXA,
                 natureza=NaturezaFiscal.SERVICO,
                 descricao=f"Taxa de turismo · {noites} {rotulo} — {reserva.uh.numero}",
                 valor=t["taxa_turismo"], criado_por=usuario,
@@ -1014,9 +1014,12 @@ class LancamentoConta(models.Model):
         DIARIA = "diaria", "Diária"
         CONSUMO = "consumo", "Consumo"
         SERVICO = "servico", "Serviço"
+        # ISS e taxa de turismo: o hóspede paga, mas não é receita de serviço da
+        # pousada — fica fora da base da NFS-e (senão o ISS incidiria sobre ele mesmo).
+        TAXA = "taxa", "Imposto/taxa"
         DESCONTO = "desconto", "Desconto"
 
-    TIPOS_DEBITO = [Tipo.DIARIA, Tipo.CONSUMO, Tipo.SERVICO]
+    TIPOS_DEBITO = [Tipo.DIARIA, Tipo.CONSUMO, Tipo.SERVICO, Tipo.TAXA]
 
     conta = models.ForeignKey(
         ContaHospedagem, on_delete=models.PROTECT,

@@ -1755,3 +1755,74 @@ class MapaSemRecarregarNoErroTests(ReservasTestsBase):
         UH.objects.all().delete()
         html = self.client.get(reverse("reservas:mapa")).content.decode()
         self.assertIn("Nenhum quarto cadastrado", html)
+
+
+@override_settings(PRECO_TAXAS_ATIVAS=True)
+class TaxasForaDaBaseDaNfseTests(ReservasTestsBase):
+    """ISS e taxa de turismo entram na conta, mas não na base da NFS-e."""
+
+    def setUp(self):
+        super().setUp()
+        from apps.nucleo.models import ConfiguracaoReservas
+        ConfiguracaoReservas.objects.update_or_create(pk=1, defaults={
+            "iss_aliquota": Decimal("4.00"), "taxa_turismo_diaria": Decimal("5.00"),
+        })
+
+    def test_checkin_lanca_taxas_com_tipo_proprio_e_a_nfse_usa_so_a_hospedagem(self):
+        r = self.reserva(dias=2)  # 600 de diárias
+        conta = r.fazer_checkin(self.usuario)
+        taxas = conta.lancamentos.filter(tipo=LancamentoConta.Tipo.TAXA)
+        self.assertEqual(sorted(t.valor for t in taxas), [Decimal("10.00"), Decimal("24.00")])
+        self.assertEqual(conta.saldo(), Decimal("634.00"))  # o hóspede paga tudo
+        resumo = services.resumo_fiscal_conta(conta.pk)
+        self.assertEqual(resumo["servico"], Decimal("600.00"))  # base da NFS-e
+        self.assertEqual(resumo["taxas"], Decimal("34.00"))
+
+    def test_taxa_nao_pode_ser_lancada_a_mao(self):
+        from .forms import LancamentoContaForm
+
+        tipos = [c[0] for c in LancamentoContaForm().fields["tipo"].choices]
+        self.assertNotIn(LancamentoConta.Tipo.TAXA, tipos)
+        self.assertNotIn(LancamentoConta.Tipo.DIARIA, tipos)
+
+    def test_migracao_marca_as_taxas_antigas(self):
+        import importlib
+
+        from django.apps import apps as registro
+
+        conta = self.reserva(dias=1).fazer_checkin(self.usuario)
+        LancamentoConta.objects.filter(conta=conta, tipo=LancamentoConta.Tipo.TAXA).update(
+            tipo=LancamentoConta.Tipo.SERVICO)  # como as contas antigas estavam
+        migracao = importlib.import_module("apps.reservas.migrations.0024_lancamento_tipo_taxa")
+        migracao.marcar_taxas(registro, None)
+        self.assertEqual(conta.lancamentos.filter(tipo=LancamentoConta.Tipo.TAXA).count(), 2)
+        self.assertEqual(conta.lancamentos.filter(tipo=LancamentoConta.Tipo.DIARIA).count(), 1)
+
+
+class DispensarTaxasExigeGerenciaTests(ReservasTestsBase):
+    def _post(self, usuario, **extra):
+        self.client.force_login(usuario)
+        dados = {
+            "hospede": self.hospede.pk, "uh": self.uh.pk,
+            "checkin": (HOJE + timedelta(days=20)).isoformat(),
+            "checkout": (HOJE + timedelta(days=22)).isoformat(),
+            "adultos": 2, "criancas": 0, "canal": "balcao", "faturamento": "particular",
+            "observacoes": "", "cobra_iss": "on", "cobra_taxa_turismo": "on",
+        }
+        dados.update(extra)
+        dados = {k: v for k, v in dados.items() if v is not None}
+        return self.client.post(reverse("reservas:nova"), dados)
+
+    def test_operador_nao_dispensa_iss_nem_taxa(self):
+        operadora = Usuario.objects.create_user(username="op-taxa", password="senha-forte-123")
+        operadora.modulos.add(ModuloContratado.objects.get(codigo=Modulo.RESERVAS))
+        resposta = self._post(operadora, cobra_taxa_turismo=None)
+        self.assertContains(resposta, "Dispensar a taxa de turismo exige gerência")
+        self.assertEqual(Reserva.objects.count(), 0)
+        self._post(operadora)  # com as duas marcadas, passa
+        self.assertEqual(Reserva.objects.count(), 1)
+
+    def test_gerencia_dispensa(self):
+        self._post(self.usuario, cobra_iss=None)
+        reserva = Reserva.objects.get()
+        self.assertFalse(reserva.cobra_iss)

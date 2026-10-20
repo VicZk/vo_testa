@@ -1053,13 +1053,17 @@ def resumo_fiscal_conta(conta_id):
     if not conta:
         return None
     por_nat = conta.total_por_natureza()  # {"Serviço": x, "Consumo": y}
+    # ISS e taxa de turismo entram na conta do hóspede, mas não são serviço prestado
+    # pela pousada: saem da base da NFS-e (o ISS não incide sobre ele mesmo).
+    taxas = conta._total(tipo=LancamentoConta.Tipo.TAXA)
     return {
         "conta_id": conta.pk,
         "reserva_id": conta.reserva_id,
         "uh": conta.reserva.uh.numero,
         "hospede": conta.reserva.hospede,  # Pessoa (tomador)
-        "servico": por_nat.get(NaturezaFiscal.SERVICO.label, Decimal("0.00")),
+        "servico": por_nat.get(NaturezaFiscal.SERVICO.label, Decimal("0.00")) - taxas,
         "consumo": por_nat.get(NaturezaFiscal.CONSUMO.label, Decimal("0.00")),
+        "taxas": taxas,
     }
 
 

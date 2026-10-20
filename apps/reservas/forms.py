@@ -115,10 +115,10 @@ class LancamentoContaForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Diária é lançada pelo sistema (check-in/rotina), não manualmente.
+        # Diária, ISS e taxa de turismo são lançados pelo sistema (check-in), não à mão.
         self.fields["tipo"].choices = [
             c for c in LancamentoConta.Tipo.choices
-            if c[0] != LancamentoConta.Tipo.DIARIA
+            if c[0] not in (LancamentoConta.Tipo.DIARIA, LancamentoConta.Tipo.TAXA)
         ]
         self.fields["valor"].widget = forms.TextInput(attrs={
             "class": "mascara-reais", "inputmode": "numeric", "placeholder": "0,00",

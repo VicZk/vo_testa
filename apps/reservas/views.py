@@ -275,6 +275,13 @@ def nova(request):
                 f"Alterar a diária (tarifa vigente: R$ {sugerida}) exige gerência.",
             )
             return render(request, template, contexto)
+        # Dispensar ISS ou taxa de turismo também baixa o preço: mesma regra da diária.
+        dispensados = [nome for campo, nome in (("cobra_iss", "o ISS"),
+                                                 ("cobra_taxa_turismo", "a taxa de turismo"))
+                       if not getattr(reserva, campo)]
+        if dispensados and not eh_gerente(request.user):
+            form.add_error(None, f"Dispensar {' e '.join(dispensados)} exige gerência.")
+            return render(request, template, contexto)
         # Orçamento é só cotação; reserva de verdade respeita a disponibilidade
         # (reserva ativa OU bloqueio de manutenção por datas — a constraint só pega
         # reserva×reserva, então validamos aqui também).
