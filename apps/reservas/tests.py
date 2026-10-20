@@ -1204,3 +1204,46 @@ class EnvioFNRHTests(ReservasTestsBase):
         self.assertEqual(p["fnrh"]["motivo_viagem_id"], "LAZER_FERIAS")
         self.assertEqual(p["fnrh"]["meio_transporte_id"], "AUTOMOVEL")
         self.assertEqual(fnrh_gateway.payload_reserva(r)["origem_reserva_id"], "MEIOHOSPEDAGEM")
+
+
+class SinaisIsoladosTests(ReservasTestsBase):
+    """Um módulo ouvinte que falha não desfaz a operação de quem emitiu o sinal
+    (apps/nucleo/sinais.py): o check-out conclui e a falha vai para o log."""
+
+    def _hospedada_com_conta_paga(self):
+        r = self.reserva(status=Reserva.Status.CONFIRMADA)
+        conta = r.fazer_checkin(self.usuario)
+        self.abrir_caixa()
+        services.receber_pagamento(conta, self.usuario, self.dinheiro, conta.saldo())
+        r.refresh_from_db()
+        return r
+
+    def test_erro_de_banco_na_governanca_nao_derruba_checkout(self):
+        from unittest import mock
+
+        from django.db import connection
+
+        def quebra_o_banco(*args, **kwargs):
+            with connection.cursor() as cur:
+                cur.execute("SELECT 1/0")  # DataError: aborta a transação
+
+        r = self._hospedada_com_conta_paga()
+        with mock.patch("apps.governanca.services.abrir_faxina", side_effect=quebra_o_banco), \
+                self.assertLogs("apps.nucleo.sinais", level="ERROR"):
+            r.fazer_checkout(self.usuario)
+        r.refresh_from_db()
+        self.assertEqual(r.status, Reserva.Status.CHECKOUT)
+        self.assertFalse(r.conta.aberta)
+        # A transação segue utilizável depois do erro contido no savepoint.
+        self.assertTrue(Reserva.objects.filter(pk=r.pk).exists())
+
+    def test_excecao_no_comercial_nao_derruba_checkout(self):
+        from unittest import mock
+
+        r = self._hospedada_com_conta_paga()
+        with mock.patch("apps.comercial.services.anotar_reserva_encerrada",
+                        side_effect=RuntimeError("bug no funil")), \
+                self.assertLogs("apps.nucleo.sinais", level="ERROR"):
+            r.fazer_checkout(self.usuario)
+        r.refresh_from_db()
+        self.assertEqual(r.status, Reserva.Status.CHECKOUT)

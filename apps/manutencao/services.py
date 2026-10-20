@@ -14,6 +14,7 @@ from django.utils import timezone
 
 from apps.nucleo.models import UH, modulo_ativo, registrar_auditoria
 from apps.nucleo.modulos import Modulo
+from apps.nucleo.sinais import emitir
 
 from .models import OrdemServico
 from .signals import reparo_concluido
@@ -141,8 +142,9 @@ def concluir_os(ordem, usuario, *, resolucao="",
     # Libera o quarto e avisa a Governança (quarto pós-reparo precisa de limpeza).
     if ordem.bloqueia_uh and ordem.uh_id:
         _liberar_uh(ordem.uh, usuario, ordem)
-        reparo_concluido.send(
-            sender=OrdemServico, uh=ordem.uh, ordem=ordem, usuario=usuario
+        emitir(
+            reparo_concluido, sender=OrdemServico, uh=ordem.uh, ordem=ordem,
+            usuario=usuario,
         )
 
     # Preventiva com recorrência: agenda a próxima OS.

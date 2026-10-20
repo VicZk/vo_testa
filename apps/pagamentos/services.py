@@ -106,11 +106,13 @@ def confirmar_pagamento(cobranca, usuario=None, origem="webhook"):
             confirmar_grupo(cobranca.grupo_id, usuario or cobranca.criado_por)
 
     # Avisa quem escuta (ex.: Comercial ganha a oportunidade do sinal pago).
-    # send_robust: um receiver que falhe NUNCA pode desfazer a confirmação do
-    # pagamento (o dinheiro já foi capturado no gateway).
+    # `emitir` (send_robust + log): um receiver que falhe NUNCA pode desfazer a
+    # confirmação do pagamento (o dinheiro já foi capturado no gateway).
+    from apps.nucleo.sinais import emitir
+
     from .signals import pagamento_confirmado
-    pagamento_confirmado.send_robust(
-        sender=Cobranca, cobranca=cobranca, usuario=usuario or cobranca.criado_por)
+    emitir(pagamento_confirmado, sender=Cobranca, cobranca=cobranca,
+           usuario=usuario or cobranca.criado_por)
     return cobranca
 
 

@@ -4,6 +4,7 @@ from django.dispatch import receiver
 
 from apps.nucleo.models import modulo_ativo
 from apps.nucleo.modulos import Modulo
+from apps.nucleo.sinais import receptor_isolado
 from apps.pagamentos.signals import pagamento_confirmado
 from apps.reservas.signals import quarto_liberado, reserva_encerrada
 
@@ -11,6 +12,7 @@ from . import services
 
 
 @receiver(reserva_encerrada)
+@receptor_isolado
 def on_reserva_encerrada(sender, reserva=None, evento="", motivo="", usuario=None, **kwargs):
     if not modulo_ativo(Modulo.COMERCIAL) or reserva is None:
         return
@@ -20,6 +22,7 @@ def on_reserva_encerrada(sender, reserva=None, evento="", motivo="", usuario=Non
 
 
 @receiver(quarto_liberado)
+@receptor_isolado
 def on_checkout_comercial(sender, uh=None, reserva=None, usuario=None, origem="", **kwargs):
     """Hand-off NPS / retenção após check-out (origem=checkout)."""
     if origem != "checkout" or reserva is None or not modulo_ativo(Modulo.COMERCIAL):
@@ -30,6 +33,7 @@ def on_checkout_comercial(sender, uh=None, reserva=None, usuario=None, origem=""
 
 
 @receiver(pagamento_confirmado)
+@receptor_isolado
 def on_sinal_pago(sender, cobranca=None, usuario=None, **kwargs):
     """Sinal pago numa oportunidade aberta → ganha + cria a reserva sozinho."""
     if cobranca is None or not modulo_ativo(Modulo.COMERCIAL):

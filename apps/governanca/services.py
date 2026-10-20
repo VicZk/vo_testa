@@ -61,10 +61,12 @@ def concluir_tarefa(tarefa, usuario=None):
     definir_status(tarefa.uh, StatusLimpeza.Situacao.LIMPA, usuario)
     registrar_auditoria(usuario, "faxina_concluida", tarefa, {"quarto": tarefa.uh.numero})
     # A Lavanderia (se ativa) recolhe o enxoval sujo do quarto — via sinal.
+    from apps.nucleo.sinais import emitir
+
     from .signals import faxina_concluida
 
-    faxina_concluida.send(sender=TarefaGovernanca, uh=tarefa.uh,
-                          tarefa=tarefa, usuario=usuario)
+    emitir(faxina_concluida, sender=TarefaGovernanca, uh=tarefa.uh,
+           tarefa=tarefa, usuario=usuario)
     return tarefa
 
 

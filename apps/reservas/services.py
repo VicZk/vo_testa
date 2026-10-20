@@ -1386,10 +1386,13 @@ def trocar_quarto(reserva, novo_uh, usuario, motivo=""):
         {"de": antigo.numero, "para": novo_uh.numero, "motivo": motivo},
     )
     # Quarto antigo foi liberado — Governança gera a faxina.
+    from apps.nucleo.sinais import emitir
+
     from .signals import quarto_liberado
 
-    quarto_liberado.send(
-        sender=Reserva, uh=antigo, reserva=reserva, usuario=usuario, origem="troca"
+    emitir(
+        quarto_liberado, sender=Reserva, uh=antigo, reserva=reserva, usuario=usuario,
+        origem="troca",
     )
     return reserva
 

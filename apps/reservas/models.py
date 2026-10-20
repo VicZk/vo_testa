@@ -483,11 +483,14 @@ class Reserva(models.Model):
         self.status = self.Status.CHECKOUT
         self.checkout_real = timezone.now()
         self.save()
-        # Governança (se ativa) escuta este sinal para gerar a faxina.
+        # Governança (se ativa) escuta este sinal para gerar a faxina. `emitir`: um
+        # módulo ouvinte que falhe não desfaz a saída (ver apps/nucleo/sinais.py).
+        from apps.nucleo.sinais import emitir
+
         from .signals import quarto_liberado
 
-        quarto_liberado.send(
-            sender=self.__class__, uh=self.uh, reserva=self,
+        emitir(
+            quarto_liberado, sender=self.__class__, uh=self.uh, reserva=self,
             usuario=usuario, origem="checkout",
         )
 
@@ -503,10 +506,12 @@ class Reserva(models.Model):
         registrar_auditoria(
             usuario, "cancelamento_reserva", self, {"motivo": motivo}
         )
+        from apps.nucleo.sinais import emitir
+
         from .signals import reserva_encerrada
 
-        reserva_encerrada.send(
-            sender=self.__class__, reserva=self, evento="cancelada",
+        emitir(
+            reserva_encerrada, sender=self.__class__, reserva=self, evento="cancelada",
             motivo=motivo, usuario=usuario,
         )
 
@@ -515,10 +520,12 @@ class Reserva(models.Model):
         self.status = self.Status.NO_SHOW
         self.save()
         registrar_auditoria(usuario, "no_show", self, {})
+        from apps.nucleo.sinais import emitir
+
         from .signals import reserva_encerrada
 
-        reserva_encerrada.send(
-            sender=self.__class__, reserva=self, evento="no_show",
+        emitir(
+            reserva_encerrada, sender=self.__class__, reserva=self, evento="no_show",
             motivo="", usuario=usuario,
         )
 

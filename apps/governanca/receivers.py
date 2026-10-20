@@ -8,12 +8,14 @@ from django.dispatch import receiver
 from apps.manutencao.signals import reparo_concluido
 from apps.nucleo.models import modulo_ativo
 from apps.nucleo.modulos import Modulo
+from apps.nucleo.sinais import receptor_isolado
 from apps.reservas.signals import quarto_liberado
 
 from . import services
 
 
 @receiver(quarto_liberado)
+@receptor_isolado
 def on_quarto_liberado(sender, uh, reserva=None, usuario=None, origem="", **kwargs):
     # Só age se a Governança estiver contratada (degradação graciosa).
     if not modulo_ativo(Modulo.GOVERNANCA):
@@ -22,6 +24,7 @@ def on_quarto_liberado(sender, uh, reserva=None, usuario=None, origem="", **kwar
 
 
 @receiver(reparo_concluido)
+@receptor_isolado
 def on_reparo_concluido(sender, uh, ordem=None, usuario=None, **kwargs):
     # Quarto que saiu de manutenção precisa de limpeza antes de voltar a receber.
     if not modulo_ativo(Modulo.GOVERNANCA):
