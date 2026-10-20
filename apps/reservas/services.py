@@ -936,9 +936,10 @@ def dados_estadia(reserva_id) -> dict | None:
 
 
 def relatorio_producao(inicio: date, fim: date) -> dict:
-    """Receita lançada nas contas no período, por natureza (serviço×consumo)."""
+    """Receita das contas no período, por natureza (serviço×consumo). Conta pela
+    competência: a diária entra no mês da noite, não no do check-in."""
     from django.db.models import Sum
-    lanc = LancamentoConta.objects.filter(criado_em__date__range=(inicio, fim))
+    lanc = LancamentoConta.objects.filter(competencia__range=(inicio, fim))
     def _soma(**f):
         return lanc.filter(**f).aggregate(t=Sum("valor"))["t"] or Decimal("0.00")
     servico = (_soma(tipo__in=LancamentoConta.TIPOS_DEBITO, natureza="servico")
@@ -959,12 +960,16 @@ def relatorio_ocupacao(inicio: date, fim: date, statuses=None) -> dict:
     from django.db.models import Sum
     statuses = statuses or [Reserva.Status.HOSPEDADA, Reserva.Status.CHECKOUT]
     dias = (fim - inicio).days + 1
-    uhs = list(UH.objects.filter(status=UH.Status.ATIVA).select_related("tipo"))
+    # Só os quartos: o day use (Dia na Pousada) não é pernoite — contado aqui, as 8
+    # unidades dele inflavam a disponibilidade e o preço do dia entrava no ADR.
+    day_use = TipoUH.Modalidade.DAY_USE
+    uhs = list(UH.objects.filter(status=UH.Status.ATIVA)
+               .exclude(tipo__modalidade=day_use).select_related("tipo"))
     disp = len(uhs) * dias
     reservas = Reserva.objects.filter(
         status__in=statuses,
         checkin__lte=fim, checkout__gt=inicio,
-    ).select_related("uh__tipo")
+    ).exclude(uh__tipo__modalidade=day_use).select_related("uh__tipo")
     ocupadas = 0
     por_tipo: dict = {}
     for r in reservas:
@@ -973,9 +978,12 @@ def relatorio_ocupacao(inicio: date, fim: date, statuses=None) -> dict:
         noites = max(0, (f - ini).days)
         ocupadas += noites
         por_tipo[r.uh.tipo.nome] = por_tipo.get(r.uh.tipo.nome, 0) + noites
+    # Receita das MESMAS noites que a ocupação conta (competência), senão ADR e RevPAR
+    # misturavam a receita de um mês com a ocupação de outro na virada.
     receita = LancamentoConta.objects.filter(
-        criado_em__date__range=(inicio, fim), tipo=LancamentoConta.Tipo.DIARIA
-    ).aggregate(t=Sum("valor"))["t"] or Decimal("0.00")
+        competencia__range=(inicio, fim), tipo=LancamentoConta.Tipo.DIARIA
+    ).exclude(conta__reserva__uh__tipo__modalidade=day_use).aggregate(
+        t=Sum("valor"))["t"] or Decimal("0.00")
     taxa = (Decimal(ocupadas) / disp * 100) if disp else Decimal("0")
     adr = (receita / ocupadas) if ocupadas else Decimal("0")
     revpar = (receita / disp) if disp else Decimal("0")
@@ -1158,8 +1166,11 @@ def lancar_na_conta(
     descricao: str,
     valor: Decimal,
     usuario,
+    *,
+    competencia: date | None = None,
 ) -> LancamentoConta:
     """Lança item na conta do quarto. É por aqui que os PDVs vão lançar consumo.
+    `competencia` = o dia a que o item se refere (a noite, numa diária); omitida, é hoje.
 
     Trava a conta antes de lançar: serializa com o check-out (que também trava) e
     relê o status do banco, então um consumo nunca entra numa conta que acabou de
@@ -1173,6 +1184,7 @@ def lancar_na_conta(
         natureza=natureza,
         descricao=descricao,
         valor=valor,
+        competencia=competencia,
         criado_por=usuario,
     )
 
@@ -1563,7 +1575,7 @@ def estender_estadia(reserva, nova_saida, usuario) -> Decimal:
     for noite in cot["diarias"]:
         lancar_na_conta(acomodacao, LancamentoConta.Tipo.DIARIA, NaturezaFiscal.SERVICO,
                         f"Diária {noite['dia']:%d/%m/%Y} — {numero} (estendida)",
-                        noite["valor"], usuario)
+                        noite["valor"], usuario, competencia=noite["dia"])
     total = cot["hospedagem"]
     if cot["desconto_nao_reembolsavel"] > 0:
         lancar_na_conta(acomodacao, LancamentoConta.Tipo.DESCONTO, NaturezaFiscal.SERVICO,
@@ -2316,13 +2328,15 @@ def dados_graficos() -> dict:
             status__in=Reserva.STATUS_ATIVOS,
             checkin__lt=hoje + timedelta(days=14),
             checkout__gt=hoje,
-        ).select_related("uh")
+        ).select_related("uh__tipo")
     )
 
-    # 1) Ocupação — próximos 14 dias
+    # 1) Ocupação — próximos 14 dias (só quartos: o day use fica fora do numerador
+    # como já ficava do denominador — senão o dia de day use passava de 100%)
     ocup_valores, ocup_labels, ocup_fds = [], [], []
     for d in dias14:
-        occ = sum(1 for r in ativas if r.checkin <= d < r.checkout)
+        occ = sum(1 for r in ativas
+                  if r.checkin <= d < r.checkout and not r.uh.tipo.eh_day_use)
         ocup_valores.append(round(occ * 100 / uhs_ativas) if uhs_ativas else 0)
         ocup_labels.append(d.strftime("%d/%m"))
         ocup_fds.append(d.weekday() >= 5)
@@ -2349,10 +2363,10 @@ def dados_graficos() -> dict:
     dias7 = [hoje - timedelta(days=6 - n) for n in range(7)]
     por_dia = defaultdict(lambda: {"servico": 0.0, "consumo": 0.0})
     lanc = LancamentoConta.objects.filter(
-        criado_em__date__gte=dias7[0], tipo__in=LancamentoConta.TIPOS_DEBITO
+        competencia__range=(dias7[0], hoje), tipo__in=LancamentoConta.TIPOS_DEBITO
     )
     for lc in lanc:
-        por_dia[lc.criado_em.date()][lc.natureza] += float(lc.valor)
+        por_dia[lc.competencia][lc.natureza] += float(lc.valor)
     receita_labels = [d.strftime("%d/%m") for d in dias7]
     receita_servico = [round(por_dia[d]["servico"], 2) for d in dias7]
     receita_consumo = [round(por_dia[d]["consumo"], 2) for d in dias7]
@@ -2610,9 +2624,60 @@ def fnrh_pendentes_qs():
 
 
 def diarias_periodo(inicio, fim) -> Decimal:
-    """Total de diárias lançadas no folio no período (sempre recebidas pela recepção).
-    Interface pública p/ Relatórios não importar LancamentoConta diretamente."""
+    """Total de diárias das noites do período (sempre recebidas pela recepção), pela
+    competência. Interface pública p/ Relatórios não importar LancamentoConta."""
     from django.db.models import Sum
     return (LancamentoConta.objects.filter(
-        criado_em__date__range=(inicio, fim), tipo=LancamentoConta.Tipo.DIARIA
+        competencia__range=(inicio, fim), tipo=LancamentoConta.Tipo.DIARIA
     ).aggregate(t=Sum("valor"))["t"] or Decimal("0"))
+
+
+# ── Fechamento do dia (auditoria noturna) ────────────────────────────────────
+
+
+def fechar_dia(dia: date | None = None):
+    """Grava o fechamento de `dia` (padrão: ontem) e devolve `(fechamento, criado)`.
+
+    Idempotente: dia já fechado devolve o que existe (`criado=False`) — o fechamento
+    não se refaz, é o retrato daquela hora. Roda na rotina diária (`fechar_dia`)."""
+    from .models import FechamentoDiario
+
+    dia = dia or (timezone.localdate() - timedelta(days=1))
+    existente = FechamentoDiario.objects.filter(data=dia).first()
+    if existente:
+        return existente, False
+
+    ocupacao = relatorio_ocupacao(dia, dia)
+    producao = relatorio_producao(dia, dia)
+    quartos = Reserva.objects.exclude(uh__tipo__modalidade=TipoUH.Modalidade.DAY_USE)
+    abertas = ContaHospedagem.objects.filter(status=ContaHospedagem.Status.ABERTA)
+    saldo = sum((s for s in ContaHospedagem.saldos(abertas).values() if s > 0),
+                Decimal("0.00"))
+    try:
+        with transaction.atomic():
+            fechamento = FechamentoDiario.objects.create(
+                data=dia,
+                quartos_disponiveis=ocupacao["disponiveis"],
+                quartos_ocupados=ocupacao["ocupadas"],
+                chegadas=quartos.filter(
+                    checkin=dia,
+                    status__in=[Reserva.Status.HOSPEDADA, Reserva.Status.CHECKOUT]).count(),
+                saidas=quartos.filter(checkout=dia, status=Reserva.Status.CHECKOUT).count(),
+                no_shows=quartos.filter(
+                    checkin=dia,
+                    status__in=[Reserva.Status.CONFIRMADA, Reserva.Status.NO_SHOW]).count(),
+                receita_diarias=ocupacao["receita"],
+                receita_servico=producao["servico"],
+                receita_consumo=producao["consumo"],
+                saldo_em_aberto=saldo,
+            )
+    except IntegrityError:  # duas rotinas no mesmo minuto: vale a primeira
+        return FechamentoDiario.objects.get(data=dia), False
+    return fechamento, True
+
+
+def fechamentos(inicio: date, fim: date):
+    """Fechamentos gravados no período, do mais novo ao mais antigo (para a Auditoria)."""
+    from .models import FechamentoDiario
+
+    return FechamentoDiario.objects.filter(data__range=(inicio, fim))

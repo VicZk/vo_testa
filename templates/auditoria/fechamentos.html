@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% load moeda %}
+
+{% block titulo %}Fechamentos do dia — Auditoria{% endblock %}
+
+{% block conteudo %}
+<a href="{% url 'auditoria:painel' %}" class="voltar">
+  <svg viewBox="0 0 24 24" class="ico"><path d="M15 6l-6 6 6 6"/></svg> Auditoria
+</a>
+<div class="pagina-cabecalho">
+  <h1>Fechamentos do dia</h1>
+  {% if eh_gerente and fechamentos %}
+    <a href="?{% if f.de %}de={{ f.de }}&ate={{ f.ate }}{% else %}mes={{ mes_sel }}&ano={{ ano_sel }}{% endif %}&export=csv" class="botao-neutro">Exportar CSV</a>
+  {% endif %}
+</div>
+<p class="subtitulo">O retrato de cada dia, gravado pela rotina da madrugada e nunca alterado: ocupação, receita pela competência e o que ficou em aberto. <strong>Período: {{ rotulo }}</strong></p>
+
+<form method="get" class="filtro-barra">
+  <div class="filtro-campo">
+    <label for="fech-mes">Mês</label>
+    <select id="fech-mes" name="mes" onchange="this.form.submit()">
+      {% for num, nome in meses %}<option value="{{ num }}" {% if num == mes_sel %}selected{% endif %}>{{ nome }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="filtro-campo">
+    <label for="fech-ano">Ano</label>
+    <select id="fech-ano" name="ano" onchange="this.form.submit()">
+      {% for a in anos %}<option value="{{ a }}" {% if a == ano_sel %}selected{% endif %}>{{ a }}</option>{% endfor %}
+    </select>
+  </div>
+  <details class="rel-personalizado">
+    <summary>Período personalizado</summary>
+    <div class="filtro-periodo">
+      <input type="date" name="de" value="{{ f.de }}" aria-label="De" onchange="this.form.submit()">
+      <span class="sep">→</span>
+      <input type="date" name="ate" value="{{ f.ate }}" aria-label="Até" onchange="this.form.submit()">
+    </div>
+  </details>
+  <button type="submit" class="botao-primario filtro-aplicar">Filtrar</button>
+</form>
+
+<div class="cartoes-indicadores colunas">
+  <div class="cartao"><span class="indicador-rotulo letreiro">Dias fechados</span><span class="indicador-valor">{{ fechamentos|length }}</span></div>
+  <div class="cartao"><span class="indicador-rotulo letreiro">Ocupação</span><span class="indicador-valor">{{ totais.taxa }}%</span></div>
+  <div class="cartao"><span class="indicador-rotulo letreiro">Diárias</span><span class="indicador-valor">{{ totais.receita_diarias|intcomma_brl }}</span></div>
+  <div class="cartao"><span class="indicador-rotulo letreiro">Diária média (ADR)</span><span class="indicador-valor">{{ totais.adr|intcomma_brl }}</span></div>
+  <div class="cartao"><span class="indicador-rotulo letreiro">Consumo</span><span class="indicador-valor">{{ totais.receita_consumo|intcomma_brl }}</span></div>
+</div>
+
+<table class="tabela" style="margin-top:1.2rem">
+  <thead>
+    <tr>
+      <th>Dia</th><th class="num">Ocupação</th><th class="num">Chegadas</th>
+      <th class="num">Saídas</th><th class="num">No-shows</th><th class="num">Diárias</th>
+      <th class="num">ADR</th><th class="num">Serviço</th><th class="num">Consumo</th>
+      <th class="num">Em aberto</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for dia in fechamentos %}
+      <tr>
+        <td title="Fechado em {{ dia.criado_em|date:'d/m/Y H:i' }}">{{ dia.data|date:"D, d/m/Y" }}</td>
+        <td class="num">{{ dia.quartos_ocupados }}/{{ dia.quartos_disponiveis }} · {{ dia.taxa_ocupacao }}%</td>
+        <td class="num">{{ dia.chegadas }}</td>
+        <td class="num">{{ dia.saidas }}</td>
+        <td class="num">{{ dia.no_shows }}</td>
+        <td class="num">{{ dia.receita_diarias|intcomma_brl }}</td>
+        <td class="num">{{ dia.adr|intcomma_brl }}</td>
+        <td class="num">{{ dia.receita_servico|intcomma_brl }}</td>
+        <td class="num">{{ dia.receita_consumo|intcomma_brl }}</td>
+        <td class="num">{{ dia.saldo_em_aberto|intcomma_brl }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="10" class="vazio">Nenhum dia fechado no período. A rotina da madrugada fecha o dia anterior (comando <code>fechar_dia</code>).</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

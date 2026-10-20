@@ -969,6 +969,7 @@ class ContaHospedagem(models.Model):
                 natureza=NaturezaFiscal.SERVICO,
                 descricao=f"Diária {dia:%d/%m/%Y} — {reserva.uh.numero}",
                 valor=valor,
+                competencia=dia,
                 criado_por=usuario,
             )
             total += valor
@@ -1115,13 +1116,21 @@ class LancamentoConta(models.Model):
         related_name="lancamentos_conta", verbose_name="lançado por",
     )
     criado_em = models.DateTimeField("lançado em", auto_now_add=True)
+    # O dia a que o lançamento se refere: na diária, a NOITE (todas são lançadas no
+    # check-in, uma linha por noite); no resto, o dia do lançamento. A receita dos
+    # relatórios conta por aqui — por `criado_em`, uma estadia de 28/10 a 03/11 caía
+    # inteira em outubro e o ADR do mês misturava receita de um mês com ocupação de outro.
+    competencia = models.DateField("competência", null=True, blank=True, editable=False)
 
     class Meta:
         verbose_name = "lançamento da conta"
         verbose_name_plural = "lançamentos da conta"
         ordering = ["criado_em"]
-        # Relatórios de produção e faturamento filtram por período de lançamento.
-        indexes = [models.Index(fields=["criado_em"], name="lancamento_criado_em_idx")]
+        # Relatórios de receita filtram pela competência (o dia do serviço).
+        indexes = [
+            models.Index(fields=["criado_em"], name="lancamento_criado_em_idx"),
+            models.Index(fields=["competencia"], name="lancamento_competencia_idx"),
+        ]
         constraints = [
             models.CheckConstraint(
                 condition=Q(valor__gt=0), name="lancamento_conta_valor_positivo"
@@ -1142,6 +1151,8 @@ class LancamentoConta(models.Model):
             raise ValidationError(
                 "Lançamento de conta não é editado — lance um desconto/ajuste."
             )
+        if self.competencia is None:
+            self.competencia = timezone.localdate()
         self.full_clean()
         super().save(*args, **kwargs)
 
@@ -1334,3 +1345,66 @@ class BercoEstoque(models.Model):
             # segunda esbarra na chave e o get_or_create devolve a da primeira).
             obj, _ = cls.objects.get_or_create(pk=1)
         return obj
+
+
+class FechamentoDiario(models.Model):
+    """Fechamento do dia (auditoria noturna): o retrato do dia que passou — ocupação,
+    receita pela competência, chegadas, saídas, no-shows e o saldo que ficou em aberto.
+
+    A rotina da madrugada grava o de ontem (`services.fechar_dia`) e ele nunca muda: é o
+    número que a gerência e o contador conferem no dia seguinte. Um lançamento feito
+    depois com data daquele dia aparece no relatório do período, não aqui — e a
+    diferença entre os dois fica à vista.
+    """
+
+    data = models.DateField("dia", unique=True)
+    quartos_disponiveis = models.PositiveIntegerField("quartos disponíveis")
+    quartos_ocupados = models.PositiveIntegerField("quartos ocupados")
+    chegadas = models.PositiveIntegerField("chegadas")
+    saidas = models.PositiveIntegerField("saídas")
+    no_shows = models.PositiveIntegerField(
+        "no-shows", help_text="Entrada no dia sem check-in (no-show marcado ou provável).")
+    receita_diarias = models.DecimalField("diárias (R$)", max_digits=12, decimal_places=2)
+    receita_servico = models.DecimalField(
+        "serviço (R$)", max_digits=12, decimal_places=2,
+        help_text="Diárias, serviços e taxas do dia, menos os descontos.")
+    receita_consumo = models.DecimalField("consumo (R$)", max_digits=12, decimal_places=2)
+    saldo_em_aberto = models.DecimalField(
+        "saldo em aberto (R$)", max_digits=12, decimal_places=2,
+        help_text="O que as contas abertas deviam na hora do fechamento.")
+    criado_em = models.DateTimeField("fechado em", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "fechamento do dia"
+        verbose_name_plural = "fechamentos do dia"
+        ordering = ["-data"]
+
+    def __str__(self):
+        return f"Fechamento de {self.data:%d/%m/%Y}"
+
+    @property
+    def taxa_ocupacao(self) -> Decimal:
+        if not self.quartos_disponiveis:
+            return Decimal("0.0")
+        return (Decimal(self.quartos_ocupados) * 100 / self.quartos_disponiveis).quantize(
+            Decimal("0.1"))
+
+    @property
+    def adr(self) -> Decimal:
+        if not self.quartos_ocupados:
+            return Decimal("0.00")
+        return (self.receita_diarias / self.quartos_ocupados).quantize(Decimal("0.01"))
+
+    @property
+    def revpar(self) -> Decimal:
+        if not self.quartos_disponiveis:
+            return Decimal("0.00")
+        return (self.receita_diarias / self.quartos_disponiveis).quantize(Decimal("0.01"))
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValidationError("O fechamento do dia não é editado.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("O fechamento do dia não é apagado.")

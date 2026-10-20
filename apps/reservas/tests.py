@@ -2193,3 +2193,148 @@ class NoShowProvavelTests(ReservasTestsBase):
         r.fazer_checkin(self.usuario)
         self.assertFalse([a for a in services.pendencias_auditoria()
                           if a["tipo"] == "no_show_provavel"])
+
+
+class CompetenciaDasDiariasTests(TestCase):
+    """A diária vale pela noite (competência), não pelo dia do check-in: a estadia que
+    vira o mês divide a receita entre os dois meses, como a ocupação."""
+
+    def setUp(self):
+        self.op = Usuario.objects.create_superuser(username="comp", password="senha-forte-123")
+        tipo = TipoUH.objects.create(nome="Std", tarifa_base=Decimal("200"))
+        self.uh = UH.objects.create(numero="C1", tipo=tipo)
+        self.hospede = Pessoa.objects.create(nome="Hóspede da virada")
+        self.ini_mes = HOJE.replace(day=1)
+        self.fim_mes_passado = self.ini_mes - timedelta(days=1)
+        self.ini_mes_passado = self.fim_mes_passado.replace(day=1)
+        # Duas noites no mês passado e uma neste, lançadas todas no check-in.
+        self.reserva = Reserva.objects.create(
+            uh=self.uh, hospede=self.hospede, checkin=self.ini_mes - timedelta(days=2),
+            checkout=self.ini_mes + timedelta(days=1), status=Reserva.Status.CONFIRMADA,
+            valor_diaria=Decimal("200"), criado_por=self.op,
+        )
+        self.reserva.fazer_checkin(self.op)
+
+    def test_cada_diaria_leva_a_sua_noite(self):
+        noites = sorted(LancamentoConta.objects.filter(
+            tipo=LancamentoConta.Tipo.DIARIA).values_list("competencia", flat=True))
+        self.assertEqual(noites, [self.ini_mes - timedelta(days=2),
+                                  self.ini_mes - timedelta(days=1), self.ini_mes])
+
+    def test_receita_se_divide_entre_os_meses(self):
+        passado = (self.ini_mes_passado, self.fim_mes_passado)
+        self.assertEqual(services.relatorio_producao(*passado)["servico"], Decimal("400"))
+        self.assertEqual(services.diarias_periodo(*passado), Decimal("400"))
+        este = (self.ini_mes, HOJE)
+        self.assertEqual(services.relatorio_producao(*este)["servico"], Decimal("200"))
+        self.assertEqual(services.diarias_periodo(*este), Decimal("200"))
+
+    def test_adr_usa_a_receita_das_mesmas_noites(self):
+        o = services.relatorio_ocupacao(self.ini_mes_passado, self.fim_mes_passado)
+        self.assertEqual((o["ocupadas"], o["receita"], o["adr"]),
+                         (2, Decimal("400"), Decimal("200.00")))
+
+    def test_consumo_vale_pelo_dia_do_lancamento(self):
+        from apps.nucleo.models import NaturezaFiscal
+
+        lanc = services.lancar_na_conta(
+            self.reserva.conta, LancamentoConta.Tipo.CONSUMO, NaturezaFiscal.CONSUMO,
+            "Água", Decimal("5.00"), self.op)
+        self.assertEqual(lanc.competencia, HOJE)
+
+    def test_noite_estendida_leva_a_propria_data(self):
+        services.estender_estadia(self.reserva, self.reserva.checkout + timedelta(days=1),
+                                  self.op)
+        estendida = LancamentoConta.objects.get(descricao__contains="(estendida)")
+        self.assertEqual(estendida.competencia, self.ini_mes + timedelta(days=1))
+
+
+class OcupacaoSemDayUseTests(TestCase):
+    """Day use não é pernoite: fica fora da disponibilidade, da ocupação e do ADR (antes
+    as 8 unidades dele entravam na conta e o preço do dia puxava a diária média)."""
+
+    def setUp(self):
+        op = Usuario.objects.create_superuser(username="du", password="senha-forte-123")
+        quarto = UH.objects.create(
+            numero="Q1", tipo=TipoUH.objects.create(nome="Std", tarifa_base=Decimal("200")))
+        # As unidades de day use já vêm da migração (DAY-01…): elas também não contam.
+        dia = UH.objects.filter(tipo__modalidade=TipoUH.Modalidade.DAY_USE,
+                                status=UH.Status.ATIVA).first()
+        hospede = Pessoa.objects.create(nome="Hóspede")
+        self.ontem = HOJE - timedelta(days=1)
+        for uh, valor in ((quarto, "200"), (dia, "120")):
+            r = Reserva.objects.create(
+                uh=uh, hospede=hospede,
+                checkin=self.ontem, checkout=HOJE, status=Reserva.Status.CONFIRMADA,
+                valor_diaria=Decimal(valor), criado_por=op)
+            r.fazer_checkin(op)
+
+    def test_relatorio_conta_so_os_quartos(self):
+        o = services.relatorio_ocupacao(self.ontem, self.ontem)
+        self.assertEqual((o["disponiveis"], o["ocupadas"]), (1, 1))
+        self.assertEqual((o["receita"], o["adr"]), (Decimal("200.00"), Decimal("200.00")))
+        self.assertNotIn("Dia na Pousada", o["por_tipo"])
+
+
+class FechamentoDoDiaTests(TestCase):
+    """Auditoria noturna: o retrato de ontem, gravado uma vez e nunca alterado."""
+
+    def setUp(self):
+        self.op = Usuario.objects.create_superuser(username="fd", password="senha-forte-123")
+        tipo = TipoUH.objects.create(nome="Std", tarifa_base=Decimal("200"))
+        hospede = Pessoa.objects.create(nome="Hóspede")
+        self.ontem = HOJE - timedelta(days=1)
+        # Q1 entrou ontem (2 noites: ontem e hoje); Q2 devia ter entrado ontem e não veio.
+        self.entrou = Reserva.objects.create(
+            uh=UH.objects.create(numero="Q1", tipo=tipo), hospede=hospede,
+            checkin=self.ontem, checkout=HOJE + timedelta(days=1),
+            status=Reserva.Status.CONFIRMADA, valor_diaria=Decimal("200"), criado_por=self.op)
+        self.entrou.fazer_checkin(self.op)
+        Reserva.objects.create(
+            uh=UH.objects.create(numero="Q2", tipo=tipo), hospede=hospede,
+            checkin=self.ontem, checkout=HOJE + timedelta(days=1),
+            status=Reserva.Status.CONFIRMADA, valor_diaria=Decimal("200"), criado_por=self.op)
+
+    def test_retrato_de_ontem(self):
+        fechamento, criado = services.fechar_dia()
+        self.assertTrue(criado)
+        self.assertEqual(fechamento.data, self.ontem)
+        self.assertEqual(
+            (fechamento.quartos_disponiveis, fechamento.quartos_ocupados,
+             fechamento.chegadas, fechamento.saidas, fechamento.no_shows),
+            (2, 1, 1, 0, 1))
+        # Só a noite de ontem é receita de ontem (a de hoje tem competência hoje)…
+        self.assertEqual(fechamento.receita_diarias, Decimal("200.00"))
+        self.assertEqual(fechamento.receita_servico, Decimal("200.00"))
+        # …mas a conta deve as duas noites, lançadas no check-in.
+        self.assertEqual(fechamento.saldo_em_aberto, Decimal("400.00"))
+        self.assertEqual((fechamento.taxa_ocupacao, fechamento.adr, fechamento.revpar),
+                         (Decimal("50.0"), Decimal("200.00"), Decimal("100.00")))
+
+    def test_nao_se_refaz_nem_se_edita(self):
+        primeiro, _ = services.fechar_dia(self.ontem)
+        services.lancar_na_conta(
+            self.entrou.conta, LancamentoConta.Tipo.CONSUMO, "consumo", "Água",
+            Decimal("5.00"), self.op, competencia=self.ontem)
+        de_novo, criado = services.fechar_dia(self.ontem)
+        self.assertFalse(criado)
+        self.assertEqual(de_novo.pk, primeiro.pk)
+        self.assertEqual(de_novo.receita_consumo, Decimal("0.00"))  # o retrato não muda
+        with self.assertRaises(ValidationError):
+            de_novo.save()
+        with self.assertRaises(ValidationError):
+            de_novo.delete()
+
+    def test_comando_e_rotina_diaria(self):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        from apps.nucleo.management.commands.rotinas import GRUPOS
+
+        self.assertIn("fechar_dia", GRUPOS["diarias"])
+        saida = StringIO()
+        call_command("fechar_dia", "--dia", self.ontem.isoformat(), stdout=saida)
+        self.assertIn("fechado", saida.getvalue())
+        call_command("fechar_dia", "--dia", self.ontem.isoformat(), stdout=saida)
+        self.assertIn("já estava fechado", saida.getvalue())

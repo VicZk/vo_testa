@@ -55,7 +55,8 @@ preço, grupos (bloco de quartos), FNRH/BOH, estoque de colchões extra e berço
 | `Reserva` | a reserva | ciclo de estados, `canal`, `faturamento`/`titular`, lotação por faixa, arranjo de camas, `expira_em`, bloco FNRH; `valor_diaria` (média) + `valor_hospedagem` (total exato cotado); `valor_retido` (cancelamento) |
 | `GrupoReserva` | reserva-mãe (bloco de quartos) | `rotulo`, `titular`, `checkin/checkout`, `expira_em`, `encerrado_em`; status **derivado** das filhas (`situacao()`) |
 | `ContaHospedagem` | folio: ou de um quarto, ou do grupo | `status` aberta/fechada; check-constraint `conta_reserva_xor_grupo` |
-| `LancamentoConta` | item do folio | `tipo` diaria/consumo/servico/taxa/desconto × `natureza` SERVIÇO/CONSUMO (obrigatória); imutável. `taxa` = ISS e taxa de turismo (lançados no check-in; fora da base da NFS-e) |
+| `LancamentoConta` | item do folio | `tipo` diaria/consumo/servico/taxa/desconto × `natureza` SERVIÇO/CONSUMO (obrigatória); imutável. `taxa` = ISS e taxa de turismo (lançados no check-in; fora da base da NFS-e). `competencia` = o dia a que o item se refere: a **noite**, na diária (todas lançadas no check-in, uma por noite); o dia do lançamento, no resto |
+| `FechamentoDiario` | fechamento do dia | um por dia (`data` única), gravado pela rotina da madrugada e **imutável**: quartos disponíveis/ocupados, chegadas, saídas, no-shows, diárias/serviço/consumo pela competência e saldo em aberto; `taxa_ocupacao`, `adr`, `revpar` derivados |
 | `PagamentoConta` | pagamento do folio | origens: **caixa** (OneToOne com `nucleo.MovimentoCaixa`), **online** (`cobranca_id`, único — pago no gateway), **faturado** (OneToOne com `nucleo.ContaPagarReceber` — título a receber da agência/empresa) ou **estorno** (`estorno_de` + valor negativo); check-constraint `pagamento_conta_sinal_coerente` |
 | `Adiantamento` | sinal/crédito antes do check-in | as mesmas três origens do `PagamentoConta`; abate a conta quando ela abre |
 | `FichaFNRH` | ficha legal por hóspede (Lei 11.771) | choices alinhados 1:1 aos ids oficiais da FNRH Digital; `CAMPOS_OBRIGATORIOS`; unique "um titular por reserva" |
@@ -109,7 +110,7 @@ Criação/edição: `obter_ou_criar_hospede(nome, email, telefone, documento)`,
 `confirmar_reserva(reserva_id, usuario) → bool`.
 
 Conta e dinheiro: `contas_abertas()`, `conta_aberta(conta_id)`,
-`lancar_na_conta(conta, tipo, natureza, descricao, valor, usuario)`,
+`lancar_na_conta(conta, tipo, natureza, descricao, valor, usuario, *, competencia=None)`,
 `receber_pagamento(conta, usuario, forma, valor, parcelas, observacao, autorizacao)`,
 `receber_adiantamento(reserva, usuario, forma, valor, parcelas, autorizacao)`,
 `resumo_fiscal_conta(conta_id)`, `diarias_periodo(inicio, fim)`.
@@ -143,8 +144,16 @@ Grupos: `criar_grupo`, `adicionar_quarto`, `confirmar_grupo`, `checkin_grupo`,
 Leitura para outros módulos: `estadia_ativa(reserva_id)`, `dados_estadia(reserva_id)`
 (Portal), `pendentes_de_sinal()` (Pagamentos), `historico_hospede(pessoa)` (Comercial),
 `resumo_do_dia()`, `mapa_quartos_hoje()`, `dados_graficos()`, `saidas_vencidas()`,
-`relatorio_producao`, `relatorio_ocupacao(inicio, fim, statuses=None)`,
-`ocupacao_prevista`, `relatorio_reservas`, `pendencias_auditoria()`.
+`relatorio_producao`, `relatorio_ocupacao(inicio, fim, statuses=None)` (só quartos: o
+day use fica fora da disponibilidade, da ocupação e do ADR), `ocupacao_prevista`,
+`relatorio_reservas`, `pendencias_auditoria()`.
+
+Fechamento do dia (auditoria noturna): `fechar_dia(dia=None) → (FechamentoDiario, criado)`
+grava o retrato de um dia (padrão: ontem) — quartos disponíveis/ocupados, chegadas,
+saídas, no-shows, diárias, serviço e consumo pela competência e o saldo em aberto das
+contas — e não o refaz se já existir; `fechamentos(inicio, fim)` lista para a Auditoria.
+Roda no comando `fechar_dia` (`--dia AAAA-MM-DD` opcional), primeiro do grupo diário do
+`rotinas`.
 
 FNRH/BOH: `garantir_fichas_fnrh`, `preparar_fnrh`, `fnrh_formset`,
 `marcar_fichas_preenchidas`, `boh_mensal(ano, mes)`, `enviar_fnrh(reserva)`,
@@ -1526,6 +1535,10 @@ da tabela.
 - Cada setor é somado pelo **service público** do módulo
   (`loja|restaurante|lavanderia.faturamento_periodo`, `reservas.diarias_periodo`), e só
   se o módulo estiver ativo.
+- A receita do folio (`relatorio_producao`, a receita do ADR/RevPAR em
+  `relatorio_ocupacao`, `diarias_periodo` e o gráfico da semana) conta pela
+  **competência** do lançamento, não pelo `criado_em`: a estadia de 28/10 a 03/11 põe
+  as noites de outubro em outubro e as de novembro em novembro, igual à ocupação.
 
 ---
 
@@ -1569,6 +1582,10 @@ publica quem/IP num threadlocal para services sem `request`.
 - `auditoria:painel` — KPIs + lista de achados com gravidade e link Resolver.
 - `auditoria:trilha` — filtro por ação, usuário e período (mês/ano), 300 últimos
   registros, export CSV (até 5.000 linhas) com a coluna descrição.
+- `auditoria:fechamentos` — os fechamentos do dia do período (mês/ano): ocupação,
+  chegadas, saídas, no-shows, diárias, ADR, serviço, consumo e saldo em aberto, com os
+  totais do período no topo; CSV só para a gerência. Lê `reservas.fechamentos()` e
+  degrada para lista vazia com Reservas inativo.
 
 ### Regras de negócio
 

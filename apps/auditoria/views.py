@@ -3,6 +3,7 @@ import csv
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import render
+from django.utils import timezone
 from django.views.decorators.cache import never_cache
 
 from apps.nucleo.audit import redigir_sensiveis
@@ -76,6 +77,59 @@ def trilha(request):
         "rotulo": rotulo,
         "acoes": TrilhaAuditoria.objects.order_by("acao").values_list("acao", flat=True).distinct(),
         "usuarios": Usuario.objects.filter(auditorias__isnull=False).distinct(),
+        "f": request.GET,
+        **selecao_periodo(request),
+    })
+
+
+@never_cache
+@requer_modulo(Modulo.AUDITORIA)
+def fechamentos(request):
+    """Fechamentos do dia gravados pela rotina da madrugada (auditoria noturna): o
+    retrato de cada dia, que não muda depois. Só leitura; CSV para a gerência."""
+    from decimal import Decimal
+
+    from apps.nucleo.models import modulo_ativo
+
+    inicio, fim, rotulo = periodo(request)
+    lista = []
+    if modulo_ativo(Modulo.RESERVAS):
+        from apps.reservas.services import fechamentos as fechamentos_do_periodo
+
+        lista = list(fechamentos_do_periodo(inicio, fim))
+    soma = {campo: sum((getattr(f, campo) for f in lista), Decimal("0"))
+            for campo in ("receita_diarias", "receita_servico", "receita_consumo")}
+    ocupados = sum(f.quartos_ocupados for f in lista)
+    disponiveis = sum(f.quartos_disponiveis for f in lista)
+    totais = {
+        **soma,
+        "ocupados": ocupados,
+        "taxa": (Decimal(ocupados) * 100 / disponiveis).quantize(Decimal("0.1"))
+        if disponiveis else Decimal("0.0"),
+        "adr": (soma["receita_diarias"] / ocupados).quantize(Decimal("0.01"))
+        if ocupados else Decimal("0.00"),
+    }
+    if request.GET.get("export") == "csv":
+        if not eh_gerente(request.user):
+            raise PermissionDenied("Exportar os fechamentos exige gerência.")
+        from apps.nucleo.export import resposta_csv
+
+        resp = resposta_csv("fechamentos_do_dia.csv")
+        w = csv.writer(resp, delimiter=";")
+        w.writerow(["dia", "quartos_disponiveis", "quartos_ocupados", "ocupacao_pct",
+                    "chegadas", "saidas", "no_shows", "diarias", "adr", "servico",
+                    "consumo", "saldo_em_aberto", "fechado_em"])
+        for f in lista:
+            w.writerow([f.data.strftime("%d/%m/%Y"), f.quartos_disponiveis,
+                        f.quartos_ocupados, f.taxa_ocupacao, f.chegadas, f.saidas,
+                        f.no_shows, f.receita_diarias, f.adr, f.receita_servico,
+                        f.receita_consumo, f.saldo_em_aberto,
+                        timezone.localtime(f.criado_em).strftime("%d/%m/%Y %H:%M")])
+        return resp
+    return render(request, "auditoria/fechamentos.html", {
+        "fechamentos": lista,
+        "totais": totais,
+        "rotulo": rotulo,
         "f": request.GET,
         **selecao_periodo(request),
     })

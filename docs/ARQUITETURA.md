@@ -1313,9 +1313,12 @@ do web e o arquivo de config-as-code `deploy/railway.rotinas.json` (`*/10 * * * 
 | `reenviar_confirmacoes_site` | `site` | frequentes | Manda a confirmação das `site.Reserva` ativas de 10 min a 2 dias atrás que estão sem `confirmacao_enviada_em` (a thread de envio morreu ou o SMTP falhou), até 100 por rodada. |
 | `reprocessar_webhooks_whatsapp` | `comercial` | frequentes | Reprocessa os `WebhookWhatsApp` não processados (com mais de 2 min, até 5 tentativas), na ordem de chegada, e apaga os processados há mais de 30 dias. Seguro porque a mensagem é única pelo `wamid`. |
 | `reenviar_emails_pendentes` | `comercial` | frequentes | Reenvia `EnvioEmail` (fora de campanha, últimos 2 dias) pendente há mais de 10 min ou com erro e menos de 3 tentativas. O conteúdo fica guardado no `EnvioEmail` só até o e-mail sair. |
+| `fechar_dia` | `reservas` | diarias | Fechamento do dia de ontem (auditoria noturna): grava o `FechamentoDiario` imutável — ocupação, chegadas, saídas, no-shows, receita pela competência e saldo em aberto. Primeiro do grupo, para o backup já levar o fechamento. Idempotente; `--dia AAAA-MM-DD` fecha um dia que ficou para trás. |
 | `enviar_conversoes_pendentes` | `comercial` | diarias | Reprocessa conversões de mídia pendentes (idempotente, best-effort). |
 | `backup_banco` | `nucleo` | diarias | Cópia do banco para fora do Railway (ver 10.6). |
 | `sincronizar_gastos_midia` | `comercial` | diarias | Puxa o gasto das plataformas para as campanhas com `id_externo` (`--dias N`). No-op com `MIDIA_GATEWAY=simulado`. |
+| `purgar_trilha` | `nucleo` | diarias | Apaga da trilha o que passou de `TRILHA_RETENCAO_DIAS` (0 = guarda sempre) e registra a própria purga. |
+| `gerar_arrumacoes` | `governanca` | diarias | Uma arrumação para cada quarto em que o hóspede continua (quem sai já tem a faxina do check-out). Idempotente. |
 
 `enviar_campanha_whatsapp` (`comercial`) fica fora: é disparo manual de um template para
 uma lista de leads, com pausa e limite, respeitando opt-in.

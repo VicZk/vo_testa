@@ -193,3 +193,45 @@ class TrilhaSalarioTests(TestCase):
         self.client.login(username="comrem", password="senha-forte-123")
         r = self.client.get(reverse("auditoria:trilha"))
         self.assertContains(r, "9999.00")
+
+
+class FechamentosTelaTests(TestCase):
+    """Tela dos fechamentos do dia: lista o mês, soma e exporta (CSV só gerência)."""
+
+    def setUp(self):
+        from apps.reservas.models import FechamentoDiario
+
+        hoje = timezone.localdate()
+        FechamentoDiario.objects.create(
+            data=hoje.replace(day=1), quartos_disponiveis=24, quartos_ocupados=12,
+            chegadas=3, saidas=2, no_shows=1, receita_diarias=Decimal("2400.00"),
+            receita_servico=Decimal("2500.00"), receita_consumo=Decimal("310.50"),
+            saldo_em_aberto=Decimal("900.00"))
+
+    def test_gerencia_ve_e_exporta(self):
+        Usuario.objects.create_superuser(username="ger", password="senha-forte-123")
+        self.client.login(username="ger", password="senha-forte-123")
+        r = self.client.get(reverse("auditoria:fechamentos"))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "R$ 2.400,00")
+        self.assertContains(r, "12/24")
+        self.assertContains(r, "R$ 200,00")  # ADR = 2.400 / 12
+        csv_resp = self.client.get(reverse("auditoria:fechamentos"), {"export": "csv"})
+        self.assertIn("text/csv", csv_resp["Content-Type"])
+        self.assertIn("2400.00", csv_resp.content.decode("utf-8-sig"))
+
+    def test_operador_ve_mas_nao_exporta(self):
+        from apps.nucleo.models import ModuloContratado
+
+        u = Usuario.objects.create_user(username="op", password="senha-forte-123")
+        u.modulos.add(ModuloContratado.objects.get(codigo="auditoria"))
+        self.client.login(username="op", password="senha-forte-123")
+        self.assertEqual(self.client.get(reverse("auditoria:fechamentos")).status_code, 200)
+        r = self.client.get(reverse("auditoria:fechamentos"), {"export": "csv"})
+        self.assertEqual(r.status_code, 403)
+
+    def test_painel_leva_aos_fechamentos(self):
+        Usuario.objects.create_superuser(username="ger", password="senha-forte-123")
+        self.client.login(username="ger", password="senha-forte-123")
+        self.assertContains(self.client.get(reverse("auditoria:painel")),
+                            reverse("auditoria:fechamentos"))

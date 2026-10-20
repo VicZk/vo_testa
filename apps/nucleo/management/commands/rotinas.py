@@ -35,6 +35,7 @@ GRUPOS = {
         "reprocessar_webhooks_whatsapp",
     ],
     "diarias": [
+        "fechar_dia",  # primeiro: o backup do dia já leva o fechamento
         "enviar_conversoes_pendentes",
         "sincronizar_gastos_midia",
         "backup_banco",

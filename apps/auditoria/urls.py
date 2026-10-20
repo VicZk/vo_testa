@@ -7,4 +7,5 @@ app_name = "auditoria"
 urlpatterns = [
     path("", views.painel, name="painel"),
     path("trilha/", views.trilha, name="trilha"),
+    path("fechamentos/", views.fechamentos, name="fechamentos"),
 ]
