@@ -2177,3 +2177,16 @@ class MenorDeIdadeECATests(ReservasTestsBase):
         self.assertNotIn("autorizacao_conferida", FichaFNRHForm().fields)
         self.assertIn("autorizacao_conferida", FichaFNRHRecepcaoForm().fields)
         self.assertIn("acompanhamento_menor", FichaFNRHForm().fields)
+
+
+class NoShowProvavelTests(ReservasTestsBase):
+    def test_confirmada_com_entrada_vencida_vira_pendencia(self):
+        ontem = self.reserva(dias=2, offset=-1)  # confirmada, entrada ontem, sem check-in
+        tipos = {(a["tipo"], a["url"]) for a in services.pendencias_auditoria()}
+        self.assertIn(("no_show_provavel", reverse("reservas:detalhe", args=[ontem.pk])), tipos)
+
+    def test_hospedada_nao_e_no_show(self):
+        r = self.reserva(dias=2, offset=-1)
+        r.fazer_checkin(self.usuario)
+        self.assertFalse([a for a in services.pendencias_auditoria()
+                          if a["tipo"] == "no_show_provavel"])

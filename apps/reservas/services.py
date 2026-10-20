@@ -1009,7 +1009,7 @@ def relatorio_reservas(inicio: date, fim: date) -> dict:
 
 def pendencias_auditoria():
     """Inconsistências operacionais de Reservas para a Auditoria (read-only)."""
-    from django.db.models import Sum
+    from django.db.models import Q, Sum
     from django.urls import reverse
     achados = []
     hoje = timezone.localdate()
@@ -1019,6 +1019,19 @@ def pendencias_auditoria():
         achados.append({
             "area": "Reservas", "tipo": "checkout_vencido", "gravidade": "alta",
             "descricao": f"{r.uh.numero} — {r.hospede.nome}: check-out era {r.checkout:%d/%m} e não foi feito.",
+            "url": reverse("reservas:detalhe", args=[r.pk]),
+        })
+
+    # Auditoria noturna: entrada que passou sem check-in (no-show provável). A decisão —
+    # marcar no-show, cobrar a política ou reagendar — é da recepção.
+    for r in (Reserva.objects.filter(checkin__lt=hoje)
+              .filter(Q(status=Reserva.Status.CONFIRMADA)
+                      | Q(status=Reserva.Status.PRE_RESERVA, expira_em__isnull=True))
+              .select_related("uh", "hospede")):
+        achados.append({
+            "area": "Reservas", "tipo": "no_show_provavel", "gravidade": "media",
+            "descricao": f"{r.uh.numero} — {r.hospede.nome}: entrada era {r.checkin:%d/%m} "
+                         "e não houve check-in. Marcar no-show ou reagendar.",
             "url": reverse("reservas:detalhe", args=[r.pk]),
         })
 
