@@ -159,6 +159,12 @@
           <label>Motivo (opcional)</label>
           <input type="text" name="motivo" placeholder="Ex.: hóspede pediu andar térreo">
         </div>
+        {% if eh_gerente %}
+          <label class="check-inline">
+            <input type="checkbox" name="cobrar_tarifa_nova"> Cobrar a tarifa do novo quarto
+          </label>
+          <p class="ajuda">Sem marcar, a diária combinada é mantida. Hospedado, a diferença das noites que faltam entra na conta.</p>
+        {% endif %}
         <div class="acoes"><button type="submit" class="botao-primario">Mover a reserva</button></div>
       </form>
     {% else %}

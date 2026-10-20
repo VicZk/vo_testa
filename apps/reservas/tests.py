@@ -738,6 +738,62 @@ class TrocaQuartoTests(ReservasTestsBase):
         with self.assertRaises(ValidationError):
             services.trocar_quarto(r, self.uh, self.usuario)
 
+    def _quarto_luxo(self):
+        luxo = TipoUH.objects.create(nome="Luxo", tarifa_base=Decimal("500.00"))
+        return UH.objects.create(numero="L1", tipo=luxo)
+
+    def test_antes_do_checkin_mantem_a_diaria_e_avisa_a_tarifa(self):
+        r = self.reserva(dias=2, offset=10)
+        movida = services.trocar_quarto(r, self._quarto_luxo(), self.usuario)
+        self.assertEqual(movida.valor_diaria, Decimal("300.00"))
+        self.assertEqual(movida.tarifa_do_destino, Decimal("500.00"))
+
+    def test_gerencia_cobra_a_tarifa_nova_antes_do_checkin(self):
+        r = self.reserva(dias=2, offset=10)
+        services.trocar_quarto(r, self._quarto_luxo(), self.usuario, cobrar_tarifa_nova=True)
+        r.refresh_from_db()
+        self.assertEqual((r.valor_diaria, r.valor_hospedagem),
+                         (Decimal("500.00"), Decimal("1000.00")))
+
+    def test_hospedado_com_tarifa_nova_paga_a_diferenca_das_noites_que_faltam(self):
+        r = self.reserva(dias=3)
+        conta = r.fazer_checkin(self.usuario)  # 900
+        services.trocar_quarto(r, self._quarto_luxo(), self.usuario, cobrar_tarifa_nova=True)
+        # Hoje é a primeira noite: faltam 3 noites × (500 − 300).
+        self.assertEqual(conta.saldo(), Decimal("1500.00"))
+
+    def test_faxina_do_quarto_antigo_so_quando_o_hospede_estava_nele(self):
+        from .signals import quarto_liberado
+
+        recebidos = []
+
+        def ouvir(sender, uh=None, **kwargs):
+            recebidos.append(uh.numero)
+
+        quarto_liberado.connect(ouvir)
+        try:
+            antes = self.reserva(dias=2, offset=10)
+            services.trocar_quarto(antes, self._quarto_luxo(), self.usuario)
+            self.assertEqual(recebidos, [])
+            hospedada = self.reserva(dias=2)
+            hospedada.fazer_checkin(self.usuario)
+            outro = UH.objects.create(numero="T3", tipo=self.tipo)
+            services.trocar_quarto(hospedada, outro, self.usuario)
+            self.assertEqual(recebidos, ["T1"])
+        finally:
+            quarto_liberado.disconnect(ouvir)
+
+    def test_cobrar_tarifa_nova_exige_gerencia_na_tela(self):
+        r = self.reserva(dias=2, offset=10)
+        luxo = self._quarto_luxo()
+        operadora = Usuario.objects.create_user(username="op-troca", password="senha-forte-123")
+        operadora.modulos.add(ModuloContratado.objects.get(codigo=Modulo.RESERVAS))
+        self.client.force_login(operadora)
+        self.client.post(reverse("reservas:trocar_quarto", args=[r.pk]),
+                         {"novo_uh": luxo.pk, "cobrar_tarifa_nova": "on"})
+        r.refresh_from_db()
+        self.assertEqual(r.uh, self.uh)
+
 
 class RateioPagamentoTests(ReservasTestsBase):
     def test_dois_pagamentos_parciais_com_pagadores(self):

@@ -531,7 +531,8 @@ def _resolver_arranjo(uh, *, casais, solteiros, usa_sofa_cama, adultos, criancas
 
 
 def _travar_e_resolver_arranjo(uh, *, casais, solteiros, usa_sofa_cama,
-                               adultos, criancas, checkin, checkout) -> dict:
+                               adultos, criancas, checkin, checkout,
+                               excluir_id=None) -> dict:
     """Resolve o arranjo de camas e **trava o pool de colchões por noite** (lock), para
     quartos configurados. Levanta ValidationError se a trava recusa. Devolve o dict de
     campos a persistir na Reserva. Chamar dentro de uma transação (o lock serializa a
@@ -549,7 +550,8 @@ def _travar_e_resolver_arranjo(uh, *, casais, solteiros, usa_sofa_cama,
         adultos=adultos, criancas=criancas)
     conf = conferir_arranjo(
         uh, casais=casais, solteiros=solteiros, usa_sofa_cama=usa_sofa_cama,
-        adultos=adultos, criancas=criancas, checkin=checkin, checkout=checkout)
+        adultos=adultos, criancas=criancas, checkin=checkin, checkout=checkout,
+        excluir_id=excluir_id)
     if conf["erros"]:
         raise ValidationError(conf["erros"])
     return {"casais": casais, "solteiros": solteiros, "usa_sofa_cama": usa_sofa_cama}
@@ -1469,11 +1471,59 @@ def saidas_vencidas() -> dict:
 
 
 @transaction.atomic
-def trocar_quarto(reserva, novo_uh, usuario, motivo=""):
+def _arranjo_no_destino(reserva, novo_uh) -> dict:
+    """Camas da reserva no quarto de destino: mantém o arranjo escolhido se ele couber;
+    senão usa o sugerido para a lotação. Trava o pool de colchões e recusa se nem o
+    sugerido couber (ex.: quarto sem sofá-cama para a criança)."""
+    comum = dict(adultos=reserva.adultos, criancas=reserva.criancas,
+                 checkin=reserva.checkin, checkout=reserva.checkout, excluir_id=reserva.pk)
+    try:
+        return _travar_e_resolver_arranjo(
+            novo_uh, casais=reserva.casais, solteiros=reserva.solteiros,
+            usa_sofa_cama=reserva.usa_sofa_cama, **comum)
+    except ValidationError:
+        return _travar_e_resolver_arranjo(
+            novo_uh, casais=None, solteiros=None, usa_sofa_cama=None, **comum)
+
+
+def _diferenca_de_tarifa(reserva, nova_diaria, novo_uh, usuario):
+    """Hóspede já hospedado que passa a pagar a tarifa do novo quarto: as diárias foram
+    lançadas no check-in, então a diferença das noites que faltam entra na conta (a
+    mais como diária; a menos como desconto)."""
+    from apps.nucleo.models import NaturezaFiscal
+
+    hoje = timezone.localdate()
+    noites = (reserva.checkout - max(hoje, reserva.checkin)).days
+    diferenca = (nova_diaria - reserva.valor_diaria) * noites
+    if noites <= 0 or diferenca == 0:
+        return
+    descricao = (f"Diferença de tarifa — quarto {reserva.uh.numero} → {novo_uh.numero}, "
+                 f"{noites} noite{'s' if noites != 1 else ''}")
+    conta = reserva.conta
+    if diferenca > 0:
+        lancar_na_conta(conta, LancamentoConta.Tipo.DIARIA, NaturezaFiscal.SERVICO,
+                        descricao, diferenca, usuario)
+    else:
+        lancar_na_conta(conta, LancamentoConta.Tipo.DESCONTO, NaturezaFiscal.SERVICO,
+                        descricao, -diferenca, usuario)
+
+
+@transaction.atomic
+def trocar_quarto(reserva, novo_uh, usuario, motivo="", cobrar_tarifa_nova=False):
     """
     Move a reserva para outro quarto. A conta (folio) pertence à reserva, então
     diárias, consumo e pagamentos vão junto automaticamente. O antioverbooking
     (ExclusionConstraint) valida se o destino está livre no período.
+
+    - Camas: o arranjo é conferido no quarto novo (mantido se couber; senão o
+      sugerido); se nem o sugerido couber, a troca é recusada.
+    - Preço: por padrão a diária acordada é mantida (troca por decisão da casa não
+      muda o que o hóspede combinou). Com `cobrar_tarifa_nova` (a view exige
+      gerência), a reserva passa à tarifa do novo quarto: antes do check-in muda a
+      diária; hospedado, a diferença das noites que faltam entra na conta.
+    - Faxina do quarto antigo só se o hóspede estava nele (hospedado).
+    `reserva.tarifa_do_destino` fica com a diária da tarifa do novo quarto, para a
+    tela avisar quando ela difere da mantida.
     """
     if reserva.status not in Reserva.STATUS_ATIVOS:
         raise ValidationError("Só reservas ativas podem trocar de quarto.")
@@ -1487,8 +1537,23 @@ def trocar_quarto(reserva, novo_uh, usuario, motivo=""):
         raise ValidationError(
             f"O quarto {novo_uh.numero} está em manutenção no período desta reserva."
         )
-    antigo = reserva.uh
+    from apps.reservas import precos
+
+    arranjo = _arranjo_no_destino(reserva, novo_uh)
+    cot = precos.cotacao(
+        uh=novo_uh, checkin=reserva.checkin, checkout=reserva.checkout,
+        adultos=reserva.adultos, criancas_0_5=reserva.criancas_0_5,
+        criancas_6_15=reserva.criancas_6_15, nao_reembolsavel=reserva.nao_reembolsavel)
+    antigo, diaria_antiga = reserva.uh, reserva.valor_diaria
+    hospedada = reserva.status == Reserva.Status.HOSPEDADA
+    if cobrar_tarifa_nova and hospedada:
+        _diferenca_de_tarifa(reserva, cot["media_noite"], novo_uh, usuario)
     reserva.uh = novo_uh
+    for campo, valor in arranjo.items():
+        setattr(reserva, campo, valor)
+    if cobrar_tarifa_nova:
+        reserva.valor_diaria = cot["media_noite"]
+        reserva.valor_hospedagem = None if hospedada else cot["hospedagem"]
     try:
         with transaction.atomic():
             reserva.save()
@@ -1498,17 +1563,20 @@ def trocar_quarto(reserva, novo_uh, usuario, motivo=""):
         )
     registrar_auditoria(
         usuario, "troca_quarto", reserva,
-        {"de": antigo.numero, "para": novo_uh.numero, "motivo": motivo},
+        {"de": antigo.numero, "para": novo_uh.numero, "motivo": motivo,
+         "diaria_antiga": str(diaria_antiga), "diaria_nova": str(reserva.valor_diaria)},
     )
-    # Quarto antigo foi liberado — Governança gera a faxina.
-    from apps.nucleo.sinais import emitir
+    reserva.tarifa_do_destino = cot["media_noite"]
+    if hospedada:
+        # O hóspede estava no quarto antigo — Governança gera a faxina.
+        from apps.nucleo.sinais import emitir
 
-    from .signals import quarto_liberado
+        from .signals import quarto_liberado
 
-    emitir(
-        quarto_liberado, sender=Reserva, uh=antigo, reserva=reserva, usuario=usuario,
-        origem="troca",
-    )
+        emitir(
+            quarto_liberado, sender=Reserva, uh=antigo, reserva=reserva, usuario=usuario,
+            origem="troca",
+        )
     return reserva
 
 

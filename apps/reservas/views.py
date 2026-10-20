@@ -527,12 +527,21 @@ def trocar_quarto(request, pk):
         return redirect("reservas:detalhe", pk=pk)
     novo = UH.objects.filter(pk=request.POST.get("novo_uh")).first()
     ok, msg = False, "Selecione um quarto de destino."
+    cobrar = request.POST.get("cobrar_tarifa_nova") == "on"
+    if cobrar and not eh_gerente(request.user):
+        novo, msg = None, "Mudar a diária na troca de quarto exige gerência."
     if novo:
         try:
-            services.trocar_quarto(reserva, novo, request.user,
-                                   request.POST.get("motivo", ""))
+            movida = services.trocar_quarto(reserva, novo, request.user,
+                                            request.POST.get("motivo", ""),
+                                            cobrar_tarifa_nova=cobrar)
             ok = True
             msg = f"Reserva movida para {novo.numero}. A conta foi junto."
+            if cobrar:
+                msg += f" Diária agora é {intcomma_brl(movida.valor_diaria)} (tarifa do quarto)."
+            elif movida.tarifa_do_destino != movida.valor_diaria:
+                msg += (f" A tarifa do {novo.numero} é {intcomma_brl(movida.tarifa_do_destino)};"
+                        f" foi mantida a diária combinada de {intcomma_brl(movida.valor_diaria)}.")
         except ValidationError as erro:
             msg = " ".join(erro.messages)
     if request.headers.get("X-Requested-With") == "fetch":
