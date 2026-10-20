@@ -779,6 +779,7 @@ Tudo que varia por ambiente é lido em `config/settings.py` (`.env` em dev via
 | `DEBUG` | `0` | `True` só com `"1"`. Governa o bloco de hardening, `MFA_OBRIGATORIO` e a confiança no corpo do webhook. |
 | `LOG_LEVEL` | `INFO` (`WARNING` nos testes) | Nível do `LOGGING` que manda tudo para o stdout (logs do Railway). |
 | `REDIS_URL` | — | Cache compartilhado em Redis. Vazio: `DatabaseCache` na tabela `nucleo_cache`. Nos testes: memória. |
+| `BACKUP_DIR` | — | Pasta do `backup_banco` quando não há R2. Vazio e sem R2: o backup não roda (só avisa). |
 | `SENTRY_DSN` | — | Liga o Sentry (fora dos testes). Sem PII: `send_default_pii=False`, sem variáveis locais e sem corpo de requisição. Opcionais: `SENTRY_ENVIRONMENT`, `SENTRY_TRACES_SAMPLE_RATE`; a release vem de `RAILWAY_GIT_COMMIT_SHA`. |
 | `SECRET_KEY` | chave de dev versionada | Em produção (`DEBUG=0`, não `TESTING`) é **obrigatória** e não pode começar com `dev-inseguro` — senão `ImproperlyConfigured`. |
 | `ALLOWED_HOSTS` | `""` (lista separada por vírgula) | Com `DEBUG=1` e vazio, usa `localhost,127.0.0.1`. Sempre são adicionados os domínios do próprio serviço (`RAILWAY_PUBLIC_DOMAIN`, `RAILWAY_PRIVATE_DOMAIN`), `healthcheck.railway.app` e loopbacks. Sem curinga `.railway.app`: o domínio próprio (ex.: `www.pousadavotesta.com.br`) vai na variável. |
@@ -1270,6 +1271,7 @@ do web e o arquivo de config-as-code `deploy/railway.rotinas.json` (`*/10 * * * 
 | `reprocessar_webhooks_whatsapp` | `comercial` | frequentes | Reprocessa os `WebhookWhatsApp` não processados (com mais de 2 min, até 5 tentativas), na ordem de chegada, e apaga os processados há mais de 30 dias. Seguro porque a mensagem é única pelo `wamid`. |
 | `reenviar_emails_pendentes` | `comercial` | frequentes | Reenvia `EnvioEmail` (fora de campanha, últimos 2 dias) pendente há mais de 10 min ou com erro e menos de 3 tentativas. O conteúdo fica guardado no `EnvioEmail` só até o e-mail sair. |
 | `enviar_conversoes_pendentes` | `comercial` | diarias | Reprocessa conversões de mídia pendentes (idempotente, best-effort). |
+| `backup_banco` | `nucleo` | diarias | Cópia do banco para fora do Railway (ver 10.6). |
 | `sincronizar_gastos_midia` | `comercial` | diarias | Puxa o gasto das plataformas para as campanhas com `id_externo` (`--dias N`). No-op com `MIDIA_GATEWAY=simulado`. |
 
 `enviar_campanha_whatsapp` (`comercial`) fica fora: é disparo manual de um template para
@@ -1289,6 +1291,33 @@ uma lista de leads, com pausa e limite, respeitando opt-in.
 | `reconciliar_capacidades`, `relatorio_telefones_incompletos` | Diagnóstico de dados. |
 | `zerar_funil`, `sanear_demo`, `recentrar_demo`, `limpar_nomes_quartos` | Limpeza de dados de demonstração — **destrutivos, nunca em produção sem conferir**. |
 | `preparar_escala` | Seed de setor/sexo dos funcionários (o sexo é **heurística pelo nome** — revisar na tela de Funcionários). |
+
+### 10.6 Backup e restauração (`apps/nucleo/management/commands/backup_banco.py`)
+
+Duas camadas:
+
+1. **Railway** — backup gerenciado do Postgres e PITR (ligar no painel; a janela de
+   recuperação só começa a contar depois de ligado).
+2. **`backup_banco`**, no grupo `diarias` do `rotinas` — cópia fora do Railway:
+   - **formato:** `pg_dump --format=custom` quando o executável existe e aceita a versão do
+     servidor; senão `dumpdata --natural-foreign --natural-primary` de todos os modelos
+     (menos contenttypes, permissões, sessões e log do admin), em JSON compactado;
+   - **destino:** o bucket R2 da mídia, prefixo `backups/AAAA/MM/`, quando as variáveis
+     `R2_*` existem; senão `BACKUP_DIR`. Sem nenhum dos dois, `--destino auto` só avisa
+     (o disco do container é apagado a cada deploy);
+   - **retenção:** apaga do mesmo destino o que tiver mais de `--manter-dias` (padrão 30).
+
+Restauração:
+
+```bash
+# .dump (pg_dump)
+pg_restore --clean --if-exists --no-owner -d "$DATABASE_URL" crm-AAAAMMDD-HHMMSS.dump
+# .json.gz (dumpdata), num banco vazio
+python manage.py migrate
+python manage.py loaddata crm-AAAAMMDD-HHMMSS.json.gz
+```
+
+Ensaie a restauração num banco separado (ex.: um Postgres local) antes de precisar dela.
 
 ---
 

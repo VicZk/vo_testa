@@ -1388,3 +1388,85 @@ class HostsPermitidosTests(TestCase):
         self.assertNotIn(".railway.app", settings.ALLOWED_HOSTS)
         self.assertNotIn(".up.railway.app", settings.ALLOWED_HOSTS)
         self.assertIn("healthcheck.railway.app", settings.ALLOWED_HOSTS)
+
+
+class BackupDoBancoTests(TestCase):
+    """`backup_banco` gera o dump e guarda fora do container, com retenção."""
+
+    def _rodar(self, *args, env=None):
+        import os
+        from io import StringIO
+        from unittest import mock
+
+        from django.core.management import call_command
+
+        saida = StringIO()
+        with mock.patch.dict(os.environ, env or {}, clear=False):
+            call_command("backup_banco", *args, stdout=saida)
+        return saida.getvalue()
+
+    def test_backup_local_em_json_tem_os_dados(self):
+        import gzip
+        import json
+        import tempfile
+        from pathlib import Path
+
+        from .models import Pessoa
+
+        Pessoa.objects.create(nome="Hóspede do Backup")
+        with tempfile.TemporaryDirectory() as pasta:
+            self._rodar("--formato", "json", env={"BACKUP_DIR": pasta})
+            arquivos = list(Path(pasta).glob("crm-*.json.gz"))
+            self.assertEqual(len(arquivos), 1)
+            with gzip.open(arquivos[0], "rt", encoding="utf-8") as f:
+                dados = json.load(f)
+        self.assertTrue(any(o["model"] == "nucleo.pessoa"
+                            and o["fields"]["nome"] == "Hóspede do Backup" for o in dados))
+
+    def test_apaga_backups_mais_velhos_que_o_prazo(self):
+        import os
+        import tempfile
+        import time
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as pasta:
+            velho = Path(pasta) / "crm-20260101-000000.json.gz"
+            velho.write_bytes(b"x")
+            quarenta_dias = time.time() - 40 * 86400
+            os.utime(velho, (quarenta_dias, quarenta_dias))
+            self._rodar("--formato", "json", "--manter-dias", "30", env={"BACKUP_DIR": pasta})
+            self.assertFalse(velho.exists())
+            self.assertEqual(len(list(Path(pasta).glob("crm-*"))), 1)
+
+    def test_sem_destino_configurado_so_avisa(self):
+        import os
+        from unittest import mock
+
+        with mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("BACKUP_DIR", None)
+            saida = self._rodar()
+        self.assertIn("Backup não feito", saida)
+
+    def test_r2_envia_com_prefixo_e_apaga_antigos(self):
+        from datetime import timedelta
+        from unittest import mock
+
+        from django.test import override_settings
+        from django.utils import timezone
+
+        from .management.commands import backup_banco
+
+        cliente = mock.MagicMock()
+        cliente.get_paginator.return_value.paginate.return_value = [{"Contents": [
+            {"Key": "backups/2026/08/crm-velho.json.gz",
+             "LastModified": timezone.now() - timedelta(days=60)},
+            {"Key": "backups/2026/10/crm-novo.json.gz", "LastModified": timezone.now()},
+        ]}]
+        with override_settings(USE_R2=True, R2_BUCKET="midia"), \
+                mock.patch.object(backup_banco, "_cliente_r2", return_value=cliente):
+            saida = self._rodar("--formato", "json")
+        chave = cliente.upload_file.call_args.args[2]
+        self.assertTrue(chave.startswith("backups/"))
+        self.assertIn("r2://midia/backups/", saida)
+        cliente.delete_objects.assert_called_once_with(
+            Bucket="midia", Delete={"Objects": [{"Key": "backups/2026/08/crm-velho.json.gz"}]})

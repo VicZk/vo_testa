@@ -5,7 +5,8 @@ Grupos:
   FNRH o que ficou pendente, dispara as campanhas de e-mail agendadas e reenvia as
   confirmações do site e os e-mails do Comercial que não saíram, e reprocessa os
   webhooks do WhatsApp que falharam;
-- diarias (madrugada): conversões de mídia pendentes e gasto das campanhas.
+- diarias (madrugada): conversões de mídia pendentes, gasto das campanhas e o backup do
+  banco para fora do Railway (se R2_* ou BACKUP_DIR estiverem definidos).
 
 Cada tarefa roda isolada: se uma falha, o erro vai para o log e as outras seguem. Ao fim,
 se alguma falhou, o comando termina com erro para o Railway marcar a execução.
@@ -36,6 +37,7 @@ GRUPOS = {
     "diarias": [
         "enviar_conversoes_pendentes",
         "sincronizar_gastos_midia",
+        "backup_banco",
     ],
 }
 

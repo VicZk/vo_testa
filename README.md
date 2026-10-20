@@ -572,6 +572,7 @@ Railway em produção). As essenciais:
 | `REDIS_URL` | cache compartilhado em Redis; vazio = tabela no próprio Postgres |
 | `SAFRAPAY_TIMEOUT` | segundos de espera pela Safrapay (padrão 10) |
 | `SENTRY_DSN` | monitoramento de erros no Sentry (sem corpo de requisição nem variáveis locais) |
+| `BACKUP_DIR` | pasta do `backup_banco` quando não há R2 (vazio e sem R2 = backup não roda) |
 
 A lista completa, com padrões e efeitos, está em
 [`docs/ARQUITETURA.md` §7](docs/ARQUITETURA.md). Durante os testes a flag `TESTING`
@@ -645,6 +646,13 @@ repositório, com as mesmas variáveis do serviço web e o arquivo de configura�
 | frequentes | `reenviar_emails_pendentes` | reenvia e-mails do Comercial presos em "pendente" ou com erro (até 3 tentativas) |
 | diarias | `enviar_conversoes_pendentes` | reenvia conversões de mídia pendentes |
 | diarias | `sincronizar_gastos_midia` | puxa o gasto das plataformas de anúncio |
+| diarias | `backup_banco` | cópia do banco para o R2 (ou `BACKUP_DIR`), apagando as de mais de 30 dias |
+
+**Backup:** além dos backups do Railway (ligue o PITR do Postgres lá), `backup_banco`
+guarda uma cópia fora dele todo dia: `pg_dump` quando disponível, senão JSON compactado
+de todos os dados. Restaurar: `pg_restore --clean --if-exists --no-owner -d
+"$DATABASE_URL" arquivo.dump` ou `python manage.py migrate && python manage.py loaddata
+arquivo.json.gz`. Teste a restauração num banco separado antes de precisar dela.
 
 **Comandos de operação:** `estrutura_inicial` (banco novo: tipos e os 24 quartos; com
 `--completo`, também camas, tarifas e vitrine), `sincronizar_vitrine` (quarto novo no site),
