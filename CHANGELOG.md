@@ -9,6 +9,76 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 20/10/2026 — Operação da recepção, fiscal e limpeza de código (`2cc35b1` a `f0441b0`)
+
+Quinto bloco: o que faltava da operação de Reservas, a preparação fiscal e a limpeza de
+código apontada na auditoria.
+
+**O que melhorou**
+- **Menores de idade (ECA, art. 82).**
+  - A ficha FNRH pergunta se o menor está com os pais, com o responsável legal ou com um
+    adulto autorizado por escrito; a recepção confere a autorização.
+  - O check-in só passa com isso em ordem.
+- **Arrumação diária.** Toda manhã a Governança recebe uma arrumação para cada quarto em
+  que o hóspede continua (quem sai no dia já tem a faxina do check-out).
+- **No-show provável.** Reserva confirmada cuja entrada passou sem check-in aparece na
+  Auditoria para a recepção decidir.
+- **Horários de check-in e check-out** configuráveis na Tabela de Preços (padrão 14h e
+  12h) e mostrados na confirmação e no e-mail.
+- **Fiscal:**
+  - IBS e CBS da reforma tributária destacados no documento fiscal (fase de teste de 2026:
+    0,9% e 0,1%);
+  - os PDVs avisam que a venda de produto está sem NFC-e enquanto não houver Inscrição
+    Estadual, com bloqueio opcional para o contador decidir.
+- **LGPD:** as políticas de privacidade identificam o encarregado pelos dados (nome e
+  e-mail configuráveis).
+- **Relatórios** com dinheiro em pt-BR ("R$ 1.234,56").
+- **Webhook de pagamento** de uma cobrança que não é nossa responde 200 (o provedor para
+  de reenviar). O estoque de colchões e berços nunca vira duas linhas.
+- **Código mais limpo:**
+  - os três endpoints de lead das LPs viraram um caminho só (a LP Fundador ganhou o
+    enriquecimento do lead que faltava);
+  - saiu o motor antigo de preço do site;
+  - o rótulo do pagamento do site não fala mais em Mercado Pago.
+
+**O que foi modificado**
+- **Migrations:**
+  - `reservas.0027`: campos do menor na FNRH;
+  - `nucleo.0047`: horários de entrada e saída;
+  - `fiscal.0002`: IBS/CBS;
+  - `core.0008`: rótulo do pagamento.
+- **Serviços:**
+  - Governança: `gerar_arrumacoes_do_dia` e o comando `gerar_arrumacoes`, no grupo
+    diário do `rotinas`;
+  - Reservas: `uhs_em_permanencia`, `Reserva.menores_pendentes`;
+  - Fiscal: `ibs_cbs`;
+  - núcleo: `fiscal_regras`.
+- **Configurações:**
+  - `ECA_BLOQUEAR_CHECKIN`;
+  - `FISCAL_BLOQUEAR_VENDA_SEM_NFCE`;
+  - `FISCAL_IBS_CBS_ATIVO`, `FISCAL_CBS_ALIQUOTA`, `FISCAL_IBS_ALIQUOTA`;
+  - `LGPD_ENCARREGADO_NOME`, `LGPD_ENCARREGADO_EMAIL`.
+- **Documentação:** `docs/MODULOS_E_FLUXOS.md` e `docs/ARQUITETURA.md`.
+
+**Como foi testado**
+- Testes novos em cada commit, entre eles:
+  - menor sem informação trava o check-in e com os pais entra;
+  - arrumação para quem fica e não para quem sai;
+  - no-show provável;
+  - horários no e-mail e na confirmação;
+  - IBS/CBS calculados;
+  - aviso e bloqueio da NFC-e;
+  - encarregado nas políticas;
+  - webhook desconhecido.
+- Suíte completa no Windows antes do push; o CI (Linux + PostgreSQL 16) roda no push.
+
+**Depois do deploy (no Railway, se quiser)**
+- Definir `LGPD_ENCARREGADO_NOME` e `LGPD_ENCARREGADO_EMAIL` com quem responde pelos dados.
+- Confirmar com o contador as alíquotas de IBS/CBS e se a venda sem NFC-e deve ser
+  bloqueada (`FISCAL_BLOQUEAR_VENDA_SEM_NFCE=1`).
+
+---
+
 ## 20/10/2026 — Segurança e LGPD (`9082fc0` a `5f3c8b6`)
 
 Quarto bloco: as proteções de login, os formulários públicos e o tratamento de dados
