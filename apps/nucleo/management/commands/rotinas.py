@@ -2,7 +2,8 @@
 
 Grupos:
 - frequentes (a cada 10 min): expira pré-reservas e recibos do site vencidos, reenvia à
-  FNRH o que ficou pendente e dispara as campanhas de e-mail agendadas;
+  FNRH o que ficou pendente, dispara as campanhas de e-mail agendadas e reenvia os
+  e-mails do Comercial que não saíram;
 - diarias (madrugada): conversões de mídia pendentes e gasto das campanhas.
 
 Cada tarefa roda isolada: se uma falha, o erro vai para o log e as outras seguem. Ao fim,
@@ -27,6 +28,7 @@ GRUPOS = {
         "expirar_recibos_site",
         "enviar_fnrh_pendentes",
         "enviar_campanhas_email",
+        "reenviar_emails_pendentes",
     ],
     "diarias": [
         "enviar_conversoes_pendentes",

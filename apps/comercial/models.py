@@ -948,6 +948,14 @@ class EnvioEmail(models.Model):
     enviado_em = models.DateTimeField("enviado em", null=True, blank=True)
     evento_em = models.DateTimeField("último evento em", null=True, blank=True)
     criado_em = models.DateTimeField("registrado em", auto_now_add=True)
+    # Conteúdo guardado só enquanto o e-mail não sai, para o `reenviar_emails_pendentes`
+    # tentar de novo (a thread de fundo morre num deploy/reinício). Apagado ao enviar.
+    remetente = models.CharField("remetente", max_length=200, blank=True)
+    reply_to = models.CharField("responder para", max_length=254, blank=True)
+    cabecalhos = models.JSONField("cabeçalhos", default=dict, blank=True)
+    corpo_html = models.TextField("corpo (HTML)", blank=True)
+    corpo_texto = models.TextField("corpo (texto)", blank=True)
+    tentativas = models.PositiveSmallIntegerField("tentativas", default=0)
 
     class Meta:
         ordering = ["-criado_em"]

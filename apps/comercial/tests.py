@@ -2690,3 +2690,71 @@ class PainelQuartosLeadTests(TestCase):
         self.uh.save()
         self.uh.refresh_from_db()
         self.assertNotIn("Banheiro", quartos._campos_a_levantar(self.uh, None))
+
+
+class ReenvioDeEmailsTests(TestCase):
+    """E-mail do Comercial que não saiu (thread morta no deploy, SMTP fora) é reenviado."""
+
+    def setUp(self):
+        self.u = Usuario.objects.create_user(username="com", password="senha-forte-123")
+
+    def _pendente(self, minutos_atras, **campos):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from .models import EnvioEmail
+
+        base = dict(email="a@ex.com", assunto="Proposta", status=EnvioEmail.Status.PENDENTE,
+                    corpo_html="<p>Olá</p>", corpo_texto="Olá",
+                    remetente="Pousada <comercial@ex.com>")
+        base.update(campos)
+        envio = EnvioEmail.objects.create(**base)
+        EnvioEmail.objects.filter(pk=envio.pk).update(
+            criado_em=timezone.now() - timedelta(minutes=minutos_atras))
+        return envio
+
+    def _rodar(self):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        call_command("reenviar_emails_pendentes", stdout=StringIO())
+
+    def test_envio_guarda_o_conteudo_so_ate_sair(self):
+        from .models import EnvioEmail
+
+        envio = services.enviar_email(para="a@ex.com", assunto="Oi", html="<p>x</p>",
+                                      texto="x", usuario=self.u)
+        envio.refresh_from_db()
+        self.assertEqual(envio.status, EnvioEmail.Status.ENVIADO)
+        self.assertEqual(envio.tentativas, 1)
+        self.assertEqual((envio.corpo_html, envio.corpo_texto), ("", ""))
+
+    def test_pendente_antigo_e_reenviado(self):
+        from django.core import mail
+
+        from .models import EnvioEmail
+
+        envio = self._pendente(15)
+        self._rodar()
+        envio.refresh_from_db()
+        self.assertEqual(envio.status, EnvioEmail.Status.ENVIADO)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["a@ex.com"])
+
+    def test_pendente_recente_espera_a_thread(self):
+        from django.core import mail
+
+        self._pendente(2)
+        self._rodar()
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_erro_com_tres_tentativas_para_de_tentar(self):
+        from django.core import mail
+
+        from .models import EnvioEmail
+
+        self._pendente(30, status=EnvioEmail.Status.ERRO, tentativas=3)
+        self._rodar()
+        self.assertEqual(len(mail.outbox), 0)

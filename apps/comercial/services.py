@@ -1231,6 +1231,7 @@ def _processar_envio_email(envio_id, para, assunto, html, texto, remetente, repl
     envio = EnvioEmail.objects.filter(pk=envio_id).first()
     if envio is None:
         return
+    envio.tentativas += 1
     try:
         res = get_email_gateway().enviar(
             para=para, assunto=assunto, html=html, texto=texto,
@@ -1238,10 +1239,15 @@ def _processar_envio_email(envio_id, para, assunto, html, texto, remetente, repl
         envio.status = EnvioEmail.Status.ENVIADO
         envio.message_id = res.get("message_id", "")
         envio.enviado_em = timezone.now()
+        envio.erro = ""
+        # Saiu: o conteúdo guardado para reenvio não é mais necessário.
+        envio.corpo_html = envio.corpo_texto = ""
+        envio.cabecalhos = {}
     except Exception as e:  # noqa: BLE001 — best-effort, registra o erro
         envio.status = EnvioEmail.Status.ERRO
         envio.erro = str(e)
-    envio.save(update_fields=["status", "message_id", "enviado_em", "erro"])
+    envio.save(update_fields=["status", "message_id", "enviado_em", "erro", "tentativas",
+                              "corpo_html", "corpo_texto", "cabecalhos"])
     if envio.status == EnvioEmail.Status.ENVIADO and oportunidade_id:
         op = Oportunidade.objects.filter(pk=oportunidade_id).first()
         user = Usuario.objects.filter(pk=usuario_id).first() if usuario_id else None
@@ -1277,7 +1283,9 @@ def enviar_email(*, para, assunto, html, texto, usuario, oportunidade=None,
 
     envio = EnvioEmail.objects.create(
         oportunidade=oportunidade, campanha=campanha, pessoa=pessoa, email=para,
-        assunto=assunto[:200], autor=usuario, status=EnvioEmail.Status.PENDENTE)
+        assunto=assunto[:200], autor=usuario, status=EnvioEmail.Status.PENDENTE,
+        remetente=remetente or "", reply_to=reply_to or "", cabecalhos=headers or {},
+        corpo_html=html or "", corpo_texto=texto or "")
     args = (envio.pk, para, assunto, html, texto, remetente, reply_to,
             usuario.pk if usuario else None,
             oportunidade.pk if oportunidade else None, headers)

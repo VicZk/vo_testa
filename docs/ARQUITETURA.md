@@ -1265,6 +1265,7 @@ do web e o arquivo de config-as-code `deploy/railway.rotinas.json` (`*/10 * * * 
 | `expirar_recibos_site` | `site` | frequentes | Marca como `expirada` as `site.Reserva` aguardando pagamento com prazo vencido. Era `expirar_reservas`, homônimo do de Reservas e inalcançável pelo nome (o Django resolve nomes iguais pelo primeiro app do `INSTALLED_APPS`). |
 | `enviar_fnrh_pendentes` | `reservas` | frequentes | Reenvia à FNRH Digital as reservas `pendente`/`erro` (backstop do envio best-effort do check-in). |
 | `enviar_campanhas_email` | `comercial` | frequentes | Dispara campanhas de e-mail agendadas cujo horário chegou (`--id N` força uma). |
+| `reenviar_emails_pendentes` | `comercial` | frequentes | Reenvia `EnvioEmail` (fora de campanha, últimos 2 dias) pendente há mais de 10 min ou com erro e menos de 3 tentativas. O conteúdo fica guardado no `EnvioEmail` só até o e-mail sair. |
 | `enviar_conversoes_pendentes` | `comercial` | diarias | Reprocessa conversões de mídia pendentes (idempotente, best-effort). |
 | `sincronizar_gastos_midia` | `comercial` | diarias | Puxa o gasto das plataformas para as campanhas com `id_externo` (`--dias N`). No-op com `MIDIA_GATEWAY=simulado`. |
 
