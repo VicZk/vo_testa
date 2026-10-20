@@ -585,3 +585,152 @@ class PaginasLegaisTests(TestCase):
         # Sem HOME_MODO=lp_fundador, a raiz é o index do site (não a LP).
         r = self.client.get("/")
         self.assertEqual(r.status_code, 200)
+
+
+class DadosEstruturadosTests(TestCase):
+    """JSON-LD da pousada na home (ficha de hospedagem do Google)."""
+
+    def test_home_tem_lodgingbusiness_valido(self):
+        import json
+        import re
+
+        html = self.client.get("/").content.decode()
+        achado = re.search(
+            r'<script type="application/ld\+json">(.*?)</script>', html, re.S
+        )
+        self.assertIsNotNone(achado, "home sem JSON-LD")
+        dados = json.loads(achado.group(1))        # falha se o JSON sair quebrado
+        self.assertEqual(dados["@type"], "LodgingBusiness")
+        self.assertEqual(dados["numberOfRooms"], 24)
+        self.assertEqual(dados["address"]["addressLocality"], "Itá")
+        self.assertEqual(dados["address"]["addressRegion"], "SC")
+        self.assertIn("priceRange", dados)
+        self.assertTrue(dados["telephone"])
+
+    def test_json_ld_nao_deixa_fechar_o_script(self):
+        """Endereço com HTML colado no painel não pode escapar do <script>."""
+        from apps.site.models import ConfiguracaoSite
+
+        cfg = ConfiguracaoSite.load()
+        cfg.endereco = "Rua X </script><script>alert(1)</script>"
+        cfg.save()
+        html = self.client.get("/").content.decode()
+        self.assertNotIn("<script>alert(1)</script>", html)
+        self.assertIn(r"<\/script>", html)
+
+
+class SitemapQuartosTests(TestCase):
+    """A vitrine e as páginas de quarto são o conteúdo que ranqueia — tinham de
+    estar no sitemap."""
+
+    def _publicar_quarto(self):
+        from apps.nucleo.models import TipoUH as TipoUHCrm
+        from apps.nucleo.models import UH
+        from apps.site.models import VitrineQuarto
+
+        tipo = TipoUHCrm.objects.create(nome="Suíte Lago", tarifa_base=Decimal("300"))
+        uh = UH.objects.create(numero="Quarto 07", tipo=tipo, nome_tematico="Vista do Lago")
+        return VitrineQuarto.objects.create(uh=uh, publicar=True, destaque=True)
+
+    def test_sitemap_tem_vitrine_e_quartos_publicados(self):
+        vitrine = self._publicar_quarto()
+        corpo = self.client.get("/sitemap.xml").content.decode()
+        self.assertIn(reverse("core:quartos_todos"), corpo)
+        self.assertIn(reverse("core:quarto_detalhe", args=[vitrine.uh_id]), corpo)
+
+    def test_quarto_nao_publicado_fica_fora(self):
+        vitrine = self._publicar_quarto()
+        vitrine.publicar = False
+        vitrine.save()
+        corpo = self.client.get("/sitemap.xml").content.decode()
+        self.assertNotIn(reverse("core:quarto_detalhe", args=[vitrine.uh_id]), corpo)
+
+
+class ProvaSocialLgpdTests(TestCase):
+    """A notificação flutuante mostrava o primeiro nome de quem acabou de
+    reservar em toda página do site — dado pessoal exposto sem necessidade."""
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self.quarto = criar_quarto(nome="Cabana do Vô")
+        hoje = date.today()
+        criar_reserva(self.quarto, hoje + timedelta(days=5), hoje + timedelta(days=7))
+
+    def test_nao_mostra_o_nome_do_hospede(self):
+        html = self.client.get("/").content.decode()
+        self.assertIn("Nova reserva", html)
+        self.assertNotIn("Fulano", html)
+
+    def test_consulta_fica_em_cache(self):
+        from django.test.utils import CaptureQueriesContext
+        from django.db import connection
+
+        self.client.get("/")                       # aquece o cache
+        with CaptureQueriesContext(connection) as ctx:
+            self.client.get("/")
+        sql = " ".join(q["sql"] for q in ctx.captured_queries)
+        self.assertNotIn("core_reserva", sql)
+
+
+class ConsentimentoTests(TestCase):
+    """LGPD: nada de medição carrega antes do "Aceitar"."""
+
+    def test_banner_na_home_com_recusar_e_politica(self):
+        html = self.client.get("/").content.decode()
+        self.assertIn('id="consentimento"', html)
+        self.assertIn("data-consent-aceitar", html)
+        self.assertIn("data-consent-recusar", html)
+        self.assertIn(reverse("core:politica_privacidade"), html)
+
+    def test_ga4_nasce_desligado(self):
+        with self.settings(GA_MEASUREMENT_ID="G-TESTE123"):
+            html = self.client.get("/").content.decode()
+        self.assertIn("G-TESTE123", html)
+        # A tag está na página, mas como text/plain: o navegador não executa.
+        self.assertIn('type="text/plain" data-consentimento', html)
+        self.assertNotIn('<script async src="https://www.googletagmanager.com', html)
+
+
+class DesempenhoHomeTests(TestCase):
+    """Peso da home: WebP com width/height, prioridade no logo do hero e
+    Flatpickr só onde há calendário."""
+
+    def test_logos_em_webp_com_dimensoes(self):
+        html = self.client.get("/").content.decode()
+        self.assertIn("logo-hero.webp", html)
+        self.assertIn('fetchpriority="high"', html)
+        self.assertNotIn("logo-hero.png", html)
+        self.assertIn('width="799" height="560"', html)
+
+    def test_imagem_abaixo_da_dobra_e_lazy(self):
+        html = self.client.get("/").content.decode()
+        self.assertIn("logo-footer.webp", html)
+        self.assertIn('loading="lazy"', html)
+
+    def test_flatpickr_so_onde_tem_calendario(self):
+        self.assertIn("flatpickr", self.client.get("/").content.decode())
+        legal = self.client.get(reverse("core:politica_privacidade")).content.decode()
+        self.assertNotIn("flatpickr", legal)
+
+    def test_htmx_do_site_nao_bloqueia_a_pintura(self):
+        html = self.client.get("/").content.decode()
+        self.assertIn("htmx.min.js", html)
+        for linha in html.splitlines():
+            if "htmx.min.js" in linha:
+                self.assertIn("defer", linha)
+
+    def test_fontes_da_marca_com_preload(self):
+        html = self.client.get("/").content.decode()
+        self.assertIn('rel="preload"', html)
+        self.assertIn("Neco-Regular.woff2", html)
+
+
+class RotuloDeCampoTests(TestCase):
+    """Rótulo tem de apontar para o campo (clique no texto foca o campo)."""
+
+    def test_hero_liga_rotulos_aos_campos(self):
+        html = self.client.get("/").content.decode()
+        for campo in ("hero-checkin", "hero-checkout", "hero-hospedes"):
+            self.assertIn(f'for="{campo}"', html)
+            self.assertIn(f'id="{campo}"', html)

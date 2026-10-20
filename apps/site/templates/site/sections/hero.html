@@ -12,7 +12,9 @@
         <p class="text-pergaminho/60 text-xs sm:text-sm tracking-[0.3em] sm:tracking-[0.4em] uppercase mb-4 sm:mb-6 font-medium">{{ config.texto_boas_vindas }}</p>
 
         <!-- Logo oficial centralizada (PNG recortado: sem padding transparente) -->
-        <img src="{% static 'site/img/logo-hero.png' %}" alt="Pousada Vô Testa" class="h-32 sm:h-40 md:h-48 lg:h-56 xl:h-60 w-auto mx-auto mb-6 sm:mb-8">
+        <img src="{% static 'site/img/logo-hero.webp' %}" alt="Pousada Vô Testa"
+             class="h-32 sm:h-40 md:h-48 lg:h-56 xl:h-60 w-auto mx-auto mb-6 sm:mb-8"
+             width="799" height="560" fetchpriority="high" decoding="async">
 
         <h1 class="font-display font-black text-pergaminho text-3xl sm:text-4xl md:text-5xl leading-tight mb-8 sm:mb-10 px-2">
             Nem resort, nem pousada.<br><span class="text-lampiao">É a casa do vô!</span>
@@ -22,20 +24,21 @@
         <form action="{% url 'core:reservar' %}" method="get"
               class="bg-noturno/60 backdrop-blur-md rounded-xl sm:rounded-2xl p-4 sm:p-6 max-w-3xl mx-auto border border-lampiao/20">
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 items-end">
+                {# `for`/`id` casando: tocar o rótulo foca o campo, e o leitor de tela anuncia qual é. #}
                 <div class="text-left">
-                    <label class="text-pergaminho/60 text-[10px] sm:text-xs uppercase tracking-wider mb-1 block">Check-in</label>
-                    <input type="text" name="checkin" required data-picker="checkin" placeholder="Selecione" autocomplete="off"
-                           class="w-full bg-noturno/50 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-pergaminho text-xs sm:text-sm border border-pergaminho/10 focus:border-lampiao outline-none cursor-pointer">
+                    <label for="hero-checkin" class="text-pergaminho/60 text-[10px] sm:text-xs uppercase tracking-wider mb-1 block">Check-in</label>
+                    <input type="text" id="hero-checkin" name="checkin" required data-picker="checkin" placeholder="Selecione" autocomplete="off"
+                           class="w-full bg-noturno/50 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-pergaminho text-xs sm:text-sm border border-pergaminho/10 focus:border-lampiao cursor-pointer">
                 </div>
                 <div class="text-left">
-                    <label class="text-pergaminho/60 text-[10px] sm:text-xs uppercase tracking-wider mb-1 block">Check-out</label>
-                    <input type="text" name="checkout" required data-picker="checkout" placeholder="Selecione" autocomplete="off"
-                           class="w-full bg-noturno/50 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-pergaminho text-xs sm:text-sm border border-pergaminho/10 focus:border-lampiao outline-none cursor-pointer">
+                    <label for="hero-checkout" class="text-pergaminho/60 text-[10px] sm:text-xs uppercase tracking-wider mb-1 block">Check-out</label>
+                    <input type="text" id="hero-checkout" name="checkout" required data-picker="checkout" placeholder="Selecione" autocomplete="off"
+                           class="w-full bg-noturno/50 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-pergaminho text-xs sm:text-sm border border-pergaminho/10 focus:border-lampiao cursor-pointer">
                 </div>
                 <div class="text-left">
-                    <label class="text-pergaminho/60 text-[10px] sm:text-xs uppercase tracking-wider mb-1 block">Hóspedes</label>
-                    <input type="number" name="hospedes" min="1" value="2" required
-                           class="w-full bg-noturno/50 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-pergaminho text-xs sm:text-sm border border-pergaminho/10 focus:border-lampiao outline-none">
+                    <label for="hero-hospedes" class="text-pergaminho/60 text-[10px] sm:text-xs uppercase tracking-wider mb-1 block">Hóspedes</label>
+                    <input type="number" id="hero-hospedes" name="hospedes" min="1" value="2" required
+                           class="w-full bg-noturno/50 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-pergaminho text-xs sm:text-sm border border-pergaminho/10 focus:border-lampiao">
                 </div>
                 <button type="submit" class="bg-lampiao text-noturno font-bold text-xs sm:text-sm px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg hover:bg-lampiao/90 transition pulse-btn flex items-center justify-center gap-2">
                     <svg class="w-4 sm:w-5 h-4 sm:h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>

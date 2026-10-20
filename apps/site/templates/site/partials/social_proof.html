@@ -1,12 +1,14 @@
 {% if prova_social %}
-<!-- PROVA SOCIAL FLUTUANTE (reserva real mais recente) -->
+{# PROVA SOCIAL FLUTUANTE (reserva real mais recente, sem identificar o hóspede) #}
 <div class="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 z-50 social-proof hidden sm:block">
     <div class="bg-white shadow-xl rounded-xl px-5 py-3 flex items-center gap-3 border border-lampiao/20 max-w-xs">
-        <div class="w-8 h-8 bg-lampiao/20 rounded-full flex items-center justify-center flex-shrink-0">
-            <span class="text-lampiao text-xs font-bold">{{ prova_social.iniciais }}</span>
+        <div class="w-8 h-8 bg-lampiao/20 rounded-full flex items-center justify-center flex-shrink-0" aria-hidden="true">
+            <svg class="w-4 h-4 text-lampiao" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/>
+            </svg>
         </div>
         <div>
-            <p class="text-noturno text-xs font-semibold">{{ prova_social.nome }} reservou</p>
+            <p class="text-noturno text-xs font-semibold">Nova reserva</p>
             <p class="text-madeira/50 text-[10px]">{{ prova_social.quarto }} • há {{ prova_social.quando|timesince }}</p>
         </div>
     </div>
