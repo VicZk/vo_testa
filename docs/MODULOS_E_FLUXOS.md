@@ -69,8 +69,8 @@ preço, grupos (bloco de quartos), FNRH/BOH, estoque de colchões extra e berço
 | Transição | Método | Quem dispara | Pré-condições / efeitos |
 |---|---|---|---|
 | orçamento/pré-reserva → **confirmada** | `Reserva.confirmar(usuario)` (`models.py:367`) | `reservas:confirmar`, `services.confirmar_reserva` (Pagamentos), `confirmar_grupo` | se vinha de orçamento, revalida o arranjo/pool de colchões; limpa `expira_em`; grava `confirmada_em` (marco da janela de arrependimento) |
-| confirmada/pré-reserva → **hospedada** | `Reserva.fazer_checkin(usuario)` (`models.py:390`) | `reservas:checkin`, `services.checkin_grupo` | exige `fnrh_pronta` quando `FNRH_BLOQUEAR_CHECKIN`; exige `uh.status == ATIVA`; com Governança ativa exige quarto limpo/inspecionado; marca `fnrh_status=pendente`; **cria a `ContaHospedagem`** e lança diárias + ISS + taxa de turismo (no folio-mãe, se houver grupo) |
-| hospedada → **checkout** | `Reserva.fazer_checkout(usuario)` (`models.py:429`) | `reservas:checkout` | **único bloqueio é dinheiro**: `conta.saldo()` tem de ser 0,00; fecha a conta; emite `quarto_liberado(origem="checkout")` |
+| confirmada/pré-reserva → **hospedada** | `Reserva.fazer_checkin(usuario)` (`models.py:446`) | `reservas:checkin`, `services.checkin_grupo` | atômico, com a reserva travada (clique duplo esbarra no status relido); exige `fnrh_pronta` quando `FNRH_BLOQUEAR_CHECKIN`; exige `uh.status == ATIVA`; com Governança ativa exige quarto limpo/inspecionado; marca `fnrh_status=pendente`; **cria a `ContaHospedagem`** e lança diárias + ISS + taxa de turismo (no folio-mãe, se houver grupo) |
+| hospedada → **checkout** | `Reserva.fazer_checkout(usuario)` (`models.py:492`) | `reservas:checkout` | atômico, trava reserva e conta; **único bloqueio é dinheiro**: `conta.saldo()` tem de ser 0,00 (resíduo de arredondamento até `CHECKOUT_TOLERANCIA_ARREDONDAMENTO`, padrão R$ 0,10, vira desconto automático registrado na trilha); fecha a conta; emite `quarto_liberado(origem="checkout")` |
 | orçamento/pré/confirmada → **cancelada** | `Reserva.cancelar(usuario, motivo)` | `reservas:cancelar`, `cancelar_grupo`, `expirar_vencidas` | motivo obrigatório; `registrar_auditoria("cancelamento_reserva")`; emite `reserva_encerrada(evento="cancelada")` |
 | confirmada → **no_show** | `Reserva.marcar_no_show(usuario)` | `reservas:no_show` | auditado; emite `reserva_encerrada(evento="no_show")` |
 
@@ -267,7 +267,9 @@ camada de UI** — o módulo só calcula.
 
 **Day use.** Fica fora do mapa operacional e do cálculo de ocupação do dashboard
 (`exclude(tipo__modalidade=DAY_USE)` em `resumo_do_dia`, `mapa_quartos_hoje`,
-`saidas_vencidas`, `dados_graficos`).
+`saidas_vencidas`, `dados_graficos`). A reserva de day use é de um dia só:
+`validar_periodo_day_use` (chamada em `Reserva.clean`, `criar_prereserva` e
+`transferir_datas`) exige a saída no dia seguinte à entrada.
 
 ### Pontos de extensão / pendências
 
@@ -309,8 +311,8 @@ conciliação de recebimentos.
 - `confirmar_pagamento(cobranca, usuario=None, origem="webhook")` — **idempotente**, com
   `select_for_update` na linha; se `finalidade=sinal` e Reservas ativo chama
   `reservas.confirmar_reserva` (ou `confirmar_grupo`), sincroniza o recibo do site e
-  emite `pagamento_confirmado` por `send_robust` (receiver que falha nunca desfaz a
-  confirmação).
+  emite `pagamento_confirmado` por `emitir()` (receiver que falha vai para o log e nunca
+  desfaz a confirmação).
 - `estornar(cobranca, operador)` (só paga, auditado), `cancelar(cobranca, operador)` (só
   pendente), `conciliacao()` (resumo por status).
 - `registrar_liquidacao(cobranca, *, valor_liquido, taxa, data_liquidacao, id_liquidacao,
@@ -712,7 +714,7 @@ confirmado, não prometa").
 
 ### Sinais
 
-- **Ouve** (`apps/comercial/receivers.py`):
+- **Ouve** (`apps/comercial/receivers.py`, todos com `@receptor_isolado`):
   - `reservas.reserva_encerrada` → `anotar_reserva_encerrada` (cancelada/no-show);
   - `reservas.quarto_liberado` com `origem="checkout"` → hand-off NPS/retenção;
   - `pagamentos.pagamento_confirmado` → `ganhar_por_sinal` quando é sinal "solto" (sem
@@ -981,8 +983,8 @@ na conta do quarto.
 ### Interface pública (`apps/restaurante/services.py`)
 
 `abrir_comanda(operador, local, mesa=None, cliente=None, rotulo="")`,
-`adicionar_item(comanda, produto, quantidade, operador)` (valida saldo e **baixa na
-hora**; soma na linha existente do mesmo produto),
+`adicionar_item(comanda, produto, quantidade, operador)` (trava a comanda e recusa se ela
+já fechou; valida saldo e **baixa na hora**; soma na linha existente do mesmo produto),
 `remover_item(item, operador)` (devolve estoque por `ajustar`),
 `fechar_comanda(comanda, operador, destino, forma=None, conta_id=None, desconto=0)`,
 `cancelar_comanda(comanda, usuario, motivo)` (devolve tudo; auditado),
@@ -1042,7 +1044,7 @@ Transversais: `pendencias_auditoria()`, `faturamento_periodo(inicio, fim)`.
 
 ### Sinais
 
-- **Ouve** `governanca.faxina_concluida` (`receivers.py`): se o módulo está ativo, chama
+- **Ouve** `governanca.faxina_concluida` (`receivers.py`, `@receptor_isolado`): se o módulo está ativo, chama
   `coletar_faxina(uh, usuario)` — move o kit `por_faxina` de cada item de **em uso → suja**
   para aquele quarto, limitado ao saldo em uso.
 - **Emite:** nenhum.
@@ -1644,7 +1646,8 @@ sequenceDiagram
    `FNRH_BLOQUEAR_CHECKIN` e `fnrh_pronta` for falso; exige `uh.status == ATIVA`; com
    Governança ativa exige `uh_pronta_para_checkin`. Então `status=hospedada`,
    `checkin_real=now`, `fnrh_status=pendente`, cria a `ContaHospedagem` e lança **diárias**
-   (uma por noite) + **ISS + taxa de turismo** — no folio-mãe quando há grupo.
+   (uma por noite) + **ISS + taxa de turismo** — no folio-mãe quando há grupo. Tudo numa
+   transação só, com a reserva travada: se um lançamento falhar, nada fica pela metade.
 4. **FNRH Digital.** A view chama `services.enviar_fnrh(reserva)` (idempotente,
    best-effort): `criar_reserva → criar_pessoa → adicionar_hospede → checkin` no gateway.
    Falha grava `fnrh_status=erro` e o cron `enviar_fnrh_pendentes` reprocessa; o detalhe
@@ -1656,7 +1659,9 @@ sequenceDiagram
    (`fechar_comanda(destino=conta)`) e Lavanderia (`entregar(destino=conta)`) chamam
    `reservas.conta_aberta(conta_id)` + `reservas.lancar_na_conta(...)`. Loja e Restaurante
    lançam `consumo` (natureza do produto); Lavanderia lança `servico` com natureza
-   SERVIÇO. Cada item baixou o estoque no momento da venda.
+   SERVIÇO. Cada item baixou o estoque no momento da venda. `lancar_na_conta` trava a
+   conta: um consumo que chega junto com o check-out ou entra antes (e aparece no saldo)
+   ou é recusado por conta fechada.
 6. **Portal do hóspede.** `portal:qr` (reserva hospedada) → `/hospede/<token>/`. O hóspede
    vê o extrato (`dados_estadia`) e pede: comanda no quarto (`pedir_restaurante`), limpeza
    extra (`governanca.abrir_faxina(origem="portal")`), manutenção
@@ -1670,8 +1675,10 @@ sequenceDiagram
    acima do saldo) cria `PagamentoConta` + `MovimentoCaixa` no **caixa de Reservas** —
    é aqui que o dinheiro de outros setores lançado no quarto entra na gaveta da recepção.
    Desconto no folio **exige gerência**.
-8. **Saída.** `reservas:checkout` → `fazer_checkout`: o **único** bloqueio é
-   `conta.saldo() == 0,00`; fecha a conta, grava `checkout_real` e emite
+8. **Saída.** `reservas:checkout` → `fazer_checkout` (trava reserva e conta): o **único**
+   bloqueio é `conta.saldo() == 0,00`. Um resíduo de arredondamento até
+   `CHECKOUT_TOLERANCIA_ARREDONDAMENTO` (padrão R$ 0,10) vira desconto automático,
+   registrado na trilha. Fecha a conta, grava `checkout_real` e emite
    `quarto_liberado(origem="checkout")`.
 9. **NFS-e.** No detalhe, "Emitir NFS-e da hospedagem" → `fiscal:emitir_nfse` →
    `emitir_nfse_da_conta(conta_id)` (idempotente por conta, com lock), que lê a parte
@@ -1771,7 +1778,8 @@ flowchart LR
 6. **Confirmação idempotente.** `confirmar_pagamento`: `select_for_update`; já pago →
    retorna; marca `pago` + `pago_em`; evento `paga`; se `finalidade=sinal` e Reservas
    ativo → `confirmar_reserva(reserva_id)` (ou `confirmar_grupo(grupo_id)`) e
-   `_sincronizar_recibo_site`; emite `pagamento_confirmado` por **`send_robust`**.
+   `_sincronizar_recibo_site`; emite `pagamento_confirmado` por **`emitir()`** (falha de
+   receiver vai para o log).
 7. **Estorno.** `pagamentos:estornar` (**gerência**) → `estornar`: só paga, chama o
    gateway, status `estornado`, evento `estornada` e `registrar_auditoria
    ("estorno_pagamento")`.
@@ -1940,7 +1948,8 @@ service público; "→ M" = importa models de outro app (exceção à regra); "�
 
 **Leitura da tabela.** O padrão dominante é o contrato declarado em `CLAUDE.md`: módulo
 chama módulo só por `services`, e a integração reversa (quem está "abaixo" avisando quem
-está "acima") é por **sinal Django** com `modulo_ativo()` no receiver — o que dá a
-degradação graciosa. As exceções acima (`fiscal → reservas.models`,
+está "acima") é por **sinal Django**, emitido com `emitir()` e ouvido por receivers com
+`@receptor_isolado` e `modulo_ativo()` — o que dá a degradação graciosa e impede que a
+falha de um ouvinte desfaça a operação de origem. As exceções acima (`fiscal → reservas.models`,
 `pagamentos → site.models`, `marketing → comercial.models`, `comercial →
 pagamentos.models`) são todas locais e intencionais, documentadas no próprio código.

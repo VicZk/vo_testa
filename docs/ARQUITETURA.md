@@ -52,7 +52,7 @@ O detalhe por módulo vive em `CLAUDE.md` → “Estado atual”.
 | Servidor | `gunicorn` **26.0.0** | `railway.json` |
 | Estáticos | `whitenoise` **6.12.0** (`CompressedStaticFilesStorage`) | `config/settings.py:176` |
 | Mídia | `django-storages` **1.14.6** + `boto3` **1.43.78** (Cloudflare R2, S3 API) | `config/settings.py:181-211` |
-| Front do CRM | Templates Django + **HTMX 2.0.4** + **Alpine.js 3.14.8** (CDN unpkg) — sem SPA | `templates/base.html:15,105` |
+| Front do CRM | Templates Django + **HTMX 2.0.4** + **Alpine.js 3.14.8** (servidos de `static/vendor/`) — sem SPA | `templates/base.html:16,106` |
 | Front do site | Templates Django + **Tailwind** (build estático) | `tailwind.config.js`, `apps/site/static/site/css/tailwind.css` |
 | Gráficos | Chart.js via CDN, tematizado | dashboard / painéis |
 | QR / imagem | `qrcode`, `Pillow` (sem pin) | portal, FNRH, MFA, Pix |
@@ -91,7 +91,7 @@ Ferramentas de desenvolvimento (`requirements-dev.txt`): `ruff==0.15.20`,
 ├── .env.example           modelo de variáveis de ambiente
 ├── CLAUDE.md              memória de produto/arquitetura (fonte de “estado atual”)
 ├── ROTEIRO.md / ROTEIRO-MARKETING.md
-└── .github/               workflows/security.yml + dependabot.yml
+└── .github/               workflows/testes.yml + security.yml + dependabot.yml
 ```
 
 ### Apps (`apps/`) — 19, todos em `INSTALLED_APPS`
@@ -570,13 +570,25 @@ Sinais customizados declarados em `apps/<app>/signals.py`; receivers em
 `apps/<app>/receivers.py`, conectados no `AppConfig.ready()`. Todo receiver começa
 checando `modulo_ativo(...)` (degradação graciosa).
 
+**A falha de um ouvinte não desfaz a operação de origem** (`apps/nucleo/sinais.py`):
+
+- quem emite chama `emitir(sinal, sender=..., **dados)`, que usa `send_robust` e registra
+  no log (`apps.nucleo.sinais`) o receiver que falhou, com traceback;
+- todo receiver entre módulos leva `@receptor_isolado`, que roda o corpo num savepoint
+  próprio e nunca levanta erro para o emissor. No PostgreSQL um erro de banco aborta a
+  transação inteira; o savepoint segura o estrago dentro do receiver.
+
+Assim, um erro da Lavanderia ao recolher o enxoval não desfaz a faxina concluída, e um erro
+do Comercial não desfaz o check-out. Sinal ou receiver novo segue as duas regras; os
+testes estão em `apps/reservas/tests.py` (`SinaisIsoladosTests`).
+
 | Sinal | Emitido por | Recebido por | Efeito |
 |---|---|---|---|
-| `reservas.signals.quarto_liberado` (`uh`, `reserva`, `usuario`, `origem`) | `reservas.models.Reserva.fazer_checkout` (`origem="checkout"`, `models.py:448`) e `reservas.services.trocar_quarto` (`origem="troca"`, `services.py:1372`) | `governanca.receivers.on_quarto_liberado`; `comercial.receivers.on_checkout_comercial` | Governança abre a faxina com a origem recebida; Comercial anota o hand-off pós-checkout (**só** quando `origem == "checkout"`) |
+| `reservas.signals.quarto_liberado` (`uh`, `reserva`, `usuario`, `origem`) | `reservas.models.Reserva.fazer_checkout` (`origem="checkout"`, `models.py:536`) e `reservas.services.trocar_quarto` (`origem="troca"`, `services.py:1405`) | `governanca.receivers.on_quarto_liberado`; `comercial.receivers.on_checkout_comercial` | Governança abre a faxina com a origem recebida; Comercial anota o hand-off pós-checkout (**só** quando `origem == "checkout"`) |
 | `reservas.signals.reserva_encerrada` (`reserva`, `evento`, `motivo`, `usuario`) | `Reserva.cancelar` (`evento="cancelada"`) e `Reserva.marcar_no_show` (`evento="no_show"`) | `comercial.receivers.on_reserva_encerrada` | registra follow-up/retenção no funil |
-| `manutencao.signals.reparo_concluido` (`uh`, `ordem`, `usuario`) | `manutencao.services.concluir_os`, quando a OS bloqueava o quarto (`services.py:144`) | `governanca.receivers.on_reparo_concluido` | abre faxina com `origem="manutencao"` antes de o quarto voltar a receber |
-| `governanca.signals.faxina_concluida` (`uh`, `tarefa`, `usuario`) | `governanca.services.concluir_tarefa` (`services.py:66`) | `lavanderia.receivers.on_faxina_concluida` | `lavanderia.services.coletar_faxina(uh, usuario)` recolhe o kit `por_faxina` (em uso → suja) |
-| `pagamentos.signals.pagamento_confirmado` (`cobranca`, `usuario`) | `pagamentos.services.confirmar_pagamento`, via **`send_robust`** (`services.py:112`) — um receiver que falhe não pode desfazer a confirmação | `comercial.receivers.on_sinal_pago` | sinal “solto” (finalidade `SINAL`, sem reserva/grupo) pago em oportunidade aberta → `ganhar_por_sinal` (ganha e cria a reserva) |
+| `manutencao.signals.reparo_concluido` (`uh`, `ordem`, `usuario`) | `manutencao.services.concluir_os`, quando a OS bloqueava o quarto (`services.py:145`) | `governanca.receivers.on_reparo_concluido` | abre faxina com `origem="manutencao"` antes de o quarto voltar a receber |
+| `governanca.signals.faxina_concluida` (`uh`, `tarefa`, `usuario`) | `governanca.services.concluir_tarefa` (`services.py:68`) | `lavanderia.receivers.on_faxina_concluida` | `lavanderia.services.coletar_faxina(uh, usuario)` recolhe o kit `por_faxina` (em uso → suja) |
+| `pagamentos.signals.pagamento_confirmado` (`cobranca`, `usuario`) | `pagamentos.services.confirmar_pagamento` (`services.py:114`) — um receiver que falhe não desfaz a confirmação | `comercial.receivers.on_sinal_pago` | sinal “solto” (finalidade `SINAL`, sem reserva/grupo) pago em oportunidade aberta → `ganhar_por_sinal` (ganha e cria a reserva) |
 | `post_save` em `comercial.Oportunidade` | ORM | `marketing.signals.atribuir_campanha_vigente` (conectado em `MarketingConfig.ready`) | lead novo sem campanha recebe a campanha vigente do seu canal (via `.update()`, sem recursão) |
 | `pre_save` / `post_save` / `post_delete` em **todos** os models de `apps.*` | ORM | `apps/nucleo/audit.py` | auditoria automática (§5.5) |
 | `user_logged_in` / `user_logged_out` | `django.contrib.auth` | `apps/nucleo/audit.py` | registra `login` / `logout` na trilha |
@@ -712,7 +724,7 @@ Tudo é declarado em **`config/urls.py`**, que compõe o domínio único:
 
 | Grupo de rotas | App / urlconf | Público | Nota |
 |---|---|---|---|
-| `/healthz/` | `config/urls.py` | infra | probe do Railway, HTTP, isento de SSL redirect |
+| `/healthz/` | `config/urls.py` | infra | probe do Railway: `SELECT 1` no banco, 503 se falhar; HTTP, isento de SSL redirect |
 | `/robots.txt`, `/llms.txt`, `/sitemap.xml` | `apps.site` + `django.contrib.sitemaps` | robôs | SEO |
 | `/` + páginas do site | `apps.site.urls` (`app_name="core"`) | hóspede | home, `/quartos/`, `/quarto/<uh_id>/`, legais, `/pedir-proposta/`, fluxo `reservar/…`, `/reserva/<token>/`, `/minha-reserva/…`, `/lab/` (oculto) |
 | `/hospede/<token>/…` | `apps.portal.urls` | hóspede (token, sem login) | `home`, `checkin` (pré check-in FNRH), `nps`, `pedir`, `solicitar`, `checkout`, `checkout/pagar`, `checkout/recepcao` |
@@ -1143,10 +1155,17 @@ python manage.py test apps.reservas.tests.ReservaTests.test_overbooking   # um t
   `end-of-file-fixer`, `trailing-whitespace`, `check-yaml`, `check-json`,
   `detect-secrets`, `bandit`, `ruff` (só as regras de segurança).
 
-### 9.5 CI — `.github/workflows/security.yml`
+### 9.5 CI — `.github/workflows/`
 
-Dispara em **push na `main`**, em **todo pull request** e por **cron semanal**
-(segunda, 09:00 UTC). Dois jobs:
+**`testes.yml`** (só neste fork): dispara em **push na `main` e na `dev`** e em **todo
+pull request**. Sobe um serviço **PostgreSQL 16** (a trava de overbooking usa
+`ExclusionConstraint`/`btree_gist`, que o SQLite não tem), instala o `requirements.txt`
+com Python 3.14, confere `makemigrations --check --dry-run` e roda
+`manage.py test --noinput`. É o gate que falta antes do deploy automático do original:
+lá, o push na `main` publica sem esperar teste nenhum.
+
+**`security.yml`**: dispara em **push na `main`**, em **todo pull request** e por **cron
+semanal** (segunda, 09:00 UTC). Dois jobs:
 
 1. **`sast-deps-secrets`** (Python 3.14): `pip-audit` → `bandit` → `ruff` (regras de
    segurança) → `semgrep` (**`continue-on-error: true`**, report-only) →
@@ -1154,10 +1173,9 @@ Dispara em **push na `main`**, em **todo pull request** e por **cron semanal**
    (`DEBUG=0`, SECRET_KEY dummy, `DATABASE_URL=sqlite:///ci.db`).
 2. **`gitleaks`**: segredos no histórico completo (`fetch-depth: 0`).
 
-**O que o CI NÃO faz:** não roda a suíte de testes (`manage.py test`), não sobe
-PostgreSQL, não faz build de estáticos, não calcula cobertura, não roda os testes
-Playwright e **não deploya** — o deploy é a integração GitHub↔Railway, independente
-deste workflow. O gate de testes é local (“testes passando antes de commit”, `CLAUDE.md`).
+**O que o CI não faz:** não faz build de estáticos, não calcula cobertura, não roda os
+testes Playwright e **não deploya**: o deploy é a integração GitHub↔Railway, independente
+dos workflows.
 
 `.github/dependabot.yml` abre PRs semanais para `pip` (limite 5, labels
 `dependencies`/`security`) e para `github-actions`.
@@ -1183,11 +1201,17 @@ deste workflow. O gate de testes é local (“testes passando antes de commit”
 ```
 
 - **Migrações e `collectstatic` rodam em todo deploy**; seeds, não.
-- **Healthcheck** em `/healthz/` (view trivial em `config/urls.py:19`), isento do
+- **Healthcheck** em `/healthz/` (`config/urls.py:29`: roda `SELECT 1` e responde 503 se
+  o banco não atender, para um container sem banco não substituir o saudável), isento do
   `SECURE_SSL_REDIRECT` por `SECURE_REDIRECT_EXEMPT = [r"^healthz/?$"]`, e
   `healthcheck.railway.app` está em `ALLOWED_HOSTS`.
 - **Estáticos** servidos por WhiteNoise (`WhiteNoiseMiddleware` logo abaixo do
   `SecurityMiddleware`) com `CompressedStaticFilesStorage`; `STATIC_ROOT=staticfiles/`.
+- **Logs** (`LOGGING` em `config/settings.py`): tudo vai para o stdout, que o Railway
+  mostra nos logs do deploy. `django.request` em ERROR (500 com traceback),
+  `django.security` em WARNING e o resto no nível de `LOG_LEVEL` (padrão `INFO`;
+  `WARNING` nos testes). Falhas de receivers de sinais saem pelo logger
+  `apps.nucleo.sinais`.
 - **Auto-deploy no push da `main`.** Não rodar `railway up` manual (criaria um deploy
   paralelo à integração do GitHub).
 
@@ -1233,6 +1257,7 @@ são **manuais**.
 
 | Comando | Quando |
 |---|---|
+| `estrutura_inicial` | Banco novo: cria os tipos de quarto e os 24 quartos; com `--completo`, roda também `configurar_camas`, `carregar_tarifas` e `sincronizar_vitrine`. Idempotente. |
 | `sincronizar_vitrine` | **Rodar no deploy** quando houver quarto novo: cria a `VitrineQuarto` que falta e marca os 9 destaques da home. O `migrate` roda sozinho; **este seed não**. |
 | `sincronizar_quartos` | Sincroniza os cards por **tipo** (venda por tipo / day use). |
 | `migrar_media_r2` | Uma vez, após configurar o R2. |
@@ -1309,12 +1334,17 @@ curva da casa é `cubic-bezier(.2,.8,.2,1)`).
 #modal-reserva.modal-overlay        modal de nova reserva (carregado por fetch)
 ```
 
-- `<head>`: Google Fonts por `<link>` (em paralelo, não `@import`), `css/app.css?v=mob3`,
-  `js/fluid.js`, **HTMX 2.0.4** e **Alpine 3.14.8** (unpkg, `defer`).
+- `<head>`: Google Fonts por `<link>` (em paralelo, não `@import`), `css/app.css?v=mob4`,
+  `js/fluid.js`, **HTMX 2.0.4** e **Alpine 3.14.8** (de `static/vendor/`, `defer`).
 - A navegação da sidebar usa `hx-boost="true"` com
   `hx-target="#conteudo" hx-select="#conteudo" hx-swap="outerHTML show:window:top"`.
 - **Toasts**: as `messages` do Django são renderizadas como `.toast toast-<tag>`; a
   função JS `toast(msg, tipo)` cria novos; saída automática em 5 s.
+- **Feedback de toda ação HTMX**: barra de progresso no topo (`#barra-progresso`) enquanto
+  houver requisição em voo, o elemento que disparou fica com aparência de ocupado
+  (`.htmx-request`), e sai um toast de erro quando o servidor responde 4xx/5xx (403 vira
+  "sem permissão"), quando a conexão cai ou quando estoura o tempo. Sem isso o HTMX não
+  avisa nada nesses casos e a pessoa clica de novo.
 - **Paleta de comandos**: lista estática de comandos (“Ir para …”, montada dentro dos
   mesmos `{% if user|pode_area %}`) + busca remota com debounce de 160 ms em
   `busca_global`; navegação com ↑/↓/Enter.
@@ -1538,9 +1568,11 @@ Restaurante e Lavanderia.
 ### Passo 12 — sinais, se precisar conversar com outro módulo
 
 - Emitir: `apps/meumodulo/signals.py` com `Signal()` documentando os kwargs; enviar no
-  service (`send_robust` quando um receiver não pode desfazer a operação).
-- Ouvir: `apps/meumodulo/receivers.py` com `@receiver(...)`, **sempre** checando
-  `modulo_ativo(Modulo.MEUMODULO)` no começo, e `from . import receivers` no `ready()`.
+  service com `apps.nucleo.sinais.emitir(sinal, sender=..., **dados)`, nunca com
+  `send()` direto: um receiver que falhe não pode desfazer a operação (§5.2).
+- Ouvir: `apps/meumodulo/receivers.py` com `@receiver(...)` por fora e
+  `@receptor_isolado` logo abaixo, **sempre** checando `modulo_ativo(Modulo.MEUMODULO)` no
+  começo, e `from . import receivers` no `ready()`.
 
 ### Checklist de arquivos a tocar
 

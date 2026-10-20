@@ -20,6 +20,13 @@ como desenvolver em cima dele. Dois documentos aprofundam o que aqui está resum
 > (convenções e "estado atual"); parte dele está desatualizada (ex.: o módulo Frigobar,
 > que já foi removido).
 
+> **Sobre este repositório.** Este é o fork [`VicZk/vo_testa`](https://github.com/VicZk/vo_testa)
+> do projeto original [`Geffersonvivan/vo_testa`](https://github.com/Geffersonvivan/vo_testa).
+> Ele anda como um projeto próprio ligado ao original: recebe as novidades de lá e
+> desenvolve aqui, na branch `dev` (a padrão deste fork), sem mexer no original. O
+> Gefferson é colaborador deste fork e pode levar para o original o que quiser daqui; o
+> passo a passo está em [12.1](#121-fluxo-de-trabalho-com-o-fork).
+
 ---
 
 ## Sumário
@@ -348,8 +355,10 @@ sidebar, a paleta ⌘K e o dashboard se montam conforme o acesso de quem está l
 | Pagamentos | `reservas.services.confirmar_reserva` | sinal pago confirma a reserva |
 | Auditoria | `pendencias_auditoria()` de cada módulo (via `importlib`) | painel de pendências sem importar models |
 
-**Avisando por sinais** (integração "de baixo para cima"; todo receiver começa checando
-`modulo_ativo`):
+**Avisando por sinais** (integração "de baixo para cima"). Quem emite usa
+`apps.nucleo.sinais.emitir()`; todo receiver leva `@receptor_isolado` e começa checando
+`modulo_ativo`. Se um módulo ouvinte falhar, o erro vai para o log e a operação de origem
+(check-out, troca de quarto, faxina, reparo, pagamento) continua valendo:
 
 | Sinal | Emitido em | Ouvido por | Efeito |
 |---|---|---|---|
@@ -357,7 +366,7 @@ sidebar, a paleta ⌘K e o dashboard se montam conforme o acesso de quem está l
 | `reservas.reserva_encerrada` | cancelamento e no-show | Comercial | tarefa de reabordagem |
 | `manutencao.reparo_concluido` | OS concluída que bloqueava o quarto | Governança | faxina antes de revender |
 | `governanca.faxina_concluida` | faxina concluída | Lavanderia | recolhe o enxoval do quarto |
-| `pagamentos.pagamento_confirmado` | pagamento confirmado (`send_robust`) | Comercial | ganha a oportunidade do sinal |
+| `pagamentos.pagamento_confirmado` | pagamento confirmado | Comercial | ganha a oportunidade do sinal |
 
 Há exceções pontuais e documentadas à regra de não importar models de outro app (ex.:
 Fiscal lê `ContaHospedagem` com trava; Marketing embrulha `comercial.Campanha` por
@@ -571,7 +580,7 @@ desliga a trava da FNRH, as taxas automáticas, o MFA e o limite de login.
 
 - **Onde:** dentro de cada app (`apps/<app>/tests.py` e `tests_*.py`), com `TestCase` do
   Django. Regras de dinheiro e de disponibilidade são sempre testadas.
-- **Quantos:** cerca de 880 testes, com 74% de cobertura de instruções. Os mais densos:
+- **Quantos:** cerca de 900 testes, com cerca de 74% de cobertura de instruções. Os mais densos:
   `comercial`, `nucleo`, `reservas`, `marketing`, `pagamentos`.
 - **Navegador:** `apps/site/tests_e2e.py` usa Playwright e é pulado se ele não estiver
   instalado (`pip install playwright && playwright install chromium`).
@@ -585,9 +594,13 @@ coverage run --source=apps manage.py test && coverage report   # cobertura
 
 - **Lint e segurança:** `ruff check apps config`, `bandit -r apps config -ll`,
   `pip-audit -r requirements.txt` e `pre-commit install` para os hooks locais.
-- **CI** (`.github/workflows/security.yml`): pip-audit, bandit, regras de segurança do
-  ruff, semgrep (só relatório), `check --deploy` e gitleaks. **Ainda não roda a suíte de
-  testes**: rode localmente antes de abrir PR.
+- **CI de testes** (`.github/workflows/testes.yml`): a cada push em `main` e `dev` e em
+  todo PR, sobe um PostgreSQL 16, confere se as migrations estão em dia
+  (`makemigrations --check`) e roda a suíte inteira. Ele existe neste fork; no original o
+  push na `main` ainda publica sem esperar teste nenhum. Para fechar essa porta lá, basta
+  levar o arquivo e fazer o Railway aguardar os checks do GitHub antes de publicar.
+- **CI de segurança** (`.github/workflows/security.yml`): pip-audit, bandit, regras de
+  segurança do ruff, semgrep (só relatório), `check --deploy` e gitleaks.
 
 ---
 
@@ -595,8 +608,13 @@ coverage run --source=apps manage.py test && coverage report   # cobertura
 
 **Railway** (`railway.json`): build pelo Railpack; a cada deploy roda
 `migrate`, `collectstatic` e sobe `gunicorn config.wsgi:application --workers 2`;
-healthcheck em `/healthz/`. O serviço está ligado ao GitHub e publica a cada push na
-`main` do repositório original. Estáticos saem pelo WhiteNoise.
+healthcheck em `/healthz/`, que confere o banco e responde 503 se ele não atender (um
+container sem banco não substitui o que está no ar). O serviço está ligado ao GitHub e
+publica a cada push na `main` do repositório original. Estáticos saem pelo WhiteNoise.
+
+**Logs:** tudo vai para a saída padrão, que o Railway mostra nos logs do deploy: erros
+500 com traceback (`django.request`) e falhas de receivers de sinais
+(`apps.nucleo.sinais`). O nível geral vem de `LOG_LEVEL` (padrão `INFO`).
 
 **Mídia:** com as cinco variáveis `R2_*`, uploads vão para o Cloudflare R2; rode
 `python manage.py migrar_media_r2` uma vez para levar o que já está em disco. Sem R2, a
@@ -613,7 +631,8 @@ repositório não agenda nenhum):
 | `enviar_conversoes_pendentes` | reenvia conversões de mídia pendentes |
 | `sincronizar_gastos_midia` | puxa o gasto das plataformas de anúncio |
 
-**Comandos de operação:** `sincronizar_vitrine` (quarto novo no site),
+**Comandos de operação:** `estrutura_inicial` (banco novo: tipos e os 24 quartos; com
+`--completo`, também camas, tarifas e vitrine), `sincronizar_vitrine` (quarto novo no site),
 `carregar_tarifas` (tabela de preços aprovada), `configurar_camas` (mudança física de
 camas), `migrar_media_r2`. Os de limpeza de demonstração (`zerar_funil`, `sanear_demo`,
 `recentrar_demo`, `limpar_nomes_quartos`) são destrutivos e não devem rodar em produção.
@@ -662,7 +681,7 @@ Pull Request revisado.
 | Branch | Papel |
 |---|---|
 | `main` | espelho do `upstream/main`; não commitar direto |
-| `dev` | desenvolvimento do fork |
+| `dev` | desenvolvimento do fork; é a branch padrão no GitHub |
 | `feat/…`, `fix/…` | trabalho do dia a dia, sai de `dev` e volta por PR |
 
 > O `main` do original publica em produção a cada push. Nada deste fork chega lá sem PR
@@ -689,6 +708,29 @@ Proteção configurada no clone para não enviar nada ao original por engano:
 ```bash
 git remote set-url --push upstream DISABLED--nao-fazer-push-no-original
 ```
+
+**Para o Gefferson: levar algo daqui para o original.** Ele é colaborador deste fork e
+pode trazer o que quiser, inteiro ou em partes. Os commits do `dev` tratam de um assunto
+cada e explicam o que mudou, por quê e como foi testado, então dá para escolher commit a
+commit:
+
+```bash
+# Uma vez, no clone do original
+git remote add vic https://github.com/VicZk/vo_testa.git
+
+# Ver o que o fork tem a mais que a main
+git fetch vic
+git log --oneline main..vic/dev
+
+# Levar só alguns commits...
+git cherry-pick <hash> [<hash>...]
+# ...ou tudo de uma vez
+git merge vic/dev
+```
+
+Também dá para abrir pelo GitHub um PR do `VicZk:dev` para o `main` do original e revisar
+lá. Um commit que vale levar logo é o `ef3f309`: ele renomeia os arquivos de
+`docs/SafraPay/` que têm `?` no nome, que impedem clonar o original no Windows.
 
 ### 12.2 Convenções
 
