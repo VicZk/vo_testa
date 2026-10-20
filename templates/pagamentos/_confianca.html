@@ -1,0 +1,27 @@
+{% load site_contato %}
+{% comment %}
+Bloco de confiança do link público de pagamento: qual é o meio de pagamento, o
+que acontece com os dados e como falar com a pousada. É a tela em que alguém
+digita o cartão sem estar logado — a dúvida aqui vira reserva perdida.
+{% endcomment %}
+{% contato_pousada as contato %}
+<div class="pay-confianca">
+  <ul>
+    <li><span class="ok" aria-hidden="true">✓</span>
+      <span>Pagamento por <strong>{{ cobranca.get_metodo_display }}</strong>{% if cobranca.metodo == 'cartao' and cobranca.parcelas > 1 %} em {{ cobranca.parcelas }}×{% endif %},
+        processado pela operadora{% if cobranca.metodo == 'cartao' %} — a Pousada Vô Testa não guarda o número do seu cartão{% endif %}.</span></li>
+    <li><span class="ok" aria-hidden="true">✓</span>
+      <span>Confirmado o pagamento, sua reserva fica garantida e você recebe o comprovante.</span></li>
+    {% if contato.whatsapp or contato.telefone %}
+    <li><span class="ok" aria-hidden="true">✓</span>
+      <span>Dúvida antes de pagar?
+        {% if contato.whatsapp %}
+          Fale com a recepção no
+          <a href="https://wa.me/{{ contato.whatsapp }}" target="_blank" rel="noopener">WhatsApp</a>{% if contato.telefone %} ou ligue para {{ contato.telefone }}{% endif %}.
+        {% else %}
+          Ligue para {{ contato.telefone }}.
+        {% endif %}
+      </span></li>
+    {% endif %}
+  </ul>
+</div>

@@ -272,6 +272,11 @@
           <td class="num">{% if a.eh_estorno %}+{% else %}−{% endif %}{{ a.valor_absoluto|intcomma_brl }}</td>
         </tr>
       {% endfor %}
+      {% if not conta.lancamentos.exists and not conta.pagamentos.exists and not reserva.adiantamentos.exists %}
+        <tr><td colspan="5" class="vazio">Conta aberta, sem movimento. As diárias entram no
+          check-in; o que o hóspede manda para o quarto na Loja, no Restaurante ou na
+          Lavanderia cai aqui.</td></tr>
+      {% endif %}
     </tbody>
   </table>
 

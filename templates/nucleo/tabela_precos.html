@@ -20,6 +20,11 @@
       </tr>
     </thead>
     <tbody>
+      {% if not grupos %}
+        <tr><td colspan="{{ colunas|length|add:1 }}" class="vazio">Nenhum quarto cadastrado ainda.
+          Cadastre os quartos em <strong>Cadastros → Quartos &amp; tipos</strong> e os preços
+          aparecem aqui para preencher.</td></tr>
+      {% endif %}
       {% for g in grupos %}
         <tr class="mapa-grupo"><td colspan="{{ colunas|length|add:1 }}"><strong>{{ g.titulo }}</strong></td></tr>
         {% for q in g.quartos %}

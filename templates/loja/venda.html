@@ -22,22 +22,22 @@
 
 <table class="tabela" style="max-width:640px">
   <thead>
-    <tr><th>Produto</th><th>Natureza</th><th>Qtd</th><th>Preço</th><th>Subtotal</th></tr>
+    <tr><th>Produto</th><th>Natureza</th><th class="num">Qtd</th><th class="num">Preço</th><th class="num">Subtotal</th></tr>
   </thead>
   <tbody>
     {% for i in itens %}
       <tr>
         <td>{{ i.descricao }}</td>
         <td>{{ i.natureza|capfirst }}</td>
-        <td>{{ i.quantidade }}</td>
-        <td>R$ {{ i.preco_unitario }}</td>
-        <td>R$ {{ i.subtotal }}</td>
+        <td class="num">{{ i.quantidade }}</td>
+        <td class="num">R$ {{ i.preco_unitario }}</td>
+        <td class="num">R$ {{ i.subtotal }}</td>
       </tr>
     {% endfor %}
   </tbody>
   <tfoot>
-    {% if venda.desconto %}<tr><td colspan="4">Desconto</td><td>− R$ {{ venda.desconto }}</td></tr>{% endif %}
-    <tr><td colspan="4"><strong>Total</strong></td><td><strong>R$ {{ venda.total }}</strong></td></tr>
+    {% if venda.desconto %}<tr><td colspan="4">Desconto</td><td class="num">− R$ {{ venda.desconto }}</td></tr>{% endif %}
+    <tr><td colspan="4"><strong>Total</strong></td><td class="num"><strong>R$ {{ venda.total }}</strong></td></tr>
   </tfoot>
 </table>
 

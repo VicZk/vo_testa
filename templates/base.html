@@ -6,21 +6,29 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block titulo %}CRM Vô Testa{% endblock %}</title>
   <link rel="icon" href="{% static 'img/simbolo-dourado.png' %}" type="image/png">
-  {# Fontes em paralelo (preconnect + link), não em série via @import do CSS #}
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
-  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=mob4">
+  {% comment %}Fontes auto-hospedadas: as @font-face estão no app.css, o preload vem
+  aqui. Saiu o <link> para o Google Fonts (uma ida a terceiros no caminho crítico).{% endcomment %}
+  {% include "componentes/fontes.html" %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  {% comment %}fluid.js SEM defer: scripts inline de página (mapa, corredor) usam
+  `Fluid` já na execução, durante o parse — com defer ele ainda não existiria.{% endcomment %}
   <script src="{% static 'js/fluid.js' %}"></script>
+  {# Embrulha as tabelas de dados num contêiner rolante (ver o próprio arquivo). #}
+  <script src="{% static 'js/tabela-rol.js' %}" defer></script>
   {# HTMX e Alpine servidos pelo próprio sistema (static/vendor/), não pelo unpkg. #}
   <script src="{% static 'vendor/htmx-2.0.4.min.js' %}" defer></script>
   <script>
-    // Combobox de pessoa com busca + agrupamento (componentes/combo_pessoa.html).
+    // Combobox com busca + agrupamento (componentes/combo_pessoa.html e combo_quarto.html).
     // Registrado antes do Alpine (defer) para o alpine:init pegar.
-    document.addEventListener("alpine:init", () => {
-      Alpine.data("comboPessoa", () => ({
-        q: "", open: false, sel: "", itens: [],
-        init() {
+    //
+    // Teclado/ARIA no padrão combobox do WAI-ARIA: ↓/↑ destacam, Enter escolhe o
+    // destacado (sem destaque, o Enter segue para o form), Esc fecha. Quem está
+    // destacado é anunciado por aria-activedescendant — o foco nunca sai do campo.
+    function comboComum(extras) {
+      const base = {
+        q: "", open: false, sel: "", itens: [], idx: -1, cid: "",
+        iniciarCombo() {
+          this.cid = this.$el.dataset.dados || "combo";
           this.itens = JSON.parse(document.getElementById(this.$el.dataset.dados).textContent);
           const inicial = this.$el.dataset.sel;
           if (inicial) {
@@ -29,32 +37,62 @@
             if (achou) this.q = achou.nome;
           }
         },
+        casaFiltro(it, f) { return it.nome.toLowerCase().includes(f); },
         get grupos() {
           const f = this.q.trim().toLowerCase();
           const mapa = new Map();
           for (const it of this.itens) {
-            if (f && !it.nome.toLowerCase().includes(f)) continue;
+            if (f && !this.casaFiltro(it, f)) continue;
             if (!mapa.has(it.grupo)) mapa.set(it.grupo, []);
             mapa.get(it.grupo).push(it);
           }
           return Array.from(mapa.entries());
         },
-        escolher(it) { this.sel = it.id; this.q = it.nome; this.open = false; },
+        // Lista achatada na ordem em que aparece na tela — é por ela que as setas andam.
+        get lista() { return this.grupos.flatMap(([, itens]) => itens); },
+        opcaoId(it) { return this.cid + "-op-" + it.id; },
+        get ativoId() {
+          const it = this.lista[this.idx];
+          return it ? this.opcaoId(it) : "";
+        },
+        digitou() { this.open = true; this.idx = -1; if (!this.q) this.sel = ""; },
+        fechar() { this.open = false; this.idx = -1; },
+        mover(passo) {
+          this.open = true;
+          const n = this.lista.length;
+          if (!n) { this.idx = -1; return; }
+          this.idx = (this.idx + passo + n) % n;
+          this.$nextTick(() => {
+            const el = document.getElementById(this.ativoId);
+            if (el) el.scrollIntoView({ block: "nearest" });
+          });
+        },
+        destacar(it) { this.idx = this.lista.findIndex((o) => o.id === it.id); },
+        // true = escolheu (o Enter foi consumido); false = deixa o form seguir.
+        confirmar() {
+          const it = this.lista[this.idx];
+          if (!it) return false;
+          this.escolher(it);
+          return true;
+        },
+        escolher(it) { this.sel = it.id; this.q = it.nome; this.fechar(); },
+      };
+      // defineProperties (e não spread): o `...` invocaria os getters e congelaria o valor.
+      Object.defineProperties(base, Object.getOwnPropertyDescriptors(extras || {}));
+      return base;
+    }
+    document.addEventListener("alpine:init", () => {
+      Alpine.data("comboPessoa", () => comboComum({
+        init() { this.iniciarCombo(); },
         adicionar(it) { this.itens.push(it); this.escolher(it); },
       }));
-      Alpine.data("comboQuarto", () => ({
+      Alpine.data("comboQuarto", () => comboComum({
         // Combo de quarto quebrado por sessões de ala. Refaz a lista de quartos LIVRES
         // via fetch quando as datas do MESMO form mudam. Busca por número, "PCD" ou ala.
-        q: "", open: false, sel: "", itens: [], url: "",
+        url: "",
         init() {
+          this.iniciarCombo();
           this.url = this.$el.dataset.url;
-          this.itens = JSON.parse(document.getElementById(this.$el.dataset.dados).textContent);
-          const inicial = this.$el.dataset.sel;
-          if (inicial) {
-            this.sel = inicial;
-            const achou = this.itens.find((it) => String(it.id) === String(inicial));
-            if (achou) this.q = achou.nome;
-          }
           const form = this.$el.closest("form");
           if (form) {
             ["[name=checkin]", "[name=checkout]"].forEach((s) => {
@@ -62,6 +100,9 @@
               if (el) el.addEventListener("change", () => this.recarregar());
             });
           }
+        },
+        casaFiltro(it, f) {
+          return it.nome.toLowerCase().includes(f) || it.grupo.toLowerCase().includes(f);
         },
         async recarregar() {
           const form = this.$el.closest("form");
@@ -77,17 +118,6 @@
             }
           } catch (e) { /* mantém a lista atual */ }
         },
-        get grupos() {
-          const f = this.q.trim().toLowerCase();
-          const mapa = new Map();
-          for (const it of this.itens) {
-            if (f && !(it.nome.toLowerCase().includes(f) || it.grupo.toLowerCase().includes(f))) continue;
-            if (!mapa.has(it.grupo)) mapa.set(it.grupo, []);
-            mapa.get(it.grupo).push(it);
-          }
-          return Array.from(mapa.entries());
-        },
-        escolher(it) { this.sel = it.id; this.q = it.nome; this.open = false; },
       }));
       Alpine.data("blocoQuartos", () => ({
         total: 0, quantidade: 0,
@@ -381,6 +411,51 @@
   }
   document.body.addEventListener('htmx:pushedIntoHistory', () => { marcarNavAtiva(); fecharSidebarMobile(); });
 
+  // ---------- Foco: preso dentro da caixa e devolvido a quem abriu ----------
+  // Modal e paleta são diálogos: o Tab circula dentro deles (WCAG 2.1.2) e, ao
+  // fechar, o foco volta ao botão de origem — ninguém "perde o lugar" na tela.
+  const FOCAVEIS = 'a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]),'
+    + ' select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
+  let origemFoco = null;
+
+  function caixaAberta() {
+    const pal = document.getElementById('paleta');
+    if (pal && pal.style.display === 'flex') return pal.querySelector('.paleta');
+    const ov = document.getElementById('modal-reserva');
+    if (ov && ov.style.display === 'flex') return document.getElementById('modal-conteudo');
+    return null;
+  }
+  function focaveisDe(caixa) {
+    return Array.from(caixa.querySelectorAll(FOCAVEIS))
+      .filter(el => el.offsetWidth || el.offsetHeight || el.getClientRects().length);
+  }
+  function guardarFoco() {
+    const a = document.activeElement;
+    origemFoco = (a && a !== document.body) ? a : null;
+  }
+  function devolverFoco() {
+    if (origemFoco && document.contains(origemFoco)) origemFoco.focus();
+    origemFoco = null;
+  }
+  function focarPrimeiro(caixa) {
+    const alvo = caixa.querySelector('[autofocus]') || focaveisDe(caixa)[0];
+    if (alvo) alvo.focus();
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Tab') return;
+    const caixa = caixaAberta();
+    if (!caixa) return;
+    const itens = focaveisDe(caixa);
+    if (!itens.length) return;
+    const primeiro = itens[0], ultimo = itens[itens.length - 1];
+    const dentro = caixa.contains(document.activeElement);
+    if (e.shiftKey && (!dentro || document.activeElement === primeiro)) {
+      e.preventDefault(); ultimo.focus();
+    } else if (!e.shiftKey && (!dentro || document.activeElement === ultimo)) {
+      e.preventDefault(); primeiro.focus();
+    }
+  });
+
   // ---------- Modal ----------
   // Origem do modal ancorada no último ponto de clique (§7 spatial consistency).
   let ultimoPonteiro = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
@@ -391,7 +466,9 @@
   function abrirModal() {
     const ov = document.getElementById('modal-reserva');
     const cx = document.getElementById('modal-conteudo');
+    if (ov.style.display !== 'flex') guardarFoco();   // antes de mexer no foco
     ov.style.display = 'flex';
+    focarPrimeiro(cx);
     const r = cx.getBoundingClientRect();
     const ox = Math.max(0, Math.min(1, (ultimoPonteiro.x - r.left) / (r.width || 1))) * 100;
     const oy = Math.max(0, Math.min(1, (ultimoPonteiro.y - r.top) / (r.height || 1))) * 100;
@@ -412,8 +489,12 @@
   function fecharModal() {
     const ov = document.getElementById('modal-reserva');
     const cx = document.getElementById('modal-conteudo');
-    const finish = () => { ov.style.display = 'none'; cx.innerHTML = ''; ov.style.opacity = ''; cx.removeAttribute('style'); };
-    if (Fluid.reducedMotion() || ov.style.display === 'none') { finish(); return; }
+    const estavaAberto = ov.style.display === 'flex';
+    const finish = () => {
+      ov.style.display = 'none'; cx.innerHTML = ''; ov.style.opacity = ''; cx.removeAttribute('style');
+      if (estavaAberto) devolverFoco();
+    };
+    if (Fluid.reducedMotion() || !estavaAberto) { finish(); return; }
     // Sai pelo mesmo caminho que entrou (§7).
     Fluid.spring({
       from: 1, to: 0, response: 0.22, bounce: 0,
@@ -434,6 +515,37 @@
     if (e.detail.target.id === 'modal-conteudo') { arranjoTocado = false; abrirModal(); atualizarTarifaHint(); }
   });
 
+  // ---------- Recarregar sem perder o lugar na tela ----------
+  // Algumas ações mudam a grade inteira (trocar de quarto) e pedem recarga. Sem
+  // guardar a rolagem, a pessoa volta ao topo e perde a linha que estava olhando.
+  // `seletores` = contêineres com rolagem própria (ex.: a faixa do mapa).
+  function recarregarNoLugar(seletores) {
+    try {
+      const pos = { y: window.scrollY, x: window.scrollX, cx: {} };
+      (seletores || []).forEach(s => {
+        const el = document.querySelector(s);
+        if (el) pos.cx[s] = el.scrollLeft;
+      });
+      sessionStorage.setItem('rolagem:' + location.pathname, JSON.stringify(pos));
+    } catch (e) { /* sessionStorage bloqueado: recarrega no topo e segue a vida */ }
+    location.reload();
+  }
+  (function reporRolagem() {
+    const chave = 'rolagem:' + location.pathname;
+    let bruto = null;
+    try { bruto = sessionStorage.getItem(chave); sessionStorage.removeItem(chave); } catch (e) { return; }
+    if (!bruto) return;
+    let pos;
+    try { pos = JSON.parse(bruto); } catch (e) { return; }
+    requestAnimationFrame(() => {
+      window.scrollTo(pos.x || 0, pos.y || 0);
+      Object.keys(pos.cx || {}).forEach(s => {
+        const el = document.querySelector(s);
+        if (el) el.scrollLeft = pos.cx[s];
+      });
+    });
+  })();
+
   // ---------- Toasts ----------
   function toast(msg, tipo) {
     const cont = document.getElementById('toasts');
@@ -450,6 +562,11 @@
     setTimeout(() => { el.classList.add('toast-saindo'); setTimeout(() => el.remove(), 400); }, 5000);
   }
   document.querySelectorAll('#toasts .toast').forEach(agendarSaida);
+  // Ação via HTMX que troca só um pedaço da tela avisa por aqui (HX-Trigger:
+  // {"aviso": {"texto": …, "tipo": …}}) — sem recarregar para ver a mensagem.
+  document.body.addEventListener('aviso', e => {
+    if (e.detail && e.detail.texto) toast(e.detail.texto, e.detail.tipo || 'success');
+  });
 
   // ---------- Feedback de toda requisição HTMX ----------
   // Barra no topo enquanto há requisição em voo, e erro sempre visível: por padrão o
@@ -522,7 +639,9 @@
   let paletaItens = [], paletaSel = 0, paletaTimer = null;
 
   function abrirPaleta() {
-    document.getElementById('paleta').style.display = 'flex';
+    const pal = document.getElementById('paleta');
+    if (pal.style.display !== 'flex') guardarFoco();
+    pal.style.display = 'flex';
     const inp = document.getElementById('paleta-input');
     inp.value = ''; inp.focus();
     paletaDica();   // abre vazia — só o campo de busca; comandos/resultados ao digitar
@@ -532,7 +651,14 @@
     document.getElementById('paleta-lista').innerHTML =
       '<div class="paleta-vazio">Digite para buscar hóspedes, reservas, produtos e leads…</div>';
   }
-  function fecharPaleta() { document.getElementById('paleta').style.display = 'none'; }
+  function fecharPaleta() {
+    const pal = document.getElementById('paleta');
+    const estavaAberta = pal.style.display === 'flex';
+    pal.style.display = 'none';
+    // Só devolve o foco se ELA estava aberta: o Escape chama os dois fechamentos
+    // e o modal perderia a sua origem de foco.
+    if (estavaAberta) devolverFoco();
+  }
 
   function renderPaleta(itens) {
     paletaItens = itens; paletaSel = 0;

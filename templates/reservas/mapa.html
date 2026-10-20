@@ -44,6 +44,10 @@
     </tr>
   </thead>
   <tbody>
+    {% if not grupos %}
+      <tr><td colspan="{{ dias|length|add:1 }}" class="vazio">Nenhum quarto cadastrado ainda —
+        o mapa nasce dos quartos. Cadastre em <strong>Cadastros → Quartos &amp; tipos</strong>.</td></tr>
+    {% endif %}
     {% for grupo in grupos %}
       <tr class="mapa-grupo">
         <td class="mapa-uh">
@@ -161,7 +165,7 @@
     pintar(uhAtual, ini, fim);
   });
 
-  document.addEventListener('pointermove', e => {
+  function arrastarNoitesMover(e) {
     if (!arrastando) return;
     if (!moveu && Math.hypot(e.clientX - px0, e.clientY - py0) < 8) return;  // histerese (§10)
     const cel = celulaEm(e.clientX, e.clientY);
@@ -169,9 +173,9 @@
     moveu = true;
     [ini, fim] = calcularIntervalo(uhAtual, cel.dataset.dia);
     pintar(uhAtual, ini, fim);
-  });
+  }
 
-  document.addEventListener('pointerup', () => {
+  function arrastarNoitesSoltar() {
     if (!arrastando) return;
     arrastando = false;
     if (celAncora) { celAncora.classList.remove('mapa-pressed'); celAncora = null; }
@@ -183,14 +187,32 @@
     if (!uh) return;
     htmx.ajax('GET', urlNova + '?uh=' + uh + '&checkin=' + checkin + '&checkout=' + checkout,
               '#modal-conteudo');
-  });
+  }
+
+  // O arraste precisa de `pointermove`/`pointerup` no documento (o dedo sai da
+  // célula), mas esta tela é trocada pelo HTMX: registrar os dois a cada troca
+  // empilhava ouvintes mortos. Então eles entram UMA vez e consultam sempre o
+  // controlador da tela atual.
+  window.__mapaNoites = { mover: arrastarNoitesMover, soltar: arrastarNoitesSoltar };
+  if (!window.__mapaNoitesLigado) {
+    window.__mapaNoitesLigado = true;
+    document.addEventListener('pointermove', e => {
+      if (window.__mapaNoites) window.__mapaNoites.mover(e);
+    });
+    document.addEventListener('pointerup', e => {
+      if (window.__mapaNoites) window.__mapaNoites.soltar(e);
+    });
+  }
 
   // ---- Arrastar uma reserva para outra linha = trocar de quarto (manip. direta) ----
   // A barra segue o dedo 1:1 (§2); a linha-alvo se ilumina (§8); ao soltar,
   // assenta na linha com um spring (§4). Toque abre o detalhe. confirm() mantido.
   const TROCA = "{% url 'reservas:trocar_quarto' 0 %}";
   const LIMIAR = 10;
-  async function enviarTroca(rid, uh, num) {
+  // Só recarrega quando a troca DEU certo (e voltando para o mesmo lugar da
+  // rolagem). Se deu erro, a barra volta para a linha de origem e fica o aviso —
+  // recarregar no erro apagava a mensagem e dava a impressão de que funcionou.
+  async function enviarTroca(rid, uh, num, desfazer) {
     const fd = new FormData(); fd.append('novo_uh', uh); fd.append('motivo', 'Troca pelo mapa de reservas');
     const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
     try {
@@ -198,9 +220,16 @@
         method: 'POST', headers: { 'X-CSRFToken': csrf, 'X-Requested-With': 'fetch' }, body: fd,
       });
       const d = await r.json();
-      if (d.ok) { toast('Reserva movida para o ' + num + '. A conta foi junto.', 'success'); setTimeout(() => location.reload(), 420); }
-      else { toast(d.erro || 'Não foi possível trocar.', 'error'); location.reload(); }
-    } catch (err) { toast('Falha de conexão.', 'error'); location.reload(); }
+      if (d.ok) {
+        toast('Reserva movida para o ' + num + '. A conta foi junto.', 'success');
+        setTimeout(() => recarregarNoLugar(['.mapa-rolagem']), 420);
+        return;
+      }
+      toast(d.erro || 'Não foi possível trocar.', 'error');
+    } catch (err) {
+      toast('Falha de conexão — a reserva não foi movida.', 'error');
+    }
+    if (desfazer) desfazer();
   }
 
   tabela.querySelectorAll('.mapa-barra[data-reserva]').forEach(bar => {
@@ -254,7 +283,7 @@
         fromX: dx, fromY: dy, toX: dx, toY: dy + (rL.top + rL.height / 2 - (rB.top + rB.height / 2)),
         velocityX: vel.x, velocityY: vel.y, response: 0.35, bounce: 0.12,
         onUpdate: (x, y) => { bar.style.transform = 'translate(' + x + 'px,' + y + 'px)'; },
-        onComplete: () => enviarTroca(bar.dataset.reserva, uh, num)
+        onComplete: () => enviarTroca(bar.dataset.reserva, uh, num, encerra)
       });
     });
     bar.addEventListener('click', e => { if (suprimir) { e.preventDefault(); suprimir = false; } });

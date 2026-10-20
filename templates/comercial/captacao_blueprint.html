@@ -5,6 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{{ pagina.hero_titulo|default:"A casa do Vô"|truncatechars:60 }} · Pousada Vô Testa</title>
 <meta name="description" content="{{ pagina.hero_subtitulo|default:'Nem resort, nem cabana. É a casa do Vô — em Itá, Santa Catarina.'|truncatechars:150 }}">
+{# Card do link no WhatsApp/Instagram/Facebook — é por ali que a campanha circula #}
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Pousada Vô Testa">
+<meta property="og:locale" content="pt_BR">
+<meta property="og:url" content="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
+<meta property="og:title" content="{{ pagina.hero_titulo|default:'A casa do Vô'|truncatechars:70 }}">
+<meta property="og:description" content="{{ pagina.hero_subtitulo|default:'Nem resort, nem cabana. É a casa do Vô — em Itá, Santa Catarina.'|truncatechars:200 }}">
+<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'site/img/og-pousada.jpg' %}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
 <style>
   @font-face{font-family:'Neco';src:url('{% static "site/fonts/Neco-Regular.woff2" %}') format('woff2');font-weight:400;font-display:swap}
   @font-face{font-family:'Neco';src:url('{% static "site/fonts/Neco-Bold.woff2" %}') format('woff2');font-weight:700;font-display:swap}
@@ -91,7 +103,7 @@
   }
 </style>
 {% if pagina.meta_pixel_id %}
-<script>
+<script type="text/plain" data-consentimento>
 !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
 n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
 n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
@@ -101,8 +113,9 @@ fbq('init','{{ pagina.meta_pixel_id }}');fbq('track','PageView');
 </script>
 {% endif %}
 {% if pagina.google_tag_id %}
-<script async src="https://www.googletagmanager.com/gtag/js?id={{ pagina.google_tag_id }}"></script>
-<script>
+<script type="text/plain" data-consentimento async
+        data-src="https://www.googletagmanager.com/gtag/js?id={{ pagina.google_tag_id }}"></script>
+<script type="text/plain" data-consentimento>
 window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
 gtag('js',new Date());gtag('config','{{ pagina.google_tag_id }}');
 </script>
@@ -186,5 +199,7 @@ gtag('js',new Date());gtag('config','{{ pagina.google_tag_id }}');
     } else { alvos.forEach(function(a){a.classList.add('vis');}); }
   })();
 </script>
+{# Consentimento (LGPD): Pixel e Google tag só depois do "Aceitar" #}
+{% include 'componentes/consentimento.html' %}
 </body>
 </html>

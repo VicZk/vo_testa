@@ -729,3 +729,43 @@ class GatewayForaDaTransacaoTests(PagamentosBase):
         with patch("apps.pagamentos.gateways.urlrequest.urlopen", return_value=resp) as urlopen:
             self._gateway()._http("GET", "/v2/charge/x")
         self.assertEqual(urlopen.call_args.kwargs["timeout"], 7)
+
+
+class PaginaPublicaPagarTests(PagamentosBase):
+    """A página em que alguém digita o cartão sem estar logado: máscara,
+    bandeira, bloco de confiança e fora dos buscadores."""
+
+    def html(self, **kw):
+        c = self.cobranca(**kw)
+        return self.client.get(reverse("pagamentos:pagar", args=[c.token])).content.decode()
+
+    def test_fora_de_indice_de_busca(self):
+        html = self.html()
+        self.assertIn('name="robots" content="noindex, nofollow"', html)
+        self.assertIn('name="referrer" content="no-referrer"', html)
+
+    def test_carrega_as_fontes_da_marca(self):
+        self.assertIn("HankenGrotesk-400-latin.woff2", self.html())
+
+    def test_bloco_de_confianca_com_contato(self):
+        from apps.site.models import ConfiguracaoSite
+
+        cfg = ConfiguracaoSite.load()
+        cfg.whatsapp = "5549999990000"
+        cfg.save()
+        html = self.html()
+        self.assertIn("não guarda o número do seu cartão", html)
+        self.assertIn("wa.me/5549999990000", html)
+
+    def test_mascara_e_bandeira_no_cartao(self):
+        """Com gateway real a captura de cartão aparece; a máscara e a bandeira
+        vêm junto (os `name` seguem numero/validade — o backend não muda)."""
+        c = self.cobranca(metodo="cartao")
+        with self.settings(PAGAMENTOS_GATEWAY="safrapay"):
+            html = self.client.get(
+                reverse("pagamentos:pagar", args=[c.token])
+            ).content.decode()
+        self.assertIn('name="numero"', html)
+        self.assertIn('name="validade"', html)
+        self.assertIn('id="cc-bandeira"', html)
+        self.assertIn("Mastercard", html)        # tabela de bandeiras no script

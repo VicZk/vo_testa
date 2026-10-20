@@ -27,7 +27,7 @@
 
 <table class="tabela">
   <thead>
-    <tr><th>Data</th><th>Tipo</th><th>Local</th><th>Quantidade</th><th>Custo unit.</th><th>Documento</th></tr>
+    <tr><th>Data</th><th>Tipo</th><th>Local</th><th class="num">Quantidade</th><th class="num">Custo unit.</th><th>Documento</th></tr>
   </thead>
   <tbody>
     {% for m in movimentos %}
@@ -35,8 +35,8 @@
         <td>{{ m.criado_em|date:"d/m/Y H:i" }}</td>
         <td>{{ m.get_tipo_display }}</td>
         <td>{{ m.local.nome }}</td>
-        <td class="{% if m.entrada %}texto-entrada{% else %}texto-alerta{% endif %}">{{ m.quantidade }}</td>
-        <td>R$ {{ m.custo_unitario }}</td>
+        <td class="num {% if m.entrada %}texto-entrada{% else %}texto-alerta{% endif %}">{{ m.quantidade }}</td>
+        <td class="num">R$ {{ m.custo_unitario }}</td>
         <td>{{ m.documento|default:"—" }}{% if m.observacao %} <small class="ajuda">{{ m.observacao }}</small>{% endif %}</td>
       </tr>
     {% empty %}

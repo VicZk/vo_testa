@@ -5,6 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{{ pagina.hero_titulo|truncatechars:60 }} · Pousada Vô Testa</title>
 <meta name="description" content="{{ pagina.hero_subtitulo|truncatechars:150 }}">
+{# Card do link no WhatsApp/Instagram/Facebook — é por ali que a campanha circula #}
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Pousada Vô Testa">
+<meta property="og:locale" content="pt_BR">
+<meta property="og:url" content="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
+<meta property="og:title" content="{{ pagina.hero_titulo|truncatechars:70 }}">
+<meta property="og:description" content="{{ pagina.hero_subtitulo|truncatechars:200 }}">
+<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'site/img/og-pousada.jpg' %}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
 <style>
   @font-face{font-family:'Neco';src:url('{% static "site/fonts/Neco-Regular.woff2" %}') format('woff2');font-weight:400;font-display:swap}
   @font-face{font-family:'Neco';src:url('{% static "site/fonts/Neco-Medium.woff2" %}') format('woff2');font-weight:500;font-display:swap}
@@ -91,7 +103,7 @@
   @media(max-width:760px){.historia .grid,.degraus,.tri{grid-template-columns:1fr}.relogio b{font-size:30px}.historia .roda-bg{display:none}}
 </style>
 {% if pagina.meta_pixel_id %}
-<script>
+<script type="text/plain" data-consentimento>
 !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
 n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
 n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
@@ -102,8 +114,9 @@ fbq('init','{{ pagina.meta_pixel_id }}');fbq('track','PageView');
 </script>
 {% endif %}
 {% if pagina.google_tag_id %}
-<script async src="https://www.googletagmanager.com/gtag/js?id={{ pagina.google_tag_id }}"></script>
-<script>
+<script type="text/plain" data-consentimento async
+        data-src="https://www.googletagmanager.com/gtag/js?id={{ pagina.google_tag_id }}"></script>
+<script type="text/plain" data-consentimento>
 window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
 gtag('js',new Date());gtag('config','{{ pagina.google_tag_id }}');
 {% if enviado %}gtag('event','generate_lead',{'campaign':'{{ pagina.slug }}'});{% endif %}
@@ -114,7 +127,7 @@ gtag('js',new Date());gtag('config','{{ pagina.google_tag_id }}');
 
 <header class="top">
   <div class="bar">
-    <img src="{% static 'site/img/logo-header.png' %}" alt="Pousada Vô Testa">
+    <img src="{% static 'site/img/logo-header.webp' %}" alt="Pousada Vô Testa" width="371" height="160" fetchpriority="high">
     <a href="#captura" class="cta">{{ pagina.cta_texto }}</a>
   </div>
 </header>
@@ -123,7 +136,7 @@ gtag('js',new Date());gtag('config','{{ pagina.google_tag_id }}');
 <section class="hero">
   <div class="wrap">
     {% if pagina.selo_texto %}<div class="selo">{{ pagina.selo_texto }}</div>{% endif %}
-    <img class="logo" src="{% static 'site/img/logo-hero.png' %}" alt="Pousada Vô Testa">
+    <img class="logo" src="{% static 'site/img/logo-hero.webp' %}" alt="Pousada Vô Testa" width="799" height="560" fetchpriority="high">
     {% if pagina.tagline %}<p class="tagline">{{ pagina.tagline|lower }}</p>{% endif %}
     <h1>{{ pagina.hero_titulo }}</h1>
     {% if pagina.hero_subtitulo %}<p class="lead">{{ pagina.hero_subtitulo }}</p>{% endif %}
@@ -147,7 +160,7 @@ gtag('js',new Date());gtag('config','{{ pagina.google_tag_id }}');
 <!-- HISTÓRIA -->
 {% if pagina.historia_texto %}
 <section class="historia" id="historia">
-  <img class="roda-bg" src="{% static 'site/img/ilustracao-roda.png' %}" alt="" aria-hidden="true">
+  <img class="roda-bg" src="{% static 'site/img/ilustracao-roda.webp' %}" alt="" width="789" height="700" loading="lazy" decoding="async" aria-hidden="true">
   <div class="wrap grid">
     <div>
       <p class="kicker">Nossa História</p>
@@ -156,7 +169,7 @@ gtag('js',new Date());gtag('config','{{ pagina.google_tag_id }}');
     </div>
     <div style="position:relative">
       <div class="foto-roda">
-        <img src="{% static 'site/img/ilustracao-roda.png' %}" alt="Roda d'água">
+        <img src="{% static 'site/img/ilustracao-roda.webp' %}" alt="Roda d'água" width="789" height="700" loading="lazy" decoding="async">
         <div class="cap">[ foto da roda d'água em frente à recepção ]</div>
       </div>
       <div class="badge"><b>1</b><span>Roda d'água<br>original</span></div>
@@ -286,7 +299,7 @@ gtag('js',new Date());gtag('config','{{ pagina.google_tag_id }}');
 {% endif %}
 
 <footer>
-  <img src="{% static 'site/img/logo-footer.png' %}" alt="Pousada Vô Testa">
+  <img src="{% static 'site/img/logo-footer.webp' %}" alt="Pousada Vô Testa" width="327" height="160" loading="lazy" decoding="async">
   <p><strong>Pousada Vô Testa</strong> · Itá — Santa Catarina</p>
   <p class="frase">Engenhosidade, acolhimento e bom viver — a essência do Vô Testa.</p>
 </footer>
@@ -307,5 +320,7 @@ gtag('js',new Date());gtag('config','{{ pagina.google_tag_id }}');
   })();
 </script>
 {% endif %}
+{# Consentimento (LGPD): Pixel e Google tag só depois do "Aceitar" #}
+{% include 'componentes/consentimento.html' %}
 </body>
 </html>

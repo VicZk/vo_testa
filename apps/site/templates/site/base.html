@@ -25,11 +25,16 @@
     <meta name="twitter:card" content="summary_large_image">
     {% block og_extra %}{% endblock %}
 
-    {# Google Analytics (GA4) — só carrega se GA_MEASUREMENT_ID estiver setado. #}
-    {# TODO: banner de consentimento (LGPD) antes de ligar em produção. #}
+    {# Dados estruturados da pousada (Google: ficha de hospedagem + mapa) #}
+    {% block jsonld %}{% endblock %}
+
+    {# Google Analytics (GA4) — só com GA_MEASUREMENT_ID setado E consentimento.    #}
+    {# `type="text/plain"` = o navegador NÃO executa; o consentimento.js liga       #}
+    {# depois do "Aceitar" (LGPD). Antes disso, nenhuma requisição ao Google.       #}
     {% if ga_measurement_id %}
-    <script async src="https://www.googletagmanager.com/gtag/js?id={{ ga_measurement_id }}"></script>
-    <script>
+    <script type="text/plain" data-consentimento async
+            data-src="https://www.googletagmanager.com/gtag/js?id={{ ga_measurement_id }}"></script>
+    <script type="text/plain" data-consentimento>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
@@ -37,7 +42,11 @@
     </script>
     {% endif %}
 
-    <!-- Fontes — Neco (display + corpo) -->
+    <!-- Fontes — Neco (display + corpo). As duas usadas acima da dobra (corpo e
+         o peso Black do título) vêm com preload: começam a baixar junto do CSS,
+         não depois dele. -->
+    <link rel="preload" href="{% static 'site/fonts/Neco-Regular.woff2' %}" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="{% static 'site/fonts/Neco-Black.woff2' %}" as="font" type="font/woff2" crossorigin>
     <style>
         @font-face {
             font-family: 'Neco';
@@ -73,22 +82,20 @@
     {% comment %}Tailwind: build estático (substitui o Play CDN). Regenerar após mudar
     classes: npx tailwindcss@3 -c tailwind.config.js -i tailwind.src.css -o apps/site/static/site/css/tailwind.css --minify
     'lab.html' (beta oculto) segue no CDN por ser sandbox de protótipos.{% endcomment %}
-    <link rel="stylesheet" href="{% static 'site/css/tailwind.css' %}?v=1">
+    <link rel="stylesheet" href="{% static 'site/css/tailwind.css' %}">
     {# Cor de fundo antes do CSS carregar (evita flash branco no refresh) #}
     <style>html{background:#051C2C}</style>
 
     <!-- Animações -->
     <link rel="stylesheet" href="{% static 'site/css/animations.css' %}">
 
-    <!-- HTMX (disponibilidade e preço dinâmico das reservas) -->
-    <script src="{% static 'site/vendor/htmx.min.js' %}"></script>
+    <!-- HTMX (disponibilidade e preço dinâmico das reservas) — `defer`: não
+         bloqueia a primeira pintura, e roda antes do DOMContentLoaded. -->
+    <script src="{% static 'site/vendor/htmx.min.js' %}" defer></script>
 
-    <!-- Flatpickr (calendário das datas de reserva) -->
-    <link rel="stylesheet" href="{% static 'site/vendor/flatpickr.min.css' %}">
-    <link rel="stylesheet" href="{% static 'site/css/datepicker.css' %}">
-    <script src="{% static 'site/vendor/flatpickr.min.js' %}"></script>
-    <script src="{% static 'site/vendor/flatpickr-pt.js' %}"></script>
-    <script src="{% static 'site/js/datepicker.js' %}"></script>
+    {% comment %}Flatpickr (≈60 KB + CSS) só nas páginas com calendário: home e passo 1
+    da reserva incluem `site/partials/_flatpickr.html` neste bloco.{% endcomment %}
+    {% block datepicker %}{% endblock %}
 
     {% block extra_head %}{% endblock %}
 </head>
@@ -118,8 +125,11 @@
     {% include 'site/partials/social_proof.html' %}
     {% endblock %}
 
+    {# Consentimento (LGPD): nada de medição antes do "Aceitar" #}
+    {% include 'componentes/consentimento.html' %}
+
     <!-- Scripts -->
-    <script src="{% static 'site/js/main.js' %}"></script>
+    <script src="{% static 'site/js/main.js' %}" defer></script>
     {% block extra_scripts %}{% endblock %}
 
 </body>

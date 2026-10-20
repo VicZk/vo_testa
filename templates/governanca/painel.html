@@ -9,57 +9,15 @@
 </div>
 <p class="subtitulo">Do check-out à liberação: o quarto vira <em>a limpar</em>, a camareira limpa e a recepção libera para o próximo hóspede.</p>
 
-<div x-data="{ f: 'todas' }" class="governanca-painel">
-  <div class="filtro-limpeza" role="tablist" aria-label="Filtrar por situação">
-    <button type="button" class="chip-limpeza" :class="f==='todas' && 'ativo'" @click="f='todas'">Todas <b>{{ linhas|length }}</b></button>
-    <button type="button" class="chip-limpeza chip-suja" :class="f==='suja' && 'ativo'" @click="f='suja'"><span class="ponto"></span>A limpar <b>{{ contagem.suja }}</b></button>
-    <button type="button" class="chip-limpeza chip-em_limpeza" :class="f==='em_limpeza' && 'ativo'" @click="f='em_limpeza'"><span class="ponto"></span>Em limpeza <b>{{ contagem.em_limpeza }}</b></button>
-    <button type="button" class="chip-limpeza chip-limpa" :class="f==='limpa' && 'ativo'" @click="f='limpa'"><span class="ponto"></span>Limpas <b>{{ contagem.limpa }}</b></button>
-    <button type="button" class="chip-limpeza chip-inspecionada" :class="f==='inspecionada' && 'ativo'" @click="f='inspecionada'"><span class="ponto"></span>Inspecionadas <b>{{ contagem.inspecionada }}</b></button>
+{% comment %}O x-data fica FORA de #gov-quadro: as ações trocam só o quadro (HTMX) e
+o filtro escolhido continua valendo — e volta igual na próxima vez (localStorage).{% endcomment %}
+<div class="governanca-painel" x-data="{
+       f: (function () { try { return localStorage.getItem('gov-filtro') || 'todas'; } catch (e) { return 'todas'; } })(),
+       filtrar(v) { this.f = v; try { localStorage.setItem('gov-filtro', v); } catch (e) {} }
+     }">
+  <div id="gov-quadro">
+    {% include "governanca/partials/quadro.html" %}
   </div>
-
-  <table class="tabela tabela-limpeza">
-    <thead>
-      <tr><th>Quarto</th><th>Situação</th><th>Camareira</th><th class="col-acao">Ação</th></tr>
-    </thead>
-    <tbody>
-      {% for ln in linhas %}
-      <tr x-show="f==='todas' || f==='{{ ln.situacao }}'" x-transition.opacity>
-        <td><strong>{{ ln.uh.numero }}</strong><small class="ajuda">{{ ln.uh.tipo.nome }}</small></td>
-        <td><span class="selo selo-{{ ln.situacao }}">{{ ln.situacao_label }}</span></td>
-        <td>
-          {% if ln.tarefa and ln.situacao == 'suja' or ln.situacao == 'em_limpeza' and ln.tarefa %}
-            <form method="post" action="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}" class="form-inline">
-              {% csrf_token %}<input type="hidden" name="acao" value="atribuir">
-              <select name="camareira" onchange="this.form.submit()" aria-label="Camareira do {{ ln.uh.numero }}">
-                <option value="">— camareira —</option>
-                {% for u in camareiras %}<option value="{{ u.pk }}" {% if ln.tarefa.camareira_id == u.pk %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>{% endfor %}
-              </select>
-            </form>
-          {% else %}
-            <span class="celula-vazia">—</span>
-          {% endif %}
-        </td>
-        <td class="acoes-limpeza col-acao">
-          {% if ln.situacao == 'suja' %}
-            {% if ln.tarefa %}
-              <form method="post" action="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}">{% csrf_token %}<input type="hidden" name="acao" value="iniciar"><button type="submit" class="botao-primario">Iniciar limpeza</button></form>
-            {% else %}
-              <form method="post" action="{% url 'governanca:nova_tarefa' %}">{% csrf_token %}<input type="hidden" name="uh" value="{{ ln.uh.pk }}"><input type="hidden" name="tipo" value="faxina_completa"><button type="submit" class="botao-primario">Abrir faxina</button></form>
-            {% endif %}
-          {% elif ln.situacao == 'em_limpeza' %}
-            <form method="post" action="{% if ln.tarefa %}{% url 'governanca:tarefa_acao' ln.tarefa.pk %}{% else %}{% url 'governanca:status_marcar' ln.uh.pk %}{% endif %}">{% csrf_token %}{% if ln.tarefa %}<input type="hidden" name="acao" value="concluir">{% else %}<input type="hidden" name="situacao" value="limpa">{% endif %}<button type="submit" class="botao-primario">Marcar limpo</button></form>
-          {% elif ln.situacao == 'limpa' %}
-            <form method="post" action="{% url 'governanca:status_marcar' ln.uh.pk %}">{% csrf_token %}<input type="hidden" name="situacao" value="inspecionada"><button type="submit" class="botao-neutro">Inspecionar</button></form>
-            <form method="post" action="{% url 'governanca:nova_tarefa' %}">{% csrf_token %}<input type="hidden" name="uh" value="{{ ln.uh.pk }}"><input type="hidden" name="tipo" value="faxina_completa"><button type="submit" class="botao-neutro">Nova faxina</button></form>
-          {% elif ln.situacao == 'inspecionada' %}
-            <form method="post" action="{% url 'governanca:nova_tarefa' %}">{% csrf_token %}<input type="hidden" name="uh" value="{{ ln.uh.pk }}"><input type="hidden" name="tipo" value="faxina_completa"><button type="submit" class="botao-neutro">Nova faxina</button></form>
-          {% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
 </div>
 
 {% if montagem %}

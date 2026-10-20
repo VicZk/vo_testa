@@ -153,3 +153,51 @@ class PainelSemEscritaTests(TestCase):
         self.assertEqual(StatusLimpeza.objects.count(), 0)
         self.assertEqual(len(dados["linhas"]), 3)
         self.assertTrue(all(ln["situacao"] == StatusLimpeza.Situacao.LIMPA for ln in dados["linhas"]))
+
+
+class PainelHtmxTests(GovernancaBase):
+    """O painel troca só o quadro (linha + contadores dos chips) sem recarregar,
+    e continua funcionando sem JavaScript."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="governanta", password="senha-forte-123")
+
+    def test_acao_com_htmx_devolve_so_o_quadro(self):
+        services.abrir_faxina(self.uh, usuario=self.user)
+        tarefa = TarefaGovernanca.objects.get(uh=self.uh)
+        r = self.client.post(
+            reverse("governanca:tarefa_acao", args=[tarefa.pk]),
+            {"acao": "iniciar"},
+            headers={"hx-request": "true"},
+        )
+        self.assertEqual(r.status_code, 200)
+        corpo = r.content.decode()
+        self.assertIn("tabela-limpeza", corpo)       # veio o quadro
+        self.assertNotIn("<html", corpo)             # e só o quadro
+        self.assertIn("Marcar limpo", corpo)         # já com a ação nova da linha
+        self.assertIn("HX-Trigger", r.headers)       # aviso vira toast
+        self.assertIn("iniciada", r.headers["HX-Trigger"])
+
+    def test_acao_sem_htmx_redireciona_como_antes(self):
+        """Sem JS (ou com o form puro), o fluxo antigo tem de continuar de pé."""
+        services.abrir_faxina(self.uh, usuario=self.user)
+        tarefa = TarefaGovernanca.objects.get(uh=self.uh)
+        r = self.client.post(
+            reverse("governanca:tarefa_acao", args=[tarefa.pk]), {"acao": "iniciar"}
+        )
+        self.assertRedirects(r, reverse("governanca:painel"))
+        self.assertEqual(services.situacao_uh(self.uh).situacao, "em_limpeza")
+
+    def test_atribuir_camareira_nao_dispara_sozinho(self):
+        """O <select> não pode mais ter onchange=submit: quem confirma é o botão."""
+        services.abrir_faxina(self.uh, usuario=self.user)
+        r = self.client.get(reverse("governanca:painel"))
+        corpo = r.content.decode()
+        self.assertNotIn("this.form.submit()", corpo)
+        self.assertIn('name="camareira"', corpo)
+
+    def test_filtro_sem_quarto_explica_em_vez_de_tabela_vazia(self):
+        r = self.client.get(reverse("governanca:painel"))
+        # O único quarto está "limpa" por padrão; "a limpar" fica sem ninguém.
+        self.assertContains(r, "Nenhum quarto")

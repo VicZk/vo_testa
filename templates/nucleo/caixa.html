@@ -77,7 +77,7 @@
   <h2>Movimentos da sessão</h2>
   <table class="tabela">
     <thead>
-      <tr><th>Hora</th><th>Tipo</th><th>Forma</th><th>Valor</th><th>Descrição</th></tr>
+      <tr><th>Hora</th><th>Tipo</th><th>Forma</th><th class="num">Valor</th><th>Descrição</th></tr>
     </thead>
     <tbody>
       {% for m in sessao.movimentos.all %}
@@ -85,7 +85,7 @@
           <td>{{ m.criado_em|date:"H:i" }}</td>
           <td><span class="dica" data-dica="{{ m.tipo_ajuda }}">{{ m.get_tipo_display }}</span></td>
           <td>{{ m.forma_pagamento|default:"Dinheiro" }}</td>
-          <td>R$ {{ m.valor }}</td>
+          <td class="num">R$ {{ m.valor }}</td>
           <td>{{ m.descricao }}</td>
         </tr>
       {% empty %}

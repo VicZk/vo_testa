@@ -117,10 +117,13 @@
 </form>
 {% endblock %}
 
+{% block datepicker %}{% include 'site/partials/_flatpickr.html' %}{% endblock %}
+
 {% block extra_scripts %}
 {{ block.super }}
 <script>
-(function () {
+// DOMContentLoaded: o flatpickr vem com `defer` e só existe depois do HTML.
+document.addEventListener('DOMContentLoaded', function () {
     var el = document.getElementById('calendario-inline');
     if (!el || typeof flatpickr === 'undefined') return;
     if (flatpickr.l10ns && flatpickr.l10ns.pt) flatpickr.localize(flatpickr.l10ns.pt);
@@ -194,6 +197,6 @@
             fCh[k].value = v; cntCh[k].textContent = v;
         });
     });
-})();
+});
 </script>
 {% endblock %}

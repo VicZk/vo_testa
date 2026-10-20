@@ -6,8 +6,18 @@
      box-shadow:var(--sombra-3);opacity:0;transition:opacity .08s;transform:translate(-50%,-100%)"></div>
 <script>
 (function(){
-  var el = document.getElementById('mkt-dica'), atual = null;
+  if (window.__mktDica) return;              // uma vez só (sobrevive aos swaps do HTMX)
+  window.__mktDica = true;
+  var atual = null;
+  // O balão é procurado a cada evento: o partial pode ser re-renderizado num swap
+  // e a referência velha ficaria apontando para um nó solto, fora da página.
+  function balao(){
+    var el = document.getElementById('mkt-dica');
+    return (el && el.isConnected) ? el : null;
+  }
   document.addEventListener('pointermove', function(e){
+    var el = balao();
+    if(!el) return;
     var t = e.target.closest ? e.target.closest('[data-dica]') : null;
     var txt = t ? (t.getAttribute('data-dica') || '') : '';
     if(!txt){ if(atual){ atual = null; el.style.opacity = 0; } return; }

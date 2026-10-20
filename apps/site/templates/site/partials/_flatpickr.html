@@ -1,0 +1,15 @@
+{% load static %}
+{% comment %}
+Calendário das datas (Flatpickr): ~60 KB de JS + CSS que só fazem sentido onde
+existe campo de data — a home (barra de busca do hero) e o passo 1 da reserva.
+As outras páginas do site não baixam nada disso.
+
+Os scripts são `defer`: rodam depois do HTML, em ordem, e antes do
+DOMContentLoaded — então qualquer init de página pode contar com o flatpickr
+já definido desde que também espere o DOMContentLoaded.
+{% endcomment %}
+<link rel="stylesheet" href="{% static 'site/vendor/flatpickr.min.css' %}">
+<link rel="stylesheet" href="{% static 'site/css/datepicker.css' %}">
+<script src="{% static 'site/vendor/flatpickr.min.js' %}" defer></script>
+<script src="{% static 'site/vendor/flatpickr-pt.js' %}" defer></script>
+<script src="{% static 'site/js/datepicker.js' %}" defer></script>

@@ -1,7 +1,14 @@
 {% extends 'site/base.html' %}
+{% load site_seo %}
 
 {% block title %}Pousada Vô Testa — Um lugar fora do tempo{% endblock %}
 {% block meta_description %}Pousada à beira do Lago de Itá, em Itá/SC. Quartos, cabanas e Dia na Pousada (day use) com piscina, mirantes, pesca esportiva e eventos. Reserve direto pelo site, com melhor preço.{% endblock %}
+
+{# Ficha da pousada para o Google (schema.org LodgingBusiness) #}
+{% block jsonld %}{% jsonld_pousada %}{% endblock %}
+
+{# A barra de busca do hero usa o calendário; as demais páginas não baixam o Flatpickr. #}
+{% block datepicker %}{% include 'site/partials/_flatpickr.html' %}{% endblock %}
 
 {% block content %}
 

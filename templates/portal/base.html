@@ -5,8 +5,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block titulo %}Sua estadia — Pousada Vô Testa{% endblock %}</title>
+  {# Página com token na URL: não pode entrar em índice de busca nem ser seguida. #}
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
   <link rel="icon" href="{% static 'img/simbolo-dourado.png' %}" type="image/png">
-  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=fnrh3">
+  {# Fontes da marca (antes esta tela caía em Georgia/system) #}
+  {% include "componentes/fontes.html" %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
   <style>
     body { background: var(--canvas); margin: 0; padding: 0 0 3rem; }
     .pt-topo { background: var(--noturno); padding: 1.1rem 1rem; text-align: center; }
@@ -20,13 +25,16 @@
                 border-bottom: 1px solid var(--fio); font-size: .92rem; }
     .pt-linha:last-child { border-bottom: none; }
     .pt-msg { padding: .7rem 1rem; border-radius: var(--raio-p); margin-bottom: .8rem; font-weight: 600; font-size: .9rem; }
-    .pt-msg.success { background: rgba(46,125,91,.14); color: var(--sucesso); }
-    .pt-msg.error { background: rgba(166,64,44,.14); color: var(--perigo); }
+    .pt-msg.success { background: var(--sucesso-bg); color: var(--sucesso); }
+    .pt-msg.error { background: var(--perigo-bg); color: var(--perigo); }
     .pt-cardapio-item { display: flex; align-items: center; gap: .6rem; padding: .5rem 0; border-bottom: 1px solid var(--fio); }
     .pt-cardapio-item:last-child { border-bottom: none; }
     .pt-cardapio-item .nome { flex: 1; }
     .pt-cardapio-item .preco { color: var(--tinta-suave); font-size: .85rem; }
-    .pt-cardapio-item input { width: 56px; text-align: center; }
+    .pt-cardapio-item input {
+      width: 56px; min-height: 44px; text-align: center; font-size: 1rem;
+    }
+    .pt-cardapio-item { min-height: 52px; }
     .pt-acoes { display: grid; gap: .6rem; }
     .pt-atalhos { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem; margin-top: 1rem; }
     .pt-atalho {
@@ -36,18 +44,24 @@
       box-shadow: var(--sombra-1); font-size: .78rem; font-weight: 600; text-align: center;
     }
     .pt-atalho .pt-ico {
-      width: 40px; height: 40px; border-radius: 50%;
+      width: 44px; height: 44px; border-radius: 50%;
       display: grid; place-items: center;
-      background: rgba(46,125,91,.12); color: var(--musgo);
+      background: var(--sucesso-bg); color: var(--musgo);
     }
     .pt-atalho .pt-ico svg { width: 22px; height: 22px; fill: currentColor; stroke: none; }
-    .pt-atalho.destaque .pt-ico { background: rgba(196,140,58,.18); color: var(--brasa, #b8742a); }
-    .pt-nps-escala { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .8rem; }
-    .pt-nps-nota {
-      width: 2rem; height: 2rem; border-radius: var(--raio-p);
-      display: grid; place-items: center; font-size: .85rem; font-weight: 700;
-      background: rgba(46,125,91,.1); color: var(--musgo);
+    .pt-atalho.destaque .pt-ico { background: var(--alerta-bg); color: var(--madeira); }
+    .pt-nps-escala {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(44px, 1fr));
+      gap: .4rem; margin-top: .8rem;
     }
+    /* 44x44 = alvo de toque mínimo (WCAG 2.5.8 / HIG) — antes eram 32px. */
+    .pt-nps-nota {
+      min-width: 44px; min-height: 44px; border-radius: var(--raio-p);
+      display: grid; place-items: center; font-size: .9rem; font-weight: 700;
+      background: var(--sucesso-bg); color: var(--musgo);
+      text-decoration: none; border: 1px solid transparent;
+    }
+    a.pt-nps-nota:hover { border-color: var(--musgo); }
     .pt-nps-nota.desabilitada { opacity: .45; }
     /* Check-in online: progresso + barra de envio fixa (alcance do polegar) */
     .pt-progresso { margin-top: .9rem; }
