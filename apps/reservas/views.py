@@ -804,6 +804,49 @@ def faturar(request, pk):
 
 
 @requer_modulo(Modulo.RESERVAS)
+def estender(request, pk):
+    """Hóspede fica mais noites: nova saída, noites a mais na conta."""
+    from datetime import date
+
+    reserva = get_object_or_404(Reserva, pk=pk)
+    if request.method != "POST":
+        return redirect("reservas:detalhe", pk=pk)
+    try:
+        nova_saida = date.fromisoformat(request.POST.get("nova_saida", ""))
+    except ValueError:
+        messages.error(request, "Informe a nova data de saída.")
+        return redirect("reservas:detalhe", pk=pk)
+    try:
+        total = services.estender_estadia(reserva, nova_saida, request.user)
+        messages.success(request, f"Estadia estendida até {nova_saida:%d/%m/%Y}: "
+                                  f"{intcomma_brl(total)} lançado na conta.")
+    except ValidationError as erro:
+        messages.error(request, " ".join(erro.messages))
+    return redirect("reservas:detalhe", pk=pk)
+
+
+@requer_modulo(Modulo.RESERVAS)
+def lotacao(request, pk):
+    """Muda adultos/crianças antes do check-in (camas e diária refeitas)."""
+    reserva = get_object_or_404(Reserva, pk=pk)
+    if request.method != "POST":
+        return redirect("reservas:detalhe", pk=pk)
+    manter = request.POST.get("manter_preco") == "on"
+    if manter and not eh_gerente(request.user):
+        messages.error(request, "Manter a diária com outra lotação exige gerência.")
+        return redirect("reservas:detalhe", pk=pk)
+    try:
+        r = services.alterar_lotacao(
+            reserva, request.user, adultos=request.POST.get("adultos"),
+            criancas_0_5=request.POST.get("criancas_0_5"),
+            criancas_6_15=request.POST.get("criancas_6_15"), manter_preco=manter)
+        messages.success(request, f"Lotação alterada. Diária: {intcomma_brl(r.valor_diaria)}.")
+    except ValidationError as erro:
+        messages.error(request, " ".join(erro.messages))
+    return redirect("reservas:detalhe", pk=pk)
+
+
+@requer_modulo(Modulo.RESERVAS)
 def devolver(request, pk):
     """Devolve ao hóspede o excedente da conta ou o valor da política de cancelamento
     (estorno no caixa do operador). Só gerência: é saída de dinheiro."""

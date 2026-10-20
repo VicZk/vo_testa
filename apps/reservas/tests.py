@@ -2069,3 +2069,60 @@ class ValidacaoNosServicosTests(ReservasTestsBase):
             services.criar_prereserva(uh=self.uh, checkin=inicio, checkout=inicio + timedelta(days=2),
                                       hospede=self.hospede, usuario=self.usuario,
                                       faturamento=Reserva.Faturamento.AGENCIA)
+
+
+class AlterarReservaTests(ReservasTestsBase):
+    """Estender a estadia (hospedado) e mudar a lotação (antes do check-in)."""
+
+    def test_estender_lanca_as_noites_a_mais_e_ocupa_o_quarto(self):
+        r = self.reserva(dias=2)
+        conta = r.fazer_checkin(self.usuario)  # 600
+        total = services.estender_estadia(r, HOJE + timedelta(days=4), self.usuario)
+        r.refresh_from_db()
+        self.assertEqual(total, Decimal("600.00"))
+        self.assertEqual(r.checkout, HOJE + timedelta(days=4))
+        self.assertEqual(conta.saldo(), Decimal("1200.00"))
+        self.assertEqual(conta.lancamentos.filter(tipo=LancamentoConta.Tipo.DIARIA).count(), 4)
+        self.assertTrue(TrilhaAuditoria.objects.filter(acao="extensao_estadia").exists())
+
+    def test_estender_sobre_outra_reserva_e_recusado_sem_lancar_nada(self):
+        r = self.reserva(dias=2)
+        conta = r.fazer_checkin(self.usuario)
+        self.reserva(dias=2, offset=2)  # próxima reserva no mesmo quarto
+        with self.assertRaisesMessage(ValidationError, "não está livre"):
+            services.estender_estadia(r, HOJE + timedelta(days=3), self.usuario)
+        self.assertEqual(conta.saldo(), Decimal("600.00"))
+        r.refresh_from_db()
+        self.assertEqual(r.checkout, HOJE + timedelta(days=2))
+
+    def test_so_estende_quem_esta_hospedado(self):
+        r = self.reserva(dias=2, offset=10)
+        with self.assertRaisesMessage(ValidationError, "transfira as datas"):
+            services.estender_estadia(r, HOJE + timedelta(days=14), self.usuario)
+
+    def test_mudar_lotacao_refaz_a_diaria(self):
+        self.tipo.pessoa_adicional = Decimal("80.00")
+        self.tipo.save()
+        r = self.reserva(dias=2, offset=10)
+        services.alterar_lotacao(r, self.usuario, adultos=3)
+        r.refresh_from_db()
+        self.assertEqual(r.adultos, 3)
+        self.assertEqual(r.valor_diaria, Decimal("380.00"))
+        self.assertEqual(r.valor_hospedagem, Decimal("760.00"))
+
+    def test_manter_diaria_com_outra_lotacao_exige_gerencia(self):
+        r = self.reserva(dias=2, offset=10)
+        operadora = Usuario.objects.create_user(username="op-lot", password="senha-forte-123")
+        operadora.modulos.add(ModuloContratado.objects.get(codigo=Modulo.RESERVAS))
+        self.client.force_login(operadora)
+        self.client.post(reverse("reservas:lotacao", args=[r.pk]),
+                         {"adultos": "4", "manter_preco": "on"})
+        r.refresh_from_db()
+        self.assertEqual(r.adultos, 2)
+
+    def test_tela_mostra_estender_para_hospedado(self):
+        r = self.reserva(dias=2)
+        r.fazer_checkin(self.usuario)
+        self.client.force_login(self.usuario)
+        self.assertContains(self.client.get(reverse("reservas:detalhe", args=[r.pk])),
+                            "Estender a estadia")

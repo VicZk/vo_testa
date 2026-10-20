@@ -126,7 +126,7 @@
             <span>Retém: <strong>{{ politica_cancel.cobranca|intcomma_brl }}</strong></span>
             <span>Devolver: <strong>{{ politica_cancel.devolver|intcomma_brl }}</strong></span>
           </div>
-          <small class="ajuda">A devolução é processada pelo caixa (estorno). Prefira transferir a data.</small>
+          <small class="ajuda">Depois de cancelar, a devolução sai em "Devolver ao hóspede", no fim desta página. Prefira transferir a data.</small>
         </div>
       {% endif %}
       <form method="post" action="{% url 'reservas:cancelar' reserva.pk %}" class="form-cartao">
@@ -137,6 +137,8 @@
     </section>
   </div>
 {% endif %}
+
+{% include "reservas/partials/alterar_reserva.html" %}
 
 {# ---------- Trocar de quarto ---------- #}
 {% if reserva.ativa %}

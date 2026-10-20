@@ -1481,6 +1481,130 @@ def saidas_vencidas() -> dict:
 
 
 @transaction.atomic
+@transaction.atomic
+def estender_estadia(reserva, nova_saida, usuario) -> Decimal:
+    """O hóspede fica mais: a saída passa para `nova_saida`, as noites a mais entram na
+    conta pela tarifa vigente (uma diária por noite, ISS e taxa de turismo pelas mesmas
+    regras do check-in) e o quarto fica ocupado até lá. Só para quem já está hospedado
+    (antes do check-in, `transferir_datas`). Devolve o total lançado."""
+    from apps.nucleo.models import NaturezaFiscal
+    from apps.nucleo.sistema import travar
+    from apps.reservas import colchoes, precos
+
+    reserva = travar(reserva)
+    if reserva.status != Reserva.Status.HOSPEDADA:
+        raise ValidationError(
+            "Estender é para quem já está hospedado. Antes do check-in, transfira as datas.")
+    if nova_saida <= reserva.checkout:
+        raise ValidationError("A nova saída precisa ser depois da saída atual.")
+    if reserva.uh.tipo.modalidade == TipoUH.Modalidade.DAY_USE:
+        raise ValidationError("Day use não se estende: faça uma nova reserva.")
+    inicio = reserva.checkout
+    expirar_vencidas()
+    conflito = (reservas_ativas_qs()
+                .filter(uh=reserva.uh, checkin__lt=nova_saida, checkout__gt=inicio)
+                .exclude(pk=reserva.pk).exists())
+    if conflito or reserva.uh.pk in _uhs_bloqueio_manutencao(inicio, nova_saida):
+        raise ValidationError(
+            f"O quarto {reserva.uh.numero} não está livre até {nova_saida:%d/%m}: troque de "
+            "quarto para as noites a mais ou escolha outra data.")
+    if colchoes.configurado(reserva.uh):
+        ColchoesExtra.objects.select_for_update().first()
+        conf = conferir_arranjo(
+            reserva.uh, casais=reserva.casais, solteiros=reserva.solteiros,
+            usa_sofa_cama=reserva.usa_sofa_cama, adultos=reserva.adultos,
+            criancas=reserva.criancas, checkin=inicio, checkout=nova_saida,
+            excluir_id=reserva.pk)
+        if conf["erros"]:
+            raise ValidationError(conf["erros"])
+
+    cot = precos.cotacao(
+        uh=reserva.uh, checkin=inicio, checkout=nova_saida, adultos=reserva.adultos,
+        criancas_0_5=reserva.criancas_0_5, criancas_6_15=reserva.criancas_6_15,
+        cobra_iss=reserva.cobra_iss, cobra_taxa_turismo=reserva.cobra_taxa_turismo,
+        nao_reembolsavel=reserva.nao_reembolsavel)
+    # Diárias do quarto de grupo vão ao folio-mãe, como no check-in.
+    acomodacao = reserva.grupo.folio if reserva.grupo_id else reserva.conta
+    numero = reserva.uh.numero
+    for noite in cot["diarias"]:
+        lancar_na_conta(acomodacao, LancamentoConta.Tipo.DIARIA, NaturezaFiscal.SERVICO,
+                        f"Diária {noite['dia']:%d/%m/%Y} — {numero} (estendida)",
+                        noite["valor"], usuario)
+    total = cot["hospedagem"]
+    if cot["desconto_nao_reembolsavel"] > 0:
+        lancar_na_conta(acomodacao, LancamentoConta.Tipo.DESCONTO, NaturezaFiscal.SERVICO,
+                        f"Tarifa não reembolsável — noites estendidas, {numero}",
+                        cot["desconto_nao_reembolsavel"], usuario)
+    if getattr(settings, "PRECO_TAXAS_ATIVAS", True):
+        noites = len(cot["diarias"])
+        if cot["iss"] > 0:
+            lancar_na_conta(acomodacao, LancamentoConta.Tipo.TAXA, NaturezaFiscal.SERVICO,
+                            f"ISS {cot['iss_aliquota'].normalize()}% — {numero} (estendida)",
+                            cot["iss"], usuario)
+            total += cot["iss"]
+        if cot["taxa_turismo"] > 0:
+            rotulo = "diária" if noites == 1 else "diárias"
+            lancar_na_conta(acomodacao, LancamentoConta.Tipo.TAXA, NaturezaFiscal.SERVICO,
+                            f"Taxa de turismo · {noites} {rotulo} — {numero} (estendida)",
+                            cot["taxa_turismo"], usuario)
+            total += cot["taxa_turismo"]
+
+    saida_antiga = reserva.checkout
+    reserva.checkout = nova_saida
+    reserva.valor_hospedagem = None  # o total cotado na reserva não vale mais
+    try:
+        with transaction.atomic():
+            reserva.save(update_fields=["checkout", "valor_hospedagem"])
+    except IntegrityError:
+        raise ValidationError("O quarto acabou de ser reservado nessas noites.")
+    registrar_auditoria(usuario, "extensao_estadia", reserva, {
+        "de": f"{saida_antiga:%d/%m/%Y}", "para": f"{nova_saida:%d/%m/%Y}",
+        "lancado": str(total)})
+    return total
+
+
+@transaction.atomic
+def alterar_lotacao(reserva, usuario, *, adultos, criancas_0_5=0, criancas_6_15=0,
+                    manter_preco=False):
+    """Muda quantas pessoas vêm, antes do check-in: confere camas e colchões no quarto
+    (arranjo sugerido para a nova lotação) e refaz a diária pela tarifa dela. Com
+    `manter_preco` (a view exige gerência) a diária combinada fica."""
+    from apps.nucleo.sistema import travar
+    from apps.reservas import precos
+
+    reserva = travar(reserva)
+    if reserva.status not in (Reserva.Status.ORCAMENTO, Reserva.Status.PRE_RESERVA,
+                              Reserva.Status.CONFIRMADA):
+        raise ValidationError("A lotação só muda antes do check-in.")
+    try:
+        adultos, c05, c615 = int(adultos), int(criancas_0_5 or 0), int(criancas_6_15 or 0)
+    except (TypeError, ValueError):
+        raise ValidationError("Informe a lotação em números.")
+    if adultos < 1 or c05 < 0 or c615 < 0:
+        raise ValidationError("Informe ao menos 1 adulto (e crianças a partir de zero).")
+    antes = (reserva.adultos, reserva.criancas_0_5, reserva.criancas_6_15, reserva.valor_diaria)
+    reserva.adultos, reserva.criancas_0_5, reserva.criancas_6_15 = adultos, c05, c615
+    reserva.criancas = c05 + c615
+    arranjo = _travar_e_resolver_arranjo(
+        reserva.uh, casais=None, solteiros=None, usa_sofa_cama=None, adultos=adultos,
+        criancas=reserva.criancas, checkin=reserva.checkin, checkout=reserva.checkout,
+        excluir_id=reserva.pk)
+    for campo, valor in arranjo.items():
+        setattr(reserva, campo, valor)
+    if not manter_preco:
+        cot = precos.cotacao(
+            uh=reserva.uh, checkin=reserva.checkin, checkout=reserva.checkout,
+            adultos=adultos, criancas_0_5=c05, criancas_6_15=c615,
+            nao_reembolsavel=reserva.nao_reembolsavel)
+        reserva.valor_diaria, reserva.valor_hospedagem = cot["media_noite"], cot["hospedagem"]
+    reserva.clean()
+    reserva.save()
+    registrar_auditoria(usuario, "alteracao_lotacao", reserva, {
+        "antes": f"{antes[0]} adulto(s), {antes[1]}+{antes[2]} criança(s), diária {antes[3]}",
+        "depois": f"{adultos} adulto(s), {c05}+{c615} criança(s), diária {reserva.valor_diaria}"})
+    return reserva
+
+
 def _arranjo_no_destino(reserva, novo_uh) -> dict:
     """Camas da reserva no quarto de destino: mantém o arranjo escolhido se ele couber;
     senão usa o sugerido para a lotação. Trava o pool de colchões e recusa se nem o
