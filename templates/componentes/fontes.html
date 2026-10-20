@@ -1,0 +1,13 @@
+{% load static %}
+{% comment %}
+Preload das duas fontes que aparecem acima da dobra em qualquer tela do CRM, do
+portal do hóspede e da página de pagamento: o corpo (Hanken Grotesk 400) e os
+títulos (Fraunces 600). Começam a baixar junto do CSS em vez de só depois dele,
+o que tira o pisca-pisca de texto na primeira pintura.
+
+As @font-face moram no `static/css/app.css` (fontes auto-hospedadas) — então
+basta carregar o app.css para ter a tipografia certa; este include só adianta o
+download. Os outros pesos chegam sob demanda.
+{% endcomment %}
+<link rel="preload" href="{% static 'fonts/HankenGrotesk-400-latin.woff2' %}" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="{% static 'fonts/Fraunces-600-latin.woff2' %}" as="font" type="font/woff2" crossorigin>

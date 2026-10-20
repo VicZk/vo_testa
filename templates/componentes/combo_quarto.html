@@ -1,29 +1,41 @@
 {% comment %}
 Combo de quarto com busca + sessões por ala (cabeçalho + divisória). Reaproveita o
-visual do combo de pessoa. Refaz a lista de quartos LIVRES via fetch quando as datas
-do mesmo form mudam (data-url).
+visual e o teclado do combo de pessoa (↓/↑ destacam, Enter escolhe, Esc fecha).
+Refaz a lista de quartos LIVRES via fetch quando as datas do mesmo form mudam (data-url).
 Parâmetros do include:
   dados       lista de {id, nome, grupo} (ver services.quartos_combo_dados)
   dados_id    id único do json_script nesta página (ex.: "quartos-cot")
   campo       name do input enviado no POST (ex.: "uh")
   placeholder texto do campo (opcional)
   valor_id    id pré-selecionado (opcional, para edição)
+  campo_id    id do campo visível (opcional) — por padrão `id_<campo>`
 {% endcomment %}
+{% firstof campo_id "id_"|add:campo as id_combo %}
 {{ dados|json_script:dados_id }}
 <div class="combo" x-data="comboQuarto" data-dados="{{ dados_id }}" data-sel="{{ valor_id|default:'' }}"
-     data-url="{% url 'comercial:quartos_disponiveis' %}" @click.outside="open=false">
+     data-url="{% url 'comercial:quartos_disponiveis' %}" @click.outside="fechar()">
   <input type="hidden" name="{{ campo }}" :value="sel">
-  <input type="text" class="combo-input" placeholder="{{ placeholder|default:'Buscar quarto (nº, PCD ou ala)…' }}"
-         autocomplete="off" x-model="q" @focus="open=true" @input="open=true; if(!q){sel=''}">
-  <div class="combo-lista" x-show="open" x-cloak>
+  <input type="text" id="{{ id_combo }}" class="combo-input" autocomplete="off"
+         placeholder="{{ placeholder|default:'Buscar quarto (nº, PCD ou ala)…' }}"
+         role="combobox" aria-autocomplete="list" :aria-expanded="open"
+         :aria-controls="cid + '-lista'" :aria-activedescendant="ativoId || null"
+         x-model="q" @focus="open = true" @input="digitou()"
+         @keydown.arrow-down.prevent="mover(1)" @keydown.arrow-up.prevent="mover(-1)"
+         @keydown.enter="if (confirmar()) $event.preventDefault()"
+         @keydown.escape.stop="fechar()" @keydown.tab="fechar()">
+  <div class="combo-lista" x-show="open" x-cloak role="listbox" :id="cid + '-lista'"
+       aria-label="Quartos livres">
     <template x-for="[grupo, lista] in grupos" :key="grupo">
-      <div class="combo-grupo">
+      <div class="combo-grupo" role="group" :aria-label="grupo">
         <div class="combo-grupo-cab" x-text="grupo"></div>
         <template x-for="it in lista" :key="it.id">
-          <button type="button" class="combo-opcao" @click="escolher(it)" x-text="it.nome"></button>
+          <button type="button" class="combo-opcao" role="option" tabindex="-1"
+                  :id="opcaoId(it)" :aria-selected="String(it.id) === String(sel)"
+                  :class="ativoId === opcaoId(it) && 'destacada'"
+                  @click="escolher(it)" @mouseenter="destacar(it)" x-text="it.nome"></button>
         </template>
       </div>
     </template>
-    <div class="combo-vazio" x-show="grupos.length === 0">Nenhum quarto livre.</div>
+    <div class="combo-vazio" x-show="grupos.length === 0" role="status">Nenhum quarto livre.</div>
   </div>
 </div>

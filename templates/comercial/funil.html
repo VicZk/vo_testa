@@ -57,7 +57,9 @@
   .funil-busca{display:flex;align-items:center;gap:.5rem;margin:.1rem .1rem .5rem;padding:.5rem .8rem;
     background:var(--superficie);border:1px solid var(--fio);border-radius:999px;max-width:560px}
   .funil-busca .ico{width:16px;height:16px;color:var(--tinta-suave);flex:0 0 auto;fill:none;stroke:currentColor;stroke-width:2}
-  .funil-busca input{flex:1;border:none;background:transparent;outline:none;font-size:14px;color:var(--tinta)}
+  .funil-busca input{flex:1;border:none;background:transparent;font-size:14px;color:var(--tinta);
+    /* anel no pill (.funil-busca:focus-within): o campo nao tem borda propria */ outline:none}
+  .funil-busca:focus-within{border-color:var(--lampiao);box-shadow:var(--foco-anel-suave)}
   .funil-busca-info{font-size:12px;color:var(--tinta-suave);white-space:nowrap}
   .funil-card[hidden]{display:none}
   .funil-coluna.sem-resultado{opacity:.5}
@@ -264,7 +266,7 @@
         <div class="modal-corpo">
           <div class="form-grade">
             <div class="campo col-2" x-data="{ novoLead: false }">
-              <label>Lead (pessoa, agência ou empresa)</label>
+              <label for="id_pessoa">Lead (pessoa, agência ou empresa)</label>
               <div class="campo-com-acao" id="combo-lead">
                 {% include "componentes/combo_pessoa.html" with dados=pessoas_data dados_id="pessoas-data" campo="pessoa" placeholder="Buscar lead…" %}
                 <button type="button" class="botao-mini" @click="novoLead = !novoLead" x-text="novoLead ? 'Fechar' : '+ Novo'"></button>
@@ -479,7 +481,18 @@
     }
     topo.addEventListener('scroll', () => espelhar(topo, board));
     board.addEventListener('scroll', () => espelhar(board, topo));
-    window.addEventListener('resize', sincronizarLargura);
+    // Os de cima morrem com os elementos no swap do HTMX; o de `resize` não —
+    // ele entra uma vez e reconsulta o board da tela atual.
+    if (!window.__funilResize) {
+      window.__funilResize = true;
+      window.addEventListener('resize', () => {
+        const b = document.getElementById('funilBoard');
+        const t = document.getElementById('funilScrollTop');
+        if (!b || !t || !t.firstElementChild) return;
+        t.firstElementChild.style.width = b.scrollWidth + 'px';
+        t.hidden = b.scrollWidth <= b.clientWidth + 1;
+      });
+    }
     sincronizarLargura();
   })();
 

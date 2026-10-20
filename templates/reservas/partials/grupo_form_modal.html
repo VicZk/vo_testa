@@ -14,7 +14,7 @@
       {% include "reservas/partials/campo.html" with campo=form.rotulo classe="col-2" %}
 
       <div class="campo col-2">
-        <label>Titular (quem paga o folio)</label>
+        <label for="id_titular">Titular (quem paga o folio)</label>
         {% include "componentes/combo_pessoa.html" with dados=titulares_data dados_id="grupo-titular-data" campo="titular" placeholder="Buscar pessoa/empresa…" %}
       </div>
 

@@ -196,9 +196,23 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# Estáticos com hash no nome (app.6f3a1c9.css) em produção: o navegador pode
+# cachear "para sempre" e o deploy invalida sozinho. Antes a invalidação era
+# manual (`?v=mob4` escrito no template) — bastava esquecer de trocar a versão
+# para a equipe ficar com o CSS velho depois de um deploy.
+# Em DEBUG e nos testes fica o storage simples: o manifest só existe depois do
+# collectstatic, e sem ele todo `{% static %}` quebraria.
+_ESTATICOS_COM_HASH = not DEBUG and not TESTING
+
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
-    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+    "staticfiles": {
+        "BACKEND": (
+            "whitenoise.storage.CompressedManifestStaticFilesStorage"
+            if _ESTATICOS_COM_HASH
+            else "whitenoise.storage.CompressedStaticFilesStorage"
+        ),
+    },
 }
 
 # --- Mídia em object storage (Cloudflare R2) --------------------------------

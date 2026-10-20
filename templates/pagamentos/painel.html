@@ -74,7 +74,7 @@
           {% for r in reservas %}<option value="{{ r.id }}">{{ r.rotulo }}</option>{% endfor %}
         </select>
       </div>
-      <div class="campo"><label>Pagador (opcional)</label>
+      <div class="campo"><label for="id_pagador">Pagador (opcional)</label>
         {% include "componentes/combo_pessoa.html" with dados=pagadores dados_id="pagadores-data" campo="pagador" placeholder="Buscar pessoa…" %}
       </div>
       <div class="acoes"><button type="submit" class="botao-primario">Gerar cobrança</button></div>
