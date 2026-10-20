@@ -1668,3 +1668,18 @@ class TrilhaLGPDTests(TestCase):
         self.assertEqual(self.client.get(reverse("auditoria:trilha")).status_code, 200)
         self.assertEqual(
             self.client.get(reverse("auditoria:trilha") + "?export=csv").status_code, 403)
+
+
+class HorariosNaTabelaDePrecosTests(TestCase):
+    def test_salva_os_horarios(self):
+        import datetime
+
+        from apps.nucleo.models import ConfiguracaoReservas
+        gerente = Usuario.objects.create_superuser(username="precos", password="x-senha-forte-1")
+        self.client.force_login(gerente)
+        self.client.post(reverse("tabela_precos"),
+                         {"hora_checkin": "13:30", "hora_checkout": "11:00"})
+        cfg = ConfiguracaoReservas.carregar()
+        self.assertEqual((cfg.hora_checkin, cfg.hora_checkout),
+                         (datetime.time(13, 30), datetime.time(11, 0)))
+        self.assertContains(self.client.get(reverse("tabela_precos")), 'value="13:30"')

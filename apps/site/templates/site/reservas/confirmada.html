@@ -39,8 +39,8 @@
         <div class="grid grid-cols-2 gap-3">
             <div><span class="text-madeira/40">Quarto:</span> <span class="text-madeira">{{ reserva.quarto.nome }}</span></div>
             <div><span class="text-madeira/40">Hóspedes:</span> <span class="text-madeira">{{ reserva.num_hospedes }}</span></div>
-            <div><span class="text-madeira/40">Check-in:</span> <span class="text-madeira">{{ reserva.data_checkin|date:'d/m/Y' }}</span></div>
-            <div><span class="text-madeira/40">Check-out:</span> <span class="text-madeira">{{ reserva.data_checkout|date:'d/m/Y' }}</span></div>
+            <div><span class="text-madeira/40">Check-in:</span> <span class="text-madeira">{{ reserva.data_checkin|date:'d/m/Y' }}{% if hora_checkin %}, a partir das {{ hora_checkin|time:'H:i' }}{% endif %}</span></div>
+            <div><span class="text-madeira/40">Check-out:</span> <span class="text-madeira">{{ reserva.data_checkout|date:'d/m/Y' }}{% if hora_checkout %}, até {{ hora_checkout|time:'H:i' }}{% endif %}</span></div>
             <div><span class="text-madeira/40">Noites:</span> <span class="text-madeira">{{ reserva.noites }}</span></div>
             <div><span class="text-madeira/40">Total ({{ reserva.get_metodo_pagamento_display }}):</span> <span class="text-madeira font-bold">R$ {{ reserva.valor_total|floatformat:2 }}</span></div>
         </div>

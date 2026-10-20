@@ -888,3 +888,29 @@ class RotuloDeCampoTests(TestCase):
         for campo in ("hero-checkin", "hero-checkout", "hero-hospedes"):
             self.assertIn(f'for="{campo}"', html)
             self.assertIn(f'id="{campo}"', html)
+
+
+class HorariosDaPousadaTests(TestCase):
+    """Os horários de entrada e saída vêm da Tabela de Preços (CRM)."""
+
+    def setUp(self):
+        import datetime
+
+        from apps.nucleo.models import ConfiguracaoReservas
+        cfg = ConfiguracaoReservas.carregar()
+        cfg.hora_checkin, cfg.hora_checkout = datetime.time(15, 0), datetime.time(11, 0)
+        cfg.save()
+        self.quarto = criar_quarto()
+        ci = date.today() + timedelta(days=10)
+        self.reserva = criar_reserva(self.quarto, ci, ci + timedelta(days=2))
+
+    def test_email_usa_os_horarios_configurados(self):
+        from .emails import _ctx_confirmacao
+        ctx = _ctx_confirmacao(self.reserva)
+        self.assertIn("15:00", ctx["chegada"])
+        self.assertIn("11:00", ctx["partida"])
+
+    def test_confirmacao_mostra_os_horarios(self):
+        r = self.client.get(reverse('core:reserva_confirmada', args=[self.reserva.token]))
+        self.assertContains(r, "a partir das 15:00")
+        self.assertContains(r, "até 11:00")

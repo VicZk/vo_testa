@@ -7,6 +7,7 @@ Pessoa é a base única. Hóspede, Funcionário e Fornecedor são especializaç�
 Pessoa diretamente, opcional.
 """
 
+import datetime
 import uuid
 from decimal import Decimal
 
@@ -529,6 +530,13 @@ class ConfiguracaoReservas(models.Model):
     taxa_turismo_diaria = models.DecimalField(
         "taxa de turismo (R$/noite)", max_digits=8, decimal_places=2,
         default=Decimal("4.00"),
+    )
+    hora_checkin = models.TimeField(
+        "check-in a partir de", default=datetime.time(14, 0),
+        help_text="Aparece no resumo e na confirmação da reserva e no e-mail.",
+    )
+    hora_checkout = models.TimeField(
+        "check-out até", default=datetime.time(12, 0),
     )
 
     class Meta:

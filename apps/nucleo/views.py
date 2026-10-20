@@ -1,3 +1,4 @@
+import datetime
 from decimal import Decimal
 
 from django.contrib import messages
@@ -951,6 +952,12 @@ def tabela_precos(request):
             cfg.iss_aliquota = iss
         if taxa is not None:
             cfg.taxa_turismo_diaria = taxa
+        for campo in ("hora_checkin", "hora_checkout"):
+            try:
+                valor = datetime.time.fromisoformat((request.POST.get(campo) or "").strip())
+            except ValueError:
+                continue  # vazio ou inválido: mantém o horário atual
+            setattr(cfg, campo, valor)
         cfg.save()
         messages.success(request, "Tabela de preços salva.")
         return redirect("tabela_precos")
@@ -993,6 +1000,8 @@ def tabela_precos(request):
         "nao_reemb_pct": _brl(cfg.nao_reembolsavel_desconto * 100),
         "iss": _brl(cfg.iss_aliquota),
         "taxa_turismo": _brl(cfg.taxa_turismo_diaria),
+        "hora_checkin": cfg.hora_checkin.strftime("%H:%M"),
+        "hora_checkout": cfg.hora_checkout.strftime("%H:%M"),
     }
 
     return render(request, "nucleo/tabela_precos.html",

@@ -1068,11 +1068,15 @@ def reserva_confirmada(request, token):
             cobranca = Cobranca.objects.filter(token=reserva.pagamento_id).first()
         except Exception:
             cobranca = None
+    from apps.nucleo.models import ConfiguracaoReservas
+    cfg_reservas = ConfiguracaoReservas.carregar()
     return render(request, 'site/reservas/confirmada.html', {
         'passo': 5,
         'reserva': reserva,
         'config': ConfiguracaoSite.load(),
         'cobranca': cobranca,
+        'hora_checkin': cfg_reservas.hora_checkin,
+        'hora_checkout': cfg_reservas.hora_checkout,
     })
 
 

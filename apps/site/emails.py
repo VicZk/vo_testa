@@ -19,8 +19,11 @@ logger = logging.getLogger(__name__)
 _EMAIL_IMG = Path(__file__).resolve().parent / "static" / "site" / "img" / "email"
 
 # Horários padrão da pousada (exibidos no e-mail).
-CHECKIN_HORA = "14:00"
-CHECKOUT_HORA = "12:00"
+def _horarios():
+    """Horários de entrada e saída da pousada (Tabela de Preços, no CRM)."""
+    from apps.nucleo.models import ConfiguracaoReservas
+    cfg = ConfiguracaoReservas.carregar()
+    return cfg.hora_checkin.strftime("%H:%M"), cfg.hora_checkout.strftime("%H:%M")
 
 # Razão social / CNPJ (rodapé legal do e-mail).
 RAZAO_SOCIAL = "POUSADA VO TESTA LTDA"
@@ -48,6 +51,7 @@ def _ctx_confirmacao(reserva):
     endereco = (config.endereco or "").strip()
     maps_q = quote_plus(endereco) if endereco else ""
     pago = reserva.status == "confirmada"
+    hora_entrada, hora_saida = _horarios()
     return {
         "reserva": reserva,
         "config": config,
@@ -55,8 +59,8 @@ def _ctx_confirmacao(reserva):
         "metodo": reserva.get_metodo_pagamento_display(),
         "titulo": "Reserva Confirmada" if pago else "Reserva Registrada",
         "pago": pago,
-        "chegada": _fmt_data_hora(reserva.data_checkin, CHECKIN_HORA),
-        "partida": _fmt_data_hora(reserva.data_checkout, CHECKOUT_HORA),
+        "chegada": _fmt_data_hora(reserva.data_checkin, hora_entrada),
+        "partida": _fmt_data_hora(reserva.data_checkout, hora_saida),
         "endereco": endereco,
         "url_google_maps": (
             f"https://www.google.com/maps/search/?api=1&query={maps_q}" if maps_q else ""
