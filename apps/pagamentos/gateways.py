@@ -131,7 +131,10 @@ class GatewaySafrapay:
             raise ValidationError("Safrapay: SAFRAPAY_GATEWAY_URL não configurada.")
         return cred
 
-    def _http(self, method, path, *, headers=None, body=None, timeout=30):
+    def _http(self, method, path, *, headers=None, body=None, timeout=None):
+        # Timeout curto (SAFRAPAY_TIMEOUT, padrão 10 s): uma Safrapay lenta não segura o
+        # worker, e o gunicorn (timeout 60 s) não mata o processo no meio da cobrança.
+        timeout = timeout or getattr(settings, "SAFRAPAY_TIMEOUT", 10)
         cred = self._exigir_token()
         url = f"{cred['base']}{path}"
         data = None
@@ -145,7 +148,7 @@ class GatewaySafrapay:
         try:
             with urlrequest.urlopen(req, timeout=timeout) as resp:
                 raw = resp.read().decode("utf-8", "replace")
-                return resp.status, json.loads(raw) if raw else {}
+                status = resp.status
         except urlerror.HTTPError as exc:
             raw = exc.read().decode("utf-8", "replace")
             logger.warning("Safrapay HTTP %s %s → %s %s", method, path, exc.code, raw[:400])
@@ -159,6 +162,15 @@ class GatewaySafrapay:
             ) from exc
         except urlerror.URLError as exc:
             raise ValidationError(f"Safrapay indisponível: {exc.reason}") from exc
+        except OSError as exc:
+            # Tempo esgotado ou conexão caída durante a leitura não viram URLError.
+            logger.warning("Safrapay %s %s sem resposta: %s", method, path, exc)
+            raise ValidationError("Safrapay não respondeu a tempo. Tente de novo.") from exc
+        try:
+            return status, json.loads(raw) if raw else {}
+        except json.JSONDecodeError as exc:
+            logger.warning("Safrapay %s %s devolveu não-JSON: %s", method, path, raw[:400])
+            raise ValidationError("Safrapay devolveu uma resposta inválida.") from exc
 
     def _access_token(self) -> str:
         cached = cache.get(self.CACHE_TOKEN)

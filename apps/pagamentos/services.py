@@ -22,30 +22,48 @@ FINALIDADE_SALDO = Cobranca.Finalidade.SALDO
 FINALIDADE_AVULSO = Cobranca.Finalidade.AVULSO
 
 
-@transaction.atomic
 def criar_cobranca(operador, *, valor, metodo, descricao, finalidade=Cobranca.Finalidade.AVULSO,
                    pagador=None, reserva_id=None, grupo_id=None, parcelas=1):
+    """Cria a cobrança e a registra no provedor.
+
+    A chamada ao provedor fica fora de transação: a cobrança é gravada pendente antes, e
+    o retorno é gravado depois. Um provedor lento não segura conexão nem travas do banco,
+    e se o processo cair no meio a cobrança local existe para conferir com o provedor.
+    Se o provedor recusar, a cobrança fica cancelada com o erro no histórico.
+    (Chamada de dentro de outra transação, os blocos viram savepoints dela.)"""
     valor = Decimal(str(valor or 0))
     if valor <= 0:
         raise ValidationError("O valor deve ser positivo.")
     if not descricao:
         raise ValidationError("Descreva a cobrança.")
-    cobranca = Cobranca.objects.create(
-        valor=valor, metodo=metodo, parcelas=int(parcelas or 1),
-        descricao=descricao, finalidade=finalidade, pagador=pagador,
-        reserva_id=reserva_id or None, grupo_id=grupo_id or None, criado_por=operador,
-    )
-    # Pix direto (fora do PSP): gera o BR Code localmente; cartão/boleto seguem no gateway.
-    if metodo == Cobranca.Metodo.PIX and getattr(settings, "PIX_DIRETO", False):
-        dados = _pix_direto(cobranca)
-    else:
-        dados = get_gateway().criar_cobranca(cobranca)
-    for campo in ("gateway", "gateway_id", "pix_copia_cola", "expira_em", "payload"):
-        if campo in dados:
-            setattr(cobranca, campo, dados[campo])
-    cobranca.save()
-    EventoPagamento.objects.create(cobranca=cobranca, tipo="criada",
-                                   origem="sistema", detalhe={"gateway": cobranca.gateway})
+    with transaction.atomic():
+        cobranca = Cobranca.objects.create(
+            valor=valor, metodo=metodo, parcelas=int(parcelas or 1),
+            descricao=descricao, finalidade=finalidade, pagador=pagador,
+            reserva_id=reserva_id or None, grupo_id=grupo_id or None, criado_por=operador,
+        )
+    try:
+        # Pix direto (fora do PSP): gera o BR Code localmente; cartão/boleto seguem no gateway.
+        if metodo == Cobranca.Metodo.PIX and getattr(settings, "PIX_DIRETO", False):
+            dados = _pix_direto(cobranca)
+        else:
+            dados = get_gateway().criar_cobranca(cobranca)
+    except Exception as erro:
+        with transaction.atomic():
+            cobranca.status = Cobranca.Status.CANCELADO
+            cobranca.save(update_fields=["status"])
+            EventoPagamento.objects.create(
+                cobranca=cobranca, tipo=EventoPagamento.Tipo.CANCELADA, origem="sistema",
+                detalhe={"erro": str(erro)[:500]},
+            )
+        raise
+    with transaction.atomic():
+        for campo in ("gateway", "gateway_id", "pix_copia_cola", "expira_em", "payload"):
+            if campo in dados:
+                setattr(cobranca, campo, dados[campo])
+        cobranca.save()
+        EventoPagamento.objects.create(cobranca=cobranca, tipo="criada",
+                                       origem="sistema", detalhe={"gateway": cobranca.gateway})
     return cobranca
 
 

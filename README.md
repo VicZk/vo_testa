@@ -569,6 +569,8 @@ Railway em produção). As essenciais:
 | `RESERVA_RETENCAO_MINUTOS`, `PRECO_*`, `CANCELAMENTO_*` | regras de reserva e preço |
 | `CHECKOUT_TOLERANCIA_ARREDONDAMENTO` | resíduo de centavos quitado sozinho no check-out (padrão R$ 0,10) |
 | `LOG_LEVEL` | nível dos logs no stdout (padrão INFO) |
+| `REDIS_URL` | cache compartilhado em Redis; vazio = tabela no próprio Postgres |
+| `SAFRAPAY_TIMEOUT` | segundos de espera pela Safrapay (padrão 10) |
 
 A lista completa, com padrões e efeitos, está em
 [`docs/ARQUITETURA.md` §7](docs/ARQUITETURA.md). Durante os testes a flag `TESTING`

@@ -674,3 +674,58 @@ class SimularGuardTests(PagamentosBase):
         self.client.post(reverse("pagamentos:simular", args=[c.pk]))
         c.refresh_from_db()
         self.assertEqual(c.status, Cobranca.Status.PAGO)
+
+
+class GatewayForaDaTransacaoTests(PagamentosBase):
+    """Falha do provedor não some com a cobrança, e erro de rede vira mensagem clara."""
+
+    @override_settings(PAGAMENTOS_GATEWAY="safrapay")
+    def test_recusa_do_provedor_deixa_a_cobranca_cancelada_com_o_erro(self):
+        from unittest.mock import patch
+
+        with patch("apps.pagamentos.gateways.GatewaySafrapay.criar_cobranca",
+                   side_effect=ValidationError("Safrapay indisponível")):
+            with self.assertRaises(ValidationError):
+                self.cobranca(metodo="cartao")
+        c = Cobranca.objects.get()
+        self.assertEqual(c.status, Cobranca.Status.CANCELADO)
+        evento = EventoPagamento.objects.get(cobranca=c)
+        self.assertEqual(evento.tipo, EventoPagamento.Tipo.CANCELADA)
+        self.assertIn("indisponível", evento.detalhe["erro"])
+
+    def _gateway(self):
+        from .gateways import GatewaySafrapay
+
+        gw = GatewaySafrapay.__new__(GatewaySafrapay)
+        gw._exigir_token = lambda: {"base": "https://safrapay.invalido", "token": "t"}
+        return gw
+
+    def test_tempo_esgotado_na_leitura_vira_validation_error(self):
+        from unittest.mock import patch
+
+        with patch("apps.pagamentos.gateways.urlrequest.urlopen", side_effect=TimeoutError()), \
+                self.assertLogs("apps.pagamentos.gateways", "WARNING"):
+            with self.assertRaisesMessage(ValidationError, "não respondeu a tempo"):
+                self._gateway()._http("GET", "/v2/charge/x")
+
+    def test_resposta_que_nao_e_json_vira_validation_error(self):
+        from unittest.mock import MagicMock, patch
+
+        resp = MagicMock(status=200)
+        resp.read.return_value = b"<html>erro</html>"
+        resp.__enter__.return_value = resp
+        with patch("apps.pagamentos.gateways.urlrequest.urlopen", return_value=resp), \
+                self.assertLogs("apps.pagamentos.gateways", "WARNING"):
+            with self.assertRaisesMessage(ValidationError, "resposta inválida"):
+                self._gateway()._http("GET", "/v2/charge/x")
+
+    @override_settings(SAFRAPAY_TIMEOUT=7)
+    def test_timeout_vem_da_configuracao(self):
+        from unittest.mock import MagicMock, patch
+
+        resp = MagicMock(status=200)
+        resp.read.return_value = b"{}"
+        resp.__enter__.return_value = resp
+        with patch("apps.pagamentos.gateways.urlrequest.urlopen", return_value=resp) as urlopen:
+            self._gateway()._http("GET", "/v2/charge/x")
+        self.assertEqual(urlopen.call_args.kwargs["timeout"], 7)

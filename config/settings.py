@@ -307,6 +307,9 @@ SAFRAPAY_GATEWAY_URL = os.environ.get(
     "SAFRAPAY_GATEWAY_URL",
     _SAFRAPAY_BASE.get(SAFRAPAY_ENV, _SAFRAPAY_BASE["hml"]),
 )
+# Segundos de espera por resposta da Safrapay. Fica bem abaixo do timeout do gunicorn
+# (60 s, railway.json) para o worker nunca morrer no meio de uma cobrança.
+SAFRAPAY_TIMEOUT = int(os.environ.get("SAFRAPAY_TIMEOUT", "10"))
 
 # Pix direto (fora do PSP): quando ligado, as cobranças Pix saem por um BR Code
 # gerado localmente a partir da chave da própria pousada — sem taxa de adquirente e

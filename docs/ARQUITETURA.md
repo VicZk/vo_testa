@@ -778,6 +778,7 @@ Tudo que varia por ambiente é lido em `config/settings.py` (`.env` em dev via
 |---|---|---|
 | `DEBUG` | `0` | `True` só com `"1"`. Governa o bloco de hardening, `MFA_OBRIGATORIO` e a confiança no corpo do webhook. |
 | `LOG_LEVEL` | `INFO` (`WARNING` nos testes) | Nível do `LOGGING` que manda tudo para o stdout (logs do Railway). |
+| `REDIS_URL` | — | Cache compartilhado em Redis. Vazio: `DatabaseCache` na tabela `nucleo_cache`. Nos testes: memória. |
 | `SECRET_KEY` | chave de dev versionada | Em produção (`DEBUG=0`, não `TESTING`) é **obrigatória** e não pode começar com `dev-inseguro` — senão `ImproperlyConfigured`. |
 | `ALLOWED_HOSTS` | `""` (lista separada por vírgula) | Com `DEBUG=1` e vazio, usa `localhost,127.0.0.1`. Sempre são adicionados os domínios do Railway, `.railway.app`, `.up.railway.app`, `healthcheck.railway.app` e loopbacks. |
 | `RAILWAY_PUBLIC_DOMAIN` | `""` | Injetada pelo Railway; entra em `ALLOWED_HOSTS`. |
@@ -814,6 +815,7 @@ Sem elas, filesystem local — e **o disco do Railway é efêmero**.
 | `PAGAMENTOS_GATEWAY` | `simulado` | `simulado` \| `safrapay`. |
 | `SAFRAPAY_ENV` | `hml` | `hml` → `payment-hml.safrapay.com.br`; `prod` → `payment.safrapay.com.br`. |
 | `SAFRAPAY_GATEWAY_URL` | derivada de `SAFRAPAY_ENV` | Sobrescreve a base da API. |
+| `SAFRAPAY_TIMEOUT` | `10` | Segundos de espera pela API. Tempo esgotado, queda na leitura e resposta que não é JSON viram `ValidationError` com mensagem clara. |
 | `SAFRAPAY_ID` | `""` | Credencial do portal (3 campos). |
 | `SAFRAPAY_CODIGO_ATIVACAO` | `""` | Idem. |
 | `SAFRAPAY_TOKEN` | `""` | Merchant Token; sem ele o gateway `safrapay` erra explicitamente. |
