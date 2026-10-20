@@ -773,3 +773,52 @@ class PaginaPublicaPagarTests(PagamentosBase):
         self.assertIn('name="validade"', html)
         self.assertIn('id="cc-bandeira"', html)
         self.assertIn("Mastercard", html)        # tabela de bandeiras no script
+
+
+class LinkVencidoTests(PagamentosBase):
+    """Link público vencido não aceita pagamento novo; o "já paguei" tem limite."""
+
+    def _vencer(self, c):
+        from django.utils import timezone
+        Cobranca.objects.filter(pk=c.pk).update(expira_em=timezone.now() - timedelta(minutes=1))
+        c.refresh_from_db()
+        return c
+
+    def test_pagina_de_link_vencido_nao_mostra_o_pix(self):
+        c = self._vencer(self.cobranca(metodo="pix"))
+        html = self.client.get(reverse("pagamentos:pagar", args=[c.token])).content.decode()
+        self.assertIn("Este link de pagamento expirou", html)
+        self.assertNotIn("Pix copia-e-cola", html)
+
+    def test_ja_paguei_em_link_vencido_nao_confirma(self):
+        c = self._vencer(self.cobranca(metodo="pix"))
+        self.client.post(reverse("pagamentos:pagar_simular", args=[c.token]))
+        c.refresh_from_db()
+        self.assertEqual(c.status, Cobranca.Status.PENDENTE)
+
+    def test_cartao_em_link_vencido_e_recusado(self):
+        c = self._vencer(self.cobranca(metodo="cartao"))
+        ok, msg = services.autorizar_cartao_online(c, {"cardNumber": "4111111111111111"})
+        self.assertFalse(ok)
+        self.assertIn("expirou", msg)
+
+    def test_confirmacao_do_gateway_vale_mesmo_vencida(self):
+        # Se o dinheiro chegou, chegou: o webhook confirma uma cobrança vencida.
+        c = self._vencer(self.cobranca(metodo="pix"))
+        services.confirmar_pagamento(c, self.op, origem="webhook")
+        c.refresh_from_db()
+        self.assertEqual(c.status, Cobranca.Status.PAGO)
+
+    @override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+                                           "LOCATION": "ja-paguei"}})
+    def test_ja_paguei_tem_limite_de_cliques(self):
+        from django.core.cache import cache
+
+        from .models import EventoPagamento
+        cache.clear()
+        c = self.cobranca(metodo="pix")
+        Cobranca.objects.filter(pk=c.pk).update(gateway=services.GATEWAY_PIX_DIRETO)
+        for _ in range(10):
+            self.client.post(reverse("pagamentos:pagar_simular", args=[c.token]))
+        self.assertEqual(EventoPagamento.objects.filter(
+            cobranca=c, origem="cliente_informou").count(), 6)

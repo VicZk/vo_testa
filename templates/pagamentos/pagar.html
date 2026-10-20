@@ -71,7 +71,11 @@
   <div class="pay">
     <img src="{% static 'img/logotipo-noturno-limpo.png' %}" alt="Pousada Vô Testa" class="marca-logo">
     <h1>{{ cobranca.descricao }}</h1>
-    <span class="selo selo-pg-{{ cobranca.status }}">{{ cobranca.get_status_display }}</span>
+    {% if cobranca.vencida %}
+      <span class="selo selo-pg-expirado">Expirado</span>
+    {% else %}
+      <span class="selo selo-pg-{{ cobranca.status }}">{{ cobranca.get_status_display }}</span>
+    {% endif %}
     <div class="valor">R$ {{ cobranca.valor }}</div>
     <p class="subtitulo">{{ cobranca.get_metodo_display }}{% if cobranca.metodo == 'cartao' and cobranca.parcelas > 1 %} · {{ cobranca.parcelas }}×{% endif %}</p>
 
@@ -88,6 +92,12 @@
         {% if url_recibo_site %}
           <a href="{{ url_recibo_site }}" class="botao-primario">Ver minha reserva</a>
         {% endif %}
+        <a href="{% url 'core:home' %}" class="botao-neutro">Voltar ao site</a>
+      </div>
+    {% elif cobranca.vencida %}
+      <p class="subtitulo">Este link de pagamento expirou. Fale com a pousada para receber um novo.</p>
+      {% include "pagamentos/_confianca.html" %}
+      <div class="acoes">
         <a href="{% url 'core:home' %}" class="botao-neutro">Voltar ao site</a>
       </div>
     {% elif cobranca.status == 'pendente' %}

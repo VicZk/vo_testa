@@ -9,6 +9,7 @@ import uuid
 
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 
 class Cobranca(models.Model):
@@ -77,6 +78,14 @@ class Cobranca(models.Model):
 
     def __str__(self):
         return f"Cobrança #{self.pk} — {self.get_metodo_display()} R$ {self.valor}"
+
+    @property
+    def vencida(self) -> bool:
+        """Pendente e passou do prazo do gateway (Pix 24 h, boleto 3 dias…): o link
+        público não aceita mais pagamento. A confirmação do gateway continua valendo
+        — se o dinheiro chegou, chegou."""
+        return (self.status == self.Status.PENDENTE and self.expira_em is not None
+                and self.expira_em < timezone.now())
 
     @property
     def paga(self) -> bool:

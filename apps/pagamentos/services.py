@@ -312,6 +312,8 @@ def autorizar_cartao_online(cobranca, card: dict, usuario=None, remote_ip=""):
         return False, "Esta cobrança não é de cartão."
     if cobranca.status != Cobranca.Status.PENDENTE:
         return False, "Cobrança não está pendente."
+    if cobranca.vencida:
+        return False, "Este link de pagamento expirou."
     gw = get_gateway()
     if not hasattr(gw, "autorizar_cartao"):
         return False, "Gateway não suporta autorização de cartão."

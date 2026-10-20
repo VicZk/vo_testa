@@ -243,7 +243,7 @@ def pagar(request, token):
     sandbox = getattr(settings, "PAGAMENTOS_GATEWAY", "simulado") == "simulado"
     qr_svg = ""
     if (cobranca.metodo == Cobranca.Metodo.PIX and cobranca.pix_copia_cola
-            and cobranca.status == Cobranca.Status.PENDENTE):
+            and cobranca.status == Cobranca.Status.PENDENTE and not cobranca.vencida):
         qr_svg = _qr_pix_svg(cobranca.pix_copia_cola)
     return render(request, "pagamentos/pagar.html", {
         "cobranca": cobranca,
@@ -331,7 +331,15 @@ def pagar_simular(request, token):
     Sandbox (gateway simulado): confirma direto. Gateway REAL: consulta o status
     verdadeiro no provedor e só confirma se estiver pago de fato — nunca confirma
     no escuro (o webhook não chega em localhost, daí a consulta ativa)."""
+    # Cada clique registra um evento e, com gateway real, consulta o provedor: com
+    # limite, ninguém enche a trilha nem martela a API do gateway.
+    if limite_excedido(request, "ja_paguei", limite=6, janela_seg=600, sufixo=str(token)):
+        messages.info(request, "Já recebemos seus avisos. Aguarde alguns minutos.")
+        return redirect("pagamentos:pagar", token=token)
     cobranca = get_object_or_404(Cobranca, token=token)
+    if cobranca.vencida:
+        messages.error(request, "Este link de pagamento expirou. Fale com a pousada.")
+        return redirect("pagamentos:pagar", token=token)
     gateway = getattr(settings, "PAGAMENTOS_GATEWAY", "simulado")
     if cobranca.gateway == services.GATEWAY_PIX_DIRETO:
         # Pix fora do PSP: não há como consultar o pagamento. Só registra o aviso do
