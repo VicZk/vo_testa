@@ -2875,6 +2875,20 @@ form.filtros:not(.subnav) {
 }
 .escolher-arquivo:focus-within { outline: 3px solid var(--foco-contorno); outline-offset: 2px; }
 .campo-curto { max-width: 130px; }
+
+/* Marketing — barra de seções + contador de coluna do quadro. */
+.mkt-barra { display: flex; align-items: center; gap: .9rem; flex-wrap: wrap; margin-bottom: 1.1rem; }
+.mkt-barra .filtro-chip .ico { width: 16px; height: 16px; }
+.mkt-conta {
+  flex: none; min-width: 22px; padding: 0 .3rem;
+  font-size: .7rem; font-weight: 700; color: var(--tinta-suave);
+}
+.mkt-quando { flex: none; font-variant-numeric: tabular-nums; }
+.mkt-tipo { flex: none; color: var(--perigo); }
+/* Etapa do funil de conteúdo: só a bolinha muda de cor. */
+.selo.mkt-etapa-topo  { --selo-cor: var(--info); }
+.selo.mkt-etapa-meio  { --selo-cor: var(--lampiao); }
+.selo.mkt-etapa-fundo { --selo-cor: var(--sucesso); }
 .filtro-campo > label {
   font-size: .68rem; font-weight: 700; letter-spacing: .06em;
   text-transform: uppercase; color: var(--tinta-suave);

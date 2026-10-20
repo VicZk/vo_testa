@@ -203,7 +203,8 @@
 
               <div class="rodape">
                 <span class="valor">{{ op.valor_estimado|intcomma_brl }}</span>
-                <span class="fchip fchip-{{ op.faturamento }}">{{ op.get_faturamento_display }}</span>
+                {# Faturamento é rótulo de dado (particular/agência/empresa), não status. #}
+                <span class="rotulo-dado">{{ op.get_faturamento_display }}</span>
               </div>
 
               {# 9 última observação #}

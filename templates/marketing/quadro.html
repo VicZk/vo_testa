@@ -16,16 +16,18 @@ descrição → abas → faixa → verba → quadro. Papel vem de request.user (
   <p style="margin:7px 0 0;font-size:13.5px;line-height:1.55;color:var(--tinta-suave);max-width:64ch">Cada campanha está numa fase só. Criativo, envolvidos e custos são campos da ficha, não colunas. Arraste para avançar — o quadro recusa quando falta o que a próxima fase exige.</p>
 </div>
 
-{# ── Abas (faixa própria, à esquerda, abaixo da descrição) + Só os meus ── #}
-<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:18px">
-  <a href="{% url 'marketing:quadro' %}" style="font-size:13px;font-weight:700;padding:7px 15px;border-radius:99px;text-decoration:none;background:var(--tinta);color:var(--superficie)">Quadro</a>
-  <a href="{% url 'marketing:calendario' %}" style="font-size:13px;padding:7px 15px;border-radius:99px;text-decoration:none;background:var(--superficie);color:var(--tinta-suave);border:1px solid var(--fio)">Calendário</a>
-  <a href="{% url 'marketing:ocupacao' %}" style="font-size:13px;padding:7px 15px;border-radius:99px;text-decoration:none;background:var(--superficie);color:var(--tinta-suave);border:1px solid var(--fio)">Ocupação</a>
-  <a href="{% url 'marketing:relatorio' %}" style="font-size:13px;padding:7px 15px;border-radius:99px;text-decoration:none;background:var(--superficie);color:var(--tinta-suave);border:1px solid var(--fio)">Relatório</a>
-  <span style="width:1px;height:22px;background:var(--fio)"></span>
-  <a href="?{% if not so_meus %}meus=1{% endif %}" style="display:inline-flex;align-items:center;gap:7px;padding:6px 13px;border-radius:99px;font-size:12.5px;font-weight:700;text-decoration:none;{% if so_meus %}background:var(--tinta);color:var(--superficie){% else %}background:var(--superficie);border:1px solid var(--fio);color:var(--tinta){% endif %}">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Só os meus
-    <span style="font-size:11px;opacity:.72">{{ meus_label }}</span>
+{% comment %}Navegação e filtro nos componentes da casa: eram cinco cápsulas
+desenhadas à mão, indistinguíveis dos chips de dado do quadro.{% endcomment %}
+<div class="mkt-barra">
+  <nav class="seg-filtro" aria-label="Seções do marketing">
+    <a href="{% url 'marketing:quadro' %}" class="ativo" aria-current="page">Quadro</a>
+    <a href="{% url 'marketing:calendario' %}">Calendário</a>
+    <a href="{% url 'marketing:ocupacao' %}">Ocupação</a>
+    <a href="{% url 'marketing:relatorio' %}">Relatório</a>
+  </nav>
+  <a href="?{% if not so_meus %}meus=1{% endif %}" class="filtro-chip"{% if so_meus %} aria-current="page"{% endif %}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ico"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Só os meus
+    <span class="n">{{ meus_label }}</span>
   </a>
 </div>
 
@@ -47,7 +49,9 @@ descrição → abas → faixa → verba → quadro. Papel vem de request.user (
           <span style="display:block;font-size:12.5px;font-weight:700;color:var(--tinta);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.nome }}</span>
           <span style="display:block;margin-top:2px;font-size:11px;color:var(--tinta-suave);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.campanha }} · {{ p.canal }} · {{ p.responsavel }}</span>
         </span>
-        <span style="flex:none;font-size:11px;font-weight:700;letter-spacing:.04em;padding:3px 9px;border-radius:99px;white-space:nowrap;{% if p.hoje %}background:var(--alerta-bg);color:var(--alerta){% else %}background:var(--superficie-2);color:var(--tinta-suave){% endif %}">{{ p.quando }}</span>
+        {# Data é dado; só "sai hoje" vira cápsula, porque pede ação agora. #}
+        {% if p.hoje %}<span class="selo selo-pendente">{{ p.quando }}</span>
+        {% else %}<span class="rotulo-dado mkt-quando">{{ p.quando }}</span>{% endif %}
       </a>
       {% endfor %}
     </div>
@@ -65,7 +69,8 @@ descrição → abas → faixa → verba → quadro. Papel vem de request.user (
       {% for a in atrasados %}
       <a href="{% url 'marketing:ficha' a.id %}" hx-get="{% url 'marketing:ficha' a.id %}" hx-target="#ficha-slot" hx-swap="innerHTML"
          style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:12px;background:var(--superficie-2);border:1px solid var(--fio);cursor:pointer;text-decoration:none">
-        <span style="flex:none;font-size:11px;font-weight:700;letter-spacing:.04em;padding:2px 7px;border-radius:99px;white-space:nowrap;background:var(--perigo-bg);color:var(--perigo)">{{ a.tipo }}</span>
+        {# O bloco inteiro já é o alerta (moldura vermelha): o tipo é rótulo. #}
+        <span class="rotulo-dado mkt-tipo">{{ a.tipo }}</span>
         <span style="flex:1;min-width:0">
           <span style="display:block;font-size:12.5px;font-weight:700;color:var(--tinta);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.texto }} · {{ a.canal }}</span>
           <span style="display:block;margin-top:2px;font-size:11px;color:var(--tinta-suave);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.campanha }} · {{ a.dono }} · {{ a.desde }}</span>
@@ -136,7 +141,7 @@ descrição → abas → faixa → verba → quadro. Papel vem de request.user (
       <div style="display:flex;align-items:center;gap:8px">
         <span style="flex:1;min-width:0;font-family:var(--fonte-titulo);font-size:14px;font-weight:700;color:var(--tinta)">{{ col.label }}</span>
         {% if col.portao %}<svg viewBox="0 0 24 24" fill="none" stroke="var(--madeira)" stroke-width="2" style="width:16px;height:16px" aria-label="Portão: só o gestor libera"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V8a5 5 0 0 1 10 0v3"/></svg>{% endif %}
-        <span style="flex:none;font-size:11px;font-weight:700;color:var(--tinta-suave);background:var(--superficie);border:1px solid var(--fio);border-radius:99px;min-width:22px;height:20px;display:inline-flex;align-items:center;justify-content:center;padding:0 6px">{{ col.conta }}</span>
+        <span class="mkt-conta num">{{ col.conta }}</span>
       </div>
       <div style="margin-top:3px;font-size:11.5px;color:var(--tinta-suave);line-height:1.35">{{ col.sub }}</div>
       {% if col.total %}<div class="num" style="margin-top:6px;font-size:11.5px;font-weight:700;color:var(--alerta)">{{ col.total|intcomma_brl }}</div>{% endif %}
@@ -154,15 +159,13 @@ descrição → abas → faixa → verba → quadro. Papel vem de request.user (
         </div>
         {% if c.obj.etapa_funil %}
         <div style="margin-top:7px">
-          <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.03em;background:var(--superficie-2);color:var(--tinta-suave);border-radius:99px;padding:3px 9px">
-            <span style="width:7px;height:7px;border-radius:50%;flex:none;background:{% if c.obj.etapa_funil == 'topo' %}var(--info){% elif c.obj.etapa_funil == 'meio' %}var(--lampiao){% else %}var(--sucesso){% endif %}"></span>
-            {{ c.obj.etapa_funil|capfirst }}{% if c.obj.objetivo_tipo %} · {{ c.obj.get_objetivo_tipo_display }}{% endif %}
-          </span>
+          {# Etapa do funil é estado informativo: bolinha + texto, como no resto da casa. #}
+          <span class="selo mkt-etapa-{{ c.obj.etapa_funil }}">{{ c.obj.etapa_funil|capfirst }}{% if c.obj.objetivo_tipo %} · {{ c.obj.get_objetivo_tipo_display }}{% endif %}</span>
         </div>
         {% endif %}
         {% if c.canais %}
         <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px">
-          {% for ch in c.canais %}<span style="font-size:11px;font-weight:700;letter-spacing:.03em;background:var(--superficie-2);color:var(--tinta-suave);border-radius:99px;padding:3px 8px">{{ ch }}</span>{% endfor %}
+          {% for ch in c.canais %}<span class="rotulo-dado">{{ ch }}</span>{% endfor %}
         </div>
         {% endif %}
         <div style="display:flex;align-items:center;gap:8px;margin-top:9px">
