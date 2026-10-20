@@ -82,8 +82,14 @@
      rola na horizontal só se faltar espaço. */
   .form-cartao.precos-form { max-width: none; overflow-x: auto; }
   .precos-tabela td, .precos-tabela th { white-space: nowrap; }
-  .precos-cel { display: flex; gap: .35rem; justify-content: flex-end; }
-  .form-cartao .precos-cel input { width: 5.75rem; padding: .45rem .55rem; text-align: right; }
+  .precos-cel { display: flex; gap: .3rem; justify-content: flex-end; }
+  /* Seletor forte (3 classes) p/ vencer o input global; flex:0 0 auto impede o
+     input de encolher — a tabela rola em vez de cortar o número. A largura de
+     5.75rem cabe "1.250,00" com folga agora que o cartão não limita a 620px. */
+  .form-cartao .precos-tabela .precos-cel input {
+    flex: 0 0 auto; width: 5.75rem; min-width: 5.75rem; padding: .45rem .5rem;
+    text-align: right; font-variant-numeric: tabular-nums;
+  }
   .precos-param { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem; margin: .5rem 0 1.5rem; }
   .precos-param label { display: flex; flex-direction: column; gap: .3rem; font-weight: 600; }
   .precos-param input { max-width: 8rem; }
