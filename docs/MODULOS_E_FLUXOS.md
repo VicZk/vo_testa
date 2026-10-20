@@ -592,7 +592,7 @@ Fundador; vazio, serve a home do site.
 - Comandos: `sincronizar_quartos` (1 card por `TipoUH`, "a partir de" = menor tarifa real
   entre as unidades), `sincronizar_vitrine` (1 `VitrineQuarto` por UH ativa de
   hospedagem, marca os 9 primeiros como destaque — **rodar no deploy**, o `migrate` não
-  faz), `expirar_reservas` (marca recibos `aguardando` vencidos como `expirada`),
+  faz), `expirar_recibos_site` (marca recibos `aguardando` vencidos como `expirada`),
   `popular_dados`, `popular_vitrine`, `regenerar_midia_site`, `migrar_media_r2`.
 
 ### Regras de negócio
@@ -1574,9 +1574,9 @@ Hóspede**.
    ver **B.5**. `confirmar_pagamento` chama `reservas.confirmar_reserva` e
    `_sincronizar_recibo_site` passa o `core.Reserva` de `aguardando` para `confirmada`.
 10. **Se ninguém paga.** Passados os minutos de retenção, a disponibilidade já ignora a
-    pré-reserva; `manage.py expirar_reservas` (Reservas) cancela com motivo. O comando
-    homônimo do site, que marcaria o recibo como `expirada`, fica inalcançável pelo nome
-    (o Django resolve para o de Reservas). Nada no repositório agenda esses comandos.
+    pré-reserva; `manage.py expirar_reservas` (Reservas) cancela com motivo e
+    `expirar_recibos_site` marca o recibo como `expirada`. Os dois rodam no grupo
+    `frequentes` do `rotinas` (a cada 10 min, no serviço de Cron do Railway).
 
 ```mermaid
 sequenceDiagram
@@ -1912,10 +1912,11 @@ flowchart LR
    todos os models de `apps.*`, por denylist, com diff + login/logout) e explicitamente
    nos fluxos com motivo (estorno, cancelamento, troca de quarto, reabertura de caixa,
    bloqueio de quarto, baixa de enxoval, publicação de escala…).
-7. **Comandos periódicos.** `expirar_reservas` (o de Reservas), `enviar_fnrh_pendentes`,
-   `enviar_campanhas_email`, `enviar_conversoes_pendentes` e `sincronizar_gastos_midia`
-   pressupõem um agendador, que o repositório não configura (ver `ARQUITETURA.md`
-   §10.4). `enviar_campanha_whatsapp` é de disparo manual.
+7. **Comandos periódicos.** `manage.py rotinas` roda `expirar_reservas`,
+   `expirar_recibos_site`, `enviar_fnrh_pendentes` e `enviar_campanhas_email` (grupo
+   `frequentes`, a cada 10 min) e `enviar_conversoes_pendentes` e
+   `sincronizar_gastos_midia` (grupo `diarias`), nos serviços de Cron descritos em
+   `ARQUITETURA.md` §10.4. `enviar_campanha_whatsapp` é de disparo manual.
 
 ---
 

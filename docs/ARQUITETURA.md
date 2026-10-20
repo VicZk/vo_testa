@@ -1192,7 +1192,8 @@ dos workflows.
 {
   "build":  { "builder": "RAILPACK" },
   "deploy": {
-    "startCommand": "python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2",
+    "preDeployCommand": "python manage.py migrate --noinput",
+    "startCommand": "python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 60",
     "healthcheckPath": "/healthz/",
     "healthcheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE"
@@ -1200,7 +1201,14 @@ dos workflows.
 }
 ```
 
-- **Migrações e `collectstatic` rodam em todo deploy**; seeds, não.
+- **Migrações no pré-deploy**: rodam uma vez, antes de o container novo entrar no ar; se
+  falharem, o deploy é abortado e a versão anterior segue servindo. `collectstatic` roda
+  no start; seeds não rodam.
+- **Gunicorn** com 2 workers × 4 threads (8 requisições simultâneas) e timeout de 60 s,
+  acima do timeout do cliente HTTP dos gateways.
+- **Cache compartilhado** (`CACHES`): Redis com `REDIS_URL`; sem ele, `DatabaseCache` na
+  tabela `nucleo_cache` (criada pela migration `nucleo.0046`). Vale para os limites de
+  tentativa e o token da Safrapay entre workers e deploys.
 - **Healthcheck** em `/healthz/` (`config/urls.py:29`: roda `SELECT 1` e responde 503 se
   o banco não atender, para um container sem banco não substituir o saudável), isento do
   `SECURE_SSL_REDIRECT` por `SECURE_REDIRECT_EXEMPT = [r"^healthz/?$"]`, e
@@ -1236,22 +1244,30 @@ app). O trilho 1:1 do Comercial pode ter SMTP próprio
 `Reply-To: comercial@` — isso evita o `553 Sender is not allowed to relay` do Zoho ao
 usar um `From` diferente do login.
 
-### 10.4 Comandos de manutenção que *deveriam* ser agendados
+### 10.4 Rotinas agendadas (`apps/nucleo/management/commands/rotinas.py`)
 
-**Nada no repositório agenda nenhum deles.** Não há cron, Celery, beat, scheduler do
-Railway nem workflow de GitHub que os execute — o único `cron:` do repositório é o
-`schedule` do `security.yml` (varredura semanal de CVE) e o do `dependabot.yml`. Hoje
-são **manuais**.
+`python manage.py rotinas --grupo frequentes|diarias [--so tarefa1,tarefa2]` chama os
+comandos do grupo um a um, cada um isolado: a falha de um vai para o log
+(`apps.nucleo.management.commands.rotinas`), não impede os outros e faz o comando terminar
+com `CommandError`, para o Railway marcar a execução como falha. Se a falha deixou a
+conexão de banco inutilizável, ela é fechada e a próxima tarefa reconecta.
 
-| Comando | App | O que faz | Cadência sugerida no código |
+**No Railway:** dois serviços de Cron a partir deste repositório, com as mesmas variáveis
+do web e o arquivo de config-as-code `deploy/railway.rotinas.json` (`*/10 * * * *`) ou
+`deploy/railway.rotinas-diarias.json` (`15 6 * * *`, 03h15 de Brasília), ambos com
+`restartPolicyType: NEVER`.
+
+| Comando | App | Grupo | O que faz |
 |---|---|---|---|
-| `expirar_reservas` | `reservas` | Cancela pré-reservas (avulsas e de grupo) com retenção vencida. Backstop: a disponibilidade já ignora vencidas em tempo real e `criar_reserva_site` chama `expirar_vencidas()` antes de alocar. | “a cada poucos minutos” |
-| `expirar_reservas` | `site` | **Homônimo e inalcançável pelo nome**: o Django resolve `expirar_reservas` para o de `apps.reservas` (vem antes em `INSTALLED_APPS`). Este marcaria como `expirada` as `site.Reserva` aguardando pagamento; para usá-lo é preciso renomeá-lo. | — |
-| `enviar_fnrh_pendentes` | `reservas` | Reenvia à FNRH Digital as reservas `pendente`/`erro` (backstop do envio best-effort do check-in). | “a cada poucos minutos” |
-| `enviar_campanhas_email` | `comercial` | Dispara campanhas de e-mail agendadas cujo horário chegou (`--id N` força uma). | cron |
-| `enviar_conversoes_pendentes` | `comercial` | Reprocessa conversões de mídia pendentes (idempotente, best-effort). | cron/backstop |
-| `sincronizar_gastos_midia` | `comercial` | Puxa o gasto das plataformas para as campanhas com `id_externo` (`--dias N`). No-op com `MIDIA_GATEWAY=simulado`. | “cron diário” |
-| `enviar_campanha_whatsapp` | `comercial` | Dispara um template para uma lista de leads, com pausa e limite; respeita opt-in. | operação manual |
+| `expirar_reservas` | `reservas` | frequentes | Cancela pré-reservas (avulsas e de grupo) com retenção vencida. Backstop: a disponibilidade já ignora vencidas em tempo real e `criar_reserva_site` chama `expirar_vencidas()` antes de alocar. |
+| `expirar_recibos_site` | `site` | frequentes | Marca como `expirada` as `site.Reserva` aguardando pagamento com prazo vencido. Era `expirar_reservas`, homônimo do de Reservas e inalcançável pelo nome (o Django resolve nomes iguais pelo primeiro app do `INSTALLED_APPS`). |
+| `enviar_fnrh_pendentes` | `reservas` | frequentes | Reenvia à FNRH Digital as reservas `pendente`/`erro` (backstop do envio best-effort do check-in). |
+| `enviar_campanhas_email` | `comercial` | frequentes | Dispara campanhas de e-mail agendadas cujo horário chegou (`--id N` força uma). |
+| `enviar_conversoes_pendentes` | `comercial` | diarias | Reprocessa conversões de mídia pendentes (idempotente, best-effort). |
+| `sincronizar_gastos_midia` | `comercial` | diarias | Puxa o gasto das plataformas para as campanhas com `id_externo` (`--dias N`). No-op com `MIDIA_GATEWAY=simulado`. |
+
+`enviar_campanha_whatsapp` (`comercial`) fica fora: é disparo manual de um template para
+uma lista de leads, com pausa e limite, respeitando opt-in.
 
 ### 10.5 Comandos de pós-deploy / operação
 

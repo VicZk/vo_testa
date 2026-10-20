@@ -1324,3 +1324,56 @@ class EstruturaInicialTests(TestCase):
         self.assertTrue(PosicaoCama.objects.filter(uh__numero="Quarto 16").exists())
         self.assertTrue(TarifaUnidade.objects.filter(uh__numero="Quarto 22").exists())
         self.assertEqual(UH.objects.filter(numero__startswith="Quarto ").count(), 24)
+
+
+class RotinasAgendadasTests(TestCase):
+    """`rotinas` roda as tarefas de um grupo, isolando falhas."""
+
+    def test_grupos_rodam_os_comandos_de_verdade(self):
+        # Sem mock: garante que todo nome listado em GRUPOS existe e roda num banco vazio.
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        for grupo in ("frequentes", "diarias"):
+            saida = StringIO()
+            call_command("rotinas", "--grupo", grupo, stdout=saida)
+            self.assertIn(f"do grupo {grupo} concluída(s)", saida.getvalue())
+
+    def test_falha_de_uma_tarefa_nao_impede_as_outras(self):
+        from io import StringIO
+        from unittest import mock
+
+        from django.core.management import call_command
+        from django.core.management.base import CommandError
+
+        from apps.nucleo.management.commands import rotinas
+
+        chamadas = []
+
+        def falso(nome, **kwargs):
+            chamadas.append(nome)
+            if nome == "expirar_reservas":
+                raise RuntimeError("banco fora")
+
+        with mock.patch.object(rotinas, "call_command", side_effect=falso), \
+                self.assertLogs("apps.nucleo.management.commands.rotinas", "ERROR"):
+            with self.assertRaisesMessage(CommandError, "expirar_reservas"):
+                call_command("rotinas", stdout=StringIO())
+        self.assertEqual(chamadas, rotinas.GRUPOS["frequentes"])
+
+    def test_so_filtra_e_recusa_tarefa_de_fora(self):
+        from io import StringIO
+        from unittest import mock
+
+        from django.core.management import call_command
+        from django.core.management.base import CommandError
+
+        from apps.nucleo.management.commands import rotinas
+
+        with mock.patch.object(rotinas, "call_command") as falso:
+            call_command("rotinas", "--so", "enviar_fnrh_pendentes", stdout=StringIO())
+        falso.assert_called_once()
+        self.assertEqual(falso.call_args.args[0], "enviar_fnrh_pendentes")
+        with self.assertRaises(CommandError):
+            call_command("rotinas", "--so", "comando_que_nao_existe", stdout=StringIO())

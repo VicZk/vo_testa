@@ -620,16 +620,25 @@ publica a cada push na `main` do repositório original. Estáticos saem pelo Whi
 `python manage.py migrar_media_r2` uma vez para levar o que já está em disco. Sem R2, a
 mídia fica no disco do container, que é apagado a cada deploy.
 
-**Comandos periódicos** (precisam de um agendador, ex.: serviço de Cron do Railway; o
-repositório não agenda nenhum):
+**Deploy:** as migrations rodam no `preDeployCommand` (uma vez por deploy, antes do
+container novo entrar no ar; se falharem, o deploy é abortado) e o gunicorn sobe com 2
+workers × 4 threads e timeout de 60 s.
 
-| Comando | O que faz |
-|---|---|
-| `expirar_reservas` | cancela pré-reservas e grupos com retenção vencida |
-| `enviar_fnrh_pendentes` | reenvia à FNRH Digital as fichas pendentes ou com erro |
-| `enviar_campanhas_email` | dispara campanhas de e-mail agendadas |
-| `enviar_conversoes_pendentes` | reenvia conversões de mídia pendentes |
-| `sincronizar_gastos_midia` | puxa o gasto das plataformas de anúncio |
+**Rotinas agendadas.** `python manage.py rotinas --grupo frequentes|diarias` roda as
+tarefas periódicas, cada uma isolada: uma falha vai para o log, não impede as outras e
+faz o comando terminar com erro. No Railway, crie dois serviços de Cron a partir deste
+repositório, com as mesmas variáveis do serviço web e o arquivo de configuração
+`deploy/railway.rotinas.json` (a cada 10 min) ou `deploy/railway.rotinas-diarias.json`
+(03h15 de Brasília).
+
+| Grupo | Comando | O que faz |
+|---|---|---|
+| frequentes | `expirar_reservas` | cancela pré-reservas e grupos com retenção vencida |
+| frequentes | `expirar_recibos_site` | marca como expirados os recibos do site não pagos |
+| frequentes | `enviar_fnrh_pendentes` | reenvia à FNRH Digital as fichas pendentes ou com erro |
+| frequentes | `enviar_campanhas_email` | dispara campanhas de e-mail agendadas |
+| diarias | `enviar_conversoes_pendentes` | reenvia conversões de mídia pendentes |
+| diarias | `sincronizar_gastos_midia` | puxa o gasto das plataformas de anúncio |
 
 **Comandos de operação:** `estrutura_inicial` (banco novo: tipos e os 24 quartos; com
 `--completo`, também camas, tarifas e vitrine), `sincronizar_vitrine` (quarto novo no site),
