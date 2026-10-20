@@ -149,6 +149,29 @@ DATABASES = {
 
 AUTH_USER_MODEL = "nucleo.Usuario"
 
+# Logs no stdout (o Railway coleta). Sem isto, com DEBUG=0 o Django não imprime os
+# erros 500 em lugar nenhum (o padrão só manda e-mail para ADMINS, que não existe),
+# e os logger.exception(...) do código também se perdem.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "simples": {"format": "{asctime} {levelname} {name}: {message}", "style": "{"},
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "simples"},
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": os.environ.get("LOG_LEVEL", "WARNING" if TESTING else "INFO"),
+    },
+    "loggers": {
+        "django": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "django.request": {"handlers": ["console"], "level": "ERROR", "propagate": False},
+        "django.security": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+    },
+}
+
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},

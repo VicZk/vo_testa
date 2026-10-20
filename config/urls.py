@@ -2,6 +2,7 @@ from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.contrib.sitemaps.views import sitemap
+from django.db import connection
 from django.http import HttpResponse
 from django.urls import include, path, re_path
 from django.views.generic import RedirectView
@@ -16,8 +17,21 @@ from apps.site.sitemaps import PaginasEstaticas
 sitemaps = {"paginas": PaginasEstaticas}
 
 
+def _banco_ok() -> bool:
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        return True
+    except Exception:
+        return False
+
+
 def healthz(_request):
-    """Probe do Railway (HTTP, sem redirect SSL)."""
+    """Probe do Railway (HTTP, sem redirect SSL). Só responde 200 se o banco atende:
+    um container sem acesso ao Postgres não pode passar no healthcheck e substituir
+    o que está saudável."""
+    if not _banco_ok():
+        return HttpResponse("banco indisponível", status=503, content_type="text/plain")
     return HttpResponse("ok", content_type="text/plain")
 
 

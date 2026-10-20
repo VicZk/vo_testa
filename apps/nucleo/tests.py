@@ -1265,3 +1265,19 @@ class ValidarTelefoneBRTests(TestCase):
     def test_ddd_invalido(self):
         with self.assertRaises(ValidationError):
             self._val("20999999999")       # DDD 20 não existe
+
+
+class HealthzTests(TestCase):
+    """O healthcheck do Railway só passa com o banco respondendo."""
+
+    def test_ok_com_banco(self):
+        r = self.client.get("/healthz/")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.content, b"ok")
+
+    def test_503_sem_banco(self):
+        from unittest import mock
+
+        with mock.patch("config.urls._banco_ok", return_value=False):
+            r = self.client.get("/healthz/")
+        self.assertEqual(r.status_code, 503)
