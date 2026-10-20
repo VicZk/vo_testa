@@ -398,7 +398,10 @@ def pessoas(request, perfil=None):
     busca = request.GET.get("q", "").strip()
     papel = perfil or request.GET.get("papel", "")
 
-    base = Pessoa.objects.all()
+    # Os papéis de cada linha (hóspede, agência, funcionário…) vêm no mesmo SELECT:
+    # sem isto eram 5 consultas por pessoa listada.
+    base = Pessoa.objects.select_related(
+        "hospede", "agencia", "funcionario", "fornecedor", "prospecto")
     if busca:
         base = base.filter(
             Q(nome__icontains=busca)

@@ -107,8 +107,11 @@ def painel_limpeza():
         .exclude(status=UH.Status.INATIVA)
         .exclude(tipo__modalidade=TipoUH.Modalidade.DAY_USE)
     )
+    # Todos os status numa consulta só. Quarto ainda sem registro aparece com a
+    # situação padrão (limpo) sem gravar nada: abrir a tela não escreve no banco.
+    existentes = {s.uh_id: s for s in StatusLimpeza.objects.filter(uh__in=quartos)}
     for uh in quartos:
-        status = situacao_uh(uh)
+        status = existentes.get(uh.pk) or StatusLimpeza(uh=uh)
         contagem[status.situacao] += 1
         linhas.append({
             "uh": uh,

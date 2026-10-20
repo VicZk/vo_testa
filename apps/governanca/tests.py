@@ -132,3 +132,24 @@ class TarefaIdempotenteTests(GovernancaBase):
         finally:
             faxina_concluida.disconnect(_h)
         self.assertEqual(len(recebidos), 1)
+
+
+class PainelSemEscritaTests(TestCase):
+    """Abrir o painel não grava StatusLimpeza (antes: get_or_create por quarto)."""
+
+    def test_painel_nao_cria_status_e_mostra_padrao(self):
+        from decimal import Decimal
+
+        from apps.nucleo.models import UH, TipoUH
+
+        from .models import StatusLimpeza
+        from .services import painel_limpeza
+
+        tipo = TipoUH.objects.create(nome="Std", tarifa_base=Decimal("200.00"), capacidade=2)
+        for n in range(3):
+            UH.objects.create(numero=f"P{n}", tipo=tipo)
+        StatusLimpeza.objects.all().delete()
+        dados = painel_limpeza()
+        self.assertEqual(StatusLimpeza.objects.count(), 0)
+        self.assertEqual(len(dados["linhas"]), 3)
+        self.assertTrue(all(ln["situacao"] == StatusLimpeza.Situacao.LIMPA for ln in dados["linhas"]))

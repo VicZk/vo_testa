@@ -174,8 +174,10 @@ def faturamento_periodo(inicio, fim):
     """Faturamento das comandas fechadas no período (caixa do setor × folio).
     Interface pública p/ Relatórios (total é método, soma em Python)."""
     caixa = quarto = ZERO
+    # Itens pré-carregados: o total de cada comanda soma em Python (arredondando item a
+    # item, como na tela) sem uma consulta por comanda.
     for c in Comanda.objects.filter(fechada_em__date__range=(inicio, fim),
-                                    status=Comanda.Status.FECHADA):
+                                    status=Comanda.Status.FECHADA).prefetch_related("itens"):
         if c.destino == Comanda.Destino.CAIXA:
             caixa += c.total()
         else:

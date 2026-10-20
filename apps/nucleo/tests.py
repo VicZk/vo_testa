@@ -1535,3 +1535,29 @@ class ModulosPorRequisicaoTests(TestCase):
         self.assertFalse(modulo_ativo(Modulo.LOJA))
         ModuloContratado.objects.filter(codigo=Modulo.LOJA).update(ativo=True)
         self.assertTrue(modulo_ativo(Modulo.LOJA))
+
+
+class PessoasSemConsultaPorLinhaTests(TestCase):
+    """A lista de Pessoas não consulta os papéis de cada linha separadamente."""
+
+    def _consultas(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        self.client.get(reverse("pessoas"))
+        with CaptureQueriesContext(connection) as ctx:
+            resp = self.client.get(reverse("pessoas"))
+        self.assertEqual(resp.status_code, 200)
+        return len(ctx.captured_queries)
+
+    def test_consultas_nao_crescem_com_as_pessoas(self):
+        from .models import Pessoa
+
+        u = Usuario.objects.create_superuser(username="pes", password="senha-forte-123")
+        self.client.force_login(u)
+        for i in range(3):
+            Pessoa.objects.create(nome=f"Pessoa {i}")
+        com_3 = self._consultas()
+        for i in range(3, 12):
+            Pessoa.objects.create(nome=f"Pessoa {i}")
+        self.assertEqual(com_3, self._consultas())
