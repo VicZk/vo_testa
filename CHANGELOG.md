@@ -9,6 +9,99 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 20/10/2026 — Infraestrutura e desempenho (`7c1394e` a `f1faf57`)
+
+Primeiro bloco das correções da auditoria: o que mantém o sistema de pé em produção e o
+que deixava as telas lentas.
+
+**O que melhorou**
+- **Telas muito mais rápidas** (consultas ao banco por abertura de tela, medidas com os
+  dados de exemplo; no Railway cada consulta ainda paga a rede):
+
+  | Tela | Antes | Depois |
+  |---|---:|---:|
+  | Busca de quartos no site (3 noites) | 334 | 18 |
+  | Busca de quartos no site (7 noites) | 682 | 24 |
+  | Home do site | 15 | 9 |
+  | Dashboard do CRM | 213 | 52 |
+  | Mapa de quartos | 157 | 20 |
+  | Pessoas | 181 | 16 |
+  | Pendências da Auditoria | 134 | 37 |
+  | Governança | 49 | 36 |
+
+  O número de consultas deixou de crescer com a quantidade de quartos, noites ou pessoas,
+  e há testes que acusam se voltar a crescer. Nenhum preço mudou: 480 preços comparados
+  antes e depois, com zero diferenças.
+- **Tarefas agendadas funcionando.** O comando `rotinas` roda tudo o que dependia de um
+  agendador que não existia: expira pré-reservas, reenvia FNRH, dispara campanhas
+  agendadas, reenvia e-mails e mensagens que falharam, e faz o backup do banco. Os dois
+  serviços de cron do Railway estão prontos em `deploy/`.
+- **Nada se perde quando algo cai no meio.**
+  - Confirmação de reserva do site: só sai depois que a reserva está gravada; se não
+    sair, é reenviada.
+  - E-mails do Comercial presos em "pendente" e mensagens do WhatsApp que falharam ao
+    processar: são reenviados ou reprocessados sozinhos.
+  - Erro do gateway de pagamento: não derruba mais a reserva do site.
+- **Gateway lento não trava o CRM.**
+  - A Safrapay espera no máximo 10 s.
+  - O servidor atende 8 requisições ao mesmo tempo, em vez de 2.
+  - As migrations rodam antes do deploy, uma vez só.
+- **Limites de tentativa de verdade.** Login, MFA, cartão e site passam a ter um contador
+  único entre os workers, que sobrevive ao deploy (antes valiam o dobro e zeravam).
+- **Backup diário fora do Railway**, com retenção de 30 dias e restauração documentada.
+- **Erros avisam.** Integração opcional com o Sentry, sem enviar dado pessoal nem de cartão.
+- **Hosts.** Só são aceitos os domínios do próprio serviço (saiu o curinga
+  `.railway.app`).
+- **Selo da temporada no site.** Vem da mesma classificação que forma o preço; antes podia
+  mostrar "Alta" num dia cobrado como baixa.
+
+**O que foi modificado**
+- **Configuração e deploy:**
+  - `config/settings.py`: cache compartilhado (Redis com `REDIS_URL`, senão tabela no
+    Postgres), Sentry opcional, `SAFRAPAY_TIMEOUT`, hosts e o middleware de módulos por
+    requisição;
+  - `railway.json`: pré-deploy com `migrate`; gunicorn com threads e timeout de 60 s;
+  - `deploy/railway.rotinas*.json` (novos);
+  - `requirements.txt`: `redis`, `sentry-sdk`.
+- **Comandos novos:**
+  - `rotinas` e `backup_banco` (núcleo);
+  - `reenviar_emails_pendentes` e `reprocessar_webhooks_whatsapp` (Comercial);
+  - `reenviar_confirmacoes_site` (site);
+  - o `expirar_reservas` do site virou `expirar_recibos_site`.
+- **Modelos e migrations:**
+  - `nucleo.0046`: tabela do cache;
+  - `comercial.0031`: `EnvioEmail` guarda o conteúdo até sair;
+  - `comercial.0032`: `WebhookWhatsApp`;
+  - `core.0007`: `Reserva.confirmacao_enviada_em`;
+  - `reservas.0021`: índices.
+- **Desempenho:**
+  - `precos_em_lote()` e `precarregar_tarifas_unidade()` (Reservas);
+  - `ContaHospedagem.saldos()`;
+  - pré-cargas no mapa, no pool de colchões, na lista de Pessoas e na Governança;
+  - auditoria sem leitura extra quando não há usuário;
+  - módulos ativos lidos uma vez por requisição.
+- **Fluxos:**
+  - `criar_cobranca` grava a cobrança antes de chamar o provedor;
+  - a finalização da reserva do site separa as gravações (numa transação) da cobrança
+    e do e-mail;
+  - o webhook do WhatsApp grava o corpo antes de processar.
+- **Documentação:** README (seções 8 e 10), `docs/ARQUITETURA.md` (4.2, 5.5, 7, 9.5, 10.1,
+  10.4 e a nova 10.6, de backup) e `docs/MODULOS_E_FLUXOS.md`.
+
+**Como foi testado**
+- Testes novos em cada commit, entre eles os que medem consultas: busca do site, mapa de
+  quartos e Pessoas com mais itens fazem o mesmo número de consultas.
+- Suíte completa no Windows e no CI (Linux + PostgreSQL 16) depois do push.
+
+**Depois do deploy (no Railway)**
+- Criar os dois serviços de Cron com os arquivos de `deploy/` e as mesmas variáveis do
+  serviço web.
+- Para o backup sair do Railway, configurar o R2 (variáveis `R2_*`) ou `BACKUP_DIR`; ligar
+  também o PITR do Postgres.
+- Opcional: add-on Redis (`REDIS_URL`) e `SENTRY_DSN`.
+
+---
+
 ## 20/10/2026 — Novidades do original: Tabela de Preços (`dae8904`)
 
 **O que melhorou**
