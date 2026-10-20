@@ -9,6 +9,27 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 20/10/2026 — Novidades do original: Tabela de Preços (`dae8904`)
+
+**O que melhorou**
+- Os campos da Tabela de Preços mostram o valor inteiro: juntamos a correção que o
+  Gefferson publicou hoje com a que já existia aqui, e as duas se completam.
+
+**O que foi modificado**
+- Merge dos commits `723a7ea`, `e71dd5f` e `8fb5eee` do original, que chegaram pelo
+  PR #1 aberto pela automação. Um conflito em `templates/nucleo/tabela_precos.html`,
+  resolvido mantendo as duas correções:
+  - daqui: o cartão do formulário deixa de limitar a 620px, que era a causa do aperto;
+  - de lá: regra mais forte e `flex: 0 0 auto`, para o campo nunca encolher, com
+    números tabulares;
+  - largura do campo: 5.75rem, conferida na tela com "1.250,00".
+
+**Como foi testado**
+- A tela já tinha sido conferida com essa largura; a regra nova só impede o campo de
+  encolher. CI roda a suíte inteira neste push.
+
+---
+
 ## 20/10/2026 — Acompanhamento automático do projeto original
 
 **O que melhorou**
@@ -29,8 +50,10 @@ A entrada mais nova fica no topo. As datas são as do push.
   diante uma entrada por push.
 
 **Como foi testado**
-- Rodado de verdade no GitHub logo depois deste push, contra as 3 novidades que o
-  Gefferson publicou hoje na Tabela de Preços (o resultado está na próxima entrada).
+- Rodado de verdade no GitHub logo depois do push, contra as 3 novidades que o Gefferson
+  publicou hoje na Tabela de Preços. Ele atualizou o espelho `main` e abriu o PR #1
+  avisando do conflito com a correção que já existia aqui (resolvida na entrada acima).
+  O caminho sem conflito (merge + testes + PR) roda na próxima novidade do original.
 
 ---
 
