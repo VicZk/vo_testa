@@ -581,8 +581,12 @@ def capturar_lead_site(*, nome, email="", telefone="", mensagem="",
     if pessoa is None and telefone:
         pessoa = _pessoa_por_telefone(telefone, nome)
     if pessoa is None:
+        # Contato novo da captação só entra na lista de e-mail se marcou o consentimento
+        # (LGPD) — o padrão do cadastro (aceita_email=True) vale para hóspede da casa,
+        # não para quem só deixou o contato numa página.
         pessoa = Pessoa.objects.create(
             nome=nome, email=email, telefone=telefone, documento=documento,
+            aceita_email=bool(aceita_email),
         )
     else:
         mudou = []

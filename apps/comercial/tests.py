@@ -1052,6 +1052,24 @@ class EnriquecimentoLeadTests(TestCase):
         self.assertEqual(op.origem_rastreio.get("dispositivo"), "iPhone")
         self.assertEqual(op.origem_rastreio.get("navegador"), "Instagram")
 
+    def test_lead_da_lp_sem_consentimento_nao_entra_na_lista_de_email(self):
+        # LGPD: consentimento é a pessoa marcar a caixa; sem o campo, não é consentimento.
+        import json
+
+        from .models import PaginaCaptacao
+        u = Usuario.objects.create_superuser(username="lgpd", password="forte-123-abc")
+        pag = PaginaCaptacao.objects.create(
+            nome="F2", slug="fundador-2", status=PaginaCaptacao.Status.PUBLICADA,
+            hero_titulo="Oi", criado_por=u)
+        r = self.client.post(
+            reverse("lp:fundador_2_lead"),
+            data=json.dumps({"nome": "Paulo Sem Optin", "whatsapp": "(49) 99123-4568",
+                             "ms": 5000}),
+            content_type="application/json")
+        self.assertEqual(r.status_code, 200)
+        op = Oportunidade.objects.get(pagina_captacao=pag)
+        self.assertFalse(op.pessoa.aceita_email)
+
 
 class WhatsAppCloudTests(TestCase):
     """Envio real (template/texto), janela de 24h, webhook e disparo em lote."""
