@@ -2193,6 +2193,20 @@ class PropostaSinalTests(TestCase):
         cob = services.criar_cobranca_sinal(self.op, self.u)
         self.assertEqual(cob.valor, Decimal("175.50"))  # 30% de 585
 
+    def test_percentual_do_sinal_vem_da_configuracao(self):
+        from django.test import override_settings
+
+        with override_settings(COMERCIAL_SINAL_PCT=50):
+            cob = services.criar_cobranca_sinal(self.op, self.u)
+        self.assertEqual(cob.valor, Decimal("292.50"))  # 50% de 585
+
+    def test_mensagem_mostra_o_percentual_real_do_sinal(self):
+        # O vendedor digitou outro valor: a mensagem não pode dizer "30%".
+        cob = services.criar_cobranca_sinal(self.op, self.u, valor=Decimal("117.00"))
+        texto = services.montar_proposta_sinal(self.op, cob, "https://exemplo/pagar")
+        self.assertIn("_(20%)_", texto)
+        self.assertNotIn("30%", texto)
+
     def test_sinal_idempotente_cancela_anterior(self):
         # Reemitir o sinal não pode deixar dois links pagáveis (pagamento em dobro).
         from apps.pagamentos.models import Cobranca

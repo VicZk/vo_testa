@@ -207,7 +207,7 @@
     <div class="cartao op-acoes">
       <p class="rot-secao">Ações rápidas</p>
       {% if pagamentos_ativo %}
-      <form method="post" action="{% url 'comercial:enviar_proposta_sinal' op.pk %}" onsubmit="return confirm('Gerar o sinal (30% do valor) e enviar no WhatsApp?')" style="margin:0">
+      <form method="post" action="{% url 'comercial:enviar_proposta_sinal' op.pk %}" onsubmit="return confirm('Gerar o sinal ({{ sinal_pct }}% do valor) e enviar no WhatsApp?')" style="margin:0">
         {% csrf_token %}
         <button type="submit" class="botao-primario botao-largo">Enviar proposta + sinal (Safrapay)</button>
       </form>

@@ -4,7 +4,8 @@ Reagendar é sempre a 1ª opção (não é cancelamento — ver `services.transf
 Quando o hóspede cancela de verdade:
 
 - **Estadia NÃO iniciada:** janela de arrependimento (CDC art. 49) de
-  `CANCELAMENTO_ARREPENDIMENTO_DIAS` a partir da **confirmação** (pagamento dos 30%).
+  `CANCELAMENTO_ARREPENDIMENTO_DIAS` a partir da **confirmação** (pagamento do sinal ou,
+  no site, da hospedagem).
   Dentro da janela → devolve 100%. Depois → retém `CANCELAMENTO_RETENCAO_PCT`% do valor
   total da reserva (devolve o resto).
 - **Estadia já iniciada:** cobra as **diárias consumidas** (valor cheio) + a retenção; a

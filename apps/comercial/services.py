@@ -1008,7 +1008,7 @@ def converter_em_reserva(oportunidade, *, tipo_uh=None, uh=None, checkin, checko
         from apps.pagamentos.services import criar_cobranca
         valor = valor_sinal
         if valor is None:
-            valor = (oportunidade.valor_estimado * Decimal("0.30")).quantize(Decimal("0.01"))
+            valor = (oportunidade.valor_estimado * fracao_sinal()).quantize(Decimal("0.01"))
         if valor and valor > 0:
             _cancelar_sinal_pendente(oportunidade, usuario)
             cobranca = criar_cobranca(
@@ -1066,12 +1066,14 @@ def montar_proposta_sinal(oportunidade, cobranca, link) -> str:
 
     if op.valor_estimado:
         linhas.append(f"💰 Total da estadia: *R$ {_brl(op.valor_estimado)}*")
-        linhas.append(f"🔒 Sinal para garantir: *R$ {_brl(cobranca.valor)}* _(30%)_")
+        # O percentual que de fato é: o vendedor pode ter digitado outro valor de sinal.
+        pct = (Decimal(cobranca.valor) * 100 / Decimal(op.valor_estimado)).quantize(Decimal("1"))
+        linhas.append(f"🔒 Sinal para garantir: *R$ {_brl(cobranca.valor)}* _({pct}%)_")
         restante = Decimal(op.valor_estimado) - Decimal(cobranca.valor)
         if restante > 0:
             linhas.append(f"🏡 O restante (R$ {_brl(restante)}) você paga na chegada.")
     else:
-        linhas.append(f"🔒 Sinal para garantir a data: *R$ {_brl(cobranca.valor)}* _(30%)_")
+        linhas.append(f"🔒 Sinal para garantir a data: *R$ {_brl(cobranca.valor)}*")
 
     linhas += [
         "",
@@ -2665,6 +2667,11 @@ def enviar_campanha_email(campanha, usuario=None):
     return campanha
 
 
+def fracao_sinal() -> Decimal:
+    """Fração do valor estimado cobrada como sinal (COMERCIAL_SINAL_PCT / 100)."""
+    return Decimal(settings.COMERCIAL_SINAL_PCT) / 100
+
+
 def _cancelar_sinal_pendente(oportunidade, usuario):
     """Idempotência do sinal: cancela a cobrança de sinal PENDENTE anterior do lead,
     para nunca haver dois links pagáveis para a mesma estadia (risco de pagamento em
@@ -2682,14 +2689,15 @@ def _cancelar_sinal_pendente(oportunidade, usuario):
 def criar_cobranca_sinal(oportunidade, usuario, valor=None, metodo="pix"):
     """Cria a cobrança do sinal (Safrapay/simulado) para o lead e a vincula.
 
-    Degrada se o módulo Pagamentos estiver inativo. Valor padrão = 30% do valor estimado.
+    Degrada se o módulo Pagamentos estiver inativo. Valor padrão = COMERCIAL_SINAL_PCT
+    (30%) do valor estimado.
     Devolve a Cobranca (o link público é montado na view com o request).
     """
     from decimal import Decimal as _D
 
     if not modulo_ativo(Modulo.PAGAMENTOS):
         raise ValidationError("Módulo Pagamentos inativo — não é possível gerar o sinal.")
-    valor = _D(str(valor)) if valor else (oportunidade.valor_estimado or _D("0")) * _D("0.30")
+    valor = _D(str(valor)) if valor else (oportunidade.valor_estimado or _D("0")) * fracao_sinal()
     valor = valor.quantize(_D("0.01"))
     if valor <= 0:
         raise ValidationError("Defina o valor estimado do lead para gerar o sinal.")

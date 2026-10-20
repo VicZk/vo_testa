@@ -291,7 +291,7 @@ class Reserva(models.Model):
         help_text="Pré-reserva de canal (site) segura o quarto só até aqui; depois expira.",
     )
     checkin_real = models.DateTimeField("entrada realizada em", null=True, blank=True)
-    # Marco da confirmação (pagamento dos 30%) — referência da janela de 7 dias de
+    # Marco da confirmação (pagamento do sinal) — referência da janela de 7 dias de
     # arrependimento (CDC). Ver apps/reservas/cancelamento.py.
     confirmada_em = models.DateTimeField("confirmada em", null=True, blank=True)
     checkout_real = models.DateTimeField("saída realizada em", null=True, blank=True)

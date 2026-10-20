@@ -1,4 +1,5 @@
 from django import forms
+from django.conf import settings
 
 from apps.nucleo.models import UH, Pessoa, TipoUH
 
@@ -211,7 +212,8 @@ class ConversaoForm(_SelecaoQuartoMixin, forms.Form):
     )
     criar_sinal = forms.BooleanField(
         label="Gerar cobrança de sinal (Pix)", required=False, initial=False,
-        help_text="Se Pagamentos estiver ativo — 30% do valor estimado (ou informe abaixo).",
+        help_text=(f"Se Pagamentos estiver ativo — {settings.COMERCIAL_SINAL_PCT}% do valor "
+                   "estimado (ou informe abaixo)."),
     )
     valor_sinal = forms.DecimalField(
         label="Valor do sinal (R$)", required=False, max_digits=10, decimal_places=2,

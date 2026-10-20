@@ -260,6 +260,7 @@ def oportunidade(request, pk):
             historico_cliente = h
     return render(request, "comercial/oportunidade.html", {
         "op": op,
+        "sinal_pct": settings.COMERCIAL_SINAL_PCT,
         "proxima_acao": services.proxima_acao(op),
         "historico_cliente": historico_cliente,
         "atividades": op.atividades.select_related("responsavel"),
