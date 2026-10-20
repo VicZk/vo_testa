@@ -14,8 +14,8 @@ Uso:  .venv/bin/python manage.py sanear_demo
 
 from decimal import Decimal
 
-from django.core.management.base import BaseCommand
 from django.core.management import call_command
+from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from apps.nucleo.models import UH, FormaPagamento, SessaoCaixa
@@ -135,8 +135,8 @@ class Command(BaseCommand):
 
     def _limpar_quartos_livres(self):
         try:
-            from apps.governanca.models import StatusLimpeza
             from apps.governanca import services as gov
+            from apps.governanca.models import StatusLimpeza
         except Exception:
             return 0
         ocupadas = set(

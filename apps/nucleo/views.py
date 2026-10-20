@@ -11,6 +11,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from .areas import Area, areas_catalogo
 from .forms import (
     AbrirCaixaForm,
     AgenciaForm,
@@ -47,7 +48,6 @@ from .models import (
     estornar_movimento,
 )
 from .modulos import APRESENTACAO
-from .areas import Area, areas_catalogo
 from .permissoes import eh_gerente, pode_ver_salario, requer_area, requer_gerencia
 
 # ---------- Dashboard ----------
@@ -190,7 +190,7 @@ def dashboard(request):
             ap = len(alerta_colchoes["apertadas"])
             if esg:
                 noites = ", ".join(
-                    f"{l['noite']:%d/%m}" for l in alerta_colchoes["esgotadas"][:4])
+                    f"{n['noite']:%d/%m}" for n in alerta_colchoes["esgotadas"][:4])
                 atencao.append({
                     "nivel": "alerta",
                     "rotulo": f"Colchões extra esgotados em {esg} noite{'s' if esg > 1 else ''}",
@@ -199,7 +199,7 @@ def dashboard(request):
                 })
             if ap:
                 noites = ", ".join(
-                    f"{l['noite']:%d/%m}" for l in alerta_colchoes["apertadas"][:4])
+                    f"{n['noite']:%d/%m}" for n in alerta_colchoes["apertadas"][:4])
                 atencao.append({
                     "nivel": "aviso",
                     "rotulo": f"Colchões extra no limite em {ap} noite{'s' if ap > 1 else ''}",

@@ -82,7 +82,7 @@ def _ctx_confirmacao(reserva):
     }
 
 
-@functools.lru_cache(maxsize=None)
+@functools.cache
 def _bytes_da_imagem(path: Path) -> bytes | None:
     """Lê cada imagem do e-mail uma vez por processo (eram ~80 KB lidos a cada envio)."""
     return path.read_bytes() if path.is_file() else None

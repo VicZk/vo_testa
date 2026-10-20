@@ -14,7 +14,14 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import (
-    Avg, Count, DurationField, ExpressionWrapper, F, OuterRef, Subquery, Sum,
+    Avg,
+    Count,
+    DurationField,
+    ExpressionWrapper,
+    F,
+    OuterRef,
+    Subquery,
+    Sum,
 )
 from django.template.loader import render_to_string
 from django.utils import timezone

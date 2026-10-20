@@ -109,7 +109,6 @@ def checkin(request, token):
     """Check-in online: o hóspede responsável preenche a FNRH de todos num só
     aparelho. Funciona antes da hospedagem (reserva ainda ativa)."""
     from apps.nucleo.models import modulo_ativo
-
     from apps.reservas import services as reservas_services
 
     if not modulo_ativo(Modulo.APPSITE):

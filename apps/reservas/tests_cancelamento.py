@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from apps.nucleo.models import Pessoa, TipoUH, UH
+from apps.nucleo.models import UH, Pessoa, TipoUH
 from apps.reservas import cancelamento, services
 from apps.reservas.models import Reserva
 

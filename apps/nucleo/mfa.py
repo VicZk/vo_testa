@@ -56,9 +56,10 @@ def qr_svg(uri: str) -> str:
     Usa SvgPathImage (como o portal) — gera um <path> com viewBox que renderiza
     embutido no HTML. O SvgImage emite rects + prolog XML que quebram inline.
     """
+    from io import BytesIO
+
     import qrcode
     import qrcode.image.svg
-    from io import BytesIO
 
     img = qrcode.make(uri, image_factory=qrcode.image.svg.SvgPathImage, box_size=10, border=2)
     buf = BytesIO()

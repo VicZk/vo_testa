@@ -75,7 +75,7 @@ class RelatoriosServiceTests(TestCase):
         kpis = dict(f["kpis"])
         # 3 diárias × 200 = 600, tudo "lançado no quarto" (recepção recebe).
         self.assertIn("600", kpis["Lançado nos quartos (recepção recebe)"])
-        hosp = next(l for l in f["linhas"] if "Hospedagem" in l[0])
+        hosp = next(lin for lin in f["linhas"] if "Hospedagem" in lin[0])
         self.assertEqual(hosp[1], "R$ 0,00")   # nada no caixa do setor (formato pt-BR)
         self.assertIn("600", hosp[2])    # tudo no quarto
 
@@ -89,7 +89,7 @@ class RelatoriosServiceTests(TestCase):
                              total=Decimal("50.00"), criado_por=self.op)
         ini, fim = self._periodo()
         f = services.rel_faturamento_modulos(ini, fim)
-        loja = next(l for l in f["linhas"] if l[0] == "Loja")
+        loja = next(lin for lin in f["linhas"] if lin[0] == "Loja")
         self.assertIn("100", loja[1])  # no caixa do setor
         self.assertIn("50", loja[2])   # lançado no quarto
         self.assertIn("150", loja[3])  # total vendido

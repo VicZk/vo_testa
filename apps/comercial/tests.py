@@ -11,7 +11,12 @@ from apps.nucleo.models import UH, Pessoa, Prospecto, TipoUH
 
 from . import services
 from .models import (
-    AnaliseLead, AtividadeComercial, EtapaFunil, MotivoPerda, Oportunidade, PaginaCaptacao,
+    AnaliseLead,
+    AtividadeComercial,
+    EtapaFunil,
+    MotivoPerda,
+    Oportunidade,
+    PaginaCaptacao,
 )
 
 Usuario = get_user_model()
@@ -1403,6 +1408,7 @@ class WhatsAppCloudTests(TestCase):
 
     def test_webhook_audio_cria_lead_e_grava_metadados(self):
         import json
+
         from .models import MensagemWhatsApp
         antes = Oportunidade.objects.count()
         self.client.post(reverse("whatsapp:webhook"),
@@ -1533,6 +1539,7 @@ class WhatsAppCloudTests(TestCase):
 
     def test_context_processor_conta_nao_lidas(self):
         import json
+
         from django.test import RequestFactory
 
         from .context_processors import whatsapp_nao_lidas
@@ -2450,7 +2457,6 @@ class SinalPagoGanhaTests(TestCase):
         # canal. Pagar o sinal NÃO pode derrubar a confirmação do pagamento.
         from apps.pagamentos.models import Cobranca
         from apps.reservas import services as reservas
-        from apps.reservas.models import Reserva
         op = services.criar_oportunidade(
             usuario=self.u, pessoa=self.pessoa, titulo="Quarto some",
             valor_estimado=Decimal("585.00"))

@@ -23,12 +23,13 @@ Pesquisa de mercado: `docs/REFERENCIA_DESBRAVADOR.md`.
 
 Config por variável de ambiente (`.env` local — ver `.env.example`). `DEBUG=1` no dev.
 
-O CI roda sozinho: `testes.yml` (suíte contra PostgreSQL 16 + `makemigrations --check`,
-em todo push da `main`/`dev` e em PR) e `security.yml` (pip-audit, bandit, ruff de
-segurança e gitleaks, no push da `main`, em PR e toda segunda). Rotinas agendadas:
-`manage.py rotinas --grupo frequentes` (a cada 10 min) e `--grupo diarias` (03:15 de
-Brasília) — dois serviços cron no Railway, configs em `deploy/`. Rotina nova entra no
-grupo certo em `apps/nucleo/management/commands/rotinas.py`.
+O CI roda sozinho: `testes.yml` (ruff, `makemigrations --check` e a suíte contra
+PostgreSQL 16, em todo push da `main`/`dev` e em PR) e `security.yml` (pip-audit,
+bandit, ruff de segurança e gitleaks, no push da `main`, em PR e toda segunda).
+Rotinas agendadas: `manage.py rotinas --grupo frequentes` (a cada 10 min) e
+`--grupo diarias` (03:15 de Brasília) — dois serviços cron no Railway, configs em
+`deploy/`. Rotina nova entra no grupo certo em
+`apps/nucleo/management/commands/rotinas.py`.
 
 ## Deploy, commit e push
 

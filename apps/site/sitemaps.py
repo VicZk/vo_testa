@@ -23,7 +23,7 @@ class PaginasEstaticas(Sitemap):
         return list(self.ROTAS) + list(self._quartos())
 
     def _quartos(self):
-        from apps.nucleo.models import TipoUH, UH
+        from apps.nucleo.models import UH, TipoUH
         from apps.site.models import VitrineQuarto
 
         return (

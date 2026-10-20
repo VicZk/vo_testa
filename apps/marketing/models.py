@@ -18,7 +18,6 @@ from django.db import models
 from django.db.models import Sum
 from django.utils import timezone
 
-
 # S-A3: anexo de checklist não pode ser arquivo executável/HTML/SVG (XSS armazenado se
 # servido same-origin) nem grande demais. Allowlist conservadora + teto de tamanho.
 EXTENSOES_ANEXO = ["pdf", "png", "jpg", "jpeg", "webp", "gif", "doc", "docx", "xls", "xlsx", "csv"]
@@ -49,7 +48,7 @@ class VerbaMarketing(models.Model):
         return "Verba de marketing (teto por mês)"
 
     @classmethod
-    def atual(cls) -> "VerbaMarketing":
+    def atual(cls) -> VerbaMarketing:
         obj = cls.objects.first()
         if obj is None:
             obj = cls.objects.create()

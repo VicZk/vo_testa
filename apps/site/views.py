@@ -9,8 +9,6 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
-logger = logging.getLogger(__name__)
-
 from apps.site.forms import (
     BuscaDisponibilidadeForm,
     DadosHospedeForm,
@@ -26,6 +24,8 @@ from apps.site.models import (
     Reserva,
     VitrineQuarto,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _is_htmx(request):
@@ -280,7 +280,7 @@ def _card_de_uh(vitrine, preco=None):
 
 def _vitrines_publicadas():
     """VitrineQuarto publicadas de quartos de hospedagem ativos (com o UH e o tipo)."""
-    from apps.nucleo.models import TipoUH, UH
+    from apps.nucleo.models import UH, TipoUH
     return (
         VitrineQuarto.objects.filter(
             publicar=True, uh__status=UH.Status.ATIVA,
@@ -450,7 +450,8 @@ def _resumo_preco_unidade(uh, checkin, checkout, metodo='pix', hospedes=2,
                           criancas_0_5=0, criancas_6_15=0, cobra_iss=True,
                           cobra_taxa_turismo=True):
     """Resumo de valores de um quarto específico (venda por unidade) pela motor."""
-    from apps.reservas import precos, services as reservas
+    from apps.reservas import precos
+    from apps.reservas import services as reservas
     cot = precos.cotacao(
         uh=uh, checkin=checkin, checkout=checkout,
         adultos=_adultos_de(hospedes, criancas_0_5, criancas_6_15),
@@ -1025,6 +1026,7 @@ def _criar_cobranca_site(reserva, pessoa):
     if not modulo_ativo(Modulo.PAGAMENTOS):
         return None
     from django.core.exceptions import ValidationError as VErr
+
     from apps.pagamentos.models import Cobranca
     from apps.pagamentos.services import criar_cobranca
     metodo = reserva.metodo_pagamento if reserva.metodo_pagamento in (

@@ -2,7 +2,6 @@ import csv
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
-from django.http import HttpResponse
 from django.shortcuts import render
 from django.views.decorators.cache import never_cache
 

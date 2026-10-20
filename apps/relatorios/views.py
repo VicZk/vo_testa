@@ -1,6 +1,6 @@
 import csv
 
-from django.http import Http404, HttpResponse
+from django.http import Http404
 from django.shortcuts import render
 from django.utils.text import slugify
 from django.views.decorators.cache import never_cache

@@ -10,14 +10,23 @@ Roda isolado no banco de teste e é repetível — vira ativo permanente da audi
 from datetime import timedelta
 from decimal import Decimal
 
-from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from apps.nucleo.models import (
-    UH, CategoriaProduto, FormaPagamento, LocalEstoque, ModuloContratado,
-    Pessoa, Produto, SessaoCaixa, TipoUH, registrar_entrada, saldo,
+    UH,
+    CategoriaProduto,
+    FormaPagamento,
+    LocalEstoque,
+    ModuloContratado,
+    Pessoa,
+    Produto,
+    SessaoCaixa,
+    TipoUH,
+    registrar_entrada,
+    saldo,
 )
 from apps.nucleo.modulos import Modulo
 

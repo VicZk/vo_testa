@@ -16,12 +16,12 @@ from apps.nucleo.permissoes import eh_gerente, requer_gerencia, requer_modulo
 from apps.nucleo.ratelimit import limite_excedido
 from apps.nucleo.seletores import pessoas_agrupadas
 
-logger = logging.getLogger(__name__)
-
 from . import services
 from .gateways import get_gateway, status_credenciais
 from .gateways import status_pago as _status_pago
 from .models import Cobranca, EventoPagamento
+
+logger = logging.getLogger(__name__)
 
 
 def _reservas_para_sinal(request):

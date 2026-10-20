@@ -1297,7 +1297,7 @@ class ColchoesExtra(models.Model):
         return f"{self.quantidade} colchões extra (avisa ≤ {self.alerta_minimo})"
 
     @classmethod
-    def atual(cls) -> "ColchoesExtra":
+    def atual(cls) -> ColchoesExtra:
         """Linha única do estoque (cria com os defaults se ainda não existir)."""
         obj = cls.objects.order_by("pk").first()
         if obj is None:
@@ -1326,7 +1326,7 @@ class BercoEstoque(models.Model):
         return f"{self.quantidade} berço(s)"
 
     @classmethod
-    def atual(cls) -> "BercoEstoque":
+    def atual(cls) -> BercoEstoque:
         """Linha única do estoque (cria com o default se ainda não existir)."""
         obj = cls.objects.order_by("pk").first()
         if obj is None:

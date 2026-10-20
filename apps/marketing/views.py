@@ -15,7 +15,6 @@ from .models import Campanha
 @never_cache
 @requer_modulo(Modulo.MARKETING)
 def quadro(request):
-    from apps.nucleo.periodos import MESES_PT
     user = request.user
     so_meus = request.GET.get("meus") == "1"
     pos = services.posicao_verba()
@@ -370,6 +369,7 @@ def nova_campanha(request):
 from datetime import date as _date  # noqa: E402
 
 from apps.nucleo.periodos import MESES_PT  # noqa: E402
+
 from .models import PecaCampanha  # noqa: E402
 
 
@@ -463,9 +463,10 @@ def relatorio(request):
         w.writerow(["Campanha", "Gasto", "Retorno rastreado", "Retorno estimado (janela)",
                     "Fechamentos", "CAC"])
         from apps.nucleo.export import sanitizar_celula  # S-M2: anti CSV formula-injection
-        for l in dados["linhas"]:
-            w.writerow([sanitizar_celula(l["nome"]), l["gasto"], l["rastreada"], l["janela"],
-                        l["fechamentos"], l["cac"] if l["cac"] is not None else "—"])
+        for linha in dados["linhas"]:
+            w.writerow([sanitizar_celula(linha["nome"]), linha["gasto"], linha["rastreada"],
+                        linha["janela"], linha["fechamentos"],
+                        linha["cac"] if linha["cac"] is not None else "—"])
         return resp
     return render(request, "marketing/relatorio.html", {
         "dados": dados, "inicio": inicio, "fim": fim, "rotulo": rotulo,

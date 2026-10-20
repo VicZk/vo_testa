@@ -85,7 +85,9 @@ class QuadroTests(TestCase):
 
     def test_faixa_atrasado_lista_peca_vencida(self):
         from datetime import timedelta
+
         from django.utils import timezone
+
         from apps.marketing.models import PecaCampanha
         c = Campanha.objects.create(nome="Y")
         PecaCampanha.objects.create(
@@ -103,6 +105,7 @@ class VerbaTests(TestCase):
 
     def test_teto_travada_disponivel_e_pct(self):
         from django.utils import timezone
+
         from apps.marketing import services
         mes = self._mes()
         services.definir_teto(mes, "10000")
@@ -117,6 +120,7 @@ class VerbaTests(TestCase):
 
     def test_alerta_dispara_acima_do_pct(self):
         from django.utils import timezone
+
         from apps.marketing import services
         mes = self._mes()
         services.definir_teto(mes, "6000")
@@ -133,6 +137,7 @@ class VerbaTests(TestCase):
     def test_encerrar_devolve_verba_nao_gasta(self):
         from django.contrib.auth import get_user_model
         from django.utils import timezone
+
         from apps.marketing import services
         U = get_user_model()
         u = U.objects.create_user(username="ge", password="x123456789",
@@ -148,6 +153,7 @@ class VerbaTests(TestCase):
 
     def test_gerencia_edita_teto(self):
         from django.contrib.auth import get_user_model
+
         from apps.marketing.models import VerbaMarketing
         U = get_user_model()
         u = U.objects.create_user(username="gestor", password="x123456789")
@@ -233,6 +239,7 @@ class PortoesTests(TestCase):
 
     def test_avancar_bloqueia_sem_o_portao_e_nao_grava(self):
         from django.core.exceptions import ValidationError
+
         from apps.marketing import services
         c = Campanha.objects.create(nome="X", inicio=self.hoje)  # sem objetivo → Ideia trava
         with self.assertRaises(ValidationError):
@@ -242,6 +249,7 @@ class PortoesTests(TestCase):
 
     def test_aprovar_bloqueia_verba_insuficiente(self):
         from django.core.exceptions import ValidationError
+
         from apps.marketing import services
         services.definir_teto(self.mes, "1000")
         c = self._pronta_em_aprovacao(verba="5000")
@@ -266,6 +274,7 @@ class PortoesTests(TestCase):
     def test_aprovacao_so_da_gerencia(self):
         from django.contrib.auth import get_user_model
         from django.core.exceptions import ValidationError
+
         from apps.marketing import services
         services.definir_teto(self.mes, "10000")
         c = self._pronta_em_aprovacao(verba="1000")
@@ -290,6 +299,7 @@ class PortoesTests(TestCase):
 
     def test_anexar_arquivo_resolve_item(self):
         from django.core.files.uploadedfile import SimpleUploadedFile
+
         from apps.marketing import services
         c = Campanha.objects.create(nome="AF", fase=Campanha.Fase.PROPOSTA)
         services.garantir_itens(c)
@@ -302,6 +312,7 @@ class PortoesTests(TestCase):
 
     def test_encerrar_exige_retrospectiva(self):
         from django.core.exceptions import ValidationError
+
         from apps.marketing import services
         c = Campanha.objects.create(nome="W", fase=Campanha.Fase.NOAR)
         with self.assertRaises(ValidationError):
@@ -335,6 +346,7 @@ class CalendarioTests(TestCase):
 
     def _peca(self, dia):
         from datetime import date
+
         from apps.marketing.models import PecaCampanha
         # a linha do tempo é por período: a campanha precisa de vigência para aparecer.
         c = Campanha.objects.create(nome="Camp cal",
@@ -403,6 +415,7 @@ class RelatorioTests(TestCase):
 
     def test_lancar_gasto_cria_anuncio_e_soma(self):
         from datetime import date
+
         from apps.marketing import services
         mc = Campanha.objects.create(nome="G", inicio=date(2026, 9, 1), fim=date(2026, 9, 30))
         services.lancar_gasto(mc, date(2026, 9, 10), "1000", self.user)
@@ -412,6 +425,7 @@ class RelatorioTests(TestCase):
 
     def test_gasto_entra_no_mes_do_dinheiro(self):
         from datetime import date
+
         from apps.marketing import services
         mc = Campanha.objects.create(nome="H", inicio=date(2026, 9, 1), fim=date(2026, 12, 31))
         services.lancar_gasto(mc, date(2026, 10, 5), "700", self.user)  # dinheiro saiu em outubro
@@ -420,8 +434,9 @@ class RelatorioTests(TestCase):
 
     def test_retorno_rastreado_cac_e_ordem(self):
         from datetime import date
-        from apps.marketing import services
+
         from apps.comercial.models import EtapaFunil, Oportunidade
+        from apps.marketing import services
         from apps.nucleo.models import Pessoa
         mc = Campanha.objects.create(nome="R", inicio=date(2026, 9, 1), fim=date(2026, 9, 30))
         services.lancar_gasto(mc, date(2026, 9, 10), "1000", self.user)
@@ -434,7 +449,7 @@ class RelatorioTests(TestCase):
                 status=Oportunidade.Status.GANHA, valor_estimado=Decimal(v),
                 checkin_previsto=date(2026, 9, 15), criado_por=self.user)
         dados = services.relatorio(date(2026, 9, 1), date(2026, 9, 30))
-        linha = [l for l in dados["linhas"] if l["nome"] == "R"][0]
+        linha = next(lin for lin in dados["linhas"] if lin["nome"] == "R")
         self.assertEqual(linha["gasto"], Decimal("1000.00"))
         self.assertEqual(linha["rastreada"], Decimal("8000.00"))  # rastreada, não somada à janela
         self.assertEqual(linha["fechamentos"], 2)
@@ -459,7 +474,9 @@ class VigenciaTests(TestCase):
 
     def _vigente(self, nome="Vig", canais=None, offset_inicio=1):
         from datetime import timedelta
+
         from django.utils import timezone
+
         from apps.marketing import services
         hoje = timezone.localdate()
         c = Campanha.objects.create(
@@ -514,7 +531,8 @@ class VigenciaTests(TestCase):
         self.assertIsNone(op.campanha_id)  # Orgânico
 
     def test_lead_com_campanha_nao_e_sobrescrito(self):
-        from apps.comercial.models import Campanha as CA, EtapaFunil, Oportunidade
+        from apps.comercial.models import Campanha as CA
+        from apps.comercial.models import EtapaFunil, Oportunidade
         from apps.nucleo.models import Pessoa
         self._vigente()
         outra = CA.objects.create(nome="Outra", codigo="outra-x",
@@ -530,11 +548,13 @@ class VigenciaTests(TestCase):
 
 class AquisicaoTests(TestCase):
     def setUp(self):
+        from datetime import timedelta
+
         from django.contrib.auth import get_user_model
-        from datetime import date, timedelta
         from django.utils import timezone
-        from apps.marketing import services
+
         from apps.comercial.models import EtapaFunil, MotivoPerda
+        from apps.marketing import services
         from apps.nucleo.models import Pessoa
         U = get_user_model()
         self.user = U.objects.create_user(username="aq", password="x123456789")
@@ -610,6 +630,7 @@ class OcupacaoTests(TestCase):
 
     def test_vazio_com_campanha_e_problema(self):
         from datetime import timedelta
+
         from apps.marketing import services
         c = Campanha.objects.create(nome="V", fase=Campanha.Fase.NOAR,
             inicio=self.hoje - timedelta(days=1), fim=self.hoje + timedelta(days=30))
@@ -637,6 +658,7 @@ class DuplicarTests(TestCase):
 
     def test_duplica_resetando_o_que_nao_se_herda(self):
         from datetime import date
+
         from apps.marketing import services
         from apps.marketing.models import EtapaCampanha, PecaCampanha
         src = Campanha.objects.create(
@@ -881,7 +903,9 @@ class CincoCorrecoesTests(TestCase):
 
     def test_atraso_traz_o_canal(self):
         from datetime import timedelta
+
         from django.utils import timezone
+
         from apps.marketing import services
         from apps.marketing.models import PecaCampanha
         c = Campanha.objects.create(nome="C")
@@ -900,6 +924,7 @@ class VerbaGuardTests(TestCase):
 
     def setUp(self):
         from django.contrib.auth import get_user_model
+
         from apps.nucleo.models import ModuloContratado
         ModuloContratado.objects.update_or_create(
             codigo=Modulo.MARKETING, defaults={"ativo": True})

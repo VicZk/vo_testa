@@ -834,7 +834,8 @@ class FuncionariosTests(TestCase):
         op = Usuario.objects.create_user(username="op", password="x")
         self.client.force_login(op)
         self.assertEqual(self.client.get(reverse("funcionarios")).status_code, 403)
-        op.areas = ["funcionarios"]; op.save()
+        op.areas = ["funcionarios"]
+        op.save()
         self.assertEqual(self.client.get(reverse("funcionarios")).status_code, 200)
 
     def test_novo_cria_pessoa_e_funcionario(self):
@@ -858,7 +859,8 @@ class FuncionariosTests(TestCase):
 
     def test_nao_gerencia_nao_ve_nem_edita_salario(self):
         op = Usuario.objects.create_user(username="rh", password="x")
-        op.areas = ["funcionarios"]; op.save()
+        op.areas = ["funcionarios"]
+        op.save()
         self.client.force_login(op)
         r = self.client.get(reverse("funcionario_editar", args=[self.func.pk]))
         self.assertNotContains(r, "Salário base")
@@ -895,7 +897,8 @@ class FuncionariosTests(TestCase):
     def test_nao_rebaixa_a_si_mesmo(self):
         from apps.nucleo.models import Funcionario, Pessoa
         ger = Usuario.objects.create_user(username="ger", password="x", is_staff=True)
-        ger.areas = ["funcionarios"]; ger.save()
+        ger.areas = ["funcionarios"]
+        ger.save()
         fg = Funcionario.objects.create(pessoa=Pessoa.objects.create(nome="Ger"), cargo="Gerente", usuario=ger)
         self.client.force_login(ger)
         self.client.post(reverse("funcionario_editar", args=[fg.pk]), {
@@ -923,9 +926,12 @@ class PessoasPapelTests(TestCase):
         from apps.nucleo.models import Agencia, Hospede, Pessoa
         self.dono = Usuario.objects.create_superuser(username="dono", password="senha-forte-123")
         self.client.force_login(self.dono)
-        self.ph = Pessoa.objects.create(nome="Hospede X"); Hospede.objects.create(pessoa=self.ph)
-        self.pa = Pessoa.objects.create(nome="Agencia CVC"); Agencia.objects.create(pessoa=self.pa, categoria="agencia")
-        self.pe = Pessoa.objects.create(nome="Empresa ACME"); Agencia.objects.create(pessoa=self.pe, categoria="empresa")
+        self.ph = Pessoa.objects.create(nome="Hospede X")
+        Hospede.objects.create(pessoa=self.ph)
+        self.pa = Pessoa.objects.create(nome="Agencia CVC")
+        Agencia.objects.create(pessoa=self.pa, categoria="agencia")
+        self.pe = Pessoa.objects.create(nome="Empresa ACME")
+        Agencia.objects.create(pessoa=self.pe, categoria="empresa")
 
     def test_papeis_distingue_agencia_empresa(self):
         self.assertIn("Agência", self.pa.papeis)
@@ -982,6 +988,7 @@ class HistoricoFuncionarioTests(TestCase):
 
     def setUp(self):
         from datetime import date
+
         from apps.nucleo.models import Funcionario, Pessoa
         self.dono = Usuario.objects.create_superuser(username="dono", password="senha-forte-123")
         p = Pessoa.objects.create(nome="Zé Cozinha")
@@ -989,6 +996,7 @@ class HistoricoFuncionarioTests(TestCase):
 
     def test_tempo_de_casa(self):
         from datetime import date
+
         from apps.nucleo.historico import tempo_de_casa
         self.assertIsNone(tempo_de_casa(None))
         self.assertIn("ano", tempo_de_casa(date(2024, 3, 12)))
@@ -1008,7 +1016,8 @@ class HistoricoFuncionarioTests(TestCase):
         self.client.force_login(self.dono)
         self.assertContains(self.client.get(reverse("funcionario_painel", args=[self.f.pk])), "Tempo de casa")
         op = Usuario.objects.create_user(username="rh", password="x")
-        op.areas = ["funcionarios"]; op.save()
+        op.areas = ["funcionarios"]
+        op.save()
         self.client.force_login(op)
         r = self.client.get(reverse("funcionario_painel", args=[self.f.pk]))
         self.assertEqual(r.status_code, 200)
@@ -1026,6 +1035,7 @@ class HistoricoFuncionarioTests(TestCase):
 
     def test_produtividade_conta_faxinas(self):
         from django.utils import timezone
+
         from apps.governanca.models import TarefaGovernanca
         from apps.nucleo.historico import produtividade
         from apps.nucleo.models import UH, TipoUH
@@ -1122,7 +1132,7 @@ class LogbookThreadTests(TestCase):
 
     def test_importantes_inclui_resolvidos_e_conta_todos(self):
         # #2: aba Importantes é histórico (aberto + resolvido), contador bate.
-        pendente = logbook_services.registrar_ocorrencia(
+        logbook_services.registrar_ocorrencia(
             self.autor, "importante-pendente", importante=True
         )
         fechado = logbook_services.registrar_ocorrencia(
@@ -1162,11 +1172,12 @@ class SalarioFlagETela1EtapaTests(TestCase):
         self.gestor = Usuario.objects.create_superuser(username="chefia", password="senha-forte-123")
 
     def test_pode_ver_salario_por_flag(self):
-        from apps.nucleo.permissoes import pode_ver_salario
         from apps.nucleo.areas import Area
+        from apps.nucleo.permissoes import pode_ver_salario
         u = Usuario.objects.create_user(username="rh", password="senha-forte-123")
         self.assertFalse(pode_ver_salario(u))          # sem flag
-        u.areas = [Area.REMUNERACAO]; u.save()
+        u.areas = [Area.REMUNERACAO]
+        u.save()
         self.assertTrue(pode_ver_salario(u))            # com flag
         self.assertTrue(pode_ver_salario(self.gestor))  # superusuário bypassa
 
@@ -1211,6 +1222,7 @@ class SistemaHelpersTests(TestCase):
 
     def test_travar_recarrega_a_instancia_passada(self):
         from django.db import transaction
+
         from apps.nucleo.models import Pessoa
         from apps.nucleo.sistema import travar
         p = Pessoa.objects.create(nome="Antigo")
@@ -1228,7 +1240,7 @@ class NomesQuartosTests(TestCase):
 
         from django.core.management import call_command
 
-        from apps.nucleo.models import TipoUH, UH
+        from apps.nucleo.models import UH, TipoUH
         tipo = TipoUH.objects.create(nome="Padrão N", tarifa_base=Decimal("100"))
         uh = UH.objects.create(numero="Quarto 11", tipo=tipo,
                                nome_tematico="Celeiro do Moleiro")

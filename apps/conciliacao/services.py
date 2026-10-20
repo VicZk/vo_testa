@@ -45,7 +45,6 @@ from .models import (
     TransacaoCartao,
 )
 
-
 # ── Parsing de OFX (sem dependência externa) ─────────────────────────────────
 _TRN_FECHADO = re.compile(r"<STMTTRN>(.*?)</STMTTRN>", re.DOTALL | re.IGNORECASE)
 

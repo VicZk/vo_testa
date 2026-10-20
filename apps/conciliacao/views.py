@@ -123,7 +123,7 @@ def manual(request):
     ext_pendentes = (LancamentoExtrato.objects
                      .filter(status=LancamentoExtrato.Status.PENDENTE)
                      .select_related("extrato").order_by("data")[:60])
-    linhas_ext = [(l, services.candidatos_para_extrato(l)) for l in ext_pendentes]
+    linhas_ext = [(lanc, services.candidatos_para_extrato(lanc)) for lanc in ext_pendentes]
 
     cartao_pendentes = (TransacaoCartao.objects
                         .filter(status=TransacaoCartao.Status.PENDENTE)

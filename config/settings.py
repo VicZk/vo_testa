@@ -10,10 +10,10 @@ import sys
 from pathlib import Path
 
 import dj_database_url
+from dotenv import load_dotenv
 
 # True quando rodando a suíte de testes (manage.py test).
 TESTING = "test" in sys.argv
-from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 

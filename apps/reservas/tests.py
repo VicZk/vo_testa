@@ -270,6 +270,7 @@ class TarifaTests(ReservasTestsBase):
 
     def test_feriado_automatico(self):
         import datetime
+
         from apps.nucleo.feriados import eh_feriado
         from apps.nucleo.models import ConfiguracaoReservas
         # Cálculo do calendário (nacional + Itá, móveis pela Páscoa).
@@ -300,6 +301,7 @@ class TarifaTests(ReservasTestsBase):
 
     def test_preco_unidade_noite_base_adicional_e_feriado_especifico(self):
         import datetime
+
         from apps.reservas.models import TarifaTemporada, TarifaUnidade
         seg = datetime.date(2026, 11, 9)  # segunda comum
         Temporada.objects.create(
@@ -341,6 +343,7 @@ class TarifaTests(ReservasTestsBase):
 
     def test_cotacao_linear_por_numero_de_adultos(self):
         import datetime
+
         from apps.reservas import precos
         from apps.reservas.models import TarifaUnidade
         Temporada.objects.create(
@@ -364,7 +367,7 @@ class TarifaTests(ReservasTestsBase):
 
     def test_meia_dayuse_e_nao_reembolsavel(self):
         import datetime
-        from apps.nucleo.models import ConfiguracaoReservas
+
         from apps.nucleo.models.cadastros import TipoUH
         from apps.reservas import precos
         from apps.reservas.models import TarifaDayUse, TarifaUnidade

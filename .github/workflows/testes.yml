@@ -55,6 +55,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      # Lint (config em ruff.toml): tem que dar zero. Fica de fora quando o "Novidades do
+      # original" chama este workflow com `ref` para testar o merge com o original — lá o
+      # que decide é a suíte; o lint do código que chega se acerta no próprio merge.
+      - name: Lint (ruff)
+        if: ${{ !inputs.ref }}
+        run: |
+          pip install ruff==0.15.20
+          ruff check apps/ config/
+
       - name: Migrations em dia com os models
         run: python manage.py makemigrations --check --dry-run
 

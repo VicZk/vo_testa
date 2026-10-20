@@ -9,7 +9,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from apps.nucleo.models import Hospede, Pessoa
-from apps.nucleo.models.cadastros import ConfiguracaoUH, PosicaoCama, TipoUH, UH
+from apps.nucleo.models.cadastros import UH, ConfiguracaoUH, PosicaoCama, TipoUH
 from apps.reservas import colchoes, services
 from apps.reservas.models import ColchoesExtra, Reserva
 

@@ -122,7 +122,7 @@ def definir_teto(mes: str, valor) -> VerbaMarketing:
 from django.core.exceptions import ValidationError  # noqa: E402
 from django.db import transaction  # noqa: E402
 
-from .models import Campanha as _Camp, Comentario, EtapaCampanha, ItemChecklist  # noqa: E402
+from .models import Comentario, EtapaCampanha, ItemChecklist  # noqa: E402
 
 # Canais oferecidos como pílulas na ficha.
 CANAIS_PADRAO = ["Instagram", "Meta Ads", "Google", "WhatsApp", "E-mail",
