@@ -42,12 +42,12 @@ ALLOWED_HOSTS = [
 ]
 if DEBUG and not ALLOWED_HOSTS:
     ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
-# Railway: domínio público injetado + wildcards + loopback do healthcheck
+# Railway: domínios do próprio serviço (injetados pelo Railway) + healthcheck + loopback.
+# Sem curinga `.railway.app`: ele aceitava o Host de qualquer projeto do Railway, e os
+# links absolutos (pagamento, QR do portal) usam o Host da requisição.
 for _host in (
     os.environ.get("RAILWAY_PUBLIC_DOMAIN", "").strip(),
     os.environ.get("RAILWAY_PRIVATE_DOMAIN", "").strip(),
-    ".railway.app",
-    ".up.railway.app",
     "healthcheck.railway.app",
     "localhost",
     "127.0.0.1",

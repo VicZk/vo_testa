@@ -1377,3 +1377,14 @@ class RotinasAgendadasTests(TestCase):
         self.assertEqual(falso.call_args.args[0], "enviar_fnrh_pendentes")
         with self.assertRaises(CommandError):
             call_command("rotinas", "--so", "comando_que_nao_existe", stdout=StringIO())
+
+
+class HostsPermitidosTests(TestCase):
+    """O Host de qualquer projeto do Railway não é aceito: só os domínios do serviço."""
+
+    def test_sem_curinga_do_railway(self):
+        from django.conf import settings
+
+        self.assertNotIn(".railway.app", settings.ALLOWED_HOSTS)
+        self.assertNotIn(".up.railway.app", settings.ALLOWED_HOSTS)
+        self.assertIn("healthcheck.railway.app", settings.ALLOWED_HOSTS)

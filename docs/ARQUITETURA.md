@@ -781,7 +781,7 @@ Tudo que varia por ambiente é lido em `config/settings.py` (`.env` em dev via
 | `REDIS_URL` | — | Cache compartilhado em Redis. Vazio: `DatabaseCache` na tabela `nucleo_cache`. Nos testes: memória. |
 | `SENTRY_DSN` | — | Liga o Sentry (fora dos testes). Sem PII: `send_default_pii=False`, sem variáveis locais e sem corpo de requisição. Opcionais: `SENTRY_ENVIRONMENT`, `SENTRY_TRACES_SAMPLE_RATE`; a release vem de `RAILWAY_GIT_COMMIT_SHA`. |
 | `SECRET_KEY` | chave de dev versionada | Em produção (`DEBUG=0`, não `TESTING`) é **obrigatória** e não pode começar com `dev-inseguro` — senão `ImproperlyConfigured`. |
-| `ALLOWED_HOSTS` | `""` (lista separada por vírgula) | Com `DEBUG=1` e vazio, usa `localhost,127.0.0.1`. Sempre são adicionados os domínios do Railway, `.railway.app`, `.up.railway.app`, `healthcheck.railway.app` e loopbacks. |
+| `ALLOWED_HOSTS` | `""` (lista separada por vírgula) | Com `DEBUG=1` e vazio, usa `localhost,127.0.0.1`. Sempre são adicionados os domínios do próprio serviço (`RAILWAY_PUBLIC_DOMAIN`, `RAILWAY_PRIVATE_DOMAIN`), `healthcheck.railway.app` e loopbacks. Sem curinga `.railway.app`: o domínio próprio (ex.: `www.pousadavotesta.com.br`) vai na variável. |
 | `RAILWAY_PUBLIC_DOMAIN` | `""` | Injetada pelo Railway; entra em `ALLOWED_HOSTS`. |
 | `RAILWAY_PRIVATE_DOMAIN` | `""` | Idem (rede interna). |
 | `CSRF_TRUSTED_ORIGINS` | `""` | Origens confiáveis (lista por vírgula). |
