@@ -684,6 +684,13 @@ def captacao_publica(request, slug):
 
     enviado = request.GET.get("ok") == "1"
     if request.method == "POST":
+        from apps.nucleo.antirrobo import parece_robo
+        from apps.nucleo.ratelimit import limite_excedido
+
+        # Robô ou envio em massa: finge sucesso e descarta (não cria lead nem e-mail).
+        if parece_robo(request.POST) or limite_excedido(
+                request, "captacao_publica", limite=8, janela_seg=3600):
+            return redirect(f"{pagina.get_absolute_url()}?ok=1")
         nome = (request.POST.get("nome") or "").strip()
         telefone = (request.POST.get("telefone") or "").strip()
         email = (request.POST.get("email") or "").strip()

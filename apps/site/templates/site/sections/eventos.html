@@ -40,7 +40,7 @@
                 </div>
                 {% endif %}
                 <form method="post" action="{% url 'core:pedir_proposta' %}" class="space-y-4">
-                    {% csrf_token %}
+                    {% csrf_token %}{% load nucleo_extras %}{% campos_antirrobo %}
                     <input type="hidden" name="tipo_interesse" value="evento">
                     <div>
                         <label class="text-madeira/50 text-xs uppercase tracking-wider mb-1.5 block">Nome / empresa *</label>

@@ -149,6 +149,9 @@ def pedir_proposta(request):
     if _limite_excedido(request, 'proposta', 8, 3600):
         messages.error(request, 'Muitas tentativas. Tente novamente mais tarde.')
         return _voltar('erro')
+    from apps.nucleo.antirrobo import parece_robo
+    if parece_robo(request.POST):
+        return _voltar('ok')  # finge sucesso: o robô não aprende a defesa
     form = PropostaSiteForm(request.POST)
     if not form.is_valid():
         erros = []

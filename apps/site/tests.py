@@ -436,6 +436,23 @@ class EventosEHomeTests(TestCase):
         self.assertEqual(op.tipo_interesse, 'evento')
         self.assertIn('Evento', op.titulo)
 
+    def test_proposta_de_robo_finge_sucesso_e_nao_cria_lead(self):
+        from apps.comercial.models import Oportunidade
+        from apps.nucleo.antirrobo import CAMPO_ARMADILHA, CAMPO_CARIMBO, carimbo
+        base = {'nome': 'Robô', 'telefone': '49999887766', 'email': 'robo@x.com',
+                'tipo_interesse': 'hospedagem'}
+        r = self.client.post(reverse('core:pedir_proposta'), {**base, CAMPO_ARMADILHA: 'ACME'})
+        self.assertIn('proposta=ok', r['Location'])
+        # Carimbo de agora: rápido demais para ser gente.
+        self.client.post(reverse('core:pedir_proposta'), {**base, CAMPO_CARIMBO: carimbo()})
+        self.assertFalse(Oportunidade.objects.filter(pessoa__email='robo@x.com').exists())
+
+    def test_formulario_traz_os_campos_antirrobo(self):
+        from apps.nucleo.antirrobo import CAMPO_ARMADILHA, CAMPO_CARIMBO
+        html = self.client.get(reverse('core:home')).content.decode()
+        self.assertIn(f'name="{CAMPO_ARMADILHA}"', html)
+        self.assertIn(f'name="{CAMPO_CARIMBO}"', html)
+
     def test_proposta_evento_aceita_mesmo_dia(self):
         from apps.comercial.models import Oportunidade
         r = self.client.post(reverse('core:pedir_proposta'), {

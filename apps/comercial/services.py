@@ -2520,6 +2520,19 @@ def montar_email_boas_vindas(oportunidade):
     return {"assunto": ctx["assunto"], "html": html, "texto": texto, "headers": headers}
 
 
+def _cabe_no_teto_diario(nome, teto) -> bool:
+    """Conta um envio no dia (cache compartilhado) e diz se ainda cabe no teto."""
+    from django.core.cache import cache
+
+    chave = f"teto:{nome}:{timezone.localdate():%Y%m%d}"
+    cache.add(chave, 0, 26 * 3600)
+    try:
+        return cache.incr(chave) <= teto
+    except ValueError:
+        cache.set(chave, 1, 26 * 3600)
+        return True
+
+
 def enviar_boas_vindas(op_id):
     """Dispara o welcome ao lead (se tem e-mail e opt-in). Best-effort/assíncrono."""
     if not getattr(settings, "LEAD_BOAS_VINDAS", True):
@@ -2531,6 +2544,15 @@ def enviar_boas_vindas(op_id):
     if not email or not op.pessoa.aceita_email:
         return
     dados = montar_email_boas_vindas(op)
+    # Uma boas-vindas por pessoa, e um teto por dia: o formulário é público, e sem
+    # isso ele viraria um disparador de e-mail para qualquer endereço digitado.
+    from .models import EnvioEmail
+    if EnvioEmail.objects.filter(pessoa=op.pessoa, assunto=dados["assunto"]).exists():
+        return
+    if not _cabe_no_teto_diario("boas_vindas",
+                                getattr(settings, "LEAD_BOAS_VINDAS_MAX_DIA", 100)):
+        logger.warning("Boas-vindas do lead %s não enviada: teto diário atingido.", op.pk)
+        return
     enviar_email(para=email, assunto=dados["assunto"], html=dados["html"],
                  texto=dados["texto"], usuario=None, oportunidade=op, pessoa=op.pessoa,
                  headers=dados["headers"],

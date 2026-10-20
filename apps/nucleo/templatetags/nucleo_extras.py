@@ -35,3 +35,20 @@ def camas_uh(uh):
 def lotacao_uh(uh):
     """Lotação máxima da unidade (com crianças no sofá). Uso: {{ uh|lotacao_uh }}"""
     return _capacidade(uh)["maxima_criancas"]
+
+
+@register.simple_tag
+def campos_antirrobo():
+    """Campos invisíveis do anti-robô (ver apps/nucleo/antirrobo.py): a armadilha e o
+    carimbo de tempo. Vai logo depois do {% csrf_token %} de formulário público."""
+    from django.utils.html import format_html
+
+    from ..antirrobo import CAMPO_ARMADILHA, CAMPO_CARIMBO, carimbo
+
+    return format_html(
+        '<div aria-hidden="true" style="position:absolute;left:-10000px;top:auto;'
+        'width:1px;height:1px;overflow:hidden">'
+        '<label>Não preencha<input type="text" name="{}" tabindex="-1" autocomplete="off">'
+        '</label></div><input type="hidden" name="{}" value="{}">',
+        CAMPO_ARMADILHA, CAMPO_CARIMBO, carimbo(),
+    )

@@ -53,7 +53,7 @@
                 </div>
                 {% endif %}
                 <form method="post" action="{% url 'core:pedir_proposta' %}" class="space-y-4">
-                    {% csrf_token %}
+                    {% csrf_token %}{% load nucleo_extras %}{% campos_antirrobo %}
                     <div>
                         <label class="text-madeira/50 text-xs uppercase tracking-wider mb-1.5 block">Nome *</label>
                         <input type="text" name="nome" required value="{{ proposta.nome|default:'' }}" class="w-full rounded-xl border border-madeira/15 px-3 py-2.5 text-madeira bg-pergaminho/40" placeholder="Seu nome">

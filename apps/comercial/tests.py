@@ -859,6 +859,33 @@ class LPFundadorTests(TestCase):
         self.pag.refresh_from_db()
         self.assertEqual(self.pag.visitas, 0)
 
+    @override_settings(EMAIL_ENVIO_ASSINCRONO=False, LEADS_ALERTA_EMAILS="")
+    def test_boas_vindas_uma_vez_por_pessoa_e_com_teto_diario(self):
+        import json
+
+        from django.core import mail
+        from django.core.cache import cache
+
+        cache.clear()
+
+        def lead(email):
+            with self.captureOnCommitCallbacks(execute=True):
+                self.client.post(
+                    reverse("lp:fundador_lead"),
+                    data=json.dumps({"nome": "Lead Teste", "email": email,
+                                     "whatsapp": "49999880101", "consent": True}),
+                    content_type="application/json")
+
+        def boas_vindas():  # só o que foi para os leads (o alerta da equipe fica de fora)
+            return [m.to for m in mail.outbox if m.to and m.to[0].endswith("@ex.com")]
+
+        lead("um@ex.com")
+        lead("um@ex.com")  # a mesma pessoa de novo: não repete a boas-vindas
+        self.assertEqual(boas_vindas(), [["um@ex.com"]])
+        with self.settings(LEAD_BOAS_VINDAS_MAX_DIA=1):
+            lead("dois@ex.com")
+        self.assertEqual(boas_vindas(), [["um@ex.com"]])  # teto do dia atingido
+
     @override_settings(EMAIL_ENVIO_ASSINCRONO=False, LEADS_ALERTA_EMAILS="time@ex.com")
     def test_lead_dispara_alerta_e_boas_vindas(self):
         import json
