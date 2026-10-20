@@ -256,9 +256,9 @@
       {% for p in conta.pagamentos.all %}
         <tr>
           <td>{{ p.criado_em|date:"d/m H:i" }}</td>
-          <td>{% if p.eh_estorno %}Estorno de pagamento{% else %}Pagamento{% endif %}</td>
+          <td>{% if p.eh_estorno %}Estorno de pagamento{% elif p.conta_receber_id %}Faturado{% else %}Pagamento{% endif %}</td>
           <td>—</td>
-          <td>{% if p.movimento_caixa_id %}{{ p.movimento_caixa.forma_pagamento }}{% if p.movimento_caixa.autorizacao %} · NSU {{ p.movimento_caixa.autorizacao }}{% endif %}{% elif p.cobranca_id %}Online{% endif %}{% if p.observacao %} · <em>{{ p.observacao }}</em>{% endif %}</td>
+          <td>{% if p.movimento_caixa_id %}{{ p.movimento_caixa.forma_pagamento }}{% if p.movimento_caixa.autorizacao %} · NSU {{ p.movimento_caixa.autorizacao }}{% endif %}{% elif p.cobranca_id %}Online{% elif p.conta_receber_id %}A receber de {{ reserva.titular.nome }} · vence {{ p.conta_receber.vencimento|date:"d/m/Y" }}{% endif %}{% if p.observacao %} · <em>{{ p.observacao }}</em>{% endif %}</td>
           {# Pagamento abate a conta (−); o estorno dele volta a cobrar (+). #}
           <td class="num">{% if p.eh_estorno %}+{% else %}−{% endif %}{{ p.valor_absoluto|intcomma_brl }}</td>
         </tr>
@@ -301,6 +301,8 @@
     </div>
   {% endif %}
 {% endif %}
+
+{% if form_faturar %}{% include "reservas/partials/faturar.html" %}{% endif %}
 
 {# ---------- Devolução ao hóspede (excedente da conta ou cancelamento) ---------- #}
 {% if devolucao %}

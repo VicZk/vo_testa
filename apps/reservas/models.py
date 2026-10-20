@@ -1104,13 +1104,15 @@ class LancamentoConta(models.Model):
 class CreditoNaReserva(models.Model):
     """Base de PagamentoConta e Adiantamento: dinheiro que abate a conta do hóspede.
 
-    Três origens:
+    Origens:
     - **caixa** — `movimento_caixa` (a veia do dinheiro na gaveta do operador);
     - **online** — `cobranca_id`, a cobrança de Pagamentos paga pelo gateway (Pix,
       cartão, boleto). Não passa pela gaveta; único por cobrança (idempotência);
     - **estorno** — `estorno_de` aponta o crédito desfeito e o valor é NEGATIVO (a
       conta volta a cobrar o que foi devolvido). Vem do estorno do movimento de caixa
       ou do estorno da cobrança no gateway.
+    - **faturado** (só PagamentoConta) — `conta_receber`: o saldo de uma reserva de
+      agência/empresa virou título a receber no Financeiro; quem paga é o titular.
     """
 
     cobranca_id = models.PositiveIntegerField(
@@ -1135,6 +1137,8 @@ class CreditoNaReserva(models.Model):
     def origem(self) -> str:
         if self.eh_estorno:
             return "estorno"
+        if getattr(self, "conta_receber_id", None):
+            return "faturado"
         return "online" if self.cobranca_id else "caixa"
 
 
@@ -1155,6 +1159,10 @@ class PagamentoConta(CreditoNaReserva):
     estorno_de = models.ForeignKey(
         "self", on_delete=models.PROTECT, null=True, blank=True,
         related_name="estornos", verbose_name="estorno do pagamento",
+    )
+    conta_receber = models.OneToOneField(
+        "nucleo.ContaPagarReceber", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="pagamento_conta", verbose_name="faturado (conta a receber)",
     )
     observacao = models.CharField(
         "pagador / observação", max_length=120, blank=True,

@@ -1,0 +1,19 @@
+{% load moeda %}
+{# Faturar para a agência/empresa titular: o saldo vira título a receber no Financeiro. #}
+<section class="cartao faturar">
+  <h2>Faturar para {{ reserva.titular.nome }}</h2>
+  <p>
+    Reserva faturada ({{ reserva.get_faturamento_display|lower }}): o saldo de {{ conta.saldo|intcomma_brl }}
+    pode virar uma conta a receber de {{ reserva.titular.nome }}, e a saída fecha sem o hóspede pagar.
+    O que for consumo pessoal, deixe de fora e receba do hóspede.
+  </p>
+  {% if pode_faturar %}
+    <form method="post" action="{% url 'reservas:faturar' reserva.pk %}" class="form-cartao">
+      {% csrf_token %}
+      {% include "nucleo/partials/campos.html" with form=form_faturar %}
+      <div class="acoes"><button type="submit" class="botao-primario">Faturar</button></div>
+    </form>
+  {% else %}
+    <p class="ajuda">O faturamento é feito pela gerência ou pelo Financeiro.</p>
+  {% endif %}
+</section>

@@ -149,6 +149,18 @@ class RecebimentoForm(forms.Form):
     )
 
 
+class FaturarForm(forms.Form):
+    valor = forms.DecimalField(
+        label="Valor faturado (R$)", min_value=Decimal("0.01"), decimal_places=2,
+        widget=forms.TextInput(attrs={
+            "class": "mascara-reais", "inputmode": "numeric", "placeholder": "0,00",
+        }),
+    )
+    vencimento = forms.DateField(
+        label="Vencimento", widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+    )
+
+
 class DevolucaoForm(forms.Form):
     valor = forms.DecimalField(
         label="Valor a devolver (R$)", min_value=Decimal("0.01"), decimal_places=2,

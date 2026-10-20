@@ -1611,6 +1611,70 @@ def desfazer_credito_do_estorno(*, origem, estorno, usuario):
             estorno_de=adiantamento, observacao=f"Estorno: {estorno.motivo}"[:120])
 
 
+# ---------- Faturamento para agência/empresa ----------
+
+
+def dono_da_conta(conta):
+    """A reserva (conta do quarto) ou o grupo (folio-mãe) dono da conta."""
+    return conta.reserva if conta.reserva_id else conta.grupo
+
+
+def pode_faturar(conta) -> bool:
+    """A conta está aberta, tem saldo e é de reserva/grupo faturado com titular."""
+    if conta is None or not conta.aberta:
+        return False
+    dono = dono_da_conta(conta)
+    return (dono is not None and dono.faturamento != Reserva.Faturamento.PARTICULAR
+            and dono.titular_id is not None and conta.saldo() > 0)
+
+
+@transaction.atomic
+def faturar_conta(conta, usuario, *, valor=None, vencimento=None):
+    """Fatura para a agência/empresa titular o saldo (ou parte dele) de uma conta de
+    reserva faturada: vira título a receber no Financeiro (categoria "Hospedagem
+    faturada", centro Reservas) e crédito na conta, que pode fechar sem o hóspede
+    pagar. O que não for faturado (ex.: consumo pessoal) segue para o hóspede.
+    Auditado ("faturamento_conta")."""
+    from apps.nucleo.models import CategoriaFinanceira, ContaPagarReceber
+    from apps.nucleo.modulos import Modulo
+    from apps.nucleo.sistema import travar
+
+    conta = travar(conta)
+    if not conta.aberta:
+        raise ValidationError("A conta desta hospedagem já foi fechada.")
+    dono = dono_da_conta(conta)
+    if dono.faturamento == Reserva.Faturamento.PARTICULAR or not dono.titular_id:
+        raise ValidationError(
+            "Só se fatura reserva de agência ou empresa, com o titular definido.")
+    saldo = conta.saldo()
+    valor = saldo if valor is None else Decimal(str(valor)).quantize(Decimal("0.01"))
+    if valor <= 0 or valor > saldo:
+        raise ValidationError(f"O valor faturado deve ficar entre R$ 0,01 e o saldo (R$ {saldo}).")
+    vencimento = vencimento or (
+        timezone.localdate() + timedelta(days=settings.FATURAMENTO_PRAZO_DIAS))
+    categoria, _criada = CategoriaFinanceira.objects.get_or_create(
+        nome="Hospedagem faturada", tipo=CategoriaFinanceira.Tipo.RECEITA)
+    if conta.reserva_id:
+        referencia = (f"reserva #{dono.pk} — {dono.hospede.nome} ({dono.uh.numero}, "
+                      f"{dono.checkin:%d/%m} a {dono.checkout:%d/%m/%Y})")
+    else:
+        referencia = f"grupo #{dono.pk} — {dono.rotulo}"
+    titulo = ContaPagarReceber.objects.create(
+        tipo=ContaPagarReceber.Tipo.RECEBER, pessoa=dono.titular, categoria=categoria,
+        centro=Modulo.RESERVAS, descricao=f"Hospedagem faturada: {referencia}"[:200],
+        valor=valor, vencimento=vencimento,
+    )
+    pagamento = PagamentoConta.objects.create(
+        conta=conta, valor=valor, conta_receber=titulo,
+        observacao=f"Faturado para {dono.titular.nome}"[:120],
+    )
+    registrar_auditoria(usuario, "faturamento_conta", conta, {
+        "valor": str(valor), "titular": dono.titular_id, "titulo": titulo.pk,
+        "vencimento": f"{vencimento:%d/%m/%Y}",
+    })
+    return pagamento
+
+
 # ---------- Devolução ao hóspede (excedente da conta ou cancelamento) ----------
 
 

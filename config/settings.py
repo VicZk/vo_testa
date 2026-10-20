@@ -458,6 +458,8 @@ CANCELAMENTO_RETENCAO_PCT = os.environ.get("CANCELAMENTO_RETENCAO_PCT", "10")  #
 # Sinal que o Comercial cobra para garantir a data, em % do valor estimado da estadia.
 # (No site, a hospedagem inteira é paga online e as taxas no check-out.)
 COMERCIAL_SINAL_PCT = int(os.environ.get("COMERCIAL_SINAL_PCT", "30"))
+# Reserva faturada para agência/empresa: prazo padrão do título a receber, em dias.
+FATURAMENTO_PRAZO_DIAS = int(os.environ.get("FATURAMENTO_PRAZO_DIAS", "30"))
 
 # E-mail — envio transacional (confirmação de reserva do site).
 # Sem SMTP configurado (dev): imprime no terminal (console). Em produção, defina as

@@ -46,6 +46,14 @@
       <input type="text" name="observacao" placeholder="Observação (opcional)">
       <button class="botao-primario">Receber no folio</button>
     </form>
+    {% if faturar %}
+    <form method="post" action="{% url 'reservas:grupo_faturar' grupo.pk %}" class="barra-busca">
+      {% csrf_token %}
+      <input type="text" name="valor" class="mascara-reais" inputmode="numeric" value="{{ faturar.valor }}" required aria-label="Valor faturado">
+      <input type="date" name="vencimento" value="{{ faturar.vencimento|date:'Y-m-d' }}" required aria-label="Vencimento">
+      <button class="botao-neutro">Faturar para {{ grupo.titular.nome }}</button>
+    </form>
+    {% endif %}
     {% if grupo.titular %}
     <form method="post" action="{% url 'reservas:grupo_sinal' grupo.pk %}" class="barra-busca">
       {% csrf_token %}

@@ -20,6 +20,7 @@ from .forms import (
     AcompanhanteForm,
     CancelamentoForm,
     DevolucaoForm,
+    FaturarForm,
     FichaFNRHFormSet,
     GrupoForm,
     LancamentoContaForm,
@@ -474,6 +475,16 @@ def detalhe(request, pk):
         from apps.reservas import cancelamento
         politica_cancel = cancelamento.resumo_cancelamento(reserva)
     devolucao = services.situacao_devolucao(reserva)
+    form_faturar = None
+    if services.pode_faturar(conta):
+        from datetime import timedelta as _dias
+
+        from django.conf import settings as _cfg
+        form_faturar = FaturarForm(initial={
+            # Já no formato da máscara de reais (ver form_devolucao abaixo).
+            "valor": intcomma_brl(conta.saldo()).removeprefix("R$ "),
+            "vencimento": timezone.localdate() + _dias(days=_cfg.FATURAMENTO_PRAZO_DIAS),
+        })
 
     return render(
         request,
@@ -489,6 +500,8 @@ def detalhe(request, pk):
             "quartos_livres": quartos_livres,
             "politica_cancel": politica_cancel,
             "devolucao": devolucao,
+            "form_faturar": form_faturar,
+            "pode_faturar": _pode_faturar(request.user),
             # Valor já no formato da máscara ("1.234,56"): com "240.00" o envio tiraria o
             # ponto como se fosse milhar e mandaria 24000.
             "form_devolucao": DevolucaoForm(initial={
@@ -743,6 +756,38 @@ def adiantamento_novo(request, pk):
             messages.error(request, " ".join(erro.messages))
     else:
         messages.error(request, "Confira forma e valor do adiantamento.")
+    return redirect("reservas:detalhe", pk=pk)
+
+
+def _pode_faturar(usuario) -> bool:
+    """Faturar fecha a conta sem o hóspede pagar: gerência ou quem tem o Financeiro."""
+    from apps.nucleo.areas import Area
+    return eh_gerente(usuario) or usuario.pode_area(Area.FINANCEIRO)
+
+
+@requer_modulo(Modulo.RESERVAS)
+def faturar(request, pk):
+    """Fatura para a agência/empresa titular o saldo da conta (título a receber)."""
+    reserva = get_object_or_404(Reserva, pk=pk)
+    if request.method != "POST":
+        return redirect("reservas:detalhe", pk=pk)
+    if not _pode_faturar(request.user):
+        messages.error(request, "Faturar a conta exige gerência ou acesso ao Financeiro.")
+        return redirect("reservas:detalhe", pk=pk)
+    form = FaturarForm(request.POST)
+    conta = getattr(reserva, "conta", None)
+    if conta is None or not form.is_valid():
+        messages.error(request, "Informe o valor e o vencimento do faturamento.")
+        return redirect("reservas:detalhe", pk=pk)
+    try:
+        pagamento = services.faturar_conta(
+            conta, request.user, valor=form.cleaned_data["valor"],
+            vencimento=form.cleaned_data["vencimento"])
+        messages.success(
+            request, f"{intcomma_brl(pagamento.valor)} faturado para {reserva.titular.nome} "
+                     f"(vence em {pagamento.conta_receber.vencimento:%d/%m/%Y}).")
+    except ValidationError as erro:
+        messages.error(request, " ".join(erro.messages))
     return redirect("reservas:detalhe", pk=pk)
 
 
@@ -1015,6 +1060,15 @@ def grupo_detalhe(request, pk):
         .exclude(tipo__modalidade=TipoUH.Modalidade.DAY_USE).select_related("tipo")
         if uh.pk not in ocupados
     ]
+    faturar = None
+    folio = getattr(grupo, "folio", None)
+    if _pode_faturar(request.user) and services.pode_faturar(folio):
+        from django.conf import settings as _cfg
+        faturar = {
+            # No formato da máscara de reais: "1.234,56".
+            "valor": intcomma_brl(folio.saldo()).removeprefix("R$ "),
+            "vencimento": timezone.localdate() + timedelta(days=_cfg.FATURAMENTO_PRAZO_DIAS),
+        }
     return render(
         request,
         "reservas/grupo_detalhe.html",
@@ -1025,6 +1079,7 @@ def grupo_detalhe(request, pk):
             "hospedes_data": pessoas_agrupadas(),
             "formas": FormaPagamento.objects.filter(ativo=True),
             "eh_gerente": eh_gerente(request.user),
+            "faturar": faturar,
         },
     )
 
@@ -1100,6 +1155,32 @@ def grupo_remover_quarto(request, pk, reserva_pk):
             messages.success(request, f"Quarto {reserva.uh.numero} removido do grupo.")
         except ValidationError as erro:
             messages.error(request, " ".join(erro.messages))
+    return _grupo_redirect(pk)
+
+
+@requer_modulo(Modulo.RESERVAS)
+def grupo_faturar(request, pk):
+    """Fatura para a agência/empresa titular do grupo o saldo do folio-mãe."""
+    grupo = get_object_or_404(GrupoReserva, pk=pk)
+    if request.method != "POST":
+        return _grupo_redirect(pk)
+    if not _pode_faturar(request.user):
+        messages.error(request, "Faturar o folio exige gerência ou acesso ao Financeiro.")
+        return _grupo_redirect(pk)
+    form = FaturarForm(request.POST)
+    folio = getattr(grupo, "folio", None)
+    if folio is None or not form.is_valid():
+        messages.error(request, "Informe o valor e o vencimento do faturamento.")
+        return _grupo_redirect(pk)
+    try:
+        pagamento = services.faturar_conta(
+            folio, request.user, valor=form.cleaned_data["valor"],
+            vencimento=form.cleaned_data["vencimento"])
+        messages.success(
+            request, f"{intcomma_brl(pagamento.valor)} faturado para {grupo.titular.nome} "
+                     f"(vence em {pagamento.conta_receber.vencimento:%d/%m/%Y}).")
+    except ValidationError as erro:
+        messages.error(request, " ".join(erro.messages))
     return _grupo_redirect(pk)
 
 

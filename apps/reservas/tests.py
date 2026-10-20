@@ -1863,3 +1863,107 @@ class DiariasSomamACotacaoTests(ReservasTestsBase):
         cot = precos.cotacao(uh=self.uh, checkin=inicio, checkout=inicio + timedelta(days=3))
         self.assertEqual(r.valor_hospedagem, cot["hospedagem"])
         self.assertEqual(r.hospedagem_prevista(), cot["hospedagem"])
+
+
+class FaturarParaAgenciaTests(ReservasTestsBase):
+    """Reserva de agência/empresa: o saldo vira título a receber e a saída fecha."""
+
+    def setUp(self):
+        super().setUp()
+        from apps.nucleo.models import Agencia
+        self.agencia = Pessoa.objects.create(nome="Agência Sol", tipo=Pessoa.Tipo.JURIDICA)
+        Agencia.objects.create(pessoa=self.agencia)
+
+    def reserva_faturada(self):
+        r = self.reserva(dias=2)
+        r.faturamento, r.titular = Reserva.Faturamento.AGENCIA, self.agencia
+        r.save(update_fields=["faturamento", "titular"])
+        return r
+
+    def test_saldo_vira_conta_a_receber_e_a_saida_fecha(self):
+        from apps.nucleo.models import ContaPagarReceber
+
+        r = self.reserva_faturada()
+        conta = r.fazer_checkin(self.usuario)
+        pagamento = services.faturar_conta(conta, self.usuario)
+        titulo = ContaPagarReceber.objects.get()
+        self.assertEqual((titulo.tipo, titulo.pessoa, titulo.valor),
+                         (ContaPagarReceber.Tipo.RECEBER, self.agencia, Decimal("600.00")))
+        self.assertEqual(titulo.vencimento, HOJE + timedelta(days=30))
+        self.assertEqual(titulo.centro, "reservas")
+        self.assertEqual(pagamento.origem, "faturado")
+        self.assertEqual(conta.saldo(), Decimal("0.00"))
+        r.fazer_checkout(self.usuario)
+
+    def test_parte_faturada_e_o_resto_fica_com_o_hospede(self):
+        from apps.nucleo.models import NaturezaFiscal
+
+        r = self.reserva_faturada()
+        conta = r.fazer_checkin(self.usuario)
+        services.lancar_na_conta(conta, LancamentoConta.Tipo.CONSUMO, NaturezaFiscal.CONSUMO,
+                                 "Vinho", Decimal("90.00"), self.usuario)
+        services.faturar_conta(conta, self.usuario, valor=Decimal("600.00"))
+        self.assertEqual(conta.saldo(), Decimal("90.00"))
+        with self.assertRaisesMessage(ValidationError, "entre R$ 0,01 e o saldo"):
+            services.faturar_conta(conta, self.usuario, valor=Decimal("90.01"))
+
+    def test_reserva_particular_nao_fatura(self):
+        conta = self.reserva(dias=2).fazer_checkin(self.usuario)
+        with self.assertRaisesMessage(ValidationError, "agência ou empresa"):
+            services.faturar_conta(conta, self.usuario)
+
+    def test_operador_sem_gerencia_nem_financeiro_nao_fatura(self):
+        from apps.nucleo.models import ContaPagarReceber
+
+        r = self.reserva_faturada()
+        r.fazer_checkin(self.usuario)
+        operadora = Usuario.objects.create_user(username="op-fat", password="senha-forte-123")
+        operadora.modulos.add(ModuloContratado.objects.get(codigo=Modulo.RESERVAS))
+        self.client.force_login(operadora)
+        detalhe = self.client.get(reverse("reservas:detalhe", args=[r.pk]))
+        self.assertContains(detalhe, "O faturamento é feito pela gerência ou pelo Financeiro")
+        self.client.post(reverse("reservas:faturar", args=[r.pk]),
+                         {"valor": "600.00", "vencimento": (HOJE + timedelta(days=30)).isoformat()})
+        self.assertFalse(ContaPagarReceber.objects.exists())
+
+    def test_gerencia_fatura_pela_tela(self):
+        from apps.nucleo.models import ContaPagarReceber
+
+        r = self.reserva_faturada()
+        r.fazer_checkin(self.usuario)
+        self.client.force_login(self.usuario)
+        detalhe = self.client.get(reverse("reservas:detalhe", args=[r.pk]))
+        self.assertContains(detalhe, "Faturar para Agência Sol")
+        self.assertContains(detalhe, 'value="600,00"')
+        vence = HOJE + timedelta(days=15)
+        self.client.post(reverse("reservas:faturar", args=[r.pk]),
+                         {"valor": "600.00", "vencimento": vence.isoformat()})
+        self.assertEqual(ContaPagarReceber.objects.get().vencimento, vence)
+        detalhe = self.client.get(reverse("reservas:detalhe", args=[r.pk]))
+        self.assertContains(detalhe, "A receber de Agência Sol")
+
+    def test_folio_de_grupo_faturado_para_a_empresa(self):
+        from apps.nucleo.models import ContaPagarReceber
+
+        inicio = HOJE + timedelta(days=3)
+        grupo = services.criar_grupo(rotulo="Convenção", titular=self.agencia, checkin=inicio,
+                                     checkout=inicio + timedelta(days=2), usuario=self.usuario,
+                                     faturamento=Reserva.Faturamento.EMPRESA)
+        filha = services.adicionar_quarto(grupo, uh=self.uh, hospede=self.hospede,
+                                          usuario=self.usuario)
+        services.confirmar_grupo(grupo.pk, self.usuario)
+        filha.refresh_from_db()
+        Reserva.objects.filter(pk=filha.pk).update(checkin=HOJE, checkout=HOJE + timedelta(days=2))
+        filha.refresh_from_db()
+        filha.fazer_checkin(self.usuario)
+        grupo.folio.refresh_from_db()
+        self.client.force_login(self.usuario)
+        pagina = self.client.get(reverse("reservas:grupo_detalhe", args=[grupo.pk]))
+        self.assertContains(pagina, "Faturar para Agência Sol")
+        saldo = grupo.folio.saldo()
+        self.client.post(reverse("reservas:grupo_faturar", args=[grupo.pk]),
+                         {"valor": str(saldo), "vencimento": (HOJE + timedelta(days=30)).isoformat()})
+        titulo = ContaPagarReceber.objects.get()
+        self.assertEqual((titulo.pessoa, titulo.valor), (self.agencia, saldo))
+        self.assertIn("grupo", titulo.descricao)
+        self.assertEqual(grupo.folio.saldo(), Decimal("0.00"))
