@@ -119,6 +119,8 @@
               <td class="num">R$ {{ c.valor_total }}</td>
               <td>{{ c.validade|date:"d/m/Y" }}</td>
             </tr>
+          {% empty %}
+            <tr><td colspan="6" class="vazio">Nenhuma cotação enviada para este lead ainda.</td></tr>
           {% endfor %}
         </tbody>
       </table>

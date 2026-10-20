@@ -98,6 +98,8 @@
 curtas (onde o rótulo não cabe). A navegação para a ficha segue normal.{% endcomment %}
 <script>
 (function () {
+  if (window.__calNome) return;              // uma vez só (sobrevive aos swaps do HTMX)
+  window.__calNome = true;
   var chip;
   function mostrarNome(ev) {
     var barra = ev.target.closest('.cal-barra');

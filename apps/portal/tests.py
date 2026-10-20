@@ -227,3 +227,32 @@ class TokenPosCheckoutTests(PortalBase):
         token = services.get_acesso(self.reserva.pk).token
         r = self.client.get(reverse("portal:home", args=[token]), SERVER_NAME="localhost")
         self.assertEqual(r.headers.get("Referrer-Policy"), "same-origin")
+
+
+class AparenciaPortalTests(PortalBase):
+    """A tela que o hóspede abre no celular: fonte da marca, fora da busca e
+    alvos de toque de 44px."""
+
+    def html(self):
+        token = services.get_acesso(self.reserva.pk).token
+        return self.client.get(reverse("portal:home", args=[token])).content.decode()
+
+    def test_carrega_as_fontes_da_marca(self):
+        """O portal usava o app.css sem nenhuma @font-face carregada e caía em
+        Georgia/system — a tela do hóspede não parecia da pousada."""
+        html = self.html()
+        self.assertIn("HankenGrotesk-400-latin.woff2", html)
+        self.assertIn("Fraunces-600-latin.woff2", html)
+
+    def test_fora_de_indice_de_busca(self):
+        """URL com token: não pode ser indexada nem vazar no Referer."""
+        html = self.html()
+        self.assertIn('name="robots" content="noindex, nofollow"', html)
+        self.assertIn('name="referrer" content="no-referrer"', html)
+
+    def test_sem_token_de_cor_inexistente(self):
+        """`var(--brasa, …)` nunca existiu: o ícone caía sempre no valor de reserva."""
+        self.assertNotIn("--brasa", self.html())
+
+    def test_alvo_de_toque_minimo(self):
+        self.assertIn("min-height: 44px", self.html())

@@ -5,6 +5,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pagamento — Pousada Vô Testa</title>
+  {% comment %}Link de pagamento com token na URL: fora de índice de busca, e sem
+  vazar a URL no Referer para o gateway/anúncio.{% endcomment %}
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  {# Fontes da marca (antes esta tela caía em Georgia/system) #}
+  {% include "componentes/fontes.html" %}
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
   <style>
     body { background: var(--canvas); display: grid; place-items: center; min-height: 100vh; margin: 0; padding: 1.5rem; }
@@ -34,6 +40,28 @@
     .card-form input:focus { outline: none; border-color: var(--lampiao); box-shadow: 0 0 0 3px rgba(215,160,72,.25); }
     .card-form .linha { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
     .card-seguro { font-size: .72rem; color: var(--tinta-suave); margin-top: .8rem; display: flex; align-items: center; gap: .35rem; justify-content: center; }
+    /* Número do cartão com a bandeira dentro do campo: a pessoa confirma que
+       digitou o cartão certo antes de enviar (reconhecimento, não memória). */
+    .cc-num-wrap { position: relative; }
+    .cc-num-wrap input { padding-right: 4.2rem; letter-spacing: .04em; }
+    .cc-bandeira {
+      position: absolute; right: .7rem; top: 50%; transform: translateY(-50%);
+      font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+      color: var(--tinta-suave); background: var(--superficie-2);
+      border: 1px solid var(--fio); border-radius: 999px; padding: .15rem .45rem;
+      opacity: 0; transition: opacity .15s;
+    }
+    .cc-bandeira.vista { opacity: 1; }
+    /* Bloco de confiança: meio de pagamento, "não guardamos o cartão" e como
+       falar com a pousada. Dúvida no checkout = carrinho abandonado. */
+    .pay-confianca {
+      margin-top: 1.4rem; padding-top: 1rem; border-top: 1px solid var(--fio);
+      font-size: .74rem; color: var(--tinta-suave); text-align: left;
+    }
+    .pay-confianca ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .45rem; }
+    .pay-confianca li { display: flex; align-items: flex-start; gap: .45rem; line-height: 1.45; }
+    .pay-confianca .ok { color: var(--sucesso); flex: none; font-weight: 700; }
+    .pay-confianca a { color: var(--madeira); font-weight: 600; }
     .pix-qr { width: 220px; height: 220px; margin: .4rem auto .2rem; padding: 12px; background: #fff;
       border: 1px solid var(--fio); border-radius: var(--raio); box-shadow: var(--sombra-1, 0 1px 3px rgba(0,0,0,.08)); }
     .pix-qr svg { width: 100%; height: 100%; display: block; }
@@ -93,8 +121,13 @@
           <label for="cc-nome">Nome impresso no cartão</label>
           <input type="text" id="cc-nome" name="nome" autocomplete="cc-name" required>
           <label for="cc-num">Número do cartão</label>
-          <input type="text" id="cc-num" name="numero" inputmode="numeric" autocomplete="cc-number"
-                 maxlength="19" placeholder="0000 0000 0000 0000" required>
+          <div class="cc-num-wrap">
+            {# maxlength 23 = 19 dígitos + 4 espaços da máscara (Diners/Amex caber também) #}
+            <input type="text" id="cc-num" name="numero" inputmode="numeric" autocomplete="cc-number"
+                   maxlength="23" placeholder="0000 0000 0000 0000" required
+                   aria-describedby="cc-bandeira">
+            <span class="cc-bandeira" id="cc-bandeira" role="status" aria-live="polite"></span>
+          </div>
           <div class="linha">
             <div>
               <label for="cc-val">Validade (MM/AA)</label>
@@ -115,6 +148,7 @@
           </button>
           <p class="card-seguro">🔒 Seus dados são enviados com segurança e não ficam guardados aqui.</p>
         </form>
+        {% include "pagamentos/_confianca.html" %}
       {% else %}
         {% if cobranca.metodo == 'cartao' %}
           <p class="subtitulo">Pagamento com cartão (sandbox). Confirme abaixo para simular a aprovação.</p>
@@ -134,6 +168,7 @@
           <p class="subtitulo" style="margin-top:1rem;font-size:.78rem">Após pagar, clique acima — verificamos a confirmação com o banco. Pode levar alguns instantes.</p>
         {% endif %}
       {% endif %}
+      {% if cobranca.metodo != 'cartao' or sandbox %}{% include "pagamentos/_confianca.html" %}{% endif %}
       <div class="acoes">
         <a href="{% url 'core:home' %}" class="botao-neutro">Cancelar e voltar ao site</a>
       </div>
@@ -173,6 +208,66 @@
         }
       });
     });
+
+    // ---------- Cartão: máscara e bandeira ----------
+    // Em grupos de 4 a pessoa confere o número lendo, não contando dígito a
+    // dígito; a bandeira aparece pelo início do número (reconhecimento) e
+    // confirma, antes de enviar, que o cartão é o que ela pegou na carteira.
+    // Os `name` não mudam (numero / validade): o backend continua lendo igual.
+    (function () {
+      var num = document.getElementById('cc-num');
+      var selo = document.getElementById('cc-bandeira');
+      if (!num) return;
+
+      var BANDEIRAS = [
+        { nome: 'Visa',       re: /^4/ },
+        { nome: 'Mastercard', re: /^(5[1-5]|2[2-7])/ },
+        { nome: 'Amex',       re: /^3[47]/ },
+        { nome: 'Elo',        re: /^(4011|4312|4389|4514|4576|5041|5067|5090|6277|6362|6363|6504|6505|6516|6550)/ },
+        { nome: 'Hipercard',  re: /^(606282|3841)/ },
+        { nome: 'Diners',     re: /^3(0[0-5]|[68])/ },
+        { nome: 'Discover',   re: /^6(011|5)/ },
+      ];
+      function bandeiraDe(d) {
+        // Elo e Hipercard antes de Visa/Master: os prefixos se sobrepõem.
+        var ordem = [3, 4, 0, 1, 2, 5, 6];
+        for (var i = 0; i < ordem.length; i++) {
+          var b = BANDEIRAS[ordem[i]];
+          if (b && b.re.test(d)) return b.nome;
+        }
+        return '';
+      }
+      function grupos(d, amex) {
+        if (amex) {                               // Amex: 4-6-5
+          return [d.slice(0, 4), d.slice(4, 10), d.slice(10, 15)].filter(Boolean).join(' ');
+        }
+        return (d.match(/.{1,4}/g) || []).join(' ');
+      }
+      num.addEventListener('input', function () {
+        var antes = num.selectionStart === num.value.length;   // cursor no fim?
+        var d = num.value.replace(/\D/g, '').slice(0, 19);
+        var marca = bandeiraDe(d);
+        num.value = grupos(d, marca === 'Amex');
+        if (antes) num.setSelectionRange(num.value.length, num.value.length);
+        if (selo) {
+          selo.textContent = marca;
+          selo.classList.toggle('vista', !!marca);
+        }
+      });
+
+      var val = document.getElementById('cc-val');
+      if (val) val.addEventListener('input', function () {
+        var d = val.value.replace(/\D/g, '').slice(0, 4);
+        // Mês digitado como "3" vira "03": ninguém erra o campo por formato.
+        if (d.length === 1 && d > '1') d = '0' + d;
+        val.value = d.length > 2 ? d.slice(0, 2) + '/' + d.slice(2) : d;
+      });
+
+      var cvv = document.getElementById('cc-cvv');
+      if (cvv) cvv.addEventListener('input', function () {
+        cvv.value = cvv.value.replace(/\D/g, '').slice(0, 4);
+      });
+    })();
 
     // Botão "verificar": feedback contínuo — nunca parece morto (§1).
     document.querySelectorAll('form[data-verificar]').forEach(function (form) {
