@@ -1374,7 +1374,14 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
   flex-wrap: wrap;
   margin: 1rem 0;
 }
-.mapa-legenda { margin-left: auto; display: flex; gap: .35rem; }
+/* A legenda não é um controle: fio de separação e tom discreto para não ser
+   confundida com os botões de navegação ao lado. */
+.mapa-legenda {
+  margin-left: auto; display: flex; align-items: center; gap: .9rem;
+  padding-left: 1rem; border-left: 1px solid var(--fio);
+  font-size: .8rem; color: var(--tinta-suave);
+}
+.mapa-legenda .selo { margin-right: 0; font-size: .78rem; font-weight: 500; color: var(--tinta-suave); }
 
 .mapa-rolagem { overflow-x: auto; }
 .mapa { min-width: 900px; table-layout: fixed; }
@@ -1413,13 +1420,18 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 }
 .mapa-livres-zero { color: var(--perigo); background: var(--perigo-bg); }
 
+/* O "+" é a principal afordância de criar reserva no mapa e tinha 1,6:1 de
+   contraste — praticamente invisível. Sobe de tom, e a linha inteira revela
+   os seus "+" quando o mouse passa por ela. */
 .mapa-livre {
-  color: color-mix(in srgb, var(--madeira) 25%, transparent);
+  color: color-mix(in srgb, var(--madeira) 45%, transparent);
+  transition: color var(--mov-rapido) var(--curva);
   font-weight: 700;
   cursor: pointer;
   user-select: none;
   touch-action: pan-y;
 }
+.mapa-linha:hover .mapa-livre { color: color-mix(in srgb, var(--madeira) 70%, transparent); }
 .mapa-livre:hover { color: var(--madeira); background: color-mix(in srgb, var(--lampiao) 18%, transparent); }
 .mapa-selecionando {
   color: var(--madeira);
@@ -2154,20 +2166,25 @@ a.modulo-ativo:hover {
 }
 .quartos-filtro-grupo { display: flex; align-items: center; flex-wrap: wrap; gap: .35rem .8rem; }
 .quartos-filtro-grupo .letreiro { color: var(--madeira); margin-right: .3rem; }
-.filtro-check { display: inline-flex; align-items: center; gap: .35rem; font-size: .84rem; cursor: pointer; }
-.filtro-check input { accent-color: var(--lampiao); }
-.filtro-n { font-size: .7rem; color: var(--tinta-suave); }
-.filtro-check.sit-livre::before, .filtro-check.sit-ocupada::before,
-.filtro-check.sit-chegada::before, .filtro-check.sit-a_limpar::before,
-.filtro-check.sit-em_limpeza::before, .filtro-check.sit-bloqueada::before {
-  content: ""; width: 9px; height: 9px; border-radius: 50%; margin-right: .1rem;
+/* A bolinha de cor fica DEPOIS da caixa de marcar, colada no rótulo — antes
+   ela era um ::before do próprio label e a linha lia "● ☐ Livre 2", com a cor
+   separada da palavra que ela colore. */
+.filtro-check { display: inline-flex; align-items: center; gap: .4rem; font-size: .84rem; cursor: pointer; }
+.filtro-check input { accent-color: var(--lampiao); flex: none; }
+.filtro-check .ponto { width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--fio-forte); }
+.filtro-n { font-size: .7rem; color: var(--tinta-suave); font-variant-numeric: tabular-nums; }
+.filtro-check.sit-livre .ponto { background: var(--sucesso); }
+.filtro-check.sit-ocupada .ponto { background: var(--perigo); }
+.filtro-check.sit-chegada .ponto { background: var(--lampiao); }
+.filtro-check.sit-a_limpar .ponto { background: var(--alerta); }
+.filtro-check.sit-em_limpeza .ponto { background: var(--andamento); }
+.filtro-check.sit-bloqueada .ponto { background: var(--info); }
+/* Fio entre os grupos de filtro (Situação | Tipo): antes só um vão de 2,4rem
+   dizia que eram dois grupos. */
+.quartos-filtro-grupo + .quartos-filtro-grupo { padding-left: 2rem; border-left: 1px solid var(--fio); }
+@media (max-width: 820px) {
+  .quartos-filtro-grupo + .quartos-filtro-grupo { padding-left: 0; border-left: none; padding-top: .7rem; border-top: 1px solid var(--fio); width: 100%; }
 }
-.filtro-check.sit-livre::before { background: var(--sucesso); }
-.filtro-check.sit-ocupada::before { background: var(--perigo); }
-.filtro-check.sit-chegada::before { background: var(--lampiao); }
-.filtro-check.sit-a_limpar::before { background: var(--alerta); }
-.filtro-check.sit-em_limpeza::before { background: var(--andamento); }
-.filtro-check.sit-bloqueada::before { background: var(--info); }
 
 .quartos-grid {
   display: grid; grid-template-columns: repeat(8, 1fr); gap: 1.7rem .5rem;
@@ -2205,7 +2222,10 @@ a.quarto-porta:hover .porta-circulo, button.quarto-porta:hover .porta-circulo {
 /* Cor por situação: porta (fill via currentColor) + anel do número */
 .sit-livre { color: var(--sucesso); }    .sit-livre .porta-dot { border-color: var(--sucesso); }
 .sit-ocupada { color: var(--perigo); }   .sit-ocupada .porta-dot { border-color: var(--perigo); }
-.sit-chegada { color: var(--lampiao); }  .sit-chegada .porta-dot { border-color: var(--lampiao); }
+/* Ouro é PREENCHIMENTO, nunca texto sobre claro: --lampiao sobre branco dá
+   2,11:1 (o mínimo é 4,5). O ponto do filtro continua dourado; a palavra usa
+   o ouro escurecido. */
+.sit-chegada { color: var(--lampiao-tinta); }  .sit-chegada .porta-dot { border-color: var(--lampiao); }
 .sit-a_limpar { color: var(--alerta); }  .sit-a_limpar .porta-dot { border-color: var(--alerta); }
 .sit-em_limpeza { color: var(--andamento); }      .sit-em_limpeza .porta-dot { border-color: var(--andamento); }
 .sit-bloqueada { color: var(--info); }   .sit-bloqueada .porta-dot { border-color: var(--info); }
@@ -2225,14 +2245,21 @@ a.quarto-porta:hover .porta-circulo, button.quarto-porta:hover .porta-circulo {
 
 .corredor-hero {
   margin: 0 0 1.25rem;
-  /* espaço para a dica abaixo da última fileira */
-  padding-bottom: 4.5rem;
   overflow: visible;
+  /* O espaço para a dica abaixo da última fileira só existe quando há dica:
+     reservado sempre, deixava ~110px de vazio entre o corredor e o mural. */
+  padding-bottom: .6rem;
+  transition: padding-bottom var(--mov-rapido) var(--curva);
 }
+.corredor-hero:has(.porta:hover) { padding-bottom: 4.5rem; }
+/* Oito portas por fileira — o que o manual da casa descreve e o que deixa o
+   NOME DO HÓSPEDE legível. Com doze colunas, 11 dos 24 cartões truncavam o
+   nome no desktop e 22 dos 24 no tablet ("Fernanda M…", "Ana Beatriz …"):
+   o dado mais consultado da recepção virava adivinhação. */
 .corredor {
   display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 8px;
   padding: 12px;
   border-radius: 12px;
   background:
@@ -2243,20 +2270,22 @@ a.quarto-porta:hover .porta-circulo, button.quarto-porta:hover .porta-circulo {
   /* visible: dicas (::after acima da porta) não podem ser cortadas na 1ª fileira */
   overflow: visible;
 }
-@media (max-width: 1100px) { .corredor { grid-template-columns: repeat(8, minmax(0, 1fr)); } }
+@media (max-width: 1100px) { .corredor { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
 @media (max-width: 720px) {
   /* Celular/tablet pequeno: todas as portas cabem na largura (nenhum quarto fica
      escondido fora da tela). Antes a grade de 6 × 76px estourava a página no
      celular e cortava 8 quartos. */
-  .corredor { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .corredor { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 @media (max-width: 480px) {
-  .corredor { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .corredor { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 .porta {
-  aspect-ratio: 3 / 4;
-  min-height: 0;
+  /* Proporção de porta, mas com teto: em oito colunas a porta fica larga, e
+     sem o teto a fileira passaria de 200px de altura. */
+  aspect-ratio: 4 / 5;
+  min-height: 128px; max-height: 176px;
   border-radius: 10px 10px 5px 5px;
   border: 1px solid rgba(255, 255, 255, .08);
   background: linear-gradient(180deg, #1A3A4C, #122937);
@@ -2312,10 +2341,14 @@ div.porta.dica[data-dica] { cursor: default; }
   color: #93A7B2;
   line-height: 1;
 }
+/* O nome é o dado principal da porta: duas linhas antes de cortar, e tamanho
+   que acompanha a largura da coluna. */
 .porta-nome {
-  font-size: .8rem; font-weight: 650; color: #EEF4F7;
-  line-height: 1.2; margin-top: 1px;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: clamp(.76rem, .68rem + .25vw, .9rem);
+  font-weight: 650; color: #EEF4F7;
+  line-height: 1.22; margin-top: 1px;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 .porta-periodo {
   font-family: var(--fonte-mono);
@@ -2323,14 +2356,19 @@ div.porta.dica[data-dica] { cursor: default; }
   letter-spacing: -.02em; line-height: 1.25;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-/* Rodapé SEMPRE numa linha só — nada vaza para a fileira de baixo */
+/* Rodapé SEMPRE numa linha só — nada vaza para a fileira de baixo.
+   Papel fixo das duas pontas: à ESQUERDA o estado do quarto (limpeza, aviso),
+   à DIREITA o dinheiro. Antes o quarto livre punha "LIMPO" exatamente onde o
+   ocupado punha "R$ 2.649" — mesma posição, significados diferentes. */
 .porta-rodape {
   margin-top: auto;
   display: flex; flex-wrap: nowrap; gap: 5px;
-  align-items: center; justify-content: space-between;
+  align-items: center;
   overflow: hidden; min-height: 16px;
   padding-top: 3px;
+  border-top: 1px solid rgba(255, 255, 255, .07);
 }
+.porta-saldo { margin-left: auto; text-align: right; }
 .porta-saldo {
   font-family: var(--fonte-mono);
   font-size: .74rem; font-weight: 700;
@@ -2514,7 +2552,7 @@ div.porta.dica[data-dica] { cursor: default; }
   padding: 1.1rem 1.3rem .9rem; border-bottom: 1px solid var(--fio); background: var(--superficie-2);
 }
 .pdv-painel-topo h2 { margin: 0; font-size: 1.15rem; }
-.pdv-contador { font-size: .78rem; font-weight: 600; color: var(--lampiao); }
+.pdv-contador { font-size: .78rem; font-weight: 600; color: var(--lampiao-tinta); }
 
 .pdv-carrinho { padding: .6rem .7rem; min-height: 110px; max-height: 40vh; overflow-y: auto; }
 .pdv-item {

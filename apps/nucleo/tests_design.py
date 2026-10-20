@@ -382,3 +382,38 @@ class FormularioEmPortuguesTests(TestCase):
     def test_textarea_nao_redimensiona_para_os_lados(self):
         css = CSS.read_text(encoding="utf-8")
         self.assertIn("textarea { resize: vertical; }", css)
+
+
+class CorredorLegivelTests(TestCase):
+    """A recepção lê o corredor o dia inteiro — ali o nome do hóspede é o dado.
+
+    Em doze colunas, 11 dos 24 cartões truncavam o nome no desktop e 22 dos 24
+    no tablet. E "Chegada hoje" saía em ouro sobre branco: 2,11:1.
+    """
+
+    def setUp(self):
+        self.css = CSS.read_text(encoding="utf-8").replace("\r\n", "\n")
+
+    def test_oito_portas_por_fileira(self):
+        bloco = re.search(r"\n\.corredor \{([^}]*)\}", self.css)
+        self.assertIsNotNone(bloco)
+        self.assertIn("repeat(8, minmax(0, 1fr))", bloco.group(1))
+
+    def test_nome_do_hospede_cabe_em_duas_linhas(self):
+        bloco = re.search(r"\n\.porta-nome \{([^}]*)\}", self.css)
+        self.assertIsNotNone(bloco)
+        self.assertIn("-webkit-line-clamp: 2", bloco.group(1))
+        self.assertIn("clamp(", bloco.group(1))
+        tpl = (Path(settings.BASE_DIR) / "templates" / "reservas" / "partials"
+               / "corredor.html").read_text(encoding="utf-8")
+        self.assertNotIn("hospede.nome|truncatechars", tpl)
+
+    def test_ouro_nao_vira_texto_sobre_claro(self):
+        """--lampiao sobre branco dá 2,11:1; como texto, usa-se --lampiao-tinta."""
+        for regra in (".sit-chegada", ".pdv-contador"):
+            bloco = re.search(rf"{re.escape(regra)} \{{([^}}]*)\}}", self.css)
+            self.assertIsNotNone(bloco, regra)
+            self.assertNotIn("color: var(--lampiao)", bloco.group(1), regra)
+        achado = re.search(r"--lampiao-tinta:\s*(#[0-9A-Fa-f]{6})", self.css)
+        self.assertIsNotNone(achado)
+        self.assertGreaterEqual(_contraste(achado.group(1), "#FFFFFF"), 4.5)

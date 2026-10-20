@@ -21,7 +21,7 @@
       {% for s in situacoes_filtro %}
         <label class="filtro-check sit-{{ s.cod }}">
           <input type="checkbox" value="{{ s.cod }}" x-model="sits">
-          {{ s.label }} <span class="filtro-n">{{ s.n }}</span>
+          <span class="ponto" aria-hidden="true"></span>{{ s.label }} <span class="filtro-n">{{ s.n }}</span>
         </label>
       {% endfor %}
     </div>
