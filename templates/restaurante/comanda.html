@@ -3,6 +3,7 @@
 {% block titulo %}Comanda #{{ comanda.pk }} — Restaurante{% endblock %}
 
 {% block conteudo %}
+{% load nucleo_extras %}{% aviso_nfce %}
 <a href="#" class="voltar" onclick="history.back(); return false;">
   <svg viewBox="0 0 24 24" class="ico"><path d="M15 6l-6 6 6 6"/></svg> Voltar
 </a>

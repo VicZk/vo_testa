@@ -52,3 +52,16 @@ def campos_antirrobo():
         '</label></div><input type="hidden" name="{}" value="{}">',
         CAMPO_ARMADILHA, CAMPO_CARIMBO, carimbo(),
     )
+
+
+@register.simple_tag
+def aviso_nfce():
+    """Aviso de venda sem NFC-e (sem Inscrição Estadual) para o topo dos PDVs."""
+    from django.utils.html import format_html
+
+    from ..fiscal_regras import AVISO_SEM_NFCE, nfce_disponivel
+
+    if nfce_disponivel():
+        return ""
+    return format_html('<p class="mensagem warning aviso-nfce" role="status">{}</p>',
+                       AVISO_SEM_NFCE)

@@ -452,6 +452,8 @@ FISCAL_REGIME = os.environ.get("FISCAL_REGIME", "lucro_presumido")
 FISCAL_NFSE_CODIGO_SERVICO = os.environ.get("FISCAL_NFSE_CODIGO_SERVICO", "090101")  # hospedagem
 FISCAL_NFSE_ISS_ALIQUOTA = os.environ.get("FISCAL_NFSE_ISS_ALIQUOTA", "4.0")  # % ISS Itá
 FISCAL_NFCE_HABILITADA = os.environ.get("FISCAL_NFCE_HABILITADA", "0") == "1"  # depende da IE
+# Sem NFC-e, os PDVs avisam; com 1, recusam a venda de produto (decisão do contador).
+FISCAL_BLOQUEAR_VENDA_SEM_NFCE = os.environ.get("FISCAL_BLOQUEAR_VENDA_SEM_NFCE", "0") == "1"
 # Segredo compartilhado com o Focus (campo "Chave de Autorização" do webhook). O Focus
 # envia no header Authorization; o endpoint /crm/fiscal/webhook/ valida.
 FISCAL_WEBHOOK_TOKEN = os.environ.get("FISCAL_WEBHOOK_TOKEN", "")

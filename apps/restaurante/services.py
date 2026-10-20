@@ -84,6 +84,8 @@ def fechar_comanda(comanda, operador, destino, forma=None, conta_id=None, descon
         raise ValidationError("Esta comanda já foi fechada.")
     if not comanda.itens.exists():
         raise ValidationError("A comanda está vazia.")
+    from apps.nucleo.fiscal_regras import conferir_venda_de_produto
+    conferir_venda_de_produto()
     desconto = Decimal(desconto or 0)
     if desconto < 0 or desconto > comanda.subtotal():
         raise ValidationError("Desconto inválido.")

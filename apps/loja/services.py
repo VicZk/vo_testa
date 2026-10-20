@@ -53,6 +53,8 @@ def _finalizar_venda(operador, local, itens, destino, forma, cliente, conta_id,
     desconto = Decimal(desconto or 0)
     if not itens:
         raise ValidationError("Adicione ao menos um item à venda.")
+    from apps.nucleo.fiscal_regras import conferir_venda_de_produto
+    conferir_venda_de_produto()
 
     # Monta as linhas com preço e valida saldo no local.
     linhas = []

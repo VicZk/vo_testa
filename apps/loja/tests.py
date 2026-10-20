@@ -232,3 +232,20 @@ class VendaIdempotenteTests(LojaBase):
         with self.assertRaises(ValidationError):
             services.cancelar_venda(venda, self.op, "Clique duplo")
         self.assertEqual(saldo(self.produto, self.local), Decimal("20.000"))
+
+
+class VendaSemNFCeTests(LojaBase):
+    def test_pdv_avisa_sem_inscricao_estadual(self):
+        self.client.force_login(self.op)
+        with self.settings(FISCAL_NFCE_HABILITADA=False):
+            self.assertContains(self.client.get(reverse("loja:pdv")), "sem NFC-e")
+        with self.settings(FISCAL_NFCE_HABILITADA=True):
+            self.assertNotContains(self.client.get(reverse("loja:pdv")), "sem NFC-e")
+
+    def test_bloqueio_opcional_da_venda(self):
+        self.abrir_caixa()
+        with self.settings(FISCAL_NFCE_HABILITADA=False, FISCAL_BLOQUEAR_VENDA_SEM_NFCE=True):
+            with self.assertRaisesMessage(ValidationError, "NFC-e"):
+                services.finalizar_venda(self.op, self.local, self.itens(1), "caixa",
+                                         forma=self.dinheiro)
+        services.finalizar_venda(self.op, self.local, self.itens(1), "caixa", forma=self.dinheiro)
