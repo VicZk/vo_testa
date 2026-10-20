@@ -29,12 +29,13 @@ class Command(BaseCommand):
                 dia = date.fromisoformat(opcoes["dia"])
             except ValueError as erro:
                 raise CommandError("Use --dia no formato AAAA-MM-DD.") from erro
+        from apps.nucleo.templatetags.moeda import intcomma_brl
         from apps.reservas.services import fechar_dia
 
         fechamento, criado = fechar_dia(dia)
         if criado:
             self.stdout.write(
                 f"Dia {fechamento.data:%d/%m/%Y} fechado: {fechamento.quartos_ocupados} "
-                f"quarto(s) ocupado(s), diárias R$ {fechamento.receita_diarias}.")
+                f"quarto(s) ocupado(s), diárias {intcomma_brl(fechamento.receita_diarias)}.")
         else:
             self.stdout.write(f"Dia {fechamento.data:%d/%m/%Y} já estava fechado.")
