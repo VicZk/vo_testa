@@ -774,9 +774,12 @@ def resumo_reserva(request):
     return render(request, 'site/reservas/resumo.html', context)
 
 
-@transaction.atomic
 def finalizar_reserva(request):
-    """Cria a reserva (status aguardando pagamento) após revalidar tudo. Vem do passo 4."""
+    """Cria a reserva (status aguardando pagamento) após revalidar tudo. Vem do passo 4.
+
+    Só as gravações (hóspede, pré-reserva no CRM, recibo do canal) ficam numa transação.
+    A cobrança (chamada ao gateway) e o e-mail vêm depois do commit: um gateway lento não
+    segura a pré-reserva travada, e o e-mail nunca confirma reserva que não foi gravada."""
     if request.method != 'POST':
         return redirect('core:reservar')
 
@@ -828,58 +831,64 @@ def finalizar_reserva(request):
         messages.error(request, 'Esta opção não comporta o número de pessoas.')
         return redirect_busca(checkin, checkout, hospedes, modalidade)
 
-    hospede = dados_form.save()  # registro do hóspede no canal (site)
+    with transaction.atomic():
+        hospede = dados_form.save()  # registro do hóspede no canal (site)
 
-    # Cria o hóspede e a PRÉ-RESERVA no CRM — fonte da verdade (aloca UH física,
-    # bloqueia overbooking pela constraint). O preço também vem do CRM.
-    pessoa = reservas.obter_ou_criar_hospede(
-        nome=hospede.nome, email=hospede.email, telefone=hospede.telefone,
-        documento=getattr(hospede, 'cpf', '') or '',
-    )
-    rotulo = 'Dia na Pousada' if modalidade == 'day_use' else 'Reserva'
-    try:
-        crm_reserva = reservas.criar_reserva_site(
-            tipo_uh=quarto.tipo_uh, checkin=checkin, checkout=checkout,
-            hospede=pessoa, usuario=_usuario_sistema(),
-            adultos=_adultos_de(hospedes, c05, c615), criancas=0,
-            criancas_0_5=c05, criancas_6_15=c615,
-            cobra_iss=cobra_iss, cobra_taxa_turismo=cobra_turismo,
-            observacoes=f'{rotulo} pelo site — {hospede.nome}',
+        # Cria o hóspede e a PRÉ-RESERVA no CRM — fonte da verdade (aloca UH física,
+        # bloqueia overbooking pela constraint). O preço também vem do CRM.
+        pessoa = reservas.obter_ou_criar_hospede(
+            nome=hospede.nome, email=hospede.email, telefone=hospede.telefone,
+            documento=getattr(hospede, 'cpf', '') or '',
         )
-    except VErr as erro:
-        messages.error(request, ' '.join(erro.messages))
-        return redirect_busca(checkin, checkout, hospedes, modalidade)
+        rotulo = 'Dia na Pousada' if modalidade == 'day_use' else 'Reserva'
+        try:
+            crm_reserva = reservas.criar_reserva_site(
+                tipo_uh=quarto.tipo_uh, checkin=checkin, checkout=checkout,
+                hospede=pessoa, usuario=_usuario_sistema(),
+                adultos=_adultos_de(hospedes, c05, c615), criancas=0,
+                criancas_0_5=c05, criancas_6_15=c615,
+                cobra_iss=cobra_iss, cobra_taxa_turismo=cobra_turismo,
+                observacoes=f'{rotulo} pelo site — {hospede.nome}',
+            )
+        except VErr as erro:
+            messages.error(request, ' '.join(erro.messages))
+            return redirect_busca(checkin, checkout, hospedes, modalidade)
 
-    config = ConfiguracaoSite.load()
-    desconto = Decimal(config.desconto_pix) if metodo == 'pix' else Decimal('0')
-    # O desconto Pix precisa valer na CONTA do CRM (fonte da verdade), não só no recibo
-    # do site. Baixa a diária da pré-reserva; o recibo guarda o preço cheio + o %.
-    preco_cheio = crm_reserva.valor_diaria
-    if desconto > 0 and preco_cheio:
-        crm_reserva.valor_diaria = (
-            preco_cheio * (Decimal('100') - desconto) / Decimal('100')
-        ).quantize(Decimal('0.01'))
-        crm_reserva.save(update_fields=['valor_diaria'])
-    reserva = Reserva.objects.create(
-        hospede=hospede,
-        quarto=quarto,
-        data_checkin=checkin,
-        data_checkout=checkout,
-        num_hospedes=hospedes,
-        preco_noite=preco_cheio,
-        desconto_percentual=desconto,
-        metodo_pagamento=metodo,
-        status='aguardando',
-        crm_reserva_id=crm_reserva.pk,
-    )
-    # Cobrança de sinal/pagamento online (Pix) — degrada se Pagamentos off ou gateway falhar.
+        config = ConfiguracaoSite.load()
+        desconto = Decimal(config.desconto_pix) if metodo == 'pix' else Decimal('0')
+        # O desconto Pix precisa valer na CONTA do CRM (fonte da verdade), não só no recibo
+        # do site. Baixa a diária da pré-reserva; o recibo guarda o preço cheio + o %.
+        preco_cheio = crm_reserva.valor_diaria
+        if desconto > 0 and preco_cheio:
+            crm_reserva.valor_diaria = (
+                preco_cheio * (Decimal('100') - desconto) / Decimal('100')
+            ).quantize(Decimal('0.01'))
+            crm_reserva.save(update_fields=['valor_diaria'])
+        reserva = Reserva.objects.create(
+            hospede=hospede,
+            quarto=quarto,
+            data_checkin=checkin,
+            data_checkout=checkout,
+            num_hospedes=hospedes,
+            preco_noite=preco_cheio,
+            desconto_percentual=desconto,
+            metodo_pagamento=metodo,
+            status='aguardando',
+            crm_reserva_id=crm_reserva.pk,
+        )
+    _cobranca_e_confirmacao(reserva, pessoa)
+    return redirect('core:reserva_confirmada', token=reserva.token)
+
+
+def _cobranca_e_confirmacao(reserva, pessoa):
+    """Depois do commit da reserva: cobrança online e e-mail de confirmação. Nenhum dos
+    dois derruba a reserva, que já está gravada."""
     cobranca = _criar_cobranca_site(reserva, pessoa)
     if cobranca:
         reserva.pagamento_id = str(cobranca.token)
         reserva.save(update_fields=['pagamento_id', 'atualizado_em'])
-    from apps.site.emails import enviar_confirmacao
-    enviar_confirmacao(reserva)  # e-mail ao hóspede (não quebra o fluxo se falhar)
-    return redirect('core:reserva_confirmada', token=reserva.token)
+    from apps.site.emails import disparar_confirmacao
+    disparar_confirmacao(reserva)
 
 
 def _quarto_recibo(uh):
@@ -892,9 +901,10 @@ def _quarto_recibo(uh):
     )
 
 
-@transaction.atomic
 def _finalizar_reserva_unidade(request):
-    """Cria a reserva de um quarto ESPECÍFICO (venda por unidade). Vem do passo 4."""
+    """Cria a reserva de um quarto ESPECÍFICO (venda por unidade). Vem do passo 4.
+    Mesma divisão de `finalizar_reserva`: gravações numa transação, cobrança e e-mail
+    depois do commit."""
     from django.core.exceptions import ValidationError as VErr
 
     from apps.nucleo.models import UH
@@ -931,48 +941,44 @@ def _finalizar_reserva_unidade(request):
         messages.error(request, 'Este quarto não comporta o número de pessoas.')
         return redirect_busca(checkin, checkout, hospedes)
 
-    hospede = dados_form.save()
-    pessoa = reservas.obter_ou_criar_hospede(
-        nome=hospede.nome, email=hospede.email, telefone=hospede.telefone,
-        documento=getattr(hospede, 'cpf', '') or '',
-    )
-    nome_quarto = uh.nome_tematico or uh.numero
-    try:
-        crm_reserva = reservas.criar_reserva_site_unidade(
-            uh=uh, checkin=checkin, checkout=checkout,
-            hospede=pessoa, usuario=_usuario_sistema(),
-            adultos=_adultos_de(hospedes, c05, c615), criancas=0,
-            criancas_0_5=c05, criancas_6_15=c615,
-            cobra_iss=cobra_iss, cobra_taxa_turismo=cobra_turismo,
-            observacoes=f'Reserva pelo site — {nome_quarto} — {hospede.nome}',
-            **_arranjo_post(request),
+    with transaction.atomic():
+        hospede = dados_form.save()
+        pessoa = reservas.obter_ou_criar_hospede(
+            nome=hospede.nome, email=hospede.email, telefone=hospede.telefone,
+            documento=getattr(hospede, 'cpf', '') or '',
         )
-    except VErr as erro:
-        messages.error(request, ' '.join(erro.messages))
-        return redirect_busca(checkin, checkout, hospedes)
+        nome_quarto = uh.nome_tematico or uh.numero
+        try:
+            crm_reserva = reservas.criar_reserva_site_unidade(
+                uh=uh, checkin=checkin, checkout=checkout,
+                hospede=pessoa, usuario=_usuario_sistema(),
+                adultos=_adultos_de(hospedes, c05, c615), criancas=0,
+                criancas_0_5=c05, criancas_6_15=c615,
+                cobra_iss=cobra_iss, cobra_taxa_turismo=cobra_turismo,
+                observacoes=f'Reserva pelo site — {nome_quarto} — {hospede.nome}',
+                **_arranjo_post(request),
+            )
+        except VErr as erro:
+            messages.error(request, ' '.join(erro.messages))
+            return redirect_busca(checkin, checkout, hospedes)
 
-    config = ConfiguracaoSite.load()
-    desconto = Decimal(config.desconto_pix) if metodo == 'pix' else Decimal('0')
-    # Propaga o desconto Pix para a diária da pré-reserva no CRM (fonte da verdade),
-    # igual à venda por tipo — senão o folio cobra o cheio e o hóspede paga em dobro.
-    preco_cheio = crm_reserva.valor_diaria
-    if desconto > 0 and preco_cheio:
-        crm_reserva.valor_diaria = (
-            preco_cheio * (Decimal('100') - desconto) / Decimal('100')
-        ).quantize(Decimal('0.01'))
-        crm_reserva.save(update_fields=['valor_diaria'])
-    reserva = Reserva.objects.create(
-        hospede=hospede, quarto=_quarto_recibo(uh),
-        data_checkin=checkin, data_checkout=checkout, num_hospedes=hospedes,
-        preco_noite=preco_cheio, desconto_percentual=desconto,
-        metodo_pagamento=metodo, status='aguardando', crm_reserva_id=crm_reserva.pk,
-    )
-    cobranca = _criar_cobranca_site(reserva, pessoa)
-    if cobranca:
-        reserva.pagamento_id = str(cobranca.token)
-        reserva.save(update_fields=['pagamento_id', 'atualizado_em'])
-    from apps.site.emails import enviar_confirmacao
-    enviar_confirmacao(reserva)
+        config = ConfiguracaoSite.load()
+        desconto = Decimal(config.desconto_pix) if metodo == 'pix' else Decimal('0')
+        # Propaga o desconto Pix para a diária da pré-reserva no CRM (fonte da verdade),
+        # igual à venda por tipo — senão o folio cobra o cheio e o hóspede paga em dobro.
+        preco_cheio = crm_reserva.valor_diaria
+        if desconto > 0 and preco_cheio:
+            crm_reserva.valor_diaria = (
+                preco_cheio * (Decimal('100') - desconto) / Decimal('100')
+            ).quantize(Decimal('0.01'))
+            crm_reserva.save(update_fields=['valor_diaria'])
+        reserva = Reserva.objects.create(
+            hospede=hospede, quarto=_quarto_recibo(uh),
+            data_checkin=checkin, data_checkout=checkout, num_hospedes=hospedes,
+            preco_noite=preco_cheio, desconto_percentual=desconto,
+            metodo_pagamento=metodo, status='aguardando', crm_reserva_id=crm_reserva.pk,
+        )
+    _cobranca_e_confirmacao(reserva, pessoa)
     return redirect('core:reserva_confirmada', token=reserva.token)
 
 
@@ -999,6 +1005,11 @@ def _criar_cobranca_site(reserva, pessoa):
             reserva_id=reserva.crm_reserva_id,
         )
     except VErr:
+        return None
+    except Exception:
+        # A reserva já está gravada: um erro inesperado do gateway (timeout, resposta
+        # estranha) vira "sem link de pagamento", não erro 500 no último passo da compra.
+        logger.exception('Cobrança da reserva %s não foi criada.', reserva.codigo)
         return None
 
 

@@ -585,3 +585,59 @@ class PaginasLegaisTests(TestCase):
         # Sem HOME_MODO=lp_fundador, a raiz é o index do site (não a LP).
         r = self.client.get("/")
         self.assertEqual(r.status_code, 200)
+
+
+class ConfirmacaoDepoisDoCommitTests(TestCase):
+    """Cobrança e e-mail vêm depois da reserva gravada; falha deles não derruba a reserva."""
+
+    setUp = FluxoReservaViewTests.setUp
+    _post_finalizar = FluxoReservaViewTests._post_finalizar
+
+    def test_confirmacao_enviada_fica_marcada(self):
+        self._post_finalizar()
+        self.assertIsNotNone(Reserva.objects.get().confirmacao_enviada_em)
+
+    def test_erro_inesperado_do_gateway_nao_derruba_a_reserva(self):
+        from unittest import mock
+
+        with mock.patch("apps.pagamentos.services.criar_cobranca",
+                        side_effect=RuntimeError("gateway não respondeu")), \
+                self.assertLogs("apps.site.views", "ERROR"):
+            resp = self._post_finalizar(metodo_pagamento='cartao')
+        reserva = Reserva.objects.get()
+        self.assertRedirects(resp, reverse('core:reserva_confirmada', args=[reserva.token]),
+                             fetch_redirect_response=False)
+        self.assertEqual(reserva.pagamento_id, '')
+
+    def test_smtp_fora_deixa_sem_marca_e_o_backstop_reenvia(self):
+        from io import StringIO
+        from unittest import mock
+
+        from django.core import mail
+        from django.core.management import call_command
+
+        with mock.patch("apps.site.emails.EmailMultiAlternatives.send",
+                        side_effect=OSError("SMTP fora")), \
+                self.assertLogs("apps.site.emails", "ERROR"):
+            self._post_finalizar()
+        reserva = Reserva.objects.get()
+        self.assertIsNone(reserva.confirmacao_enviada_em)
+        Reserva.objects.filter(pk=reserva.pk).update(
+            criado_em=timezone.now() - timedelta(minutes=15))
+        mail.outbox.clear()
+        call_command("reenviar_confirmacoes_site", stdout=StringIO())
+        reserva.refresh_from_db()
+        self.assertIsNotNone(reserva.confirmacao_enviada_em)
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_backstop_nao_reenvia_o_que_ja_saiu(self):
+        from io import StringIO
+
+        from django.core import mail
+        from django.core.management import call_command
+
+        self._post_finalizar()
+        Reserva.objects.update(criado_em=timezone.now() - timedelta(minutes=15))
+        mail.outbox.clear()
+        call_command("reenviar_confirmacoes_site", stdout=StringIO())
+        self.assertEqual(len(mail.outbox), 0)

@@ -1,4 +1,7 @@
 """E-mails transacionais do site (confirmação de reserva)."""
+import functools
+import logging
+import threading
 from email.mime.image import MIMEImage
 from pathlib import Path
 from urllib.parse import quote_plus
@@ -7,9 +10,11 @@ from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.urls import reverse
-from django.utils import formats
+from django.utils import formats, timezone
 
-from apps.site.models import ConfiguracaoSite
+from apps.site.models import ConfiguracaoSite, Reserva
+
+logger = logging.getLogger(__name__)
 
 _EMAIL_IMG = Path(__file__).resolve().parent / "static" / "site" / "img" / "email"
 
@@ -73,6 +78,12 @@ def _ctx_confirmacao(reserva):
     }
 
 
+@functools.lru_cache(maxsize=None)
+def _bytes_da_imagem(path: Path) -> bytes | None:
+    """Lê cada imagem do e-mail uma vez por processo (eram ~80 KB lidos a cada envio)."""
+    return path.read_bytes() if path.is_file() else None
+
+
 def _anexar_imagens(msg: EmailMultiAlternatives) -> None:
     """Anexa imagens inline (CID). Hero da prancheta já inclui o brasão."""
     arquivos = [
@@ -80,9 +91,10 @@ def _anexar_imagens(msg: EmailMultiAlternatives) -> None:
         ("email-roda", _EMAIL_IMG / "roda.png", "png"),
     ]
     for cid, path, subtype in arquivos:
-        if not path.is_file():
+        conteudo = _bytes_da_imagem(path)
+        if conteudo is None:
             continue
-        img = MIMEImage(path.read_bytes(), _subtype=subtype)
+        img = MIMEImage(conteudo, _subtype=subtype)
         img.add_header("Content-ID", f"<{cid}>")
         img.add_header("Content-Disposition", "inline", filename=path.name)
         msg.attach(img)
@@ -109,3 +121,42 @@ def enviar_confirmacao(reserva, *, fail_silently=True) -> bool:
     _anexar_imagens(msg)
     msg.send(fail_silently=fail_silently)
     return True
+
+
+def registrar_confirmacao(reserva) -> bool:
+    """Manda a confirmação e marca `confirmacao_enviada_em`. Nunca levanta: se falhar,
+    a reserva fica sem a marca e o `reenviar_confirmacoes_site` tenta de novo."""
+    try:
+        if not enviar_confirmacao(reserva, fail_silently=False):
+            return False
+    except Exception:
+        logger.exception(
+            "Confirmação da reserva %s não saiu; o rotinas tenta de novo.", reserva.codigo)
+        return False
+    Reserva.objects.filter(pk=reserva.pk).update(confirmacao_enviada_em=timezone.now())
+    return True
+
+
+def _confirmacao_em_thread(reserva_id):
+    from django.db import connections
+
+    try:
+        reserva = Reserva.objects.select_related("hospede").filter(pk=reserva_id).first()
+        if reserva is not None:
+            registrar_confirmacao(reserva)
+    finally:
+        connections.close_all()  # só as conexões desta thread
+
+
+def disparar_confirmacao(reserva) -> None:
+    """Confirmação ao hóspede depois que a reserva foi gravada.
+
+    Em produção sai numa thread de fundo, para o SMTP (handshake TLS de até
+    EMAIL_TIMEOUT s) não segurar a resposta do último passo da reserva. Se o processo
+    cair antes do envio, a reserva fica sem `confirmacao_enviada_em` e o
+    `reenviar_confirmacoes_site` (rotinas, a cada 10 min) manda depois. Nos testes, ou
+    com EMAIL_ENVIO_ASSINCRONO=0, envia na hora."""
+    if getattr(settings, "EMAIL_ENVIO_ASSINCRONO", True) and not getattr(settings, "TESTING", False):
+        threading.Thread(target=_confirmacao_em_thread, args=(reserva.pk,), daemon=True).start()
+    else:
+        registrar_confirmacao(reserva)

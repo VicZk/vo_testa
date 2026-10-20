@@ -369,6 +369,11 @@ class Reserva(models.Model):
     # Reservas 'aguardando' seguram o quarto só até expira_em (evita bloqueio eterno sem pagamento).
     expira_em = models.DateTimeField('Expira em', null=True, blank=True, editable=False)
 
+    # Quando o e-mail de confirmação saiu. Vazio = ainda não saiu: o
+    # `reenviar_confirmacoes_site` (rotinas) tenta de novo.
+    confirmacao_enviada_em = models.DateTimeField(
+        'Confirmação enviada em', null=True, blank=True, editable=False)
+
     criado_em = models.DateTimeField('Criado em', auto_now_add=True)
     atualizado_em = models.DateTimeField('Atualizado em', auto_now=True)
 

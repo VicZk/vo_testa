@@ -556,7 +556,9 @@ CRM; `core.Reserva` é apenas o **recibo do canal**.
 Não há `services.py`. O site **consome** services de Reservas, Comercial e Pagamentos; os
 helpers ficam em `views.py` (`_buscar_unidades`, `_buscar_quartos`, `_resumo_preco`,
 `_resumo_preco_unidade`, `_montar_resumo`, `_card_de_uh`, `_criar_cobranca_site`).
-`apps/site/emails.py` expõe `enviar_confirmacao(reserva, fail_silently=True)` e
+`apps/site/emails.py` expõe `enviar_confirmacao(reserva, fail_silently=True)`,
+`disparar_confirmacao(reserva)` (envio em segundo plano que marca
+`Reserva.confirmacao_enviada_em`), `registrar_confirmacao(reserva)` e
 `url_recibo_reserva(reserva)`. Context processors: `reserva_passos`, `prova_social`,
 `analytics`.
 
@@ -614,8 +616,10 @@ Fundador; vazio, serve a home do site.
 - Reserva sem `VitrineQuarto` publicada não é reservável (`_vitrine_ou_404`).
 - Deep-link `?uh=<id>`: com datas válidas e quarto livre, pula direto ao passo 3; se
   ocupado, avisa e mostra as alternativas.
-- O e-mail de confirmação é best-effort (`fail_silently=True`) e anexa imagens inline por
-  CID.
+- O e-mail de confirmação sai depois do commit da reserva, numa thread de fundo, e
+  marca `confirmacao_enviada_em`. Se não sair (deploy no meio, SMTP fora), o
+  `reenviar_confirmacoes_site` do `rotinas` manda depois. Anexa imagens inline por CID,
+  lidas do disco uma vez por processo.
 
 ### Pontos de extensão / pendências
 
@@ -1563,13 +1567,16 @@ Hóspede**.
    `ConfiguracaoSite.desconto_pix` % (a conta do CRM é a fonte da verdade) e cria-se o
    `core.Reserva` (`status=aguardando`, `preco_noite` cheio + `desconto_percentual`,
    `crm_reserva_id`).
-7. **Cobrança.** `_criar_cobranca_site` → `pagamentos.criar_cobranca(..., valor=
-   reserva.valor_total, finalidade=SINAL, reserva_id=crm_reserva_id)`; o token volta em
-   `reserva.pagamento_id`. Se Pagamentos estiver inativo ou o gateway falhar, degrada
-   (reserva criada sem cobrança).
-8. **E-mail + confirmação.** `site.emails.enviar_confirmacao(reserva)` (best-effort,
-   imagens inline por CID) e redirect para `core:reserva_confirmada` `/reserva/<token>/`,
-   que mostra o bloco "Pagar agora" com a cobrança.
+7. **Cobrança (depois do commit).** Hóspede, pré-reserva e recibo são gravados numa
+   transação; só depois `_criar_cobranca_site` → `pagamentos.criar_cobranca(..., valor=
+   reserva.valor_total, finalidade=SINAL, reserva_id=crm_reserva_id)`, fora dela, e o
+   token volta em `reserva.pagamento_id`. Se Pagamentos estiver inativo ou o gateway
+   falhar, inclusive com erro inesperado (registrado no log), degrada: a reserva existe e
+   fica sem cobrança.
+8. **E-mail + confirmação.** `site.emails.disparar_confirmacao(reserva)` (segundo plano,
+   marca `confirmacao_enviada_em`; o `rotinas` reenvia o que não saiu) e redirect para
+   `core:reserva_confirmada` `/reserva/<token>/`, que mostra o bloco "Pagar agora" com a
+   cobrança.
 9. **Pagamento.** O hóspede abre `pagamentos:pagar` `/crm/pagamentos/pagar/<token>/` →
    ver **B.5**. `confirmar_pagamento` chama `reservas.confirmar_reserva` e
    `_sincronizar_recibo_site` passa o `core.Reserva` de `aguardando` para `confirmada`.

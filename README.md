@@ -639,6 +639,7 @@ repositório, com as mesmas variáveis do serviço web e o arquivo de configura�
 | frequentes | `expirar_recibos_site` | marca como expirados os recibos do site não pagos |
 | frequentes | `enviar_fnrh_pendentes` | reenvia à FNRH Digital as fichas pendentes ou com erro |
 | frequentes | `enviar_campanhas_email` | dispara campanhas de e-mail agendadas |
+| frequentes | `reenviar_confirmacoes_site` | manda a confirmação das reservas do site que ficaram sem e-mail |
 | frequentes | `reenviar_emails_pendentes` | reenvia e-mails do Comercial presos em "pendente" ou com erro (até 3 tentativas) |
 | diarias | `enviar_conversoes_pendentes` | reenvia conversões de mídia pendentes |
 | diarias | `sincronizar_gastos_midia` | puxa o gasto das plataformas de anúncio |
