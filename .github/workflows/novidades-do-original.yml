@@ -1,0 +1,124 @@
+name: Novidades do original
+
+# Acompanha o repositório original (Geffersonvivan/vo_testa) duas vezes por dia.
+# Quando aparece commit novo na main de lá:
+#   1. atualiza o espelho `main` deste fork (só avança, nunca força);
+#   2. junta as novidades com o `dev` no branch `sincronizar/original`;
+#   3. roda a suíte de testes nesse merge (reaproveita o testes.yml);
+#   4. abre ou atualiza um PR para o `dev` com os commits novos e o resultado.
+# Se o merge conflitar, o PR sai da `main` e avisa que precisa resolver à mão.
+# Entrar no `dev` continua sendo decisão de alguém: o workflow nunca faz o merge final.
+on:
+  schedule:
+    - cron: "0 11,20 * * *"   # 08h e 17h no horário de Brasília
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: novidades-do-original
+  cancel-in-progress: false
+
+env:
+  ORIGINAL: https://github.com/Geffersonvivan/vo_testa.git
+  BRANCH_MERGE: sincronizar/original
+
+jobs:
+  juntar:
+    name: Buscar e juntar com o dev
+    if: github.repository == 'VicZk/vo_testa'
+    runs-on: ubuntu-latest
+    outputs:
+      novos: ${{ steps.juntar.outputs.novos }}
+      conflito: ${{ steps.juntar.outputs.conflito }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      - name: Buscar o original e juntar
+        id: juntar
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add original "$ORIGINAL"
+          git fetch --no-tags original main
+
+          if git merge-base --is-ancestor origin/main original/main; then
+            git push origin original/main:refs/heads/main
+          else
+            echo "::warning::A main deste fork divergiu da do original; o espelho não foi atualizado."
+          fi
+
+          novos=$(git rev-list --count HEAD..original/main)
+          echo "novos=$novos" >> "$GITHUB_OUTPUT"
+          echo "Commits do original que o dev ainda não tem: $novos"
+          if [ "$novos" = "0" ]; then
+            echo "conflito=nao" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git checkout -B "$BRANCH_MERGE"
+          if git merge --no-ff original/main -m "merge: novidades do original"; then
+            echo "conflito=nao" >> "$GITHUB_OUTPUT"
+            git push --force origin "$BRANCH_MERGE"
+          else
+            git merge --abort
+            echo "conflito=sim" >> "$GITHUB_OUTPUT"
+          fi
+
+  testes:
+    name: Testes do merge
+    needs: juntar
+    if: needs.juntar.outputs.novos != '0' && needs.juntar.outputs.conflito == 'nao'
+    uses: ./.github/workflows/testes.yml
+    with:
+      ref: sincronizar/original
+
+  avisar:
+    name: Abrir ou atualizar o PR
+    needs: [juntar, testes]
+    if: always() && needs.juntar.result == 'success' && needs.juntar.outputs.novos != '0'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      - name: PR para o dev
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CONFLITO: ${{ needs.juntar.outputs.conflito }}
+          TESTES: ${{ needs.testes.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          git remote add original "$ORIGINAL"
+          git fetch --no-tags original main
+          commits=$(git log --format='- `%h` %s (%an, %ad)' --date=format:'%d/%m %H:%M' origin/dev..original/main)
+
+          if [ "$CONFLITO" = "sim" ]; then
+            head=main
+            situacao="⚠️ As novidades **conflitam** com o \`dev\`: o merge precisa ser resolvido à mão. Este PR mostra os commits do original como estão."
+          else
+            head="$BRANCH_MERGE"
+            if [ "$TESTES" = "success" ]; then
+              situacao="✅ O merge com o \`dev\` está pronto no branch \`$BRANCH_MERGE\` e a suíte de testes passou."
+            else
+              situacao="❌ O merge com o \`dev\` está no branch \`$BRANCH_MERGE\`, mas a suíte de testes não passou (\`$TESTES\`)."
+            fi
+          fi
+
+          corpo=$(printf '%s\n\n**Commits novos no original:**\n%s\n\nRun: %s\n\n_Aberto pelo workflow "Novidades do original". Entrar no `dev` é decisão de quem revisar este PR._\n' "$situacao" "$commits" "$RUN_URL")
+
+          numero=$(gh pr list --base dev --state open --json number,headRefName \
+            --jq '[.[] | select(.headRefName == "main" or .headRefName == "'"$BRANCH_MERGE"'")][0].number // empty')
+          if [ -n "$numero" ]; then
+            gh pr edit "$numero" --body "$corpo"
+            echo "PR #$numero atualizado."
+          else
+            gh pr create --base dev --head "$head" --title "Novidades do original (Gefferson)" --body "$corpo"
+          fi

@@ -3,10 +3,18 @@ name: Testes
 # Roda a suíte do Django contra PostgreSQL de verdade (a trava de overbooking usa
 # ExclusionConstraint/btree_gist, que o SQLite não tem). É o gate que faltava antes
 # do deploy automático da main: marque este job como obrigatório na proteção de branch.
+# Também é chamado pelo "Novidades do original" para testar o merge com o original.
 on:
   push:
     branches: [main, dev]
   pull_request:
+  workflow_call:
+    inputs:
+      ref:
+        description: "Branch ou commit a testar (vazio = o do evento)"
+        type: string
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -34,6 +42,8 @@ jobs:
       DATABASE_URL: postgres://vo:vo_ci@localhost:5432/crm_vo_testa
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
 
       - uses: actions/setup-python@v5
         with:
