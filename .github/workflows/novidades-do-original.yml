@@ -34,7 +34,7 @@ jobs:
       novos: ${{ steps.juntar.outputs.novos }}
       conflito: ${{ steps.juntar.outputs.conflito }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: dev
           fetch-depth: 0
@@ -84,7 +84,7 @@ jobs:
     if: always() && needs.juntar.result == 'success' && needs.juntar.outputs.novos != '0'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: dev
           fetch-depth: 0

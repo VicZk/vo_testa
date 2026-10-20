@@ -8,6 +8,10 @@ from django.utils.safestring import mark_safe
 
 register = template.Library()
 
+# Mesmo escape do `json_script` do Django: `<`, `>` e `&` viram \uXXXX. O JSON continua
+# válido (o Google lê igual) e nenhum texto do painel fecha o <script> nem abre `<!--`.
+_ESCAPE_JSON_EM_SCRIPT = {ord(">"): "\\u003E", ord("<"): "\\u003C", ord("&"): "\\u0026"}
+
 # Município/UF da pousada — fixos (não é dado que o painel edita; o endereço
 # completo, sim, vem da Configuração do Site).
 CIDADE, UF, CEP, PAIS = "Itá", "SC", "89760-000", "BR"
@@ -56,6 +60,6 @@ def jsonld_pousada(context):
         dados["url"] = base + "/"
         dados["image"] = base + arquivo_estatico("site/img/og-pousada.jpg")
 
-    # `</` escapado: nem um endereço com HTML colado no painel fecha o <script>.
-    corpo = json.dumps(dados, ensure_ascii=False).replace("</", "<\\/")
-    return mark_safe(f'<script type="application/ld+json">{corpo}</script>')
+    corpo = json.dumps(dados, ensure_ascii=False).translate(_ESCAPE_JSON_EM_SCRIPT)
+    # `corpo` é JSON com <, > e & escapados (acima): não há HTML nele.
+    return mark_safe(f'<script type="application/ld+json">{corpo}</script>')  # nosec B308, B703

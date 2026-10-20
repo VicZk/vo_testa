@@ -16,11 +16,11 @@ jobs:
     name: SAST + dependências + segredos
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0            # histórico completo p/ o gitleaks
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.14"
 
@@ -30,8 +30,11 @@ jobs:
           pip install -r requirements.txt
           pip install pip-audit bandit ruff semgrep
 
+      # Só o que vai para produção (requirements.txt). Sem o `-r`, o pip-audit olhava o
+      # ambiente inteiro do CI e acusava CVE em pacote que só as ferramentas daqui trazem
+      # (ex.: o `mcp` que vem com o semgrep), deixando o gate vermelho sem motivo real.
       - name: pip-audit (CVEs em dependências)
-        run: pip-audit
+        run: pip-audit -r requirements.txt
 
       - name: bandit (SAST Python)
         run: bandit -r apps config -ll -x '*/tests.py,*/tests_e2e.py' --skip B310
@@ -58,9 +61,9 @@ jobs:
     name: Segredos no histórico (gitleaks)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
+      - uses: gitleaks/gitleaks-action@v3
         env:
           GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"

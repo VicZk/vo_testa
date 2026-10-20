@@ -733,6 +733,9 @@ class DadosEstruturadosTests(TestCase):
 
     def test_json_ld_nao_deixa_fechar_o_script(self):
         """Endereço com HTML colado no painel não pode escapar do <script>."""
+        import json
+        import re
+
         from apps.site.models import ConfiguracaoSite
 
         cfg = ConfiguracaoSite.load()
@@ -740,7 +743,11 @@ class DadosEstruturadosTests(TestCase):
         cfg.save()
         html = self.client.get("/").content.decode()
         self.assertNotIn("<script>alert(1)</script>", html)
-        self.assertIn(r"<\/script>", html)
+        self.assertIn(r"\u003C/script\u003E", html)
+        # E o Google lê o endereço de volta, sem perder nada.
+        achado = re.search(r'<script type="application/ld\+json">(.*?)</script>', html, re.S)
+        dados = json.loads(achado.group(1))
+        self.assertEqual(dados["address"]["streetAddress"], cfg.endereco)
 
 
 class SitemapQuartosTests(TestCase):
