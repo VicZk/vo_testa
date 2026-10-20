@@ -6,7 +6,6 @@ Reservas — fundo R$ 0,00" em vez do JSON cru. O detalhe bruto continua guardad
 (forense); isto é só apresentação. O que não tem molde cai num texto genérico
 razoável, nunca quebra.
 """
-from decimal import Decimal, InvalidOperation
 
 # Nomes de model → português amigável.
 ALVOS = {
@@ -35,10 +34,9 @@ _MOV = {
 
 
 def _rs(v):
-    try:
-        return "R$ " + f"{Decimal(str(v)):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-    except (InvalidOperation, TypeError, ValueError):
-        return f"R$ {v}"
+    """Dinheiro em pt-BR pelo formatador único do sistema (um só, para não divergir)."""
+    from apps.nucleo.templatetags.moeda import intcomma_brl
+    return intcomma_brl(v)
 
 
 def frase(registro) -> str:

@@ -11,12 +11,15 @@ from decimal import Decimal
 from django.db.models import Sum
 
 from apps.nucleo.modulos import Modulo
+
 # Seletor de período compartilhado (mês/ano) — mesmo controle da Trilha de auditoria.
 from apps.nucleo.periodos import periodo, selecao_periodo  # noqa: F401
 
 
 def _rs(v):
-    return f"R$ {Decimal(v or 0):.2f}"
+    """Dinheiro em pt-BR pelo formatador único do sistema ("R$ 1.234,56")."""
+    from apps.nucleo.templatetags.moeda import intcomma_brl
+    return intcomma_brl(v or 0)
 
 
 # ───────────────────────── Consolidados (cruzados) ─────────────────────────

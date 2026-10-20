@@ -76,7 +76,7 @@ class RelatoriosServiceTests(TestCase):
         # 3 diárias × 200 = 600, tudo "lançado no quarto" (recepção recebe).
         self.assertIn("600", kpis["Lançado nos quartos (recepção recebe)"])
         hosp = next(l for l in f["linhas"] if "Hospedagem" in l[0])
-        self.assertIn("0.00", hosp[1])   # nada no caixa do setor
+        self.assertEqual(hosp[1], "R$ 0,00")   # nada no caixa do setor (formato pt-BR)
         self.assertIn("600", hosp[2])    # tudo no quarto
 
     def test_faturamento_loja_separa_caixa_e_quarto(self):
