@@ -2135,3 +2135,45 @@ class ExpiracaoAuditadaTests(ReservasTestsBase):
         self.assertEqual(services.expirar_vencidas(), 1)
         self.assertTrue(TrilhaAuditoria.objects.filter(
             acao="expiracao_retencao", alvo="Reserva", alvo_id=str(r.pk)).exists())
+
+
+class MenorDeIdadeECATests(ReservasTestsBase):
+    """ECA, art. 82: menor só entra com os pais/responsável ou autorização conferida."""
+
+    def _com_menor(self, acompanhamento="", conferida=False):
+        from .models import FichaFNRH
+        r = self.reserva(dias=2)
+        FichaFNRH.objects.create(
+            reserva=r, nome="Criança Teste", nascimento=HOJE - timedelta(days=365 * 10),
+            acompanhamento_menor=acompanhamento, autorizacao_conferida=conferida)
+        return r
+
+    def test_menor_sem_informacao_trava_o_checkin(self):
+        r = self._com_menor()
+        with self.assertRaisesMessage(ValidationError, "ECA, art. 82"):
+            r.fazer_checkin(self.usuario)
+
+    def test_menor_com_os_pais_entra(self):
+        r = self._com_menor("pais")
+        r.fazer_checkin(self.usuario)
+        self.assertEqual(r.status, Reserva.Status.HOSPEDADA)
+
+    def test_menor_com_adulto_autorizado_precisa_da_conferencia(self):
+        r = self._com_menor("autorizado")
+        with self.assertRaisesMessage(ValidationError, "autorização"):
+            r.fazer_checkin(self.usuario)
+        Reserva.objects.filter(pk=r.pk).update(status=Reserva.Status.CANCELADA)
+        r2 = self._com_menor("autorizado", conferida=True)
+        r2.fazer_checkin(self.usuario)
+
+    def test_maior_de_idade_nao_precisa_de_nada(self):
+        from .models import FichaFNRH
+        r = self.reserva(dias=2)
+        FichaFNRH.objects.create(reserva=r, nome="Adulto", nascimento=HOJE - timedelta(days=365 * 30))
+        r.fazer_checkin(self.usuario)
+
+    def test_conferencia_so_aparece_na_recepcao(self):
+        from .forms import FichaFNRHForm, FichaFNRHRecepcaoForm
+        self.assertNotIn("autorizacao_conferida", FichaFNRHForm().fields)
+        self.assertIn("autorizacao_conferida", FichaFNRHRecepcaoForm().fields)
+        self.assertIn("acompanhamento_menor", FichaFNRHForm().fields)

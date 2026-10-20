@@ -21,7 +21,7 @@ from .forms import (
     CancelamentoForm,
     DevolucaoForm,
     FaturarForm,
-    FichaFNRHFormSet,
+    FichaFNRHRecepcaoFormSet,
     GrupoForm,
     LancamentoContaForm,
     RecebimentoForm,
@@ -894,7 +894,7 @@ def fnrh(request, pk):
     queryset = reserva.fichas_fnrh.all()
 
     if request.method == "POST":
-        formset = FichaFNRHFormSet(request.POST, queryset=queryset)
+        formset = FichaFNRHRecepcaoFormSet(request.POST, queryset=queryset)
         if formset.is_valid():
             fichas = formset.save()
             services.marcar_fichas_preenchidas(
@@ -909,7 +909,7 @@ def fnrh(request, pk):
             return redirect("reservas:detalhe", pk=pk)
         messages.error(request, "Revise os campos destacados.")
     else:
-        formset = FichaFNRHFormSet(queryset=queryset)
+        formset = FichaFNRHRecepcaoFormSet(queryset=queryset)
 
     fichas = list(reserva.fichas_fnrh.all())
     return render(request, "reservas/fnrh.html", {

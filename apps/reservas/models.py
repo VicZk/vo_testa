@@ -419,6 +419,11 @@ class Reserva(models.Model):
         return max(0, self.colchoes_consumidos - base)
 
     @property
+    def menores_pendentes(self) -> list:
+        """Fichas de menores de idade sem os pais/responsável nem autorização conferida."""
+        return [f for f in self.fichas_fnrh.all() if not f.menor_regular]
+
+    @property
     def fnrh_pronta(self) -> bool:
         """FNRH em ordem para check-in: uma ficha completa por hóspede, com o
         titular entre elas."""
@@ -505,6 +510,14 @@ class Reserva(models.Model):
             raise ValidationError(
                 "FNRH pendente — registre a ficha de cada hóspede antes do check-in."
             )
+        if getattr(settings, "ECA_BLOQUEAR_CHECKIN", True):
+            pendentes = self.menores_pendentes
+            if pendentes:
+                nomes = ", ".join(f.nome or "sem nome" for f in pendentes)
+                raise ValidationError(
+                    f"Menor de idade sem os pais ou o responsável legal, nem autorização "
+                    f"escrita conferida (ECA, art. 82): {nomes}. Registre na FNRH."
+                )
         if self.uh.status != self.uh.Status.ATIVA:
             raise ValidationError(
                 f"O quarto {self.uh.numero} está {self.uh.get_status_display().lower()}."
@@ -775,6 +788,11 @@ class FichaFNRH(models.Model):
         PORTAL = "portal", "Portal do hóspede"
 
     # Campos mínimos para a ficha valer (usados na trava de check-in).
+    class AcompanhamentoMenor(models.TextChoices):
+        PAIS = "pais", "Com os pais (ou um deles)"
+        RESPONSAVEL = "responsavel", "Com o responsável legal (tutor ou guardião)"
+        AUTORIZADO = "autorizado", "Com adulto autorizado por escrito pelos pais"
+
     CAMPOS_OBRIGATORIOS = ("nome", "nascimento", "documento_numero", "cidade", "motivo_viagem")
 
     reserva = models.ForeignKey(
@@ -826,6 +844,17 @@ class FichaFNRH(models.Model):
         help_text="Cidade/UF/país de onde o hóspede veio nesta viagem.",
     )
     proximo_destino = models.CharField("próximo destino", max_length=120, blank=True)
+    # ECA, art. 82: criança ou adolescente só se hospeda com os pais/responsável ou com
+    # autorização escrita deles. Só vale para quem tem menos de 18 anos na entrada.
+    acompanhamento_menor = models.CharField(
+        "se menor de 18 anos, está", max_length=12, choices=AcompanhamentoMenor.choices,
+        blank=True,
+        help_text="Só para menores de idade (ECA, art. 82).",
+    )
+    autorizacao_conferida = models.BooleanField(
+        "autorização escrita dos pais conferida pela recepção", default=False,
+        help_text="Quando o menor vem com outro adulto: a recepção viu o documento.",
+    )
 
     origem = models.CharField(
         "preenchida via", max_length=8, choices=Origem.choices, default=Origem.RECEPCAO,
@@ -857,6 +886,27 @@ class FichaFNRH(models.Model):
     @property
     def completa(self) -> bool:
         return all(getattr(self, campo) for campo in self.CAMPOS_OBRIGATORIOS)
+
+    @property
+    def menor(self) -> bool:
+        """Menos de 18 anos no dia da entrada (sem data de nascimento: não se sabe)."""
+        if not self.nascimento or not self.reserva_id:
+            return False
+        dia = self.reserva.checkin
+        idade = dia.year - self.nascimento.year - (
+            (dia.month, dia.day) < (self.nascimento.month, self.nascimento.day))
+        return idade < 18
+
+    @property
+    def menor_regular(self) -> bool:
+        """ECA, art. 82: menor com os pais/responsável, ou com adulto autorizado por
+        escrito e a autorização conferida pela recepção."""
+        if not self.menor:
+            return True
+        A = self.AcompanhamentoMenor
+        if self.acompanhamento_menor in (A.PAIS, A.RESPONSAVEL):
+            return True
+        return self.acompanhamento_menor == A.AUTORIZADO and self.autorizacao_conferida
 
 
 class ContaHospedagem(models.Model):

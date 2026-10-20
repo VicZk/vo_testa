@@ -123,6 +123,9 @@ MFA_OBRIGATORIO_PARA = os.environ.get("MFA_OBRIGATORIO_PARA", "superusuario")
 # Trava por conta no login (8 senhas erradas → 15 min). Desligada na suíte, como o
 # limite por IP: o cache é compartilhado entre os testes.
 LOGIN_TRAVA_POR_CONTA = not TESTING
+# ECA, art. 82: check-in recusado se um menor não está com os pais/responsável nem com
+# autorização escrita conferida. Ligado sempre (também nos testes).
+ECA_BLOQUEAR_CHECKIN = os.environ.get("ECA_BLOQUEAR_CHECKIN", "1") == "1"
 # Retenção da trilha de auditoria em dias (comando purgar_trilha). 0 = guardar sempre.
 # Registros financeiros pedem 5 anos: se ligar, use 1830 ou mais.
 TRILHA_RETENCAO_DIAS = int(os.environ.get("TRILHA_RETENCAO_DIAS", "0"))

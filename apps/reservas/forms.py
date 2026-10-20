@@ -210,6 +210,7 @@ class FichaFNRHForm(forms.ModelForm):
             "documento_tipo", "documento_numero", "documento_emissor", "cpf",
             "pais", "cep", "endereco", "cidade", "uf", "telefone", "email",
             "motivo_viagem", "meio_transporte", "procedencia", "proximo_destino",
+            "acompanhamento_menor",
         ]
         widgets = {
             "nascimento": DataInput(),
@@ -221,6 +222,7 @@ class FichaFNRHForm(forms.ModelForm):
         ("Documento", ["documento_tipo", "documento_numero", "documento_emissor", "cpf"]),
         ("Endereço e contato", ["pais", "cep", "endereco", "cidade", "uf", "telefone", "email"]),
         ("Sobre a viagem", ["motivo_viagem", "meio_transporte", "procedencia", "proximo_destino"]),
+        ("Menor de 18 anos", ["acompanhamento_menor", "autorizacao_conferida"]),
     ]
 
     def __init__(self, *args, **kwargs):
@@ -231,14 +233,31 @@ class FichaFNRHForm(forms.ModelForm):
                 self.fields[campo].required = True
 
     def grupos(self):
-        """Campos agrupados por seção, para renderizar a ficha em blocos."""
-        return [(titulo, [self[nome] for nome in nomes]) for titulo, nomes in self.GRUPOS]
+        """Campos agrupados por seção, para renderizar a ficha em blocos (só os que o
+        formulário tem: o do portal não traz o que é da recepção)."""
+        saida = []
+        for titulo, nomes in self.GRUPOS:
+            campos = [self[nome] for nome in nomes if nome in self.fields]
+            if campos:
+                saida.append((titulo, campos))
+        return saida
+
+
+class FichaFNRHRecepcaoForm(FichaFNRHForm):
+    """Ficha na recepção: além do que o hóspede preenche, a conferência da autorização
+    escrita do menor (só quem vê o documento marca)."""
+
+    class Meta(FichaFNRHForm.Meta):
+        fields = FichaFNRHForm.Meta.fields + ["autorizacao_conferida"]
 
 
 # Formset: todas as fichas de uma reserva editadas juntas (um único celular
 # no portal; ou a recepção). extra=0 — os slots são preparados na view.
 FichaFNRHFormSet = forms.modelformset_factory(
     FichaFNRH, form=FichaFNRHForm, extra=0,
+)
+FichaFNRHRecepcaoFormSet = forms.modelformset_factory(
+    FichaFNRH, form=FichaFNRHRecepcaoForm, extra=0,
 )
 
 
