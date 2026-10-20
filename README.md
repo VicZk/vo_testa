@@ -406,7 +406,8 @@ dicionário de gateways e documentar as variáveis no `.env.example`.
 models de `apps.*` (com poucas exclusões) e registra criar, editar (com diff campo a
 campo) e excluir, além de login e logout. Um middleware publica o usuário e o IP da
 requisição para que qualquer service saiba a quem atribuir a ação. Só há registro quando
-existe um usuário real no contexto (seeds, migrations e rotinas de sistema não poluem).
+existe um usuário real no contexto (seeds, migrations e rotinas de sistema não poluem,
+nem pagam a leitura do estado anterior).
 Fluxos com motivo (estorno, cancelamento, troca de quarto, reabertura de caixa) também
 chamam `registrar_auditoria(...)` explicitamente. A leitura fica no módulo Auditoria,
 com frases legíveis e exportação CSV.

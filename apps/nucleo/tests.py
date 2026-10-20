@@ -1472,6 +1472,40 @@ class BackupDoBancoTests(TestCase):
             Bucket="midia", Delete={"Objects": [{"Key": "backups/2026/08/crm-velho.json.gz"}]})
 
 
+class AuditoriaSemCustoExtraTests(TestCase):
+    """A auditoria automática não lê a linha à toa e só compara o que foi gravado."""
+
+    def test_sem_usuario_no_contexto_nao_le_a_linha_antiga(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        from .models import Pessoa
+
+        p = Pessoa.objects.create(nome="Ana")
+        p.nome = "Ana Maria"
+        with CaptureQueriesContext(connection) as ctx:
+            p.save()
+        selects = [q["sql"] for q in ctx.captured_queries
+                   if q["sql"].startswith("SELECT") and "nucleo_pessoa" in q["sql"]]
+        self.assertEqual(selects, [])
+
+    def test_update_fields_registra_so_os_campos_gravados(self):
+        from . import audit
+        from .models import Pessoa, TrilhaAuditoria
+
+        u = Usuario.objects.create_user(username="aud", password="senha-forte-123")
+        p = Pessoa.objects.create(nome="Ana", email="ana@ex.com")
+        audit.definir_contexto(u, "127.0.0.1")
+        try:
+            p.nome = "Ana Maria"
+            p.email = "mudou-so-na-memoria@ex.com"
+            p.save(update_fields=["nome"])
+        finally:
+            audit.limpar_contexto()
+        trilha = TrilhaAuditoria.objects.filter(acao="editar", alvo="Pessoa", alvo_id=p.pk).get()
+        self.assertEqual(set(trilha.detalhe["alteracoes"]), {"nome"})
+
+
 class ModulosPorRequisicaoTests(TestCase):
     """Dentro de uma requisição, os módulos ativos são lidos uma vez."""
 

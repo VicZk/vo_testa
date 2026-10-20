@@ -666,7 +666,9 @@ MODELOS_EXCLUIDOS = {
 }
 ```
 
-- `pre_save` guarda o snapshot do estado anterior (`_audit_anterior`) para o diff.
+- `pre_save` guarda o snapshot do estado anterior (`_audit_anterior`) para o diff — só
+  quando há usuário no contexto (sem ele nada é registrado, então a leitura não
+  acontece) e, com `save(update_fields=…)`, só dos campos gravados.
 - `post_save` grava `criar` (`{"valores": …}`) ou `editar` (`{"alteracoes": {campo: [antes, depois]}}`);
   `save` sem mudança de campo não gera registro.
 - `post_delete` grava `excluir` com o snapshot.
@@ -696,7 +698,8 @@ clicável (timeline por operador) e export CSV. Acesso por `@requer_modulo(Modul
 **O que a auditoria automática não cobre** (documentado no próprio código e em
 `CLAUDE.md`): só **escritas** — leitura/visualização não gera log; `bulk_create`,
 `QuerySet.update()` e SQL cru não passam por signals; e o `pre_save` custa 1 query
-extra por escrita.
+extra por escrita feita por um usuário (as do site, do portal, dos webhooks e das rotinas
+não pagam esse custo).
 
 ### 5.6 Camadas de segurança (o que cada uma faz)
 

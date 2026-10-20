@@ -127,22 +127,33 @@ def _serializa(valor):
     return str(valor)
 
 
-def _snapshot(instance) -> dict:
+def _snapshot(instance, campos=None) -> dict:
+    """Valores dos campos concretos; com `campos` (update_fields), só esses."""
     dados = {}
     for campo in instance._meta.concrete_fields:
         if campo.name in CAMPOS_IGNORADOS or campo.primary_key:
+            continue
+        if campos is not None and campo.name not in campos and campo.attname not in campos:
             continue
         dados[campo.attname] = _serializa(getattr(instance, campo.attname, None))
     return dados
 
 
-def _pre_save(sender, instance, **kwargs):
-    """Guarda o estado anterior (do banco) para calcular o diff no post_save."""
-    if not instance.pk:
-        instance._audit_anterior = None
+def _pre_save(sender, instance, update_fields=None, **kwargs):
+    """Guarda o estado anterior (do banco) para calcular o diff no post_save.
+
+    Sem usuário no contexto o post_save não registra nada, então a leitura extra não
+    acontece (site, portal, webhooks e rotinas pagavam um SELECT por gravação à toa).
+    Com update_fields, lê e compara só os campos gravados: os demais não mudam no banco."""
+    instance._audit_anterior = None
+    instance._audit_campos = set(update_fields) if update_fields is not None else None
+    if not instance.pk or usuario_atual() is None:
         return
-    anterior = sender.objects.filter(pk=instance.pk).first()
-    instance._audit_anterior = _snapshot(anterior) if anterior else None
+    qs = sender._base_manager.filter(pk=instance.pk)
+    if instance._audit_campos is not None:
+        qs = qs.only(*instance._audit_campos)
+    anterior = qs.first()
+    instance._audit_anterior = _snapshot(anterior, instance._audit_campos) if anterior else None
 
 
 def _post_save(sender, instance, created, **kwargs):
@@ -155,7 +166,7 @@ def _post_save(sender, instance, created, **kwargs):
         registrar_auditoria(usuario, "criar", instance, {"valores": _snapshot(instance)})
         return
     anterior = getattr(instance, "_audit_anterior", None) or {}
-    atual = _snapshot(instance)
+    atual = _snapshot(instance, getattr(instance, "_audit_campos", None))
     alteracoes = {
         campo: [anterior.get(campo), novo]
         for campo, novo in atual.items()
