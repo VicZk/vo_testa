@@ -9,6 +9,93 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 20/10/2026 — Segurança e LGPD (`9082fc0` a `5f3c8b6`)
+
+Quarto bloco: as proteções de login, os formulários públicos e o tratamento de dados
+pessoais apontados na auditoria.
+
+**O que melhorou**
+- **Entrada da equipe:**
+  - **"Esqueci minha senha":** o funcionário recebe por e-mail um link de uso único,
+    válido por 1 hora. A tela é a mesma exista ou não o e-mail.
+  - **Trava por usuário:** 8 senhas erradas para o mesmo usuário seguram aquela conta por
+    15 minutos, venham de onde vierem.
+  - **MFA obrigatório configurável:** só superusuário (padrão, decisão do dono),
+    gerência, ou também quem opera dinheiro.
+  - As mensagens da entrada aparecem em português e como são (o limite de tentativas não
+    vira mais "senha incorreta").
+- **Formulários públicos:**
+  - "Pedir proposta" e as páginas de captação ganham defesa silenciosa contra robôs
+    (campo-armadilha + tempo mínimo); as páginas de captação, também limite por IP.
+  - As boas-vindas automáticas vão uma vez por pessoa, com teto diário. O formulário não
+    vira um disparador de e-mail em nome da pousada.
+- **LGPD:**
+  - Contato das páginas de captação só entra na lista de e-mail se marcar o
+    consentimento; a caixa não vem mais marcada.
+  - Descadastro só com confirmação: o antivírus que abre o link sozinho não tira ninguém
+    da lista. E o botão "descadastrar" do Gmail passa a funcionar.
+  - Trilha de auditoria:
+    - registra que o documento ou o nascimento mudou, mas não guarda o valor;
+    - retenção configurável;
+    - exportação só pela gerência;
+    - escritas feitas pelo site, pelo portal, pelo link de pagamento e pelos webhooks
+      também ficam registradas.
+  - Testes e exemplos passam a usar dados sintéticos. Sem telefone do pagador, o gateway
+    recebe o comercial da pousada.
+- **Pagamentos:**
+  - Link vencido não aceita mais pagamento novo (o que o gateway confirmar continua
+    valendo).
+  - "Já paguei" tem limite de cliques.
+- **Portal do hóspede:** "Gerar novo QR" invalida o link que foi parar onde não devia.
+- **"Minha reserva" no site:** o sobrenome precisa ser um sobrenome inteiro, não um
+  pedaço do nome.
+- **Outros:**
+  - token da Meta no cabeçalho, nunca na URL;
+  - upload da Conciliação limitado a 5 MB e ao tipo certo;
+  - violações de CSP vão para o log, para o bloqueio ser ligado sem quebrar tela.
+
+**O que foi modificado**
+- **Novos:**
+  - `apps/nucleo/antirrobo.py` e a tag `{% campos_antirrobo %}`;
+  - comando `purgar_trilha`;
+  - rotas `/crm/senha/…` (Esqueci minha senha);
+  - `/csp/relatorio/`;
+  - `portal:qr_novo`;
+  - templates `registration/senha_*`.
+- **Configurações:**
+  - `MFA_OBRIGATORIO_PARA`;
+  - `TRILHA_RETENCAO_DIAS`;
+  - `LEAD_BOAS_VINDAS_MAX_DIA`;
+  - `PAGAMENTOS_TELEFONE_PADRAO`;
+  - `LOGIN_TRAVA_POR_CONTA` (fixa, desligada só nos testes).
+- **Sem migrations.**
+- **Documentação:** `docs/ARQUITETURA.md` (auditoria, camadas de segurança e variáveis).
+
+**Como foi testado**
+- Testes novos em cada commit, entre eles:
+  - o fluxo completo de "Esqueci minha senha";
+  - a trava com 8 IPs diferentes;
+  - o descadastro de um cliente com CSRF ligado;
+  - lead sem consentimento;
+  - token fora da URL;
+  - upload grande;
+  - relatório de CSP com token mascarado;
+  - link vencido;
+  - novo QR;
+  - robô e teto de boas-vindas;
+  - sobrenome por pedaço;
+  - documento mascarado na trilha e escrita pública atribuída.
+- Suíte completa no Windows: 1080 testes; a única falha é a conhecida do Windows. O CI
+  (Linux + PostgreSQL 16) roda no push.
+
+**Depois do deploy (opcional, no Railway)**
+- Para exigir MFA também da gerência: `MFA_OBRIGATORIO_PARA=gerencia`.
+- Para ligar a retenção da trilha: `TRILHA_RETENCAO_DIAS` (5 anos ≥ 1830).
+- Para o "Esqueci minha senha" sair de verdade: `EMAIL_HOST` configurado (o mesmo dos
+  e-mails de reserva) e o e-mail de cada funcionário preenchido no cadastro.
+
+---
+
 ## 20/10/2026 — Faturamento para agência, NFS-e certa e a recepção mais flexível (`a6d63a4` a `108b444`)
 
 Terceiro bloco: o resto das regras de dinheiro da auditoria e as primeiras correções de
