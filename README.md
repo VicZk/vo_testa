@@ -558,6 +558,8 @@ Railway em produção). As essenciais:
 | `FISCAL_GATEWAY`, `FISCAL_NFSE_*` | emissão fiscal |
 | `WHATSAPP_*`, `META_*`, `GA_MEASUREMENT_ID` | comunicação e mídia |
 | `RESERVA_RETENCAO_MINUTOS`, `PRECO_*`, `CANCELAMENTO_*` | regras de reserva e preço |
+| `CHECKOUT_TOLERANCIA_ARREDONDAMENTO` | resíduo de centavos quitado sozinho no check-out (padrão R$ 0,10) |
+| `LOG_LEVEL` | nível dos logs no stdout (padrão INFO) |
 
 A lista completa, com padrões e efeitos, está em
 [`docs/ARQUITETURA.md` §7](docs/ARQUITETURA.md). Durante os testes a flag `TESTING`

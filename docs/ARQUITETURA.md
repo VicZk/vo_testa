@@ -765,6 +765,7 @@ Tudo que varia por ambiente é lido em `config/settings.py` (`.env` em dev via
 | Variável | Default | O que faz |
 |---|---|---|
 | `DEBUG` | `0` | `True` só com `"1"`. Governa o bloco de hardening, `MFA_OBRIGATORIO` e a confiança no corpo do webhook. |
+| `LOG_LEVEL` | `INFO` (`WARNING` nos testes) | Nível do `LOGGING` que manda tudo para o stdout (logs do Railway). |
 | `SECRET_KEY` | chave de dev versionada | Em produção (`DEBUG=0`, não `TESTING`) é **obrigatória** e não pode começar com `dev-inseguro` — senão `ImproperlyConfigured`. |
 | `ALLOWED_HOSTS` | `""` (lista separada por vírgula) | Com `DEBUG=1` e vazio, usa `localhost,127.0.0.1`. Sempre são adicionados os domínios do Railway, `.railway.app`, `.up.railway.app`, `healthcheck.railway.app` e loopbacks. |
 | `RAILWAY_PUBLIC_DOMAIN` | `""` | Injetada pelo Railway; entra em `ALLOWED_HOSTS`. |
@@ -814,6 +815,7 @@ Sem elas, filesystem local — e **o disco do Railway é efêmero**.
 | Variável | Default | O que faz |
 |---|---|---|
 | `RESERVA_RETENCAO_MINUTOS` | `30` | Minutos que a pré-reserva de canal segura o quarto antes de expirar. |
+| `CHECKOUT_TOLERANCIA_ARREDONDAMENTO` | `0.10` | Saldo positivo até este valor é quitado no check-out com um desconto auditado (`ajuste_arredondamento`); `0` desliga. |
 | `ACRESCIMO_TARIFA_DUPLO` | `1.6` | Fator sobre a tarifa do tipo para quarto de dois cômodos (arredondado à dezena). `tarifa_override` vence o cálculo. |
 | `PRECO_ISS_ALIQUOTA` | `FISCAL_NFSE_ISS_ALIQUOTA` | % de ISS lançado na conta. |
 | `PRECO_TAXA_TURISMO_DIARIA` | `4.00` | R$ fixos por noite. |
@@ -900,9 +902,8 @@ Sem elas, filesystem local — e **o disco do Railway é efêmero**.
 | `JEV_API_KEY` | `""` | Credencial. |
 | `JEV_TIMEOUT_MS` | `800` | Timeout da chamada. |
 
-> `.env.example` ainda menciona `FRIGOBAR_BLOQUEAR_CHECKOUT` — **não é lida em nenhum
-> lugar**: o módulo Frigobar foi removido (`nucleo/0036`) e o check-out só exige saldo
-> zerado (`Reserva.fazer_checkout`).
+> `FRIGOBAR_BLOQUEAR_CHECKOUT` foi retirada do `.env.example`: o módulo Frigobar foi
+> removido (`nucleo/0036`) e o check-out só exige saldo zerado (`Reserva.fazer_checkout`).
 
 ---
 
