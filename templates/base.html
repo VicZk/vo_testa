@@ -10,9 +10,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
-  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=mob3">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=mob4">
   <script src="{% static 'js/fluid.js' %}"></script>
-  <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
+  {# HTMX e Alpine servidos pelo próprio sistema (static/vendor/), como o site público já
+     faz: sem eles o CRM vira página estática, e o unpkg pode cair ou ficar lento. #}
+  <script src="{% static 'vendor/htmx-2.0.4.min.js' %}" defer></script>
   <script>
     // Combobox de pessoa com busca + agrupamento (componentes/combo_pessoa.html).
     // Registrado antes do Alpine (defer) para o alpine:init pegar.
@@ -102,7 +104,7 @@
       }));
     });
   </script>
-  <script src="https://unpkg.com/alpinejs@3.14.8/dist/cdn.min.js" defer></script>
+  <script src="{% static 'vendor/alpinejs-3.14.8.min.js' %}" defer></script>
 </head>
 <body>
 {% if user.is_authenticated %}
@@ -309,6 +311,9 @@
   </div>
 </div>
 
+{# Barra de progresso das requisições HTMX (acende enquanto há requisição em voo) #}
+<div class="barra-progresso" id="barra-progresso" aria-hidden="true"></div>
+
 {# Toasts (mensagens Django viram notificações) #}
 <div class="toasts" id="toasts">
   {% for message in messages %}
@@ -446,6 +451,35 @@
     setTimeout(() => { el.classList.add('toast-saindo'); setTimeout(() => el.remove(), 400); }, 5000);
   }
   document.querySelectorAll('#toasts .toast').forEach(agendarSaida);
+
+  // ---------- Feedback de toda requisição HTMX ----------
+  // Barra no topo enquanto há requisição em voo, e erro sempre visível: por padrão o
+  // HTMX não troca nada em 4xx/5xx nem avisa — a pessoa clicava e "nada acontecia".
+  (function () {
+    const barra = document.getElementById('barra-progresso');
+    let emVoo = 0;
+    const comecou = () => { emVoo++; if (barra) barra.classList.add('ativa'); };
+    const terminou = () => {
+      emVoo = Math.max(0, emVoo - 1);
+      if (!emVoo && barra) barra.classList.remove('ativa');
+    };
+    document.body.addEventListener('htmx:beforeRequest', comecou);
+    document.body.addEventListener('htmx:afterRequest', terminou);
+    document.body.addEventListener('htmx:responseError', e => {
+      const status = e.detail.xhr ? e.detail.xhr.status : '';
+      toast(status === 403
+        ? 'Você não tem permissão para esta ação.'
+        : 'Não foi possível concluir (erro ' + status + '). Tente de novo.', 'error');
+    });
+    document.body.addEventListener('htmx:sendError', () => {
+      terminou();
+      toast('Sem conexão com o servidor. Confira a internet e tente de novo.', 'error');
+    });
+    document.body.addEventListener('htmx:timeout', () => {
+      terminou();
+      toast('O servidor demorou para responder. Tente de novo.', 'error');
+    });
+  })();
 
   // ---------- Paleta de comandos ----------
   const COMANDOS = [

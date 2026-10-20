@@ -1422,6 +1422,26 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 @keyframes toast-sai { to { opacity: 0; transform: translateX(20px); } }
 @media (prefers-reduced-motion: reduce) { .toast, .toast-saindo { animation: none; } }
 
+/* Barra de progresso global das requisições HTMX (base.html). */
+.barra-progresso {
+  position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 9999;
+  pointer-events: none; opacity: 0; transition: opacity .2s;
+  background: linear-gradient(90deg, transparent, var(--lampiao), transparent);
+  background-size: 200% 100%;
+}
+.barra-progresso.ativa { opacity: 1; animation: barra-correndo 1.1s linear infinite; }
+@keyframes barra-correndo { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .barra-progresso.ativa { animation: none; background: var(--lampiao); }
+}
+/* Quem disparou a requisição fica visivelmente ocupado e ignora o 2º clique
+   (o HTMX põe .htmx-request no elemento que fez o pedido). */
+button.htmx-request,
+form.htmx-request button[type="submit"],
+form.htmx-request .botao-primario {
+  opacity: .65; pointer-events: none; cursor: progress;
+}
+
 .paleta-overlay {
   position: fixed; inset: 0; z-index: 150;
   display: flex; align-items: flex-start; justify-content: center;
