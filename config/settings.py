@@ -288,6 +288,13 @@ FNRH_BLOQUEAR_CHECKIN = (
     not TESTING and os.environ.get("FNRH_BLOQUEAR_CHECKIN", "1") == "1"
 )
 
+# Check-out: resíduo de arredondamento (diária média × noites dá centavos a mais que
+# o total cotado) até este valor é quitado sozinho com um desconto auditado, em vez
+# de travar a saída. Acima dele, o saldo continua bloqueando o check-out.
+CHECKOUT_TOLERANCIA_ARREDONDAMENTO = os.environ.get(
+    "CHECKOUT_TOLERANCIA_ARREDONDAMENTO", "0.10"
+)
+
 # SEO / analytics do site público. GA4 só carrega se o ID estiver setado.
 GA_MEASUREMENT_ID = os.environ.get("GA_MEASUREMENT_ID", "")
 

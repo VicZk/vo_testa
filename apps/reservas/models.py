@@ -487,9 +487,25 @@ class Reserva(models.Model):
         # Único bloqueio de check-out é o dinheiro: saldo tem que estar zerado.
         # (A pousada não trabalha com consumo de frigobar, então não há trava de
         # conferência na saída.)
-        if conta.saldo() != Decimal("0.00"):
+        saldo = conta.saldo()
+        tolerancia = Decimal(str(getattr(settings, "CHECKOUT_TOLERANCIA_ARREDONDAMENTO", "0")))
+        if Decimal("0.00") < saldo <= tolerancia:
+            # Centavos de arredondamento (diária média × noites ≠ total cotado): o
+            # hóspede pagou o valor combinado e o atendente não pode dar desconto
+            # (exige gerência). Quita o resíduo com um desconto rastreável.
+            LancamentoConta.objects.create(
+                conta=conta, tipo=LancamentoConta.Tipo.DESCONTO,
+                natureza=NaturezaFiscal.SERVICO,
+                descricao="Ajuste de arredondamento no check-out",
+                valor=saldo, criado_por=usuario,
+            )
+            registrar_auditoria(
+                usuario, "ajuste_arredondamento", self, {"valor": str(saldo)}
+            )
+            saldo = conta.saldo()
+        if saldo != Decimal("0.00"):
             raise ValidationError(
-                f"A conta tem saldo de R$ {conta.saldo()} — receba ou ajuste antes."
+                f"A conta tem saldo de R$ {saldo} — receba ou ajuste antes."
             )
         conta.status = ContaHospedagem.Status.FECHADA
         conta.fechada_em = timezone.now()

@@ -1286,3 +1286,39 @@ class CheckinCheckoutAtomicosTests(ReservasTestsBase):
             services.lancar_na_conta(
                 conta_antiga, "consumo", "consumo", "Cerveja", Decimal("12.00"), self.usuario)
         self.assertFalse(LancamentoConta.objects.filter(descricao="Cerveja").exists())
+
+
+class CheckoutArredondamentoTests(ReservasTestsBase):
+    """Check-out não trava por centavos de arredondamento da diária média."""
+
+    def _hospedada(self, diaria, noites):
+        r = Reserva.objects.create(
+            uh=self.uh, hospede=self.hospede, checkin=HOJE,
+            checkout=HOJE + timedelta(days=noites), status=Reserva.Status.CONFIRMADA,
+            valor_diaria=diaria, criado_por=self.usuario,
+        )
+        conta = r.fazer_checkin(self.usuario)
+        self.abrir_caixa()
+        return r, conta
+
+    def test_residuo_de_centavos_e_quitado_e_auditado(self):
+        # 5 noites a 250 + 2 a 400 = 2.050,00 cotado; média 292,86 × 7 = 2.050,02 lançado.
+        r, conta = self._hospedada(Decimal("292.86"), 7)
+        self.assertEqual(conta.saldo(), Decimal("2050.02"))
+        services.receber_pagamento(conta, self.usuario, self.dinheiro, Decimal("2050.00"))
+        r.fazer_checkout(self.usuario)
+        r.refresh_from_db()
+        self.assertEqual(r.status, Reserva.Status.CHECKOUT)
+        ajuste = LancamentoConta.objects.get(conta=conta, tipo=LancamentoConta.Tipo.DESCONTO)
+        self.assertEqual(ajuste.valor, Decimal("0.02"))
+        self.assertTrue(TrilhaAuditoria.objects.filter(acao="ajuste_arredondamento").exists())
+
+    def test_saldo_acima_da_tolerancia_continua_bloqueando(self):
+        r, conta = self._hospedada(Decimal("300.00"), 2)
+        services.receber_pagamento(conta, self.usuario, self.dinheiro, Decimal("599.50"))
+        with self.assertRaises(ValidationError):
+            r.fazer_checkout(self.usuario)
+        r.refresh_from_db()
+        self.assertEqual(r.status, Reserva.Status.HOSPEDADA)
+        self.assertFalse(
+            LancamentoConta.objects.filter(conta=conta, tipo=LancamentoConta.Tipo.DESCONTO).exists())
