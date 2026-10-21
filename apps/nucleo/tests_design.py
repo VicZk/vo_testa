@@ -592,9 +592,10 @@ class EstiloForaDoAtributoTests(TestCase):
         self.raiz = Path(settings.BASE_DIR) / "templates"
 
     def _estaticos(self, caminho):
-        """style="…" sem variável de template dentro (o dinâmico é dado, não estilo)."""
+        """style="…" sem variável de template dentro (o dinâmico é dado, não estilo).
+        O `:style` do Alpine é ligação dinâmica e fica de fora."""
         texto = caminho.read_text(encoding="utf-8")
-        return [v for v in re.findall(r'style="([^"]*)"', texto)
+        return [v for v in re.findall(r'(?<![:\w-])style="([^"]*)"', texto)
                 if "{{" not in v and "{%" not in v]
 
     def test_marketing_e_comercial_sem_style_estatico(self):
@@ -605,6 +606,19 @@ class EstiloForaDoAtributoTests(TestCase):
                 if rel in self.EMAILS:
                     continue
                 for valor in self._estaticos(p):
+                    sobras.append(f"{rel}: {valor[:60]}")
+        self.assertEqual(sobras, [])
+
+    def test_nenhuma_tela_com_style_estatico(self):
+        """Valeu para o sistema todo: o CRM, o portal e o pagamento. Sobra só o
+        `display:none` que o JS liga e desliga (é estado, não desenho)."""
+        sobras = []
+        for p in self.raiz.rglob("*.html"):
+            rel = p.relative_to(self.raiz).as_posix()
+            if rel in self.EMAILS or rel.startswith("site/"):  # o site é Tailwind, à parte
+                continue
+            for valor in self._estaticos(p):
+                if valor.replace(" ", "").rstrip(";") != "display:none":
                     sobras.append(f"{rel}: {valor[:60]}")
         self.assertEqual(sobras, [])
 

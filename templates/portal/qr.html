@@ -10,12 +10,12 @@
 <h1>Acesso do hóspede — reserva #{{ reserva_id }}</h1>
 <p class="subtitulo">Mostre ou imprima este QR Code. O hóspede aponta a câmera e acessa a própria estadia (sem senha).</p>
 
-<div class="painel-bloco" style="max-width:420px;text-align:center">
-  <div style="width:240px;margin:0 auto">{{ svg|safe }}</div>
-  <p class="ficha-texto" style="word-break:break-all"><code>{{ url }}</code></p>
+<div class="painel-bloco qr-hospede">
+  <div class="qr-hospede-codigo">{{ svg|safe }}</div>
+  <p class="ficha-texto qr-hospede-url"><code>{{ url }}</code></p>
 </div>
 
-<form method="post" action="{% url 'portal:qr_novo' reserva_id %}" class="form-cartao" style="max-width:420px">
+<form method="post" action="{% url 'portal:qr_novo' reserva_id %}" class="form-cartao qr-hospede-form">
   {% csrf_token %}
   <input type="hidden" name="voltar" value="{{ voltar }}">
   <p class="ajuda">O link foi parar onde não devia? Gere outro: o anterior deixa de abrir o portal na hora.</p>
