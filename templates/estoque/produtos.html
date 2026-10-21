@@ -42,7 +42,7 @@
   <button type="submit" class="botao-primario filtro-aplicar">Aplicar</button>
 </form>
 
-<table class="tabela est-tabela">
+<table class="tabela">
   <thead>
     <tr>
       <th>Produto</th>
@@ -60,7 +60,9 @@
           <a href="{% url 'estoque:produto_editar' p.pk %}" class="est-produto-nome">{{ p.nome }}</a>
           <span class="est-produto-meta">
             <span class="rotulo-dado">{{ p.categoria.nome }}</span>
-            <span class="rotulo-dado">{{ p.get_natureza_display }}</span>
+            {% comment %}Natureza fiscal só quando foge do normal: produto físico é
+            consumo, e repetir "CONSUMO" em 32 linhas não informa nada.{% endcomment %}
+            {% if p.natureza != 'consumo' %}<span class="rotulo-dado">{{ p.get_natureza_display }}</span>{% endif %}
             {% if p.codigo_barras %}<span class="rotulo-dado">{{ p.codigo_barras }}</span>{% endif %}
             {% if not p.ativo %}<span class="selo selo-neutro">Inativo</span>{% endif %}
           </span>

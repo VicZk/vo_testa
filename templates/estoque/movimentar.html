@@ -107,7 +107,7 @@ que são quatro jeitos de mexer no mesmo saldo, e troca sem sair da tela.
       {% if operacao == 'entrada' %}
         <div class="campo">
           <label for="id_custo_unitario">{{ form.custo_unitario.label }}</label>
-          <div class="est-campo-unidade est-campo-moeda">
+          <div class="est-campo-unidade">
             <span class="est-unidade est-unidade-antes">R$</span>
             <input type="number" id="id_custo_unitario" name="custo_unitario" step="0.0001" min="0"
                    value="{{ form.custo_unitario.value|default_if_none:'' }}" x-model.number="custo" required>
@@ -156,7 +156,7 @@ que são quatro jeitos de mexer no mesmo saldo, e troca sem sair da tela.
       </div>
     {% elif operacao == 'ajuste' %}
       <div class="campo">
-        <label for="id_motivo">5. {{ form.motivo.label }}</label>
+        <label for="id_motivo">4. {{ form.motivo.label }}</label>
         <input type="text" id="id_motivo" name="motivo" value="{{ form.motivo.value|default_if_none:'' }}"
                placeholder="Ex.: contagem da prateleira, quebra não lançada" required>
         <small class="ajuda">{{ form.motivo.help_text }}</small>
