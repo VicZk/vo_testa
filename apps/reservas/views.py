@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.conf import settings
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
@@ -267,6 +268,13 @@ def nova(request):
     for campo in ("uh", "checkin", "checkout"):
         if request.GET.get(campo):
             inicial[campo] = request.GET[campo]
+    # Datas já preenchidas com hoje → amanhã. É o caso da esmagadora maioria no
+    # balcão (quem chega e quem liga para esta semana), e o calendário do
+    # navegador abre no mês certo em vez de em branco. Quem vem do mapa traz as
+    # datas da célula clicada (acima) e manda nestas.
+    hoje = timezone.localdate()
+    inicial.setdefault("checkin", hoje)
+    inicial.setdefault("checkout", hoje + timedelta(days=1))
 
     form = ReservaForm(request.POST or None, initial=inicial)
     contexto = {
@@ -467,6 +475,12 @@ def tarifa_preview(request):
         colchoes_status = "ok"
         colchoes_msg = "Arranjo dentro da base do quarto (não usa colchão extra)."
 
+    # Os valores saem prontos para ler, pelo formatador único da casa: o aviso ao
+    # vivo escrevia "R$ 940.00" e "R$ 1200.00" — ponto decimal e sem separador de
+    # milhar, justamente no número que a recepção lê em voz alta ao telefone. Os
+    # campos crus seguem (o JS compara `> 0` com eles).
+    from apps.nucleo.templatetags.moeda import intcomma_brl
+
     return JsonResponse(
         {
             "diaria": f"{diaria:.2f}",
@@ -474,9 +488,14 @@ def tarifa_preview(request):
             "noites": noites,
             "hospedagem": f"{cot['hospedagem']:.2f}",
             "iss": f"{cot['iss']:.2f}",
-            "iss_aliquota": f"{cot['iss_aliquota']:.1f}",
+            "iss_aliquota": pct_br(cot["iss_aliquota"]),
             "taxa_turismo": f"{cot['taxa_turismo']:.2f}",
             "total": f"{cot['total']:.2f}",
+            "diaria_br": intcomma_brl(diaria),
+            "hospedagem_br": intcomma_brl(cot["hospedagem"]),
+            "iss_br": intcomma_brl(cot["iss"]),
+            "taxa_turismo_br": intcomma_brl(cot["taxa_turismo"]),
+            "total_br": intcomma_brl(cot["total"]),
             "feriado_ou_alta": bool(temporadas),
             "arranjo": {"casais": casais, "solteiros": solteiros, "sofa": usa_sofa},
             "colchoes_extra": conf["extra"],
@@ -511,15 +530,35 @@ def detalhe(request, pk):
 
     from apps.nucleo.models import modulo_ativo
 
+    # O que impede a entrada, dito ANTES do clique e com o caminho para resolver.
+    # A FNRH e o ECA barram o check-in no model, mas a tela não avisava: o botão
+    # ficava ativo e só devolvia erro depois — com a resposta (a ficha) escondida
+    # no fim de uma página longa.
     aviso_checkin = None
     if reserva.status in (Reserva.Status.CONFIRMADA, Reserva.Status.PRE_RESERVA):
-        if modulo_ativo(Modulo.GOVERNANCA):
+        if getattr(settings, "FNRH_BLOQUEAR_CHECKIN", True) and not reserva.fnrh_pronta:
+            faltam = sum(1 for f in reserva.fichas_fnrh.all() if not f.completa)
+            aviso_checkin = {
+                "texto": f"FNRH pendente: {faltam} ficha(s) de hóspede por completar.",
+                "url": reverse("reservas:fnrh", args=[reserva.pk]),
+                "acao": "Preencher a FNRH",
+            }
+        elif getattr(settings, "ECA_BLOQUEAR_CHECKIN", True) and reserva.menores_pendentes:
+            aviso_checkin = {
+                "texto": "Menor de idade sem os pais, responsável legal ou autorização "
+                         "escrita conferida (ECA, art. 82).",
+                "url": reverse("reservas:fnrh", args=[reserva.pk]),
+                "acao": "Registrar na FNRH",
+            }
+        elif modulo_ativo(Modulo.GOVERNANCA):
             from apps.governanca.services import uh_pronta_para_checkin
 
             if not uh_pronta_para_checkin(reserva.uh):
-                aviso_checkin = (
-                    f"O quarto {reserva.uh.numero} não está limpo/inspecionado."
-                )
+                aviso_checkin = {
+                    "texto": f"O quarto {reserva.uh.numero} não está limpo/inspecionado.",
+                    "url": reverse("governanca:painel"),
+                    "acao": "Abrir governança",
+                }
 
     # Prévia da política de cancelamento (quanto reteria/devolveria agora).
     politica_cancel = None
@@ -554,7 +593,24 @@ def detalhe(request, pk):
         cobrancas_reserva = cobrancas_da_reserva(reserva.pk)
         fin_cobr_pendente = sum((c.valor for c in cobrancas_reserva if c.pendente),
                                 Decimal("0.00"))
+        # Link público pronto para copiar/mandar no WhatsApp direto da linha.
+        for cobranca in cobrancas_reserva:
+            cobranca.link_publico = request.build_absolute_uri(
+                reverse("pagamentos:pagar", args=[cobranca.token])
+            )
     fin_saldo = fin_total - fin_recebido
+
+    # Link do pré check-in (FNRH) para copiar/mandar no WhatsApp ao lado do
+    # «Preencher / editar FNRH» — antes só existia dentro da tela do QR, que
+    # serve quem está no balcão. `get_acesso` cria o token da reserva se ainda
+    # não houver (é o mesmo que a tela do QR faz).
+    link_pre_checkin = ""
+    if reserva.ativa and modulo_ativo(Modulo.APPSITE):
+        from apps.portal.services import get_acesso
+
+        link_pre_checkin = request.build_absolute_uri(
+            reverse("portal:checkin", args=[get_acesso(reserva.pk).token])
+        )
 
     return render(
         request,
@@ -569,8 +625,23 @@ def detalhe(request, pk):
             "cobrancas_reserva": cobrancas_reserva,
             "form_cancelamento": CancelamentoForm(),
             "form_transferencia": TransferenciaForm(),
-            "form_recebimento": RecebimentoForm(),
-            "form_lancamento": LancamentoContaForm(),
+            # Durante a estadia, «Receber pagamento» já abre com o saldo em aberto:
+            # é o que se faz na saída, e digitar o valor à mão num campo vazio é
+            # onde nasce o erro de centavo. Fica editável (pagamento parcial, rateio).
+            # No «Adiantamento / sinal» (antes da entrada) segue em branco — ali o
+            # valor é combinado, não é o total.
+            # `auto_id` próprio em cada um: os dois têm um campo `valor` e ficavam
+            # com `id="id_valor"` repetido na mesma página — clicar no rótulo
+            # "Valor (R$)" de «Receber pagamento» punha o foco no campo de
+            # «Lançar na conta», logo ao lado.
+            "form_recebimento": RecebimentoForm(
+                auto_id="id_receb_%s",
+                initial={"valor": fin_saldo}
+                if reserva.status == Reserva.Status.HOSPEDADA and fin_saldo > 0
+                else None,
+            ),
+            "form_lancamento": LancamentoContaForm(auto_id="id_lanc_%s"),
+            "link_pre_checkin": link_pre_checkin,
             "form_acompanhante": AcompanhanteForm(),
             "quartos_livres": quartos_livres,
             "politica_cancel": politica_cancel,
@@ -709,15 +780,21 @@ def cancelar(request, pk):
 
 
 def _nota_politica(resumo) -> str:
-    """Frase da política p/ o motivo/auditoria/mensagem (retém × devolve)."""
-    devolver = resumo["devolver"]
+    """Frase da política p/ o motivo/auditoria/mensagem (retém × devolve).
+
+    O valor sai pelo formatador único: esta frase vira o aviso que a recepção lê
+    ao cancelar e o motivo gravado na reserva, e dizia "Devolver R$ 1200.50".
+    """
+    from apps.nucleo.templatetags.moeda import intcomma_brl
+
+    devolver = intcomma_brl(resumo["devolver"])
     if resumo["cenario"] == "em_hospedagem":
         return (f"Saída antecipada: cobrar {resumo['dias_consumidos']} diária(s) usada(s) "
-                f"+ {pct_br(resumo['retencao_pct'])}% de retenção. Devolver R$ {devolver}.")
+                f"+ {pct_br(resumo['retencao_pct'])}% de retenção. Devolver {devolver}.")
     if resumo["dentro_arrependimento"]:
-        return f"Dentro do prazo de arrependimento — devolver 100% (R$ {devolver})."
+        return f"Dentro do prazo de arrependimento — devolver 100% ({devolver})."
     return (f"Fora do prazo: reter {pct_br(resumo['retencao_pct'])}% "
-            f"(R$ {resumo['retencao_valor']}). Devolver R$ {devolver}.")
+            f"({intcomma_brl(resumo['retencao_valor'])}). Devolver {devolver}.")
 
 
 @requer_modulo(Modulo.RESERVAS)

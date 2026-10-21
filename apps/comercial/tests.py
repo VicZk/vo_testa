@@ -1992,6 +1992,17 @@ class PaginaCaptacaoTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertContains(r, "/captacao/promo-lp/")
 
+    def test_link_publico_tem_copiar_e_whatsapp(self):
+        """Divulgar a LP é mandar o link: antes era um input e um `Copiar` sem
+        plano B onde a Clipboard API não existe (servidor local em http)."""
+        pag = self._pagina()
+        self.client.login(username="com", password="senha-forte-123")
+        r = self.client.get(reverse("comercial:pagina_detalhe", args=[pag.pk]))
+        html = r.content.decode()
+        self.assertIn('data-copiar="http://testserver/captacao/promo-lp/"', html)
+        self.assertIn("https://wa.me/?text=", html)
+        self.assertIn("Enviar pelo WhatsApp", html)
+
     def test_pixel_e_whatsapp_renderizam(self):
         self._pagina(meta_pixel_id="123456789", whatsapp_destino="5549999990000")
         r = self.client.get(reverse("captacao:publica", args=["promo-lp"]))
@@ -3512,3 +3523,31 @@ class DesempenhoDoFunilEDoLeadTests(TestCase):
         quartos.quartos_para_lead(longo)
         self.assertEqual(self._contar(lambda: quartos.quartos_para_lead(longo)), poucos)
 
+
+
+class CampoDeDataPrePreenchidoTests(TestCase):
+    """O Comercial tinha a sua própria cópia do widget de data, sem o formato ISO
+    que o `<input type="date">` exige: reabrir uma oportunidade com período
+    previsto trazia as datas EM BRANCO."""
+
+    def test_periodo_previsto_volta_preenchido(self):
+        from datetime import date
+
+        from apps.nucleo.models import Pessoa
+
+        from .forms import OportunidadeForm
+        from .models import EtapaFunil, Oportunidade
+
+        dono = Usuario.objects.create_superuser(username="dat", password="senha-forte-123")
+        etapa = EtapaFunil.objects.first() or EtapaFunil.objects.create(nome="Novo", ordem=1)
+        op = Oportunidade.objects.create(
+            pessoa=Pessoa.objects.create(nome="Lead Teste"), etapa=etapa, criado_por=dono,
+            checkin_previsto=date(2026, 11, 9), checkout_previsto=date(2026, 11, 12),
+        )
+        html = str(OportunidadeForm(instance=op)["checkin_previsto"])
+        self.assertIn('value="2026-11-09"', html)
+
+    def test_data_hora_do_agendamento_sai_em_iso(self):
+        from .forms import DataHoraInput
+
+        self.assertEqual(DataHoraInput().format, "%Y-%m-%dT%H:%M")

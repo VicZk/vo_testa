@@ -80,12 +80,12 @@
       <div class="pdv-total"><span class="letreiro">Total</span><strong x-text="reais(total())"></strong></div>
     </div>
 
-    <label class="select-wrap pdv-cliente">
-      <select x-model="cliente_id">
-        <option value="">Cliente avulso</option>
-        {% for p in clientes %}<option value="{{ p.pk }}">{{ p.nome }}</option>{% endfor %}
-      </select>
-    </label>
+    {% comment %}Era um <select> com TODA a lista de pessoas — com a pousada cheia,
+    rolar centenas de nomes no balcão. Mesmo combobox com busca e agrupamento por
+    papel do Restaurante e da nova reserva. Vazio = cliente avulso.{% endcomment %}
+    <div class="pdv-cliente">
+      {% include "componentes/combo_pessoa.html" with dados=clientes dados_id="pdv-clientes-data" campo="cliente" placeholder="Cliente (vazio = avulso)…" %}
+    </div>
 
     <div class="pdv-seg" role="tablist">
       <button type="button" :class="{ativo: destino === 'caixa'}" @click="destino = 'caixa'">Pagar agora</button>
@@ -118,7 +118,13 @@
     return {
       produtos: JSON.parse('{{ produtos_json|escapejs }}'),
       cart: [], filtro: '', desconto: 0, destino: 'caixa',
-      forma_id: '', cliente_id: '', conta_id: '', enviando: false,
+      forma_id: '', conta_id: '', enviando: false,
+      // O cliente vem do combobox (componente Alpine próprio): lemos o hidden
+      // dele na hora de enviar, em vez de duplicar o estado aqui.
+      clienteEscolhido() {
+        const el = document.querySelector('.pdv-cliente [name=cliente]');
+        return el && el.value ? el.value : null;
+      },
       // Uma chave por carrinho: se o envio repetir (clique duplo, conexão que cai),
       // o servidor devolve a mesma venda em vez de cobrar de novo.
       chave: (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
@@ -146,7 +152,7 @@
           local_id: {{ local.pk }}, destino: this.destino,
           forma_id: this.destino === 'caixa' ? this.forma_id : null,
           conta_id: this.destino === 'conta' ? this.conta_id : null,
-          cliente_id: this.cliente_id || null,
+          cliente_id: this.clienteEscolhido(),
           desconto: this.desconto || 0,
           itens: this.cart.map(i => ({ produto_id: i.id, quantidade: i.qtd })),
           chave: this.chave,

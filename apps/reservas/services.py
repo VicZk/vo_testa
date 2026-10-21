@@ -1108,9 +1108,7 @@ def pendentes_de_sinal():
     """Reservas que ainda podem receber sinal (orçamento/pré-reserva) — para o
     módulo Pagamentos vincular a cobrança. Retorna [{id, rotulo}]."""
     qs = (
-        Reserva.objects.filter(
-            status__in=[Reserva.Status.ORCAMENTO, Reserva.Status.PRE_RESERVA]
-        )
+        Reserva.objects.filter(status__in=Reserva.STATUS_SINAL)
         .select_related("uh", "hospede")
         .order_by("checkin")
     )
@@ -1118,6 +1116,24 @@ def pendentes_de_sinal():
         {"id": r.pk, "rotulo": f"#{r.pk} · {r.uh.numero} · {r.hospede.nome} · {r.checkin:%d/%m}"}
         for r in qs
     ]
+
+
+def contato_da_reserva(reserva_id) -> dict:
+    """Para quem mandar a mensagem desta reserva: {"nome", "telefone"}.
+
+    Quem paga vem primeiro (é dele a cobrança); sem pagador distinto, o hóspede.
+    Interface pública — o Pagamentos só tem o `reserva_id` solto e precisa do
+    telefone para o botão de WhatsApp. Reserva inexistente devolve dict vazio.
+    """
+    reserva = (
+        Reserva.objects.filter(pk=reserva_id)
+        .select_related("hospede", "titular")
+        .first()
+    )
+    if reserva is None:
+        return {}
+    pessoa = reserva.pagador          # titular do faturamento ou o próprio hóspede
+    return {"nome": pessoa.nome, "telefone": pessoa.telefone or ""}
 
 
 def estadia_ativa(reserva_id):

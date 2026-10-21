@@ -1,0 +1,38 @@
+{% comment %}Copiar / Enviar pelo WhatsApp. Montado por {% copiar %}
+(apps/nucleo/templatetags/nucleo_extras.py); o clique é tratado por static/js/copiar.js,
+que já está no base.html. Em tela standalone (fora do base), inclua o script na página.
+
+Os dois rótulos ficam empilhados na mesma célula de grade: o botão já nasce com a
+largura do maior, e trocar «Copiar» por «Copiado» não empurra o que está ao lado.
+{% endcomment %}
+<div class="copiar">
+  {% if rotulo %}<span class="letreiro">{{ rotulo }}</span>{% endif %}
+  {% if mostrar %}<code class="copiar-texto">{{ texto }}</code>{% endif %}
+  <div class="copiar-acoes">
+    <button type="button" class="botao-mini copiar-botao" data-copiar="{{ texto }}"
+            aria-label="Copiar{% if rotulo %}: {{ rotulo|lower }}{% endif %}">
+      <span class="copiar-pilha">
+        <svg viewBox="0 0 24 24" class="ico copiar-ico-folha" aria-hidden="true">
+          <rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/>
+        </svg>
+        <svg viewBox="0 0 24 24" class="ico copiar-ico-feito" aria-hidden="true">
+          <path d="M5 13l4 4L19 7"/>
+        </svg>
+      </span>
+      <span class="copiar-troca">
+        <span class="copiar-rot">Copiar</span>
+        <span class="copiar-rot copiar-rot-feito" aria-hidden="true">Copiado</span>
+      </span>
+    </button>
+    {% if whatsapp %}
+      <a class="botao-mini copiar-whats" href="{{ whatsapp }}" target="_blank" rel="noopener"
+         title="{% if tem_destino %}Abre a conversa do contato com a mensagem pronta{% else %}Abre o WhatsApp para você escolher o contato — a mensagem já vai escrita{% endif %}">
+        <svg viewBox="0 0 24 24" class="ico" aria-hidden="true">
+          <path d="M21 11.5a8.5 8.5 0 0 1-12.6 7.4L3.5 20.5l1.6-4.8A8.5 8.5 0 1 1 21 11.5z"/>
+          <path d="M8.8 9.2c.3 2.6 3.4 5.7 6 6l1-1.4 1.9.9-.4 1.6a5.6 5.6 0 0 1-5-1.6 11 11 0 0 1-3-3 5.6 5.6 0 0 1-1.6-5l1.6-.4.9 1.9-1.4 1z"/>
+        </svg>
+        Enviar pelo WhatsApp
+      </a>
+    {% endif %}
+  </div>
+</div>

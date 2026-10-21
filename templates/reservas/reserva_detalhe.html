@@ -32,6 +32,250 @@ uma ficha: cada dado com o seu rótulo, lido de relance.{% endcomment %}
   <div class="mensagem error"><strong>Cancelada:</strong> {{ reserva.motivo_cancelamento }}</div>
 {% endif %}
 
+{% comment %}AÇÕES DA RESERVA — uma barra só, logo abaixo da ficha.
+Antes: "Trocar de quarto" e "Estender a estadia" eram `<details>` de 13px perdidos
+no meio da página (pedido do dono: "meio perdido, meio invisível no meio"), e os
+formulários de sinal/transferir/cancelar ficavam permanentemente abertos, estreitos
+e soltos numa grade de três colunas. Agora: o que fazer AGORA em botão sólido, as
+alterações em botões neutros, o destrutivo separado à direita — e o formulário de
+cada um abre num painel largo embaixo da barra, um por vez.
+Nada de view nova: são os mesmos POSTs, só reorganizados. Sem JS (Alpine fora do
+ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
+<section class="acoes-reserva-bloco" x-data="{ acao: '' }"
+         @keydown.escape.window="acao = ''">
+  {% if aviso_checkin %}
+    {% comment %}O impedimento vem com o caminho para resolvê-lo (ver a view): a
+    ficha da FNRH ficava no fim da página, e o erro só aparecia depois do clique.{% endcomment %}
+    <div class="mensagem warning">{{ aviso_checkin.texto }}
+      <a href="{{ aviso_checkin.url }}">{{ aviso_checkin.acao }}</a>
+    </div>
+  {% endif %}
+
+  <div class="acoes-reserva-barra">
+    {# ── O que fazer agora (um por estado) ───────────────────────────────── #}
+    {% if reserva.status == "orcamento" or reserva.status == "pre_reserva" %}
+      <form method="post" action="{% url 'reservas:confirmar' reserva.pk %}">
+        {% csrf_token %}<button type="submit" class="botao-primario">Confirmar reserva</button>
+      </form>
+    {% endif %}
+    {% if reserva.status == "confirmada" or reserva.status == "pre_reserva" %}
+      <form method="post" action="{% url 'reservas:checkin' reserva.pk %}">
+        {% csrf_token %}<button type="submit" class="botao-primario"{% if aviso_checkin %} disabled title="{{ aviso_checkin.texto }}"{% endif %}>Fazer entrada (check-in)</button>
+      </form>
+    {% endif %}
+    {% if reserva.status == "hospedada" %}
+      <form method="post" action="{% url 'reservas:checkout' reserva.pk %}"
+            onsubmit="return confirm('Concluir a saída (check-out)? A conta precisa estar zerada.')">
+        {% csrf_token %}<button type="submit" class="botao-primario">Fazer saída (check-out)</button>
+      </form>
+    {% endif %}
+
+    {# ── Alterar a reserva (abre o painel embaixo) ───────────────────────── #}
+    {% if reserva.status == "orcamento" or reserva.status == "pre_reserva" or reserva.status == "confirmada" %}
+      <button type="button" class="botao-neutro" aria-controls="acao-sinal"
+              :aria-expanded="acao === 'sinal'" :class="acao === 'sinal' && 'acao-ligada'"
+              @click="acao = acao === 'sinal' ? '' : 'sinal'">Receber sinal</button>
+      <button type="button" class="botao-neutro" aria-controls="acao-lotacao"
+              :aria-expanded="acao === 'lotacao'" :class="acao === 'lotacao' && 'acao-ligada'"
+              @click="acao = acao === 'lotacao' ? '' : 'lotacao'">Alterar lotação</button>
+      <button type="button" class="botao-neutro" aria-controls="acao-datas"
+              :aria-expanded="acao === 'datas'" :class="acao === 'datas' && 'acao-ligada'"
+              @click="acao = acao === 'datas' ? '' : 'datas'">Transferir datas</button>
+    {% endif %}
+    {% if reserva.status == "hospedada" %}
+      <button type="button" class="botao-neutro" aria-controls="acao-estender"
+              :aria-expanded="acao === 'estender'" :class="acao === 'estender' && 'acao-ligada'"
+              @click="acao = acao === 'estender' ? '' : 'estender'">Estender estadia</button>
+    {% endif %}
+    {% if reserva.ativa %}
+      <button type="button" class="botao-neutro" aria-controls="acao-trocar"
+              :aria-expanded="acao === 'trocar'" :class="acao === 'trocar' && 'acao-ligada'"
+              @click="acao = acao === 'trocar' ? '' : 'trocar'">Trocar de quarto</button>
+    {% endif %}
+    {% if reserva.status == "hospedada" and 'appsite'|modulo_ativo %}
+      <a href="{% url 'portal:qr' reserva.pk %}" class="botao-neutro">QR do hóspede</a>
+    {% endif %}
+    {% if 'fiscal'|modulo_ativo and reserva.conta %}
+      <form method="post" action="{% url 'fiscal:emitir_nfse' %}">
+        {% csrf_token %}<input type="hidden" name="conta_id" value="{{ reserva.conta.pk }}">
+        <button type="submit" class="botao-neutro">Emitir NFS-e</button>
+      </form>
+    {% endif %}
+
+    {# ── Risco: separado do resto, no fim da barra ───────────────────────── #}
+    {% if reserva.status == "confirmada" or reserva.status == "orcamento" or reserva.status == "pre_reserva" or reserva.status == "no_show" %}
+      <span class="acoes-reserva-risco">
+        {% if reserva.status == "confirmada" %}
+          <form method="post" action="{% url 'reservas:no_show' reserva.pk %}"
+                onsubmit="return confirm('Registrar não comparecimento (no-show)?')">
+            {% csrf_token %}<button type="submit" class="botao-neutro">Não compareceu</button>
+          </form>
+        {% endif %}
+        {% if reserva.status == "no_show" and pode_desfazer_no_show %}
+          <button type="button" class="botao-neutro" aria-controls="acao-desfazer"
+                  :aria-expanded="acao === 'desfazer'" :class="acao === 'desfazer' && 'acao-ligada'"
+                  @click="acao = acao === 'desfazer' ? '' : 'desfazer'">Desfazer não comparecimento</button>
+        {% endif %}
+        {% if reserva.status == "orcamento" or reserva.status == "pre_reserva" or reserva.status == "confirmada" %}
+          <button type="button" class="botao-perigo" aria-controls="acao-cancelar"
+                  :aria-expanded="acao === 'cancelar'" :class="acao === 'cancelar' && 'acao-ligada'"
+                  @click="acao = acao === 'cancelar' ? '' : 'cancelar'">Cancelar reserva</button>
+        {% endif %}
+      </span>
+    {% endif %}
+  </div>
+
+  {# ── Painéis: o formulário da ação escolhida, largo, um por vez ───────── #}
+  {% if reserva.status == "orcamento" or reserva.status == "pre_reserva" or reserva.status == "confirmada" %}
+    <div class="acao-painel" id="acao-sinal" x-show="acao === 'sinal'" x-cloak>
+      <h2 class="acao-painel-titulo">Adiantamento / sinal
+        <span class="info-dica dica" data-dica="Valor pago antes da entrada; vira crédito na conta do quarto.">ⓘ</span>
+      </h2>
+      <form method="post" action="{% url 'reservas:adiantamento_novo' reserva.pk %}" class="form-cartao">
+        {% csrf_token %}
+        {% include "nucleo/partials/campos.html" with form=form_recebimento %}
+        <div class="acoes"><button type="submit" class="botao-primario">Receber no meu caixa</button></div>
+      </form>
+    </div>
+
+    <div class="acao-painel" id="acao-lotacao" x-show="acao === 'lotacao'" x-cloak>
+      <h2 class="acao-painel-titulo">Alterar a lotação</h2>
+      <p class="ajuda">Confere as camas no quarto e refaz a diária pela tarifa da nova lotação.</p>
+      <form method="post" action="{% url 'reservas:lotacao' reserva.pk %}" class="form-cartao">
+        {% csrf_token %}
+        <div class="form-grade">
+          <div class="campo">
+            <label for="lot-adultos">Adultos</label>
+            <input type="number" id="lot-adultos" name="adultos" min="1" value="{{ reserva.adultos }}" required>
+          </div>
+          <div class="campo">
+            <label for="lot-c05">Crianças até 5 anos</label>
+            <input type="number" id="lot-c05" name="criancas_0_5" min="0" value="{{ reserva.criancas_0_5 }}">
+          </div>
+          <div class="campo">
+            <label for="lot-c615">Crianças de 6 a 15 anos</label>
+            <input type="number" id="lot-c615" name="criancas_6_15" min="0" value="{{ reserva.criancas_6_15 }}">
+          </div>
+        </div>
+        {% if eh_gerente %}
+          <label class="check-inline"><input type="checkbox" name="manter_preco"> Manter a diária combinada</label>
+        {% endif %}
+        <div class="acoes"><button type="submit" class="botao-primario">Salvar lotação</button></div>
+      </form>
+    </div>
+
+    <div class="acao-painel" id="acao-datas" x-show="acao === 'datas'" x-cloak>
+      <h2 class="acao-painel-titulo">Transferir as datas</h2>
+      <p class="ajuda">1ª opção antes de cancelar: reagenda a reserva para outras datas
+        (revalida disponibilidade e recalcula a diária). Não gera multa.</p>
+      <form method="post" action="{% url 'reservas:transferir' reserva.pk %}" class="form-cartao">
+        {% csrf_token %}
+        <div class="form-grade">{% include "nucleo/partials/campos.html" with form=form_transferencia %}</div>
+        <div class="acoes"><button type="submit" class="botao-primario">Reagendar</button></div>
+      </form>
+    </div>
+
+    <div class="acao-painel acao-painel-risco" id="acao-cancelar" x-show="acao === 'cancelar'" x-cloak>
+      <h2 class="acao-painel-titulo">Cancelar a reserva</h2>
+      {% if politica_cancel %}
+        <div class="aviso-politica">
+          {% if politica_cancel.cenario == 'em_hospedagem' %}
+            <strong>Saída antecipada.</strong> Cobrar {{ politica_cancel.dias_consumidos }}
+            diária(s) usada(s) + {{ politica_cancel.retencao_pct|floatformat:"-1" }}% de retenção.
+          {% elif politica_cancel.dentro_arrependimento %}
+            <strong>Dentro do prazo de arrependimento</strong> ({{ politica_cancel.retencao_pct|floatformat:"-1" }}%
+            não se aplica) — devolver 100%.
+          {% else %}
+            <strong>Fora do prazo.</strong> Reter {{ politica_cancel.retencao_pct|floatformat:"-1" }}%
+            ({{ politica_cancel.retencao_valor|intcomma_brl }}).
+          {% endif %}
+          <div class="politica-valores">
+            <span>Pago: <strong>{{ politica_cancel.pago|intcomma_brl }}</strong></span>
+            <span>Retém: <strong>{{ politica_cancel.cobranca|intcomma_brl }}</strong></span>
+            <span>Devolver: <strong>{{ politica_cancel.devolver|intcomma_brl }}</strong></span>
+          </div>
+          <small class="ajuda">Depois de cancelar, a devolução sai em "Devolver ao hóspede", no fim desta página. Prefira transferir a data.</small>
+        </div>
+      {% endif %}
+      <form method="post" action="{% url 'reservas:cancelar' reserva.pk %}" class="form-cartao"
+            onsubmit="return confirm('Cancelar a reserva #{{ reserva.pk }}? A devolução sai em «Devolver ao hóspede».')">
+        {% csrf_token %}
+        {% include "nucleo/partials/campos.html" with form=form_cancelamento %}
+        <div class="acoes"><button type="submit" class="botao-perigo">Cancelar reserva</button></div>
+      </form>
+    </div>
+  {% endif %}
+
+  {% if reserva.status == "hospedada" %}
+    <div class="acao-painel" id="acao-estender" x-show="acao === 'estender'" x-cloak>
+      <h2 class="acao-painel-titulo">Estender a estadia</h2>
+      <p class="ajuda">As noites a mais entram na conta pela tarifa de hoje, com ISS e taxa de
+        turismo como no check-in. O quarto precisa estar livre até a nova saída; se não
+        estiver, troque de quarto.</p>
+      <form method="post" action="{% url 'reservas:estender' reserva.pk %}" class="form-cartao">
+        {% csrf_token %}
+        <div class="campo">
+          <label for="nova-saida">Nova saída</label>
+          <input type="date" id="nova-saida" name="nova_saida" required
+                 min="{{ reserva.checkout|date:'Y-m-d' }}">
+        </div>
+        <div class="acoes"><button type="submit" class="botao-primario">Estender</button></div>
+      </form>
+    </div>
+  {% endif %}
+
+  {% if reserva.status == "no_show" and pode_desfazer_no_show %}
+    <div class="acao-painel" id="acao-desfazer" x-show="acao === 'desfazer'" x-cloak>
+      <h2 class="acao-painel-titulo">Desfazer o não comparecimento</h2>
+      <p class="ajuda">O hóspede chegou depois, ou o check-in ficou esquecido no sistema. A reserva volta a confirmada se o {{ reserva.uh.numero }} ainda estiver livre nas noites dela.</p>
+      <form method="post" action="{% url 'reservas:desfazer_no_show' reserva.pk %}" class="form-cartao">
+        {% csrf_token %}
+        <div class="campo">
+          <label for="motivo-desfazer">Motivo</label>
+          <input type="text" id="motivo-desfazer" name="motivo" required placeholder="Ex.: voo atrasou, chegou às 9h">
+        </div>
+        <div class="acoes"><button type="submit" class="botao-primario">Voltar a confirmada</button></div>
+      </form>
+    </div>
+  {% endif %}
+
+  {% if reserva.ativa %}
+    <div class="acao-painel" id="acao-trocar" x-show="acao === 'trocar'" x-cloak>
+      <h2 class="acao-painel-titulo">Trocar de quarto</h2>
+      <p class="ajuda">A conta (diárias, consumo e pagamentos) vai junto — pertence à reserva, não ao quarto.</p>
+      {% if quartos_livres %}
+        <form method="post" action="{% url 'reservas:trocar_quarto' reserva.pk %}" class="form-cartao">
+          {% csrf_token %}
+          <div class="form-grade">
+            <div class="campo">
+              <label for="troca-uh">Novo quarto (livres no período)</label>
+              <select name="novo_uh" id="troca-uh" required>
+                <option value="">Escolha…</option>
+                {% for uh in quartos_livres %}
+                  <option value="{{ uh.pk }}">{{ uh.numero }} — {{ uh.tipo.nome }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="campo">
+              <label for="troca-motivo">Motivo (opcional)</label>
+              <input type="text" id="troca-motivo" name="motivo" placeholder="Ex.: hóspede pediu andar térreo">
+            </div>
+          </div>
+          {% if eh_gerente %}
+            <label class="check-inline">
+              <input type="checkbox" name="cobrar_tarifa_nova"> Cobrar a tarifa do novo quarto
+            </label>
+            <p class="ajuda">Sem marcar, a diária combinada é mantida. Hospedado, a diferença das noites que faltam entra na conta.</p>
+          {% endif %}
+          <div class="acoes"><button type="submit" class="botao-primario">Mover a reserva</button></div>
+        </form>
+      {% else %}
+        <p class="bloco-vazio">Nenhum quarto livre no período desta reserva.</p>
+      {% endif %}
+    </div>
+  {% endif %}
+</section>
+
 {# ---------- Painel financeiro ---------- #}
 {% if reserva.status != "cancelada" %}
 <div class="cartao painel-financeiro">
@@ -53,9 +297,18 @@ uma ficha: cada dado com o seu rótulo, lido de relance.{% endcomment %}
         <td>{{ c.get_finalidade_display }}</td>
         <td class="num">{{ c.valor|intcomma_brl }}</td>
         <td><span class="selo selo-pg-{{ c.status }}">{{ c.get_status_display }}</span></td>
-        <td class="nao-quebra">
-          <a href="{% url 'pagamentos:detalhe' c.pk %}" class="botao-mini">Abrir</a>
-          {% if c.pendente %}<a href="{% url 'pagamentos:pagar' c.token %}" target="_blank" class="botao-mini">Link de pagamento</a>{% endif %}
+        <td>
+          <div class="copiar-celula">
+            <a href="{% url 'pagamentos:detalhe' c.pk %}" class="botao-mini">Abrir</a>
+            {% comment %}Era um «Link de pagamento» que ABRIA a página do hóspede
+            numa aba — e a recepção então copiava a barra de endereços para colar
+            no WhatsApp. O que ela quer é mandar o link, não visitá-lo (a página
+            tem o botão «Já paguei»): agora copia ou manda daqui, e a página em si
+            segue a um clique, no detalhe da cobrança.{% endcomment %}
+            {% if c.pendente %}
+              {% copiar c.link_publico mostrar=False telefone=reserva.pagador.telefone recado="Olá! Aqui está o link para pagar a sua reserva na Pousada Vô Testa:" %}
+            {% endif %}
+          </div>
         </td>
       </tr>
       {% endfor %}
@@ -65,169 +318,38 @@ uma ficha: cada dado com o seu rótulo, lido de relance.{% endcomment %}
   {% elif 'pagamentos'|modulo_ativo %}
   <p class="subtitulo">Nenhuma cobrança (Pix/cartão) gerada para esta reserva.</p>
   {% endif %}
-</div>
-{% endif %}
-
-{# ---------- Ações por estado ---------- #}
-<div class="acoes acoes-reserva">
-  {% if reserva.status == "orcamento" or reserva.status == "pre_reserva" %}
-    <form method="post" action="{% url 'reservas:confirmar' reserva.pk %}">
-      {% csrf_token %}<button type="submit" class="botao-primario">Confirmar reserva</button>
-    </form>
+  {% comment %}«Nenhuma cobrança gerada» era um beco sem saída: para mandar um Pix
+  ao hóspede a recepção decorava o número da reserva, abria Pagamentos, escolhia a
+  finalidade e procurava a reserva na lista. O atalho já abre o formulário
+  apontado para ela.{% endcomment %}
+  {% if 'pagamentos'|modulo_ativo and reserva.pode_receber_sinal %}
+    <p class="bloco-respiro-curto">
+      <a href="{% url 'pagamentos:painel' %}?reserva={{ reserva.pk }}#nova-cobranca" class="botao-neutro">
+        Gerar cobrança (Pix, cartão ou link)
+      </a>
+    </p>
   {% endif %}
-  {% if reserva.status == "confirmada" or reserva.status == "pre_reserva" %}
-    {% if aviso_checkin %}
-      <div class="mensagem warning">{{ aviso_checkin }}
-        {% if 'governanca'|modulo_ativo %}
-          <a href="{% url 'governanca:painel' %}">Abrir governança</a>
-        {% endif %}
-      </div>
-    {% endif %}
-    <form method="post" action="{% url 'reservas:checkin' reserva.pk %}">
-      {% csrf_token %}<button type="submit" class="botao-primario"{% if aviso_checkin %} disabled title="{{ aviso_checkin }}"{% endif %}>Fazer entrada (check-in)</button>
-    </form>
-  {% endif %}
-  {% if reserva.status == "hospedada" %}
-    <form method="post" action="{% url 'reservas:checkout' reserva.pk %}"
-          onsubmit="return confirm('Concluir a saída (check-out)? A conta precisa estar zerada.')">
-      {% csrf_token %}<button type="submit" class="botao-primario">Fazer saída (check-out)</button>
-    </form>
-    {% if 'appsite'|modulo_ativo %}
-      <a href="{% url 'portal:qr' reserva.pk %}" class="botao-neutro">QR do hóspede</a>
-    {% endif %}
-  {% endif %}
-  {% if reserva.status == "confirmada" %}
-    <form method="post" action="{% url 'reservas:no_show' reserva.pk %}"
-          onsubmit="return confirm('Registrar no-show?')">
-      {% csrf_token %}<button type="submit" class="botao-neutro">Marcar não comparecimento</button>
-    </form>
-  {% endif %}
-  {% if 'fiscal'|modulo_ativo and reserva.conta %}
-    <form method="post" action="{% url 'fiscal:emitir_nfse' %}">
-      {% csrf_token %}<input type="hidden" name="conta_id" value="{{ reserva.conta.pk }}">
-      <button type="submit" class="botao-neutro">Emitir NFS-e da hospedagem</button>
-    </form>
+  {% comment %}Sinal já recebido: antes da entrada não existe conta do quarto, e
+  este era o único lugar que mostrava os adiantamentos — morava numa das três
+  colunas de formulários que saíram. Agora fica junto do resto do dinheiro.{% endcomment %}
+  {% if reserva.adiantamentos.exists %}
+    <h3 class="rot-secao respiro-medio">Sinal recebido</h3>
+    <table class="tabela">
+      <thead><tr><th>Data</th><th>Origem</th><th class="num">Valor</th></tr></thead>
+      <tbody>
+        {% for a in reserva.adiantamentos.all %}
+          <tr>
+            <td class="nao-quebra">{{ a.criado_em|date:"d/m/Y H:i" }}</td>
+            <td>{% if a.eh_estorno %}Estorno{% elif a.cobranca_id %}Online{% else %}{{ a.movimento_caixa.forma_pagamento }}{% endif %}{% if a.observacao %} · <em>{{ a.observacao }}</em>{% endif %}</td>
+            <td class="num">{% if a.eh_estorno %}−{% endif %}{{ a.valor_absoluto|intcomma_brl }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   {% endif %}
 </div>
-
-{% if reserva.status == "no_show" and pode_desfazer_no_show %}
-  <details class="acao-sensivel">
-    <summary>Desfazer não comparecimento</summary>
-    <p class="ajuda">O hóspede chegou depois, ou o check-in ficou esquecido no sistema. A reserva volta a confirmada se o {{ reserva.uh.numero }} ainda estiver livre nas noites dela.</p>
-    <form method="post" action="{% url 'reservas:desfazer_no_show' reserva.pk %}" class="form-cartao">
-      {% csrf_token %}
-      <div class="campo">
-        <label for="motivo-desfazer">Motivo</label>
-        <input type="text" id="motivo-desfazer" name="motivo" required placeholder="Ex.: voo atrasou, chegou às 9h">
-      </div>
-      <div class="acoes"><button type="submit" class="botao-primario">Voltar a confirmada</button></div>
-    </form>
-  </details>
 {% endif %}
 
-{% if reserva.status == "orcamento" or reserva.status == "pre_reserva" or reserva.status == "confirmada" %}
-  <div class="colunas">
-    <section>
-      <h2>Adiantamento / sinal
-        <span class="info-dica dica" data-dica="Valor pago antes da entrada; vira crédito na conta do quarto.">ⓘ</span>
-      </h2>
-      <form method="post" action="{% url 'reservas:adiantamento_novo' reserva.pk %}" class="form-cartao">
-        {% csrf_token %}
-        {% include "nucleo/partials/campos.html" with form=form_recebimento %}
-        <div class="acoes"><button type="submit" class="botao-primario">Receber no meu caixa</button></div>
-      </form>
-      {% if reserva.adiantamentos.exists %}
-        <table class="tabela">
-          <thead><tr><th>Data</th><th>Origem</th><th class="num">Valor</th></tr></thead>
-          <tbody>
-            {% for a in reserva.adiantamentos.all %}
-              <tr>
-                <td>{{ a.criado_em|date:"d/m/Y H:i" }}</td>
-                <td>{% if a.eh_estorno %}Estorno{% elif a.cobranca_id %}Online{% else %}{{ a.movimento_caixa.forma_pagamento }}{% endif %}{% if a.observacao %} · <em>{{ a.observacao }}</em>{% endif %}</td>
-                <td class="num">{% if a.eh_estorno %}−{% endif %}{{ a.valor_absoluto|intcomma_brl }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      {% endif %}
-    </section>
-    <section>
-      <h2>Transferir data</h2>
-      <p class="ajuda">1ª opção: reagenda a reserva para outras datas (revalida disponibilidade
-        e recalcula a diária). Não gera multa.</p>
-      <form method="post" action="{% url 'reservas:transferir' reserva.pk %}" class="form-cartao">
-        {% csrf_token %}
-        {% include "nucleo/partials/campos.html" with form=form_transferencia %}
-        <div class="acoes"><button type="submit" class="botao-neutro">Reagendar</button></div>
-      </form>
-    </section>
-    <section>
-      <h2>Cancelar reserva</h2>
-      {% if politica_cancel %}
-        <div class="aviso-politica">
-          {% if politica_cancel.cenario == 'em_hospedagem' %}
-            <strong>Saída antecipada.</strong> Cobrar {{ politica_cancel.dias_consumidos }}
-            diária(s) usada(s) + {{ politica_cancel.retencao_pct|floatformat:"-1" }}% de retenção.
-          {% elif politica_cancel.dentro_arrependimento %}
-            <strong>Dentro do prazo de arrependimento</strong> ({{ politica_cancel.retencao_pct|floatformat:"-1" }}%
-            não se aplica) — devolver 100%.
-          {% else %}
-            <strong>Fora do prazo.</strong> Reter {{ politica_cancel.retencao_pct|floatformat:"-1" }}%
-            ({{ politica_cancel.retencao_valor|intcomma_brl }}).
-          {% endif %}
-          <div class="politica-valores">
-            <span>Pago: <strong>{{ politica_cancel.pago|intcomma_brl }}</strong></span>
-            <span>Retém: <strong>{{ politica_cancel.cobranca|intcomma_brl }}</strong></span>
-            <span>Devolver: <strong>{{ politica_cancel.devolver|intcomma_brl }}</strong></span>
-          </div>
-          <small class="ajuda">Depois de cancelar, a devolução sai em "Devolver ao hóspede", no fim desta página. Prefira transferir a data.</small>
-        </div>
-      {% endif %}
-      <form method="post" action="{% url 'reservas:cancelar' reserva.pk %}" class="form-cartao">
-        {% csrf_token %}
-        {% include "nucleo/partials/campos.html" with form=form_cancelamento %}
-        <div class="acoes"><button type="submit" class="botao-perigo">Cancelar reserva</button></div>
-      </form>
-    </section>
-  </div>
-{% endif %}
-
-{% include "reservas/partials/alterar_reserva.html" %}
-
-{# ---------- Trocar de quarto ---------- #}
-{% if reserva.ativa %}
-  <details class="acao-sensivel troca-quarto">
-    <summary>Trocar de quarto</summary>
-    <p class="ajuda">A conta (diárias, consumo e pagamentos) vai junto — pertence à reserva, não ao quarto.</p>
-    {% if quartos_livres %}
-      <form method="post" action="{% url 'reservas:trocar_quarto' reserva.pk %}" class="form-cartao">
-        {% csrf_token %}
-        <div class="campo">
-          <label>Novo quarto (livres no período)</label>
-          <select name="novo_uh" required>
-            <option value="">Escolha…</option>
-            {% for uh in quartos_livres %}
-              <option value="{{ uh.pk }}">{{ uh.numero }} — {{ uh.tipo.nome }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="campo">
-          <label>Motivo (opcional)</label>
-          <input type="text" name="motivo" placeholder="Ex.: hóspede pediu andar térreo">
-        </div>
-        {% if eh_gerente %}
-          <label class="check-inline">
-            <input type="checkbox" name="cobrar_tarifa_nova"> Cobrar a tarifa do novo quarto
-          </label>
-          <p class="ajuda">Sem marcar, a diária combinada é mantida. Hospedado, a diferença das noites que faltam entra na conta.</p>
-        {% endif %}
-        <div class="acoes"><button type="submit" class="botao-primario">Mover a reserva</button></div>
-      </form>
-    {% else %}
-      <p class="bloco-vazio">Nenhum quarto livre no período desta reserva.</p>
-    {% endif %}
-  </details>
-{% endif %}
 
 {# ---------- FNRH (Ficha Nacional de Registro de Hóspedes) ---------- #}
 <h2>FNRH — Ficha de hóspedes
@@ -255,9 +377,15 @@ uma ficha: cada dado com o seu rótulo, lido de relance.{% endcomment %}
   </table>
 {% endif %}
 {% if reserva.ativa %}
-  <div class="acoes">
+  {% comment %}O QR só serve a quem está no balcão. O link do pré check-in copiado
+  e mandado pelo WhatsApp é o caminho de quem reservou por telefone ou ainda está
+  em casa — antes existia só dentro da tela do QR.{% endcomment %}
+  <div class="copiar-celula">
     <a href="{% url 'reservas:fnrh' reserva.pk %}" class="botao-primario">Preencher / editar FNRH</a>
     <a href="{% url 'portal:qr_fnrh' reserva.pk %}" class="botao-neutro">QR para o hóspede preencher</a>
+    {% if link_pre_checkin %}
+      {% copiar link_pre_checkin mostrar=False telefone=reserva.pagador.telefone recado="Olá! Para a sua entrada na Pousada Vô Testa ser rápida, preencha a ficha de hospedagem por este link antes de chegar (dá para preencher a de todos num celular só):" %}
+    {% endif %}
   </div>
 {% endif %}
 

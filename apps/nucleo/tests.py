@@ -1,3 +1,6 @@
+from pathlib import Path
+
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.test import TestCase, override_settings
@@ -1892,3 +1895,95 @@ class PctBrTests(TestCase):
         self.assertEqual(pct_br(Decimal("4.00")), "4")
         self.assertEqual(pct_br(Decimal("0.00")), "0")
         self.assertEqual(pct_br("20"), "20")
+
+
+class CopiarECompartilharTests(TestCase):
+    """O botão «Copiar» e o «Enviar pelo WhatsApp» (apps/nucleo/compartilhar.py +
+    {% copiar %}). O que a recepção fazia com o mouse: selecionar o link de
+    pagamento, copiar e colar na conversa."""
+
+    def render(self, template, **ctx):
+        from django.template import Context, Template
+
+        return Template("{% load nucleo_extras %}" + template).render(Context(ctx))
+
+    # ── telefone ────────────────────────────────────────────────────────────
+    def test_telefone_com_mascara_vira_numero_discavel(self):
+        from .compartilhar import telefone_whatsapp
+
+        self.assertEqual(telefone_whatsapp("(49) 99964-8702"), "5549999648702")
+        self.assertEqual(telefone_whatsapp("49 2055-0005"), "554920550005")
+
+    def test_telefone_que_ja_tem_ddi_nao_ganha_outro(self):
+        from .compartilhar import telefone_whatsapp
+
+        self.assertEqual(telefone_whatsapp("+55 (49) 99964-8702"), "5549999648702")
+        self.assertEqual(telefone_whatsapp("554920550005"), "554920550005")
+
+    def test_ddd_55_de_santa_maria_nao_e_confundido_com_o_ddi(self):
+        """11 dígitos começando em 55 é DDD 55 (RS), não DDI — leva o 55 na frente."""
+        from .compartilhar import telefone_whatsapp
+
+        self.assertEqual(telefone_whatsapp("55999990000"), "5555999990000")
+
+    def test_telefone_pela_metade_nao_vira_link_errado(self):
+        from .compartilhar import telefone_whatsapp
+
+        for valor in ("", None, "99964", "0000-0000", "abc"):
+            self.assertEqual(telefone_whatsapp(valor), "", valor)
+
+    # ── mensagem e link ─────────────────────────────────────────────────────
+    def test_mensagem_junta_recado_e_link(self):
+        from .compartilhar import mensagem_whatsapp
+
+        self.assertEqual(mensagem_whatsapp("Olá!", "http://x/y"), "Olá!\n\nhttp://x/y")
+        self.assertEqual(mensagem_whatsapp("", "http://x/y"), "http://x/y")
+        self.assertEqual(mensagem_whatsapp("Olá!", ""), "Olá!")
+
+    def test_link_do_whatsapp_leva_telefone_normalizado_e_texto_codificado(self):
+        from .compartilhar import link_whatsapp
+
+        url = link_whatsapp("Olá! Seu link:\nhttp://x/y", "(49) 99964-8702")
+        self.assertTrue(url.startswith("https://wa.me/5549999648702?text="))
+        self.assertIn("Ol%C3%A1", url)          # acento codificado
+        self.assertIn("%0A", url)               # quebra de linha preservada
+        self.assertNotIn(" ", url)
+
+    def test_sem_telefone_abre_o_whatsapp_para_escolher_o_contato(self):
+        from .compartilhar import link_whatsapp
+
+        self.assertTrue(link_whatsapp("oi", "").startswith("https://wa.me/?text="))
+
+    # ── componente ──────────────────────────────────────────────────────────
+    def test_componente_poe_o_texto_no_botao_e_na_tela(self):
+        html = self.render('{% copiar "http://x/y" rotulo="Link de pagamento" %}')
+        self.assertIn('data-copiar="http://x/y"', html)
+        self.assertIn("Link de pagamento", html)
+        self.assertIn(">Copiar<", html)
+        self.assertIn(">Copiado<", html)        # o retorno já está no HTML
+        self.assertIn('class="ico', html)       # ícone é SVG, não emoji
+
+    def test_sem_recado_nao_aparece_botao_de_whatsapp(self):
+        html = self.render('{% copiar "http://x/y" %}')
+        self.assertNotIn("wa.me", html)
+
+    def test_com_recado_e_telefone_o_botao_abre_a_conversa_certa(self):
+        html = self.render(
+            '{% copiar "http://x/y" recado="Olá! Segue o link:" telefone="(49) 99964-8702" %}'
+        )
+        self.assertIn("https://wa.me/5549999648702?text=", html)
+        self.assertIn("Enviar pelo WhatsApp", html)
+        self.assertIn("http%3A//x/y", html)     # o link vai dentro da mensagem
+
+    def test_mostrar_false_deixa_so_os_botoes(self):
+        html = self.render('{% copiar "http://x/y" mostrar=False %}')
+        self.assertNotIn("copiar-texto", html)
+        self.assertIn("data-copiar", html)
+
+    def test_aspas_no_texto_nao_quebram_o_atributo(self):
+        html = self.render('{% copiar texto %}', texto='di"ga')
+        self.assertIn("data-copiar=\"di&quot;ga\"", html)
+
+    def test_script_do_copiar_vai_em_toda_tela_do_crm(self):
+        base = (Path(settings.BASE_DIR) / "templates" / "base.html").read_text(encoding="utf-8")
+        self.assertIn("js/copiar.js", base)

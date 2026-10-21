@@ -2492,7 +2492,10 @@ class PainelFinanceiroReservaTests(ReservasTestsBase):
         self.assertContains(resp, "Total previsto")
         self.assertContains(resp, "Saldo a receber")
         self.assertContains(resp, "Sinal de reserva")       # finalidade da cobrança
-        self.assertContains(resp, "Link de pagamento")       # cobrança pendente → link público
+        # Cobrança pendente → o link público, pronto para copiar/mandar. Antes era
+        # um link que ABRIA a página do hóspede; ver LinkDePagamentoNaReservaTests.
+        self.assertContains(resp, "data-copiar=")
+        self.assertContains(resp, "Enviar pelo WhatsApp")
 
     def test_detalhe_sem_cobranca_mostra_vazio(self):
         r = self.reserva(status=Reserva.Status.PRE_RESERVA)
@@ -2637,3 +2640,227 @@ class ZerarReservasCommandTests(TransactionTestCase):
         if not u:
             u = Usuario.objects.create_superuser(username="zcmd", password="senha-forte-123")
         return u
+
+
+class ContatoDaReservaTests(ReservasTestsBase):
+    """Para onde o Pagamentos e o Portal mandam a mensagem desta reserva — sem
+    importar models de Reservas (interface pública)."""
+
+    def test_sem_titular_o_contato_e_o_hospede(self):
+        from . import services
+
+        Pessoa.objects.filter(pk=self.hospede.pk).update(telefone="(49) 99964-8702")
+        contato = services.contato_da_reserva(self.reserva().pk)
+        self.assertEqual(contato["nome"], "Maria Teste")
+        self.assertEqual(contato["telefone"], "(49) 99964-8702")
+
+    def test_com_titular_quem_recebe_e_quem_paga(self):
+        from . import services
+
+        agencia = Pessoa.objects.create(nome="Agência Teste", telefone="4920550005")
+        r = self.reserva()
+        r.titular = agencia
+        r.faturamento = Reserva.Faturamento.AGENCIA
+        r.save()
+        self.assertEqual(services.contato_da_reserva(r.pk)["nome"], "Agência Teste")
+
+    def test_reserva_inexistente_nao_estoura(self):
+        from . import services
+
+        self.assertEqual(services.contato_da_reserva(999999), {})
+
+
+class LinkDePagamentoNaReservaTests(ReservasTestsBase):
+    """Na linha da cobrança pendente, copiar/mandar o link é o passo seguinte —
+    antes só dava para abrir a página e copiar a barra de endereços."""
+
+    def test_linha_da_cobranca_pendente_tem_botao_de_copiar(self):
+        from apps.pagamentos import services as pagamentos
+
+        Pessoa.objects.filter(pk=self.hospede.pk).update(telefone="(49) 99964-8702")
+        r = self.reserva(status=Reserva.Status.PRE_RESERVA)
+        cobranca = pagamentos.criar_cobranca(
+            self.usuario, valor=Decimal("150.00"), metodo="pix",
+            descricao="Sinal", finalidade="sinal_reserva", reserva_id=r.pk,
+        )
+        self.client.force_login(self.usuario)
+        html = self.client.get(reverse("reservas:detalhe", args=[r.pk])).content.decode()
+        link = "http://testserver" + reverse("pagamentos:pagar", args=[cobranca.token])
+        self.assertIn(f'data-copiar="{link}"', html)
+        self.assertIn("https://wa.me/5549999648702?text=", html)
+
+
+class CampoDeDataPrePreenchidoTests(ReservasTestsBase):
+    """`<input type="date">` só mostra o valor em ISO. Reservas e Comercial tinham
+    cada um a sua cópia do widget SEM o formato — então reabrir qualquer ficha com
+    data (FNRH, restrição, grupo, oportunidade) trazia o campo EM BRANCO, e salvar
+    de novo pedia a data outra vez. O widget do núcleo (um só) já resolvia isso."""
+
+    def test_data_da_reserva_sai_em_iso(self):
+        from .forms import ReservaForm
+
+        html = str(ReservaForm(None, initial={"checkin": HOJE})["checkin"])
+        self.assertIn(f'value="{HOJE.isoformat()}"', html)
+
+    def test_nascimento_da_ficha_fnrh_volta_preenchido(self):
+        from datetime import date
+
+        from .forms import FichaFNRHForm
+        from .models import FichaFNRH
+
+        r = self.reserva()
+        ficha = FichaFNRH.objects.create(reserva=r, nome="Maria Teste", titular=True,
+                                         nascimento=date(1990, 5, 17))
+        self.assertIn('value="1990-05-17"', str(FichaFNRHForm(instance=ficha)["nascimento"]))
+
+    def test_restricao_volta_com_o_periodo_preenchido(self):
+        from .forms import RestricaoVendaForm
+        from .models import RestricaoVenda
+
+        rest = RestricaoVenda.objects.create(
+            descricao="Réveillon", inicio=HOJE, fim=HOJE + timedelta(days=3),
+            min_noites=3, criado_por=self.usuario,
+        )
+        html = str(RestricaoVendaForm(instance=rest)["inicio"])
+        self.assertIn(f'value="{HOJE.isoformat()}"', html)
+
+    def test_balcao_abre_com_hoje_e_amanha(self):
+        """Walk-in e telefone são a maioria: o calendário do navegador abre no mês
+        certo em vez de em branco. Quem vem do mapa manda as datas da célula."""
+        self.client.force_login(self.usuario)
+        html = self.client.get(reverse("reservas:nova")).content.decode()
+        self.assertIn(f'name="checkin" value="{HOJE.isoformat()}"', html)
+        self.assertIn(
+            f'name="checkout" value="{(HOJE + timedelta(days=1)).isoformat()}"', html)
+
+    def test_datas_do_mapa_mandam_na_sugestao(self):
+        self.client.force_login(self.usuario)
+        alvo = (HOJE + timedelta(days=20)).isoformat()
+        html = self.client.get(
+            reverse("reservas:nova"), {"checkin": alvo, "checkout": alvo}
+        ).content.decode()
+        self.assertIn(f'name="checkin" value="{alvo}"', html)
+
+
+class ContaDoQuartoSemAtritoTests(ReservasTestsBase):
+    """Dois atritos na tela mais usada da recepção: o valor a receber digitado à
+    mão com o saldo logo acima, e dois campos `valor` com o MESMO id — clicar no
+    rótulo de «Receber pagamento» punha o foco em «Lançar na conta»."""
+
+    def _hospedada(self):
+        r = self.reserva()
+        r.fazer_checkin(self.usuario)
+        return r
+
+    def test_receber_abre_com_o_saldo_em_aberto(self):
+        r = self._hospedada()
+        self.client.force_login(self.usuario)
+        html = self.client.get(reverse("reservas:detalhe", args=[r.pk])).content.decode()
+        from apps.nucleo.templatetags.moeda import intcomma_brl
+
+        saldo = r.conta.saldo()
+        self.assertGreater(saldo, 0)
+        esperado = intcomma_brl(saldo).removeprefix("R$ ")   # máscara: "1.234,56"
+        self.assertIn(f'name="valor" value="{esperado}"', html)
+
+    def test_adiantamento_antes_da_entrada_segue_em_branco(self):
+        """Ali o valor é combinado (10%, metade), não o total da estadia."""
+        r = self.reserva(status=Reserva.Status.CONFIRMADA)
+        self.client.force_login(self.usuario)
+        html = self.client.get(reverse("reservas:detalhe", args=[r.pk])).content.decode()
+        self.assertNotIn('name="valor" value="', html)
+
+    def test_cada_formulario_tem_o_seu_id(self):
+        r = self._hospedada()
+        self.client.force_login(self.usuario)
+        html = self.client.get(reverse("reservas:detalhe", args=[r.pk])).content.decode()
+        self.assertIn('id="id_receb_valor"', html)
+        self.assertIn('id="id_lanc_valor"', html)
+        self.assertNotIn('id="id_valor"', html)
+        self.assertIn('for="id_receb_valor"', html)
+
+
+class AvisoDoCheckinTests(ReservasTestsBase):
+    """O que impede a entrada é dito ANTES do clique, com o caminho para resolver:
+    o botão ficava ativo e o erro só aparecia depois, com a ficha da FNRH
+    escondida no fim de uma página longa."""
+
+    @override_settings(FNRH_BLOQUEAR_CHECKIN=True)
+    def test_fnrh_pendente_desliga_o_botao_e_aponta_a_ficha(self):
+        from .services import garantir_fichas_fnrh
+
+        r = self.reserva(status=Reserva.Status.CONFIRMADA)
+        garantir_fichas_fnrh(r)
+        self.client.force_login(self.usuario)
+        html = self.client.get(reverse("reservas:detalhe", args=[r.pk])).content.decode()
+        self.assertIn("FNRH pendente", html)
+        self.assertIn(reverse("reservas:fnrh", args=[r.pk]), html)
+        self.assertIn("disabled", html)
+
+    @override_settings(FNRH_BLOQUEAR_CHECKIN=False)
+    def test_sem_impedimento_o_botao_fica_livre(self):
+        r = self.reserva(status=Reserva.Status.CONFIRMADA)
+        self.client.force_login(self.usuario)
+        html = self.client.get(reverse("reservas:detalhe", args=[r.pk])).content.decode()
+        self.assertNotIn("FNRH pendente", html)
+
+
+class BarraDeAcoesTests(ReservasTestsBase):
+    """As ações da reserva numa barra visível, com o formulário de cada uma num
+    painel largo. Antes: «Trocar de quarto» e «Estender a estadia» eram
+    `<details>` de 13px perdidos no meio da página (e o dono reclamou disso), e
+    sinal/transferir/cancelar ficavam abertos para sempre em três colunas."""
+
+    def html(self, reserva):
+        self.client.force_login(self.usuario)
+        return self.client.get(reverse("reservas:detalhe", args=[reserva.pk])).content.decode()
+
+    def test_confirmada_oferece_alterar_e_o_destrutivo_separado(self):
+        html = self.html(self.reserva(status=Reserva.Status.CONFIRMADA))
+        for rotulo in ("Fazer entrada (check-in)", "Receber sinal", "Alterar lotação",
+                       "Transferir datas", "Trocar de quarto"):
+            self.assertIn(rotulo, html, rotulo)
+        self.assertIn("acoes-reserva-risco", html)        # cancelar/no-show à parte
+        self.assertIn("Cancelar reserva", html)
+        self.assertIn("Não compareceu", html)
+        self.assertNotIn("Estender estadia", html)        # só hospedada
+
+    def test_hospedada_troca_as_acoes_pelas_da_estadia(self):
+        r = self.reserva()
+        r.fazer_checkin(self.usuario)
+        html = self.html(r)
+        self.assertIn("Fazer saída (check-out)", html)
+        self.assertIn("Estender estadia", html)
+        self.assertIn("Trocar de quarto", html)
+        self.assertNotIn("Alterar lotação", html)        # só antes da entrada
+        self.assertNotIn("Cancelar reserva", html)       # saída antecipada é outro caminho
+
+    def test_depois_da_saida_nao_oferece_acao_de_alteracao(self):
+        r = self.reserva()
+        r.fazer_checkin(self.usuario)
+        Reserva.objects.filter(pk=r.pk).update(status=Reserva.Status.CHECKOUT)
+        html = self.html(Reserva.objects.get(pk=r.pk))
+        for rotulo in ("Trocar de quarto", "Estender estadia", "Alterar lotação",
+                       "Transferir datas", "Cancelar reserva"):
+            self.assertNotIn(rotulo, html, rotulo)
+
+    def test_cada_painel_tem_o_botao_que_o_abre(self):
+        """Nenhum `<details>` sobrou, e todo painel é apontado por um botão."""
+        import re
+
+        html = self.html(self.reserva(status=Reserva.Status.CONFIRMADA))
+        paineis = set(re.findall(r'class="acao-painel[^"]*" id="(acao-[a-z]+)"', html))
+        controlados = set(re.findall(r'aria-controls="(acao-[a-z]+)"', html))
+        self.assertTrue(paineis)
+        self.assertEqual(paineis, controlados)
+        self.assertNotIn("acao-sensivel", html)
+
+    def test_link_do_pre_checkin_fica_ao_lado_do_preencher_fnrh(self):
+        from apps.portal.services import get_acesso
+
+        r = self.reserva(status=Reserva.Status.CONFIRMADA)
+        Pessoa.objects.filter(pk=self.hospede.pk).update(telefone="(49) 99964-8702")
+        html = self.html(r)
+        token = get_acesso(r.pk).token
+        self.assertIn(f'data-copiar="http://testserver/hospede/{token}/checkin/"', html)
+        self.assertIn("https://wa.me/5549999648702?text=", html)

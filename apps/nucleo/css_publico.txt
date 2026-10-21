@@ -63,6 +63,8 @@ cancelado
 .fnrh-ficha-cab:focus-visible
 .fnrh-ficha-cab .selo
 .fnrh-ficha-cab h3
+.fnrh-ficha-nome
+.fnrh-ficha-cab h3 > span:not(.fnrh-ficha-ico)
 .fnrh-ficha-ico
 .fnrh-ficha:first-of-type .fnrh-ficha-ico
 .fnrh-grupo

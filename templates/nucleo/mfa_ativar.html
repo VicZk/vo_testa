@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load nucleo_extras %}
 
 {% block titulo %}Ativar MFA — CRM Vô Testa{% endblock %}
 
@@ -15,6 +16,9 @@
     Não consegue escanear? Cadastre esta chave manualmente:<br>
     <code class="mono-num chave-mfa">{{ secret }}</code>
   </p>
+  {% comment %}Chave de 32 letras digitada à mão erra fácil. Copiar, sim; mandar por
+     mensagem, não — é o segredo do segundo fator.{% endcomment %}
+  <div class="copiar-centrado">{% copiar secret mostrar=False %}</div>
   <form method="post" class="largura-cheia form-empilhado solto">
     {% csrf_token %}
     <label for="id_codigo">Código do app</label>

@@ -864,7 +864,7 @@ button.link:hover { color: var(--lampiao); background: rgba(255, 255, 255, .05);
 
 /* Barra de ações: com largura apertada, os botões descem de linha em vez de
    empurrar a página. */
-.acoes, .pagina-acoes, .eleg-acoes, .filtros, .acoes-reserva { flex-wrap: wrap; }
+.acoes, .pagina-acoes, .eleg-acoes, .filtros { flex-wrap: wrap; }
 
 
 .topbar {
@@ -1306,6 +1306,12 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 /* Detalhe da reserva → painel Financeiro (total previsto, recebido, saldo e as cobranças). */
 .cartao.painel-financeiro { margin: 1.2rem 0 1.6rem; }
 .painel-financeiro .kpi-grade { margin: .6rem 0 0; }
+/* Teto por cartão: a 1760px os três KPIs viravam faixas de 540px, com o rótulo
+   num canto e o valor no outro. Agora crescem até 300px e param. */
+.painel-financeiro .kpi-grade {
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 300px));
+  justify-content: start;
+}
 .painel-financeiro .tabela-rol > .tabela { margin-top: 1rem; }
 .painel-financeiro .subtitulo { margin: .7rem 0 0; }
 .tabela th {
@@ -2014,14 +2020,19 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 }
 .boh-hero-pct { font-size: .45em; opacity: .8; margin-left: .1em; }
 .boh-hero-sub { font-size: .8rem; color: rgba(243, 239, 226, .75); }
-.boh-mini { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+/* Decide pelo ESPAÇO que sobrou, não pela janela: em 821px com o menu aberto o
+   `@media` não dispara, os três cartões ficavam com 64px de texto útil e
+   "PERMANÊNCIA MÉDIA" era cortada no meio da palavra, sem reticências. Com piso
+   de 150px o terceiro cartão desce de linha sozinho, em qualquer largura. */
+.boh-mini {
+  display: grid; gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
+}
 .boh-mini .cartao { display: flex; flex-direction: column; justify-content: center; }
 .boh-mini small { font-size: .6em; color: var(--tinta-suave); font-weight: 400; }
 @media (max-width: 720px) {
   .boh-resumo { grid-template-columns: 1fr; }
-  /* Três cartões de 87px não comportam "R$ 1.234,56": abaixo disto eles
-     se reacomodam sozinhos em vez de empurrar a página. */
-  .boh-mini { grid-template-columns: repeat(auto-fit, minmax(min(110px, 100%), 1fr)); gap: .6rem; }
+  .boh-mini { gap: .6rem; }
 }
 
 /* Alinha à direita as colunas numéricas dos quadros */
@@ -2284,8 +2295,6 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 
 /* As cores de status de reserva moram na seção SELO (--selo-cor). */
 
-.acoes-reserva { flex-wrap: wrap; margin-bottom: 1.4rem; }
-.acoes-reserva form { display: inline; }
 
 /* Arrastar reserva entre quartos no mapa de reservas */
 .mapa-barra[data-reserva] { cursor: grab; }
@@ -2725,7 +2734,6 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
   :root { interpolate-size: allow-keywords; }  /* deixa animar de 0 até auto */
   .acao-bloco::details-content,
   .op-det::details-content,
-  .troca-quarto::details-content,
   .lb-resolver::details-content,
   .mais-opcoes::details-content {
     block-size: 0; overflow: hidden;
@@ -2734,7 +2742,6 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
   }
   .acao-bloco[open]::details-content,
   .op-det[open]::details-content,
-  .troca-quarto[open]::details-content,
   .lb-resolver[open]::details-content,
   .mais-opcoes[open]::details-content { block-size: auto; }
 }
@@ -3116,8 +3123,6 @@ a.modulo-ativo:hover {
 .sit-em_limpeza { color: var(--andamento); }
 .sit-bloqueada { color: var(--info); }
 .sit-inativa { color: var(--tinta-suave); }
-
-.troca-quarto summary { color: var(--madeira); }
 
 /* ---------- Corredor (herói Operação Lampião) ---------- */
 
@@ -5463,8 +5468,6 @@ body.escala-dragging .escala-drop { cursor: copy; }
   width: 100%; padding: .6rem .75rem; border: 1px solid var(--fio-forte); border-radius: var(--raio-p);
   background: var(--superficie); color: var(--tinta); font: inherit; margin-top: .25rem;
 }
-.linha-copia { display: flex; gap: .5rem; align-items: center; }
-.linha-copia input { flex: 1; margin-top: 0; }
 .qr-el { width: 100%; max-width: 180px; border-radius: var(--raio); }
 /* QR do hóspede (recepção → Portal): bloco estreito e centrado, o código no meio.
    `.form-cartao.qr-hospede-form` vem depois de `.form-cartao:not(:has(.form-grade))`
@@ -6162,3 +6165,105 @@ body.escala-dragging .escala-drop { cursor: copy; }
    ficava com "R$" numa linha e "4,20" na outra. Quando falta espaço, a tabela
    rola dentro do cartão (tabela-rol.js) — que é o jeito da casa. */
 .est-tabela td.num, .est-tabela th.num { white-space: nowrap; }
+
+/* ═══════════════════════════════════════════════════════════════
+   USABILIDADE — copiar e mandar pelo WhatsApp
+   O que a equipe antes selecionava com o mouse e colava na conversa: link de
+   pagamento, Pix copia-e-cola, endereço do portal, link da página de captação.
+   Markup em componentes/copiar.html, comportamento em static/js/copiar.js.
+   ═══════════════════════════════════════════════════════════════ */
+.copiar { margin-top: 1rem; }
+.copiar > .letreiro { display: block; }
+/* Mesmo papel morno do `.pix-box`: o código é texto para ler e conferir. */
+.copiar-texto {
+  display: block; margin-top: .3rem; padding: .7rem;
+  background: var(--superficie-2); border: 1px solid var(--fio);
+  border-radius: var(--raio-p);
+  font-size: .78rem; word-break: break-all;
+}
+/* Decide pelo espaço que tem, não pela janela: dentro de um cartão estreito
+   (painel lateral, coluna do detalhe) os dois botões empilham sozinhos. */
+.copiar-acoes { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .45rem; }
+.copiar-botao, .copiar-whats { gap: .35rem; padding-block: .45rem; }
+.copiar-botao .ico, .copiar-whats .ico { width: 15px; height: 15px; }
+/* Os dois ícones e os dois rótulos ocupam a MESMA célula: o botão já nasce com a
+   largura do maior, e confirmar a cópia não empurra o botão vizinho. */
+.copiar-pilha, .copiar-troca { display: grid; }
+.copiar-pilha > *, .copiar-troca > * {
+  grid-area: 1 / 1;
+  transition: opacity var(--mov-rapido) var(--curva);
+}
+.copiar-rot-feito, .copiar-ico-feito { opacity: 0; }
+.copiar-botao.copiado { color: var(--sucesso); background: var(--sucesso-bg);
+  border-color: color-mix(in srgb, var(--sucesso) 45%, transparent); }
+.copiar-botao.copiado .copiar-rot, .copiar-botao.copiado .copiar-ico-folha { opacity: 0; }
+.copiar-botao.copiado .copiar-rot-feito, .copiar-botao.copiado .copiar-ico-feito { opacity: 1; }
+/* Campo do plano B (navegador sem Clipboard API): existe só durante a cópia. */
+.copiar-plano-b { position: fixed; top: 0; left: 0; width: 1px; height: 1px;
+  padding: 0; border: 0; opacity: 0; }
+/* Nome do hóspede ao lado de "Acompanhante N" no cabeçalho da ficha FNRH: com o
+   acordeão fechado, quatro linhas diziam só o número. Encolhe e corta com
+   reticências antes de empurrar o selo de situação. */
+.fnrh-ficha-nome {
+  /* Encolhe (e corta com reticências) antes de empurrar o selo de situação: sem
+     o `min-width: 0` no h3 — que é item de flex do cabeçalho — a largura mínima
+     dele virava a do nome inteiro e a ficha rolava de lado em 320px. */
+  flex: 0 1 auto; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: .82rem; font-weight: 500; color: var(--tinta-suave);
+}
+.fnrh-ficha-cab h3 { min-width: 0; }
+.fnrh-ficha-cab h3 > span:not(.fnrh-ficha-ico) { min-width: 0; }
+/* Botão centrado sob um bloco centrado (chave do MFA). */
+.copiar-centrado { display: flex; justify-content: center; }
+.copiar-centrado .copiar { margin-top: 0; }
+/* Dentro de uma célula de tabela o bloco não tem respiro próprio: ele divide a
+   linha com os outros botões e quebra quando a coluna aperta. */
+.copiar-celula { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+.copiar-celula .copiar, .copiar-celula .copiar-acoes { margin-top: 0; }
+/* No papel não há o que copiar. */
+@media print { .copiar-acoes { display: none; } }
+
+/* ── Ações da reserva: barra visível + painel largo ─────────────────────────
+   "Trocar de quarto" e "Estender a estadia" eram <details> de 13px no meio da
+   página; sinal/transferir/cancelar ficavam abertos para sempre em três colunas
+   estreitas. Agora: uma barra (o que fazer agora em sólido, as alterações em
+   neutro, o risco separado no fim) e o formulário da ação escolhida num painel
+   que ocupa a largura toda. */
+.acoes-reserva-bloco { margin: 0 0 1.4rem; }
+.acoes-reserva-barra {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .5rem;
+  padding: .75rem .9rem;
+  background: var(--superficie); border: 1px solid var(--fio);
+  border-radius: var(--raio); box-shadow: var(--sombra-1);
+}
+.acoes-reserva-barra form { display: contents; }
+/* O destrutivo não fica ao lado de "Trocar de quarto": vai para o fim da barra,
+   atrás de um fio. Em tela estreita desce de linha sozinho (o fio some). */
+.acoes-reserva-risco {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .5rem;
+  margin-left: auto; padding-left: .75rem;
+  border-left: 1px solid var(--fio);
+}
+@media (max-width: 720px) {
+  .acoes-reserva-risco { margin-left: 0; padding-left: 0; border-left: 0; }
+}
+/* Botão da ação aberta: o painel embaixo é dele. */
+.acao-ligada {
+  background: color-mix(in srgb, var(--lampiao) 18%, transparent);
+  border-color: var(--madeira);
+}
+.acao-painel {
+  margin-top: .7rem; padding: 1.1rem 1.2rem 1.2rem;
+  background: var(--superficie); border: 1px solid var(--fio-forte);
+  border-radius: var(--raio); box-shadow: var(--sombra-cartao);
+}
+.acao-painel-risco { border-color: color-mix(in srgb, var(--perigo) 45%, transparent); }
+.acao-painel-titulo { margin: 0 0 .2rem; font-size: 1.05rem; letter-spacing: -.01em; }
+.acao-painel .ajuda { display: block; margin: 0 0 .8rem; }
+.acao-painel .form-cartao { margin: 0; padding: 0; background: none; border: 0; box-shadow: none; }
+/* O painel não estica até 1760px: largura de leitura, como o resto da casa. No
+   monitor grande um cartão de ponta a ponta com dois campos de data no canto
+   esquerdo era um vão dentro de uma moldura. */
+.acao-painel { max-width: 900px; }
+.acao-painel .form-cartao, .acao-painel .aviso-politica { max-width: 100%; }

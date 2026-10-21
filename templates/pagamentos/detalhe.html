@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load moeda %}
+{% load moeda nucleo_extras %}
 
 {% block titulo %}Cobrança #{{ cobranca.pk }} — Pagamentos{% endblock %}
 
@@ -26,16 +26,10 @@
     </dl>
 
     {% if cobranca.metodo == 'pix' and cobranca.pix_copia_cola %}
-      <div class="pix-box">
-        <span class="letreiro">Pix copia-e-cola</span>
-        <code>{{ cobranca.pix_copia_cola }}</code>
-      </div>
+      {% copiar cobranca.pix_copia_cola rotulo="Pix copia-e-cola" telefone=telefone_destino recado="Olá! Segue o código Pix para o pagamento na Pousada Vô Testa. É só copiar e colar no app do seu banco:" %}
     {% endif %}
 
-    <div class="pix-box">
-      <span class="letreiro">Link de pagamento (enviar por WhatsApp/e-mail)</span>
-      <code>{{ request.scheme }}://{{ request.get_host }}{% url 'pagamentos:pagar' cobranca.token %}</code>
-    </div>
+    {% copiar link_publico rotulo="Link de pagamento" telefone=telefone_destino recado="Olá! Aqui está o link para pagar a sua reserva na Pousada Vô Testa:" %}
   </section>
 
   <section>

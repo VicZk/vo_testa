@@ -834,3 +834,92 @@ class ConciliacaoRotuloTests(PagamentosBase):
         linha = services.conciliacao()[0]
         self.assertEqual(linha["rotulo"], dict(Cobranca.Status.choices)[linha["status"]])
         self.assertTrue(linha["rotulo"][0].isupper())
+
+
+class BotoesDeCopiarTests(PagamentosBase):
+    """Mandar o link é o que mais se faz com uma cobrança pendente. Antes era
+    selecionar o texto com o mouse; agora tem botão no painel e no detalhe."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.op)
+
+    def link(self, cobranca):
+        return "http://testserver" + reverse("pagamentos:pagar", args=[cobranca.token])
+
+    def test_detalhe_copia_o_link_e_o_pix(self):
+        c = self.cobranca(metodo="pix")
+        html = self.client.get(reverse("pagamentos:detalhe", args=[c.pk])).content.decode()
+        self.assertIn(f'data-copiar="{self.link(c)}"', html)
+        self.assertIn(f'data-copiar="{c.pix_copia_cola}"', html)
+        self.assertIn("Enviar pelo WhatsApp", html)
+
+    def test_whatsapp_do_detalhe_vai_para_o_telefone_do_pagador(self):
+        pagador = Pessoa.objects.create(nome="Maria Teste", telefone="(49) 99964-8702")
+        c = self.cobranca(pagador=pagador)
+        html = self.client.get(reverse("pagamentos:detalhe", args=[c.pk])).content.decode()
+        self.assertIn("https://wa.me/5549999648702?text=", html)
+
+    def test_sem_pagador_o_whatsapp_abre_para_escolher_o_contato(self):
+        c = self.cobranca()
+        html = self.client.get(reverse("pagamentos:detalhe", args=[c.pk])).content.decode()
+        self.assertIn("https://wa.me/?text=", html)
+
+    def test_painel_copia_o_link_da_cobranca_pendente_na_propria_linha(self):
+        c = self.cobranca()
+        html = self.client.get(reverse("pagamentos:painel")).content.decode()
+        self.assertIn(f'data-copiar="{self.link(c)}"', html)
+
+    def test_painel_nao_oferece_link_de_cobranca_ja_paga(self):
+        c = self.cobranca()
+        services.confirmar_pagamento(c, self.op)
+        html = self.client.get(reverse("pagamentos:painel")).content.decode()
+        self.assertNotIn(f'data-copiar="{self.link(c)}"', html)
+
+
+class AtalhoGerarCobrancaTests(PagamentosBase):
+    """Vindo do detalhe da reserva, o formulário já abre apontado para ela — antes
+    era decorar o número, escolher a finalidade e procurar na lista."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.op)
+        tipo = TipoUH.objects.create(nome="Std", tarifa_base=Decimal("200"))
+        self.uh = UH.objects.create(numero="Quarto 90", tipo=tipo)
+        self.hospede = Pessoa.objects.create(nome="Bruno Teste")
+
+    def _reserva(self, status="pre_reserva"):
+        from apps.reservas.models import Reserva
+        hoje = timezone.localdate()
+        return Reserva.objects.create(
+            uh=self.uh, hospede=self.hospede, checkin=hoje, checkout=hoje + timedelta(days=2),
+            status=status, valor_diaria=Decimal("200"), criado_por=self.op,
+        )
+
+    def test_painel_abre_apontado_para_a_reserva(self):
+        r = self._reserva()
+        html = self.client.get(reverse("pagamentos:painel"), {"reserva": r.pk}).content.decode()
+        self.assertIn("fin: 'sinal_reserva'", html)
+        self.assertIn(f'value="Sinal reserva #{r.pk}"', html)
+        self.assertIn(f'<option value="{r.pk}" selected>', html)
+
+    def test_reserva_que_nao_recebe_mais_sinal_e_ignorada(self):
+        """Hospedada já não é sinal: o formulário abre em branco em vez de mentir."""
+        r = self._reserva(status="hospedada")
+        html = self.client.get(reverse("pagamentos:painel"), {"reserva": r.pk}).content.decode()
+        self.assertIn("fin: 'avulso'", html)
+        self.assertNotIn('value="Sinal reserva #', html)   # o placeholder fica
+
+    def test_parametro_lixo_nao_estoura(self):
+        html = self.client.get(reverse("pagamentos:painel"), {"reserva": "abc"}).content.decode()
+        self.assertIn("fin: 'avulso'", html)
+
+    def test_detalhe_da_reserva_tem_o_atalho(self):
+        r = self._reserva()
+        html = self.client.get(reverse("reservas:detalhe", args=[r.pk])).content.decode()
+        self.assertIn(f"{reverse('pagamentos:painel')}?reserva={r.pk}#nova-cobranca", html)
+
+    def test_reserva_hospedada_nao_oferece_o_atalho(self):
+        r = self._reserva(status="hospedada")
+        html = self.client.get(reverse("reservas:detalhe", args=[r.pk])).content.decode()
+        self.assertNotIn("#nova-cobranca", html)

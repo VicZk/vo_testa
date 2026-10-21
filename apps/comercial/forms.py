@@ -1,6 +1,6 @@
 from django import forms
 
-from apps.nucleo.forms import ReaisInput
+from apps.nucleo.forms import DataInput, ReaisInput
 from apps.nucleo.models import UH, Pessoa, TipoUH
 
 from .models import (
@@ -74,12 +74,14 @@ class TemplateEmailForm(forms.ModelForm):
         }
 
 
-class DataInput(forms.DateInput):
-    input_type = "date"
-
-
 class DataHoraInput(forms.DateTimeInput):
     input_type = "datetime-local"
+    # Mesma história do DataInput do núcleo: `<input type="datetime-local">` só
+    # pré-preenche com o valor em ISO. Sem isto, reabrir um agendamento vinha
+    # com o campo de data/hora em branco.
+    def __init__(self, *a, **k):
+        k.setdefault("format", "%Y-%m-%dT%H:%M")
+        super().__init__(*a, **k)
 
 
 class CampanhaForm(forms.ModelForm):
