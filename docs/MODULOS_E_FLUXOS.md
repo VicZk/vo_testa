@@ -75,7 +75,8 @@ preço, grupos (bloco de quartos), FNRH/BOH, estoque de colchões extra e berço
 | confirmada/pré-reserva → **hospedada** | `Reserva.fazer_checkin(usuario)` (`models.py:446`) | `reservas:checkin`, `services.checkin_grupo` | atômico, com a reserva travada (clique duplo esbarra no status relido); exige `fnrh_pronta` quando `FNRH_BLOQUEAR_CHECKIN`; exige `uh.status == ATIVA`; com Governança ativa exige quarto limpo/inspecionado; marca `fnrh_status=pendente`; **cria a `ContaHospedagem`** e lança diárias + ISS + taxa de turismo (no folio-mãe, se houver grupo) |
 | hospedada → **checkout** | `Reserva.fazer_checkout(usuario)` (`models.py:492`) | `reservas:checkout` | atômico, trava reserva e conta; **único bloqueio é dinheiro**: `conta.saldo()` tem de ser 0,00 (resíduo de arredondamento até `CHECKOUT_TOLERANCIA_ARREDONDAMENTO`, padrão R$ 0,10, vira desconto automático registrado na trilha; saldo negativo = crédito do hóspede, recusado com a indicação de "Devolver ao hóspede"); fecha a conta; emite `quarto_liberado(origem="checkout")` |
 | orçamento/pré/confirmada → **cancelada** | `Reserva.cancelar(usuario, motivo)` | `reservas:cancelar`, `cancelar_grupo`, `expirar_vencidas` | motivo obrigatório; `registrar_auditoria("cancelamento_reserva")`; emite `reserva_encerrada(evento="cancelada")` |
-| confirmada → **no_show** | `Reserva.marcar_no_show(usuario)` | `reservas:no_show` | auditado; emite `reserva_encerrada(evento="no_show")` |
+| confirmada → **no_show** | `Reserva.marcar_no_show(usuario, motivo="")` | `reservas:no_show`; `services.marcar_no_shows_vencidos` (rotina `marcar_no_shows`, se ligada) | auditado (o motivo vai na trilha — o automático diz "automático: entrada dd/mm…", pelo usuário de sistema `_auditoria`); grava `cancelada_em`; emite `reserva_encerrada(evento="no_show")` |
+| no_show → **confirmada** | `Reserva.desfazer_no_show(usuario, motivo)` | `reservas:desfazer_no_show` | motivo obrigatório; só enquanto a estadia não terminou e se o quarto ainda estiver livre (se foi vendido, a constraint de overbooking recusa e nada muda); limpa `cancelada_em`; auditado (`no_show_desfeito`) |
 
 `GrupoReserva` **não** tem status gravado: `situacao()` deriva das filhas na ordem
 cancelado → check-out → hospedado → confirmado → pré-reserva (`models.py:541`).
@@ -87,6 +88,27 @@ Tarifa e preço:
 `tarifa_da_unidade(uh, dia)`, `diaria_media_unidade(uh, ci, co)`,
 `tarifa_base_unidade(uh)`, `preco_unidade_noite(uh, dia) → (base, pessoa_adicional)`,
 `tarifa_minima_do_tipo(tipo)`.
+
+Preço em lote (`precos_em_lote()`, contextvar): dentro dele, `configuracao_reservas()`
+lê a `ConfiguracaoReservas` uma vez; `precarregar_tarifas_unidade(uhs)` traz numa consulta
+as `TarifaUnidade` e as `TarifaTemporada` de todos os quartos; `precarregar_classificacoes
+(inicio, fim)` traz a temporada de cada noite do período numa consulta. É o que deixa o
+painel de quartos do lead (Comercial) e a busca do site com número de consultas
+constante, por mais quartos e noites que tenham.
+
+No-show automático: `marcar_no_shows_vencidos(hoje=None)` — confirmada cuja entrada
+passou há `ConfiguracaoReservas.no_show_automatico_noites` noite(s) sem check-in vira
+"não compareceu" (0 = desligado, o padrão: a recepção decide pela Auditoria). Trava de
+linha, não mexe em dinheiro, devolve as marcadas. A pendência "no-show provável" diz em
+que madrugada o sistema vai marcar.
+
+Receita vendida (o cálculo mora em `receita.py`; estas são as portas para Relatórios):
+`carteira(inicio, fim)` (OTB dia a dia: firme + pré-reserva dentro da retenção, à parte),
+`pickup(inicio, fim, janela=7)` (entrou × saiu da carteira, pela `criado_em` e pela
+`cancelada_em`), `ritmo_de_vendas(inicio, fim)` (curva acumulada por antecedência) e
+`custo_distribuicao(inicio, fim)` (bruto, custo estimado e líquido por canal, com os
+percentuais de `ConfiguracaoReservas.custo_por_canal()`). O preço da noite é o da
+reserva (`valores_das_diarias()`), não o da conta: é relatório de venda.
 
 Restrições de venda e contingência:
 `restricoes_da_estadia(checkin, checkout, tipo_uh=, uh=)` → violações com a mensagem
@@ -192,6 +214,7 @@ Módulos auxiliares: `precos.py` (motor de preço), `colchoes.py` (arranjos de c
 | `reservas:tarifa_preview` | JSON ao vivo: diária, temporada, itens (ISS/turismo), arranjo e status do pool de colchões | `@requer_modulo` |
 | `reservas:detalhe` | folio, transições, FNRH, política de cancelamento, troca de quarto | `@requer_modulo` |
 | `confirmar` / `checkin` / `checkout` / `cancelar` / `transferir` / `trocar_quarto` / `no_show` | transições (POST) | `@requer_modulo` |
+| `desfazer_no_show` | volta a confirmada o no-show (manual ou automático) quando o hóspede aparece; motivo obrigatório | `@requer_modulo` |
 | `lancamento_novo` / `pagamento_novo` / `adiantamento_novo` / `acompanhante_novo` | folio e caixa | `@requer_modulo`; **desconto exige gerência** (`views.py:645`) |
 | `devolver` | devolução ao hóspede (excedente da conta ou cancelamento) | `@requer_modulo` + **gerência** (saída de dinheiro) |
 | `reservas:fnrh` / `fnrh_reenviar` | formset das fichas da reserva / push manual à FNRH | `@requer_modulo` |
@@ -209,7 +232,11 @@ Módulos auxiliares: `precos.py` (motor de preço), `colchoes.py` (arranjos de c
 - `CANCELAMENTO_ARREPENDIMENTO_DIAS` (7), `CANCELAMENTO_RETENCAO_PCT` (10).
 - `FNRH_BLOQUEAR_CHECKIN` (on, off em testes), `FNRH_GATEWAY` (`simulado`|`serpro`),
   `FNRH_API_URL/USER/SENHA`.
-- Comandos: `expirar_reservas` (cron — `expirar_vencidas` + `expirar_grupos_vencidos`),
+- `ConfiguracaoReservas` (Tabela de Preços): `no_show_automatico_noites` (0 desligado,
+  1 madrugada seguinte, 2 e 3 com 1 ou 2 dias de tolerância) e `custo_canal_ota/site/
+  whatsapp/balcao` (% sobre a hospedagem, só estimativa do relatório de distribuição).
+- Comandos: `marcar_no_shows` (cron diário, antes de `fechar_dia`),
+  `expirar_reservas` (cron — `expirar_vencidas` + `expirar_grupos_vencidos`),
   `enviar_fnrh_pendentes` (cron), `carregar_tarifas` (tabela ago/2026 por quarto),
   `configurar_camas`, `recentrar_demo`.
 
@@ -839,6 +866,8 @@ Públicas (fora do `/crm/`):
 |---|---|
 | `/captacao/<slug>/` (`captacao:publica`) | LP gerenciável; **GET conta visita**, POST captura lead (`csrf_protect`); temas `fundador` e `blueprint` |
 | `/lp/fundador/`, `/lp/fundador-2/`, `/lp/inauguracao_31_10_2026/` + `/lead/` | LPs em HTML bespoke (`LPs/`), com honeypot + rejeição de envio instantâneo, rate-limit por IP e Meta CAPI pelo servidor (dedupe por `event_id`) |
+| `/lp/arquivo/<hash>.<ext>` | fotos e fontes que vinham em base64 dentro do HTML das LPs: `views_lp._desembutir()` troca cada `data:` (≥ 3 KB) por este endereço ao servir, nomeado pelo sha256 do conteúdo, com `Cache-Control: immutable`. O arquivo em `LPs/` continua autocontido |
+| `/lp/inauguracao/` | redirect (302) para `/lp/inauguracao_31_10_2026/` com os `utm_*` — era o endereço que a LP anunciava no canônico |
 | `/email/descadastrar/<uuid:token>/` | descadastro LGPD (desliga `aceita_email`), idempotente |
 | `/whatsapp/webhook/` | WhatsApp Cloud API: GET = handshake `hub.challenge`; POST = eventos |
 
@@ -1043,7 +1072,9 @@ Nenhum.
 ### Telas/rotas (`/crm/loja/`)
 
 `loja:pdv` (carrinho Alpine; produtos com saldo no local), `loja:finalizar`,
-`loja:vendas` (histórico), `loja:venda` (recibo) — `@requer_modulo(Modulo.LOJA)`;
+`loja:vendas` (histórico), `loja:venda` (recibo), `loja:cupom` (cupom de 80 mm da
+venda para a impressora térmica; `?imprimir=1` abre a impressão) —
+`@requer_modulo(Modulo.LOJA)`;
 `loja:cancelar` — **`@requer_gerencia`** (sem `@requer_modulo`).
 O local vem de `?local=` ou do primeiro `LocalEstoque` com `modulo=loja` ativo.
 
@@ -1100,7 +1131,8 @@ Nenhum.
 ### Telas/rotas (`/crm/restaurante/`)
 
 `restaurante:comandas`, `abrir`, `comanda/<pk>`, `add_item` (HTMX), `remover_item`,
-`fechar`, `transferir`, `historico`, `mesas` — `@requer_modulo`;
+`fechar`, `transferir`, `historico`, `mesas`, `cupom` (80 mm: conferência da conta com
+a comanda aberta, recibo depois de fechada) — `@requer_modulo`;
 `restaurante:cancelar` — **`@requer_gerencia`**.
 
 ### Regras de negócio
@@ -1155,7 +1187,8 @@ Transversais: `pendencias_auditoria()`, `faturamento_periodo(inicio, fim)`.
 
 `lavanderia:painel`, `abrir`, `ordem/<pk>`, `add_item`, `remover_item`, `avancar`,
 `entregar`, `historico`, `servicos` (tabela de preços), `rouparia`, `rouparia_item`,
-`rouparia_mover` — `@requer_modulo`; `lavanderia:cancelar` — `@requer_modulo` +
+`rouparia_mover`, `cupom` (80 mm: comprovante na recepção da roupa, recibo na entrega) —
+`@requer_modulo`; `lavanderia:cancelar` — `@requer_modulo` +
 **`@requer_gerencia`**.
 
 ### Regras de negócio
@@ -1185,7 +1218,13 @@ evento. Alimenta o mapa de quartos e **bloqueia o check-in** em quarto sujo.
   propriedade `pronta` = limpa **ou** inspecionada.
 - **`TarefaGovernanca`** — `uh`, `tipo` (`faxina_completa|arrumacao|troca_roupa|
   pos_manutencao`), `status` `pendente → em_andamento → concluida`, `camareira`,
-  `origem` (texto: `manual|checkout|troca|manutencao|portal`), timestamps.
+  `origem` (texto: `manual|checkout|troca|manutencao|portal`), timestamps; inspeção:
+  `inspecionada_em/por`, `reprovada_em` e `motivo_reprovacao`.
+- **`ConferenciaOcupacao`** — o que a camareira viu na ronda: `uh`, `dia`, `visto`
+  (`vago | ocupado | ocupado_sem_bagagem`), o retrato do PMS naquele momento
+  (`pms_ocupado`, `reserva_id`), o veredito gravado em `divergencia` (`ok | skip |
+  saida_nao_lancada | sleeper | sem_bagagem | sem_base`), `observacao`,
+  `registrado_em/por`. Histórico: cada toque é uma linha nova, nunca sobrescreve.
 
 ### Interface pública (`apps/governanca/services.py`)
 
@@ -1194,8 +1233,17 @@ evento. Alimenta o mapa de quartos e **bloqueia o check-in** em quarto sujo.
 **`abrir_faxina(uh, tipo, usuario, origem)`** (marca sujo + cria tarefa, sem duplicar
 pendente), `iniciar_tarefa` (idempotente; quarto → em limpeza),
 `concluir_tarefa` (idempotente; quarto → limpo, auditado, emite sinal), `inspecionar`,
-`tarefas_ativas()`, `painel_limpeza()` (uma linha por quarto físico, ordenada por
+`reprovar_inspecao(uh, usuario, motivo)` (devolve o quarto para a fila, auditado),
+`tarefas_ativas()`, `painel_limpeza(dia=None)` (uma linha por quarto físico, ordenada por
 urgência: sujo → em limpeza → limpo → inspecionado),
+**`registrar_conferencia(uh, visto, usuario, dia, observacao)`** (grava o que foi visto e
+o veredito contra `reservas.ocupacao_por_uh`), **`discrepancias(dia=None)`** (confronta
+ao vivo a última conferência de cada quarto com o PMS; quarto bloqueado pela Manutenção
+não é discrepância), `classificar(visto, pms, …)` e `explicar_divergencia(cod)`;
+`pendencias_auditoria()` (as divergências do dia na varredura da Auditoria; "sem ronda"
+numa linha só, e só pelos quartos que o PMS diz ocupados); relatórios
+`relatorio_faxinas`, `relatorio_inspecoes` e `relatorio_discrepancias(inicio, fim)` (este
+pelo veredito gravado, não por recálculo);
 **`gerar_arrumacoes_do_dia()`** — uma Arrumação (`origem="arrumacao_diaria"`) para cada
 quarto em que o hóspede fica além de hoje (`reservas.uhs_em_permanencia`), sem
 duplicar; roda no comando `gerar_arrumacoes`, do grupo diário do `rotinas`.
@@ -1210,9 +1258,11 @@ duplicar; roda no comando `gerar_arrumacoes`, do grupo diário do `rotinas`.
 
 ### Telas/rotas (`/crm/governanca/`) — todas `@requer_modulo(Modulo.GOVERNANCA)`
 
-`governanca:painel` (tela única: quarto × status × tarefa ativa + **lista de montagem de
-camas das chegadas do dia**, vinda de `reservas.montagem_do_dia`), `nova_tarefa`,
-`tarefa_acao` (atribuir camareira / iniciar / concluir), `status_marcar`.
+`governanca:painel` (aba Limpeza: quarto × status × tarefa ativa + **lista de montagem de
+camas das chegadas do dia**, vinda de `reservas.montagem_do_dia`, e o aviso com o número
+de divergências), `governanca:discrepancias` (aba Discrepâncias), `nova_tarefa`,
+`tarefa_acao` (atribuir camareira / iniciar / concluir / inspecionar / reprovar),
+`status_marcar`, `ronda` (registra a conferência do quarto; HTMX devolve só o quadro).
 
 ### Regras de negócio
 
@@ -1520,6 +1570,13 @@ Nenhum (o app tem `migrations/` só para o seed de ativação do módulo).
 | `ocupacao` | Ocupação & Diárias (taxa, **ADR**, **RevPAR**, diárias-quarto por tipo) | Consolidados | `RESERVAS` |
 | `caixa` | Caixa / Financeiro (por forma e por operador) | Consolidados | — |
 | `faturamento_modulos` | **Faturamento por setor (caixa × quarto)** | Consolidados | — |
+| `carteira` | Carteira de reservas (OTB): vendido para o mês, dia a dia, com a pré-reserva à parte | Consolidados | `RESERVAS` |
+| `pickup` | Pickup — entrou × saiu da carteira nos últimos 7/14/30 dias | Consolidados | `RESERVAS` |
+| `ritmo` | Ritmo de vendas: o vendido por antecedência (90+, 60, 30, 14, 7, 0 dias) | Consolidados | `RESERVAS` |
+| `distribuicao` | Custo de distribuição por canal (bruto, custo estimado, líquido) | Consolidados | `RESERVAS` |
+| `governanca_faxinas` | Governança — faxinas por camareira (por tipo e tempo médio) | Por módulo | `GOVERNANCA` |
+| `governanca_inspecao` | Governança — inspeção e retrabalho (aprovadas × reprovadas, motivos) | Por módulo | `GOVERNANCA` |
+| `governanca_discrepancias` | Governança — discrepâncias da ronda, por dia e por tipo | Por módulo | `GOVERNANCA` |
 | `estoque` | Estoque — consumo (curva ABC) | Por módulo | `ESTOQUE` |
 | `reservas` | Reservas — canal e status | Por módulo | `RESERVAS` |
 | `comercial` | Comercial — funil e conversão | Por módulo | `COMERCIAL` |

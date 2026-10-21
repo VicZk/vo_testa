@@ -24,12 +24,15 @@ Pesquisa de mercado: `docs/REFERENCIA_DESBRAVADOR.md`.
 Config por variável de ambiente (`.env` local — ver `.env.example`). `DEBUG=1` no dev.
 
 O CI roda sozinho: `testes.yml` (ruff, `makemigrations --check` e a suíte contra
-PostgreSQL 16, em todo push da `main`/`dev` e em PR) e `security.yml` (pip-audit,
-bandit, ruff de segurança e gitleaks, no push da `main`, em PR e toda segunda).
+PostgreSQL 16, mais o job "Fluxos no navegador" com Playwright + Chromium —
+`apps/site/tests_e2e.py`, `E2E_OBRIGATORIO=1` —, em todo push da `main`/`dev` e em PR)
+e `security.yml` (pip-audit, bandit, ruff de segurança e gitleaks, no push da `main`, em
+PR e toda segunda).
 Rotinas agendadas: `manage.py rotinas --grupo frequentes` (a cada 10 min) e
 `--grupo diarias` (03:15 de Brasília) — dois serviços cron no Railway, configs em
 `deploy/`. Rotina nova entra no grupo certo em
-`apps/nucleo/management/commands/rotinas.py`.
+`apps/nucleo/management/commands/rotinas.py`. Com `ROTINAS_MONITOR_FREQUENTES/DIARIAS`
+(URL de um check do Healthchecks.io), o grupo avisa começo, fim e falha.
 
 ## Deploy, commit e push
 
@@ -167,6 +170,13 @@ e rode o comando — o teste `CssDasTelasPublicasTests` avisa quando o recorte f
   `--sucesso-bg`/`--alerta-bg`/`--perigo-bg`/`--info-bg`; tinta translúcida é
   `color-mix(in srgb, var(--token) N%, transparent)`. O teste `CorSoPorTokenTests` barra
   hex/rgba no CRM.
+- **Impressão:** o `@page` geral é A4 (kit de contingência) e o `@media print` do app.css
+  tira o app-shell. Recibo, conta e comprovante de balcão saem pelo cupom de 80 mm
+  (`templates/componentes/cupom.html`, página nomeada `@page cupom` com a altura medida
+  pelo próprio componente) — não criar outro layout de recibo.
+- **Componente injetado em página de terceiros** (LPs do design, site): classes com
+  prefixo próprio e conferência visual na página hospedeira — o aviso de cookies nasceu
+  com `.consent`, a classe do checkbox de LGPD das LPs, e arrancava o checkbox do form.
 - **Referências de princípio:** skill `apple-design` (resposta, tipografia ótica,
   materiais, simplicidade) e a memória [[design-lampiao]]. Ao mudar o "look" global,
   mexer nos **tokens** (propaga a tudo), não em cada template.
@@ -522,5 +532,9 @@ e rode o comando — o teste `CssDasTelasPublicasTests` avisa quando o recorte f
   no-show, arrumação diária), segurança e LGPD (trava de login por conta, recuperação de
   senha, MFA por escopo, CSP com relatório, antirrobô, descadastro em um clique,
   encarregado de dados, retenção da trilha), fiscal (IBS/CBS, aviso de venda sem NFC-e) e
-  visual. O que mudou e por quê, push a push: `CHANGELOG.md`. Fluxos:
+  visual; depois, no-show automático opcional (`marcar_no_shows` + "Desfazer"), cupom de
+  80 mm (Loja/Restaurante/Lavanderia), relatórios de receita (OTB, pickup, ritmo, custo
+  por canal), ronda da Governança com discrepâncias, LPs servidas sem base64 embutido
+  (`/lp/arquivo/<hash>`) e telas do lead/funil/nova reserva com consultas constantes
+  (Postgres com `jit=off`). O que mudou e por quê, push a push: `CHANGELOG.md`. Fluxos:
   `docs/MODULOS_E_FLUXOS.md`. Peças e variáveis de ambiente: `docs/ARQUITETURA.md`.

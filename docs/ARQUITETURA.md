@@ -764,7 +764,7 @@ Tudo é declarado em **`config/urls.py`**, que compõe o domínio único:
 | `/` + páginas do site | `apps.site.urls` (`app_name="core"`) | hóspede | home, `/quartos/`, `/quarto/<uh_id>/`, legais, `/pedir-proposta/`, fluxo `reservar/…`, `/reserva/<token>/`, `/minha-reserva/…`, `/lab/` (oculto) |
 | `/hospede/<token>/…` | `apps.portal.urls` | hóspede (token, sem login) | `home`, `checkin` (pré check-in FNRH), `nps`, `pedir`, `solicitar`, `checkout`, `checkout/pagar`, `checkout/recepcao` |
 | `/hospede/recepcao/…` | `apps.portal.urls` | equipe | `@requer_modulo(Modulo.APPSITE)`: QR do portal, QR da FNRH, painel de solicitações |
-| `/lp/fundador/`, `/lp/fundador-2/`, `/lp/inauguracao_31_10_2026/` (+ `/lead/`) | `apps.comercial.urls_lp` | público | HTML de `LPs/` servido direto |
+| `/lp/fundador/`, `/lp/fundador-2/`, `/lp/inauguracao_31_10_2026/` (+ `/lead/`) | `apps.comercial.urls_lp` | público | HTML de `LPs/` servido com as fotos e fontes em base64 trocadas por `/lp/arquivo/<hash>.<ext>` (cache imutável); `/lp/inauguracao/` leva à LP com os `utm_*` |
 | `/captacao/<slug>/` | `apps.comercial.urls_publicas` | público | Páginas de Captação geridas no CRM |
 | `/captacao/fundador/`, `/captacao/fundador-2/`, `/captacao/inauguracao_31_10_2026/` | `config/urls.py` | público | `RedirectView` para as LPs novas |
 | `/privacidade/` | `apps.comercial.views_lp` | público | LGPD |
@@ -775,26 +775,26 @@ Tudo é declarado em **`config/urls.py`**, que compõe o domínio único:
 | `/crm/entrar/`, `/crm/sair/` | `LoginComLimite` / `LogoutView` | equipe | login com rate-limit + MFA |
 | `/crm/mfa/`, `/crm/mfa/ativar/`, `/crm/mfa/desafio/` | `apps.nucleo.mfa_views` | equipe | configuração, ativação (QR) e desafio TOTP |
 | `/crm/…` (raiz do CRM) | `apps.nucleo.urls` (**sem `app_name`** → nomes globais) | equipe | 40 rotas: `dashboard`, `busca_global`, `modulos_central`, funcionários, pessoas/hóspedes/agências/empresas/fornecedores, estrutura/tipos/UHs, `tabela_precos`, temporadas, caixa (abrir/movimento/fechar/sessões/reabrir/estorno), financeiro (lançamentos/contas/baixa), logbook |
-| `/crm/reservas/…` | `apps.reservas.urls` | equipe | 32 rotas: mapa, lista, detalhe, check-in/out, FNRH, BOH, grupos, troca de quarto, colchões |
+| `/crm/reservas/…` | `apps.reservas.urls` | equipe | 43 rotas: mapa, lista, detalhe, check-in/out, no-show e desfazer, FNRH, BOH, grupos, troca de quarto, colchões, kit de contingência, restrições de venda |
 | `/crm/estoque/…` | `apps.estoque.urls` | equipe | 13 rotas: posição, produtos, kardex, categorias, locais, movimentações, inventário |
-| `/crm/loja/…` | `apps.loja.urls` | equipe | 5 rotas: `pdv`, `finalizar`, `vendas`, `venda`, `cancelar` |
-| `/crm/restaurante/…` | `apps.restaurante.urls` | equipe | 10 rotas (comandas, itens, fechamento, transferência) |
-| `/crm/lavanderia/…` | `apps.lavanderia.urls` | equipe | 13 rotas (ordens + rouparia) |
-| `/crm/governanca/…` | `apps.governanca.urls` | equipe | 4 rotas: `painel`, `nova_tarefa`, `tarefa_acao`, `status_marcar` |
+| `/crm/loja/…` | `apps.loja.urls` | equipe | 6 rotas: `pdv`, `finalizar`, `vendas`, `venda`, `cupom` (80 mm), `cancelar` |
+| `/crm/restaurante/…` | `apps.restaurante.urls` | equipe | 11 rotas (comandas, itens, fechamento, transferência, cupom de 80 mm) |
+| `/crm/lavanderia/…` | `apps.lavanderia.urls` | equipe | 14 rotas (ordens + rouparia + cupom de 80 mm) |
+| `/crm/governanca/…` | `apps.governanca.urls` | equipe | 6 rotas: `painel`, `discrepancias`, `nova_tarefa`, `tarefa_acao`, `status_marcar`, `ronda` |
 | `/crm/manutencao/…` | `apps.manutencao.urls` | equipe | 6 rotas (painel, nova, detalhe, iniciar, concluir, cancelar) |
 | `/crm/escala/…` | `apps.escala.urls` | equipe | 12 rotas: `grade`, `gerar`, `editar`, `publicar`, `relatorio`, `atribuir`, `remover_atribuicao`, `minha`, `turnos`, `ausencias`, `trocas`, `decidir_troca` |
 | `/crm/pagamentos/…` | `apps.pagamentos.urls` | equipe + **público** | 15 rotas. Painel/conciliação/criar/detalhe/simular/liquidar/cancelar/estornar são internas; **`/crm/pagamentos/pagar/<token>/`** (+ `confirmar/`, `cartao/`) é o **link de pagamento público, sem login**; `/crm/pagamentos/webhook/` é `csrf_exempt` |
 | `/crm/fiscal/…` | `apps.fiscal.urls` | equipe + provedor | 5 rotas (painel, detalhe, emitir, cancelar, **webhook** do Focus validado por `FISCAL_WEBHOOK_TOKEN`) |
 | `/crm/conciliacao/…` | `apps.conciliacao.urls` | equipe | 12 rotas (`@requer_area(Area.FINANCEIRO)`) |
-| `/crm/relatorios/…` | `apps.relatorios.urls` | gerência | 2 rotas: índice e `<slug:chave>` (7 relatórios) |
+| `/crm/relatorios/…` | `apps.relatorios.urls` | gerência | 2 rotas: índice e `<slug:chave>` (14 relatórios) |
 | `/crm/auditoria/…` | `apps.auditoria.urls` | gerência | 2 rotas: painel de pendências e trilha |
 | `/crm/comercial/…` | `apps.comercial.urls` | equipe | 48 rotas (funil, oportunidade, cotações, atividades, WhatsApp, e-mail, LP Páginas, respostas rápidas, impulsionamento) |
 | `/crm/marketing/…` | `apps.marketing.urls` | equipe | 26 rotas (quadro de fases, ficha, peças, etapas, checklist, verba, calendário) |
 | `/crm/nps/` | `apps.nps.urls` | equipe | 1 rota (`@requer_area(Area.NPS)`) |
 | `/media/<path>` | `django.views.static.serve` | público | mídia local quando o R2 não está ativo |
 
-**Total:** 326 entradas `path()`/`re_path()` somando `config/urls.py` e todos os
-urlconfs de app, das quais **24 são `include()`** → **302 rotas terminais declaradas
+**Total:** 353 entradas `path()`/`re_path()` somando `config/urls.py` e todos os
+urlconfs de app, das quais **24 são `include()`** → **329 rotas terminais declaradas
 no projeto**. Uma dessas 302 (`crm/admin/`) monta a árvore inteira do admin do Django,
 que tem as suas próprias rotas e não está contada aqui.
 
@@ -816,6 +816,8 @@ Tudo que varia por ambiente é lido em `config/settings.py` (`.env` em dev via
 | `REDIS_URL` | — | Cache compartilhado em Redis. Vazio: `DatabaseCache` na tabela `nucleo_cache`. Nos testes: memória. |
 | `BACKUP_DIR` | — | Pasta do `backup_banco` quando não há R2. Vazio e sem R2: o backup não roda (só avisa). |
 | `KIT_CONTINGENCIA_EMAILS` | — | Quem recebe a folha do dia (kit de contingência) toda madrugada, separados por vírgula. Vazio: não envia nada. |
+| `ROTINAS_MONITOR_FREQUENTES`, `ROTINAS_MONITOR_DIARIAS` | — | URL de um check do Healthchecks.io (ou compatível) por grupo do `rotinas` ("dead man's switch"): o grupo avisa `/start`, o fim e `/fail`. Vazio: não avisa. Ver 10.4. |
+| `DB_JIT` | `0` | `1` religa o JIT do Postgres na conexão do sistema. Desligado por padrão (`-c jit=off`): com tabelas pequenas ainda sem ANALYZE o planejador compilava consultas de 1 ms por 185 ms. |
 | `SENTRY_DSN` | — | Liga o Sentry (fora dos testes). Sem PII: `send_default_pii=False`, sem variáveis locais e sem corpo de requisição. Opcionais: `SENTRY_ENVIRONMENT`, `SENTRY_TRACES_SAMPLE_RATE`; a release vem de `RAILWAY_GIT_COMMIT_SHA`. |
 | `SECRET_KEY` | chave de dev versionada | Em produção (`DEBUG=0`, não `TESTING`) é **obrigatória** e não pode começar com `dev-inseguro` — senão `ImproperlyConfigured`. |
 | `ALLOWED_HOSTS` | `""` (lista separada por vírgula) | Com `DEBUG=1` e vazio, usa `localhost,127.0.0.1`. Sempre são adicionados os domínios do próprio serviço (`RAILWAY_PUBLIC_DOMAIN`, `RAILWAY_PRIVATE_DOMAIN`), `healthcheck.railway.app` e loopbacks. Sem curinga `.railway.app`: o domínio próprio (ex.: `www.pousadavotesta.com.br`) vai na variável. |
@@ -1157,10 +1159,14 @@ Os testes ficam **dentro de cada app** e são descobertos pelo runner do Django:
 | `apps/site/tests_e2e.py` | 107 | **Playwright** sobre `StaticLiveServerTestCase` |
 | demais apps | 46–676 cada | `auditoria`, `conciliacao`, `escala`, `estoque`, `fiscal`, `governanca`, `lavanderia`, `loja`, `manutencao`, `nps`, `pagamentos`, `portal`, `relatorios`, `restaurante` |
 
-O único teste de navegador é `apps/site/tests_e2e.py`: importa
-`playwright.sync_api.sync_playwright` dentro de um `try` e marca as classes com
-`@unittest.skipUnless(_PLAYWRIGHT_OK, …)` — **sem Playwright instalado os testes são
-pulados, não falham**. Para habilitar:
+O único arquivo de testes de navegador é `apps/site/tests_e2e.py` (reserva no site de
+ponta a ponta, calendário, home, funil — busca e arrasto —, a LP da Inauguração e o menu
+lateral do CRM): importa `playwright.sync_api.sync_playwright` dentro de um `try` e marca
+as classes com `@unittest.skipUnless(_PLAYWRIGHT_OK, …)` — **sem Playwright instalado
+os testes são pulados, não falham**. No CI eles rodam num job próprio ("Fluxos no
+navegador", em `testes.yml`, com `playwright==1.64.0` + Chromium) e com
+`E2E_OBRIGATORIO=1`: lá, faltar o Playwright é erro, para o job nunca ficar verde pulando
+tudo. Para habilitar localmente:
 
 ```bash
 pip install playwright && playwright install chromium
@@ -1319,7 +1325,8 @@ do web e o arquivo de config-as-code `deploy/railway.rotinas.json` (`*/10 * * * 
 | `reenviar_confirmacoes_site` | `site` | frequentes | Manda a confirmação das `site.Reserva` ativas de 10 min a 2 dias atrás que estão sem `confirmacao_enviada_em` (a thread de envio morreu ou o SMTP falhou), até 100 por rodada. |
 | `reprocessar_webhooks_whatsapp` | `comercial` | frequentes | Reprocessa os `WebhookWhatsApp` não processados (com mais de 2 min, até 5 tentativas), na ordem de chegada, e apaga os processados há mais de 30 dias. Seguro porque a mensagem é única pelo `wamid`. |
 | `reenviar_emails_pendentes` | `comercial` | frequentes | Reenvia `EnvioEmail` (fora de campanha, últimos 2 dias) pendente há mais de 10 min ou com erro e menos de 3 tentativas. O conteúdo fica guardado no `EnvioEmail` só até o e-mail sair. |
-| `fechar_dia` | `reservas` | diarias | Fechamento do dia de ontem (auditoria noturna): grava o `FechamentoDiario` imutável — ocupação, chegadas, saídas, no-shows, receita pela competência e saldo em aberto. Primeiro do grupo, para o backup já levar o fechamento. Idempotente; `--dia AAAA-MM-DD` fecha um dia que ficou para trás. |
+| `marcar_no_shows` | `reservas` | diarias | No-show automático, se ligado na Tabela de Preços (`ConfiguracaoReservas.no_show_automatico_noites`: 0 desligado, 1 = madrugada seguinte à entrada, 2 e 3 = com 1 ou 2 dias de tolerância). Confirmada sem check-in vira "não compareceu" pelo usuário de sistema `_auditoria`, com trava de linha; não mexe em dinheiro. Primeiro do grupo, antes do fechamento. |
+| `fechar_dia` | `reservas` | diarias | Fechamento do dia de ontem (auditoria noturna): grava o `FechamentoDiario` imutável — ocupação, chegadas, saídas, no-shows, receita pela competência e saldo em aberto. Antes do backup, para ele já levar o fechamento. Idempotente; `--dia AAAA-MM-DD` fecha um dia que ficou para trás. |
 | `enviar_conversoes_pendentes` | `comercial` | diarias | Reprocessa conversões de mídia pendentes (idempotente, best-effort). |
 | `backup_banco` | `nucleo` | diarias | Cópia do banco para fora do Railway (ver 10.6). |
 | `sincronizar_gastos_midia` | `comercial` | diarias | Puxa o gasto das plataformas para as campanhas com `id_externo` (`--dias N`). No-op com `MIDIA_GATEWAY=simulado`. |
@@ -1328,6 +1335,16 @@ do web e o arquivo de config-as-code `deploy/railway.rotinas.json` (`*/10 * * * 
 
 `enviar_campanha_whatsapp` (`comercial`) fica fora: é disparo manual de um template para
 uma lista de leads, com pausa e limite, respeitando opt-in.
+
+**Monitor ("dead man's switch").** Com `ROTINAS_MONITOR_FREQUENTES` /
+`ROTINAS_MONITOR_DIARIAS` definidas (URL de um check do Healthchecks.io ou compatível),
+cada execução do grupo inteiro avisa o começo (`POST <url>/start?rid=…`), o fim
+(`POST <url>?rid=…`, com uma linha por tarefa no corpo: "backup_banco: ok em 3,1s") e a
+falha (`POST <url>/fail?rid=…`, com "FALHOU (OperationalError)" — só o tipo do erro, nunca
+a mensagem, que pode ter dado de hóspede). O mesmo `rid` liga começo e fim. Rodar só
+algumas tarefas à mão (`--so`) não avisa; monitor fora do ar (timeout de 10 s) vira aviso
+no log e a rotina segue. No Healthchecks: frequentes com período de 10 min e tolerância de
+10 min; diárias com o cron `15 6 * * *` (UTC) e tolerância de 1 h.
 
 ### 10.5 Comandos de pós-deploy / operação
 
@@ -1490,6 +1507,16 @@ curva da casa é `cubic-bezier(.2,.8,.2,1)`).
 | `combo_quarto.html` | `dados`, `dados_id`, `campo`, `placeholder`, `valor_id`, `data-url` | Mesmo visual, seções por **ala**; refaz a lista de quartos livres por `fetch` quando as datas do form mudam. |
 | `icone_modulo.html` | `codigo` | SVG do módulo para a sidebar/dashboard. |
 | `paginacao.html` | `pagina` | Paginador de lista: a view chama `apps.nucleo.paginacao.paginar(request, consulta, por_pagina=50)` (lê `?pagina=`, desempata a ordem pelo `pk`, número inválido vira a primeira página e além do fim vira a última) e o template inclui o componente logo abaixo da tabela. Busca e filtros vão junto pela tag `querystring` do Django; com uma página só, não aparece. Totais e contadores da tela continuam somando a consulta inteira, não a página. |
+| `consentimento.html` | — | Aviso de cookies (LGPD) do site, das páginas de captação e das LPs; as tags de medição ficam `type="text/plain" data-consentimento` até o "Aceitar". Classes com prefixo próprio (`aviso-cookies*`): o HTML das LPs não pode reusar nenhuma (teste `test_aviso_nao_reusa_classe_das_lps`). |
+| `cupom.html` | `cupom` (dict: `titulo`, `origem`, `meta`, `itens`, `subtotal`, `desconto`, `total`, `pagamento`, `aviso`, `voltar`), `imprimir` | Cupom de 80 mm para impressora térmica pelo navegador (Loja, Restaurante, Lavanderia). Página própria, sem o app-shell. |
+
+**Impressão.** O `@media print` do `app.css` tira o app-shell de qualquer tela mandada para a
+impressora, e o `@page` geral é A4 retrato (o kit de contingência). O cupom tem página
+nomeada (`@page cupom`): 80 mm de largura, margem zero, e a altura é reescrita pelo script
+do componente com a altura do próprio cupom antes de imprimir — a bobina corta logo depois
+do rodapé. Sem `size` próprio, a página do cupom herdaria o A4 e o driver da térmica
+encolheria a folha inteira para caber em 80 mm (teste `CupomTermicoTests`). Térmica só
+imprime preto: o cupom usa só `--tinta` e fios tracejados.
 
 ### 11.5 O kit “eleg” — `templates/comercial/_estilo_elegante.html`
 

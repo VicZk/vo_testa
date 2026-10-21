@@ -9,6 +9,179 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 21/10/2026 — Telas rápidas, a LP leve, o cupom da térmica, o no-show da madrugada e os relatórios de receita e de governança (`2e1ae94` a `a8a3f1a`)
+
+Décimo bloco: o que ainda estava aberto no relatório da auditoria, tirando dados
+fictícios e LGPD, que ficaram de fora por decisão do dono. Os relatórios de receita e os
+de governança foram feitos por agentes em cópias separadas do código e revisados no
+navegador antes do merge. O original não ganhou commit novo desde o último push.
+
+**O que melhorou**
+- **Telas do dia a dia mais rápidas** (medido no banco local com os dados de teste):
+  - abrir um lead: 444 consultas ao banco e 481 ms → 56 consultas e 69 ms. O painel de
+    quartos do lead relia temporada, tarifas e configuração para cada quarto × noite —
+    e piorava a cada noite a mais no pedido;
+  - o funil: 60 consultas e 211 ms → 16 e 24 ms (eram duas consultas por card);
+  - "Nova reserva": 38 consultas e 410 ms → 11 e 21 ms. Mais da metade do tempo era o
+    JIT do Postgres, que compilava por 185 ms uma consulta de 1,4 ms (tabelas pequenas
+    que ainda não passaram pelo ANALYZE). O sistema agora conecta com o JIT desligado.
+- **A landing page da inauguração, leve e compartilhável:**
+  - tinha 2,1 MB, sendo 2,0 MB de sete fontes e quinze imagens dentro do próprio HTML —
+    as fontes e a foto do hero no `<head>`. Num celular com 4G fraco: 4,2 s de tela vazia
+    e 10,9 s para carregar. Agora o HTML tem 89 KB e as fotos e fontes vêm em arquivos
+    próprios, que o navegador guarda: primeira pintura em 0,4 s, carga completa em
+    5,6 s, metade dos bytes (a foto que aparecia duas vezes e o selo que aparecia três
+    passam a vir uma vez só). A página é a mesma, pixel a pixel;
+  - o link compartilhado no WhatsApp e no Instagram saía **sem imagem**: a imagem e o
+    canônico apontavam para `/lp/inauguracao/…`, endereço que nunca existiu (e o Google
+    recebia um canônico que dá 404). Agora há uma imagem de compartilhamento feita do
+    próprio hero da página (a torre do relógio, "A casa do Vô abre as portas.", "31 de
+    Outubro"), e quem digitar `/lp/inauguracao/` cai na LP com a campanha junto.
+- **Conserto de um defeito deste fork:** o aviso de cookies que entrou nas LPs no bloco
+  anterior usava a mesma classe do checkbox de LGPD do formulário. Na Fundador e na
+  Inauguração, o checkbox ia parar no rodapé da tela e o botão "Quero participar" subia
+  por cima do texto; o aviso, por sua vez, saía espremido numa coluna de 22 px. A
+  produção do original não tem o aviso, então não foi afetada — mas o patch do aviso
+  preparado para o Gefferson tinha o mesmo defeito e ganhou a correção junto.
+- **No-show automático (opcional):** em Tabela de Preços → "Horários e não
+  comparecimento". Desligado, nada muda: a reserva confirmada sem check-in continua
+  aparecendo na Auditoria para a recepção decidir. Ligado, a rotina da madrugada marca o
+  "não compareceu" — na madrugada seguinte à entrada ou com 1 ou 2 dias de tolerância — e
+  o quarto volta à venda nas noites que sobravam. O que o hóspede pagou fica na conta,
+  como no no-show manual. Se ele aparecer (voo atrasado, check-in esquecido no sistema),
+  "Desfazer não comparecimento" devolve a reserva, desde que o quarto ainda esteja livre.
+- **Cupom de 80 mm na impressora térmica**, pelo navegador:
+  - Loja: o recibo da venda; Restaurante: a conferência da conta com a comanda aberta
+    (a que vai à mesa) e o recibo depois de fechada; Lavanderia: o comprovante que fica
+    com o hóspede quando entrega a roupa (o que entrou e quando fica pronto) e o recibo
+    na entrega;
+  - sai do tamanho do cupom: a bobina corta logo depois do rodapé, sem puxar papel em
+    branco. Diz "Não é documento fiscal" (a NFC-e é com o Fiscal).
+- **Aviso quando uma rotina parar:** com um check do Healthchecks.io para cada grupo de
+  rotinas, quem cuida da operação recebe o alerta quando o cron para, trava ou falha —
+  expiração das pré-reservas, FNRH, backup e fechamento do dia. Até aqui, um cron parado
+  só aparecia em vermelho num painel do Railway.
+- **Relatórios de receita** (Relatórios → Consolidados):
+  - **Carteira (OTB):** o que já está vendido para o mês, dia a dia — quartos-noite,
+    ocupação, receita e diária média —, com a pré-reserva separada ("pode cair") e cortes
+    por canal e faturamento;
+  - **Pickup:** quanto entrou e quanto caiu (cancelamento, retenção vencida, no-show) nos
+    últimos 7, 14 ou 30 dias para aquelas datas — se o mês está andando para a frente;
+  - **Ritmo de vendas:** quanto do mês foi vendido com 90, 60, 30, 14, 7 e 0 dias de
+    antecedência;
+  - **Custo de distribuição por canal:** receita bruta, custo estimado e líquida, com os
+    percentuais na Tabela de Preços (OTA começa em 18%, venda direta em 0%).
+- **Governança — a ronda que confere a ocupação:**
+  - na ronda, a camareira registra num toque o que viu em cada quarto (vago, com bagagem,
+    sem bagagem). A aba "Discrepâncias" confronta com o sistema e diz o que fazer:
+    hóspede que foi embora sem passar na recepção (conta aberta, diária correndo, quarto
+    invendável), saída não lançada, hóspede sem check-in lançado, quarto não conferido.
+    As divergências do dia entram também na Auditoria. A conferência só aponta: não
+    fecha conta nem mexe na reserva — quem corrige é a recepção. A aba de hoje recalcula
+    ao vivo (o que a recepção resolve some) e o relatório guarda o que a ronda encontrou
+    na hora; para o mesmo dia, os dois podem não bater, de propósito;
+  - inspeção da faxina com "Reprovar", que devolve o quarto para a fila, com motivo;
+  - três relatórios: faxinas por camareira (por tipo e tempo médio), inspeção e
+    retrabalho (com os motivos mais comuns) e discrepâncias da ronda.
+- **Testes no navegador no CI:** os testes com navegador de verdade existiam, mas só
+  rodavam na máquina de quem tinha o Playwright — no CI, pulavam em silêncio. Agora rodam
+  num job próprio a cada push, e ganharam a LP da inauguração (checkbox no lugar, fotos e
+  fontes carregando, medição só depois do "Aceitar") e o menu lateral (nenhum ícone pula
+  ao recolher).
+- **Miúdos:** o botão pequeno de "Voltar" dos relatórios, do kit e do Comercial tinha o
+  texto colado no topo; os CSVs do sistema traziam um caractere invisível no começo de
+  toda linha (agora só no começo do arquivo, que é onde o Excel precisa); e o cabeçalho
+  das colunas de número não alinhava à direita em cerca de 30 telas.
+
+**O que foi modificado**
+- **Desempenho (`2e1ae94`, `a40c619`):** `config/settings.py` conecta com `-c jit=off`
+  (`DB_JIT=1` religa); `reservas.services`: `configuracao_reservas()` memorizada no lote
+  de preços, `precarregar_classificacoes(inicio, fim)` e `precarregar_tarifas_unidade`
+  trazendo também as `TarifaTemporada`; `precos.py` lê a configuração por `_config()`;
+  `ReservaForm` com `select_related("tipo")`; `comercial.quartos.quartos_para_lead` dentro
+  de `precos_em_lote()`; `comercial.services._anotar_tarefa_e_contato()` no funil e
+  `AtividadeComercial.TIPOS_CONTATO`.
+- **Aviso de cookies (`89b16cd`):** classes `aviso-cookies*` em
+  `componentes/consentimento.html`; teste que barra classe repetida entre o aviso e as LPs.
+- **LP (`049138e`):** `views_lp._desembutir()` e a view `arquivo_lp` (`/lp/arquivo/<hash>`,
+  cache imutável) nas três LPs; canônico, og:url e og:image da inauguração;
+  `static/lp/og-inauguracao.jpg`; redirect `/lp/inauguracao/`. O arquivo em `LPs/`
+  continua como o design entregou.
+- **CI (`5aff095`):** job "Fluxos no navegador" em `testes.yml` (Playwright 1.64.0 +
+  Chromium) com `E2E_OBRIGATORIO=1`; `playwright` no `requirements-dev.txt`; testes
+  `LpInauguracaoE2ETests` e `MenuLateralE2ETests`.
+- **No-show (`f85ea00`):** `ConfiguracaoReservas.no_show_automatico_noites` (migração
+  `nucleo.0048`); `reservas.services.marcar_no_shows_vencidos()`; comando
+  `marcar_no_shows` no grupo `diarias`, antes do fechamento; `Reserva.desfazer_no_show()`
+  e a rota `reservas:desfazer_no_show`; a pendência "no-show provável" diz em que
+  madrugada o sistema marca.
+- **Monitor das rotinas (`cdddbca`):** `rotinas` avisa `ROTINAS_MONITOR_FREQUENTES` /
+  `ROTINAS_MONITOR_DIARIAS` (`/start`, fim e `/fail`, só com o nome da tarefa e o tipo do
+  erro); `.env.example`.
+- **Cupom (`bbaca7a`):** `templates/componentes/cupom.html` e o bloco "Cupom 80 mm" do
+  `app.css` (`@page cupom`); rotas `loja:cupom`, `restaurante:cupom` e `lavanderia:cupom`
+  e os botões nas telas da venda, da comanda e da ordem; `nucleo.formatos.qtd_br()`.
+- **Receita (`034fabe` a `6825cfe`, merge `f0ef20b`):** `apps/reservas/receita.py` e as
+  portas `carteira`, `pickup`, `ritmo_de_vendas` e `custo_distribuicao` em
+  `reservas.services`; `Reserva.cancelada_em` (migração `reservas.0031`), preenchida no
+  cancelamento, no no-show e na expiração, e limpa no "Desfazer"; custo por canal na
+  `ConfiguracaoReservas` (migração `nucleo.0049`, renumerada no merge para vir depois da
+  do no-show); CSV com um BOM só (`nucleo/export.py`); `.tabela th.num`.
+- **Botão pequeno (`3a62e76`):** `.botao-mini` nasce `inline-flex` centrado.
+- **Governança (`f2f84cd`, `0bf4759`, merge `a8a3f1a`):** model `ConferenciaOcupacao` e
+  campos de inspeção na `TarefaGovernanca` (migração `governanca.0003`); services
+  `registrar_conferencia`, `discrepancias`, `reprovar_inspecao`, `pendencias_auditoria` e
+  os três relatórios; rotas `governanca:discrepancias` e `ronda`; abas Limpeza /
+  Discrepâncias; `reservas.services.ocupacao_por_uh()`; a Governança na varredura da
+  Auditoria.
+- **Docs:** README, `docs/ARQUITETURA.md` (variáveis, rotas, rotinas, impressão) e
+  `docs/MODULOS_E_FLUXOS.md`.
+
+**Como foi testado**
+- **Desempenho:** testes que fixam o número de consultas — o funil com 2 ou 8 leads, o
+  lead com 3 quartos × 2 noites ou 12 × 7, o modal com 3 ou 12 quartos — e o `SHOW jit`
+  da conexão.
+- **LP:** celular emulado em 4G lento (perfil do Lighthouse, mediana de 3); comparação
+  pixel a pixel da página inteira em 390 e 1440 px entre o HTML do design e a LP servida
+  (só os segundos da contagem regressiva diferem); cada arquivo responde com o tipo certo
+  e o conteúdo do próprio hash. O aviso de cookies medido nas três LPs e no site, em 320,
+  390 e 1440 px.
+- **No-show:** ponta a ponta no servidor local — regra ligada pela tela, a rotina marcou
+  as duas confirmadas vencidas, "Desfazer" pela tela devolveu as duas, regra desligada.
+- **Cupom:** PDF de impressão do tamanho do cupom (80 × 95 mm numa venda de um item); a
+  hora sai em Brasília (a primeira versão escrevia em UTC — 15:12 no cupom, 12:12 na
+  tela —, pego no navegador e coberto por teste).
+- **Monitor:** pedido de verdade contra um servidor HTTP local; falha chega sem a
+  mensagem do erro.
+- **Antes de cada merge:** as telas novas da receita e da governança em 320, 390, 821
+  (menu aberto) e 1440 px — sem rolagem lateral, nada cortado.
+- **Suíte completa no Windows:** 1.450 testes no `a8a3f1a` (eram 1.324 no bloco anterior), os 10 de navegador inclusive, só a falha conhecida do ambiente (`test_webhook_audio_baixa_e_salva_arquivo`, que só falha no Windows). Ruff zero, `makemigrations --check` limpo.
+
+**Depois do deploy (no Railway)**
+- As migrações (`nucleo.0048`, `nucleo.0049`, `reservas.0031`, `governanca.0003`) o deploy
+  roda sozinho.
+- Decisões da pousada, nenhuma obrigatória:
+  - ligar o no-show automático (sugestão: "1 dia de tolerância", que dá à recepção a
+    manhã inteira);
+  - conferir os percentuais de custo por canal na Tabela de Preços (OTA 18%; site,
+    WhatsApp e balcão em 0% — o Pix sai por BR Code, sem taxa; quando o cartão entrar, é
+    editar o número);
+  - a comissão de agência aparece no relatório de distribuição só como **estimativa**
+    (pela comissão do cadastro), abaixo do total e fora da receita líquida, até a pousada
+    decidir se ela é desconto na diária, despesa comercial ou repasse — e quando nasce;
+  - Governança: se "ocupado sem bagagem" no meio da estadia deve virar achado (hoje é
+    aviso leve) e se a ronda deve ter horário-limite (hoje há "não conferido", não "ronda
+    atrasada").
+- O pickup conta as saídas da carteira daqui para a frente: cancelamento anterior a esta
+  versão não aparece na coluna "Saiu" (a tela avisa).
+- Opcional, recomendado: criar no Healthchecks.io um check para cada grupo de rotinas e
+  pôr as URLs em `ROTINAS_MONITOR_FREQUENTES` e `ROTINAS_MONITOR_DIARIAS` nos dois
+  serviços de cron.
+- Impressora térmica: na caixa de impressão do navegador é só escolher a térmica — o
+  tamanho do papel e as margens vêm do próprio cupom.
+
+---
+
 ## 21/10/2026 — O menu que não pula, o kit de contingência, as regras do Réveillon e o aceite da política (`28524ef` a `d60824b`)
 
 Nono bloco. Começou por um pedido sobre o menu — "aquela sidebar tem vários elementos

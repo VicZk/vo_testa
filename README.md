@@ -454,7 +454,10 @@ na casa toda, num tipo ou num quarto. No site a regra barra e diz o motivo; na r
 aviso, e só "parar vendas" exige gerência (fica na trilha). Kit de contingência
 (`reservas:kit`): a folha A4 do dia — hospedados com saldo, chegadas com telefone,
 saídas, situação dos quartos — para a recepção seguir quando a internet cair, com cópia
-diária por e-mail.
+diária por e-mail. No-show automático (Tabela de Preços → "Horários e não comparecimento",
+desligado por padrão): a rotina da madrugada marca a confirmada sem check-in como "não
+compareceu" e o quarto volta à venda; "Desfazer não comparecimento" devolve a reserva se
+o hóspede aparecer e o quarto ainda estiver livre.
 
 **Pagamentos.** `Cobranca` com token público, estados pendente → pago, estornado,
 cancelado ou expirado, e trilha `EventoPagamento`. Confirmação idempotente com trava de
@@ -478,12 +481,21 @@ termos de serviço.
 
 **Loja e Restaurante.** PDV com carrinho e comandas por ponto de atendimento; cada item
 baixa o estoque na hora e a cobrança vai para o caixa do setor ou para a conta do quarto.
+Cupom de 80 mm para impressora térmica pelo navegador (`componentes/cupom.html`): o
+recibo da venda e, no restaurante, a conferência da conta com a comanda aberta. Não é
+documento fiscal (a NFC-e sai pelo Fiscal).
 
 **Lavanderia.** Ordens de serviço ao hóspede (recebida → lavando → pronta → entregue) e
-rouparia interna como livro-razão de enxoval (limpa, em uso, suja, lavando).
+rouparia interna como livro-razão de enxoval (limpa, em uso, suja, lavando). O mesmo
+cupom de 80 mm serve de comprovante na recepção da roupa e de recibo na entrega.
 
 **Governança.** Situação de cada quarto (suja, em limpeza, limpa, inspecionada) e fila
-de faxinas geradas pelo check-out, pela manutenção ou pelo portal.
+de faxinas geradas pelo check-out, pela manutenção ou pelo portal. Inspeção com
+"Reprovar" (o quarto volta para a fila, com motivo). Na ronda, a camareira registra o que
+viu em cada quarto (vago, com bagagem, sem bagagem), e a aba "Discrepâncias" confronta com
+o sistema: hóspede que saiu sem passar na recepção (skip), saída não lançada, hóspede sem
+check-in (sleeper) e quarto não conferido — cada um com o que fazer. Relatórios do setor:
+faxinas por camareira, inspeção e retrabalho, discrepâncias da ronda.
 
 **Manutenção.** Ordens corretivas e preventivas (com recorrência), bloqueio do quarto
 na disponibilidade e liberação com faxina automática.
@@ -510,8 +522,10 @@ e calendário, embrulhando as campanhas do Comercial.
 fecha o mês.
 
 **Relatórios e Auditoria.** Relatórios por mês (produção, ocupação, caixa, faturamento
-por setor, consumo, funil) com CSV; painel de pendências que cada módulo alimenta e
-leitura da trilha.
+por setor, consumo, funil) com CSV; e os de receita vendida: carteira (OTB, o que já está
+vendido para o mês), pickup (entrou × saiu nos últimos 7/14/30 dias), ritmo de vendas
+(por antecedência) e custo de distribuição por canal (percentuais na Tabela de Preços).
+Painel de pendências que cada módulo alimenta e leitura da trilha.
 
 ---
 
@@ -601,6 +615,8 @@ Railway em produção). As essenciais:
 | `SENTRY_DSN` | monitoramento de erros no Sentry (sem corpo de requisição nem variáveis locais) |
 | `BACKUP_DIR` | pasta do `backup_banco` quando não há R2 (vazio e sem R2 = backup não roda) |
 | `KIT_CONTINGENCIA_EMAILS` | quem recebe a folha do dia por e-mail, separados por vírgula (vazio = ninguém) |
+| `ROTINAS_MONITOR_FREQUENTES`, `ROTINAS_MONITOR_DIARIAS` | URL de um check do Healthchecks.io por grupo de rotinas: avisa quando o cron para, trava ou falha (vazio = não avisa) |
+| `DB_JIT` | `1` religa o JIT do Postgres (desligado por padrão: deixava telas pequenas lentas) |
 
 A lista completa, com padrões e efeitos, está em
 [`docs/ARQUITETURA.md` §7](docs/ARQUITETURA.md). Durante os testes a flag `TESTING`
@@ -612,10 +628,12 @@ desliga a trava da FNRH, as taxas automáticas, o MFA e o limite de login.
 
 - **Onde:** dentro de cada app (`apps/<app>/tests.py` e `tests_*.py`), com `TestCase` do
   Django. Regras de dinheiro e de disponibilidade são sempre testadas.
-- **Quantos:** cerca de 1.320 testes. Os mais densos:
+- **Quantos:** cerca de 1.450 testes. Os mais densos:
   `comercial`, `nucleo`, `reservas`, `marketing`, `pagamentos`.
-- **Navegador:** `apps/site/tests_e2e.py` usa Playwright e é pulado se ele não estiver
-  instalado (`pip install playwright && playwright install chromium`).
+- **Navegador:** `apps/site/tests_e2e.py` usa Playwright (reserva no site, calendário,
+  funil, a LP da Inauguração e o menu lateral do CRM). Localmente é pulado se ele não
+  estiver instalado (`pip install playwright==1.64.0 && playwright install chromium`); no
+  CI roda num job próprio, onde faltar o Playwright é erro.
 - **Rodar:**
 
 ```bash
@@ -628,7 +646,8 @@ coverage run --source=apps manage.py test && coverage report   # cobertura
   `pip-audit -r requirements.txt` e `pre-commit install` para os hooks locais.
 - **CI de testes** (`.github/workflows/testes.yml`): a cada push em `main` e `dev` e em
   todo PR, roda o ruff, sobe um PostgreSQL 16, confere se as migrations estão em dia
-  (`makemigrations --check`) e roda a suíte inteira. Ele existe neste fork; no original o
+  (`makemigrations --check`) e roda a suíte inteira; em paralelo, o job "Fluxos no
+  navegador" roda os testes do Playwright com Chromium. Ele existe neste fork; no original o
   push na `main` ainda publica sem esperar teste nenhum. Para fechar essa porta lá, basta
   levar o arquivo e fazer o Railway aguardar os checks do GitHub antes de publicar.
 - **CI de segurança** (`.github/workflows/security.yml`): pip-audit, bandit, regras de
@@ -675,10 +694,21 @@ repositório, com as mesmas variáveis do serviço web e o arquivo de configura�
 | frequentes | `reenviar_confirmacoes_site` | manda a confirmação das reservas do site que ficaram sem e-mail |
 | frequentes | `reprocessar_webhooks_whatsapp` | reprocessa mensagens do WhatsApp cujo processamento falhou (até 5 tentativas) e apaga as processadas há mais de 30 dias |
 | frequentes | `reenviar_emails_pendentes` | reenvia e-mails do Comercial presos em "pendente" ou com erro (até 3 tentativas) |
+| diarias | `marcar_no_shows` | no-show automático, se ligado na Tabela de Preços: confirmada sem check-in vira "não compareceu" e o quarto volta à venda |
+| diarias | `fechar_dia` | fechamento do dia de ontem (ocupação, chegadas, saídas, no-shows, receita, saldo em aberto) — imutável |
 | diarias | `enviar_conversoes_pendentes` | reenvia conversões de mídia pendentes |
 | diarias | `sincronizar_gastos_midia` | puxa o gasto das plataformas de anúncio |
 | diarias | `backup_banco` | cópia do banco para o R2 (ou `BACKUP_DIR`), apagando as de mais de 30 dias |
+| diarias | `purgar_trilha` | apaga da trilha o que passou de `TRILHA_RETENCAO_DIAS` (0 = guarda sempre) |
+| diarias | `gerar_arrumacoes` | uma arrumação para cada quarto em que o hóspede continua |
 | diarias | `enviar_kit_contingencia` | manda a folha do dia (kit de contingência) para `KIT_CONTINGENCIA_EMAILS`; vazio = não envia |
+
+**Monitor das rotinas.** Com `ROTINAS_MONITOR_FREQUENTES` e `ROTINAS_MONITOR_DIARIAS`
+(um check do [Healthchecks.io](https://healthchecks.io) para cada grupo), as rotinas
+avisam quando começam, quando terminam e quando falham — e o monitor manda o alerta se o
+aviso não chegar no prazo. Sem isso, um cron parado só aparece em vermelho no painel do
+Railway. Configuração dos checks: frequentes com período de 10 min e tolerância de 10 min;
+diárias com o cron `15 6 * * *` (UTC) e tolerância de 1 h.
 
 **Backup:** além dos backups do Railway (ligue o PITR do Postgres lá), `backup_banco`
 guarda uma cópia fora dele todo dia: `pg_dump` quando disponível, senão JSON compactado
