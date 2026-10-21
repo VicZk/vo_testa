@@ -50,7 +50,7 @@
     {% endif %}
     {% for grupo in grupos %}
       <tr class="mapa-grupo">
-        <td class="mapa-uh">
+        <td class="mapa-uh" title="{{ grupo.titulo }}">
           <strong>{{ grupo.titulo }}</strong> <small>({{ grupo.uhs|length }})</small>
         </td>
         {% for d in grupo.disponibilidade %}

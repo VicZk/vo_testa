@@ -1517,7 +1517,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 
 /* BOH: resumo com métrica-herói + mini-cartões */
 .boh-resumo {
-  display: grid; grid-template-columns: minmax(220px, 1fr) 2fr;
+  display: grid; grid-template-columns: minmax(min(220px, 100%), 1fr) 2fr;
   gap: 1rem; margin: 1rem 0 .4rem; align-items: stretch;
 }
 .boh-hero {
@@ -1571,7 +1571,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 /* BOH: quadros lado a lado */
 .boh-quadros {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
   gap: 1.2rem 1.6rem;
   margin-top: 1.4rem;
 }
@@ -1638,10 +1638,25 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 .mapa { min-width: 900px; table-layout: fixed; }
 .mapa th, .mapa td { padding: .35rem .3rem; text-align: center; font-size: .78rem; }
 .mapa thead th { font-size: .64rem; line-height: 1.3; }
-.mapa-uh { width: 110px; text-align: left !important; }
-.mapa-uh small { display: block; color: var(--tinta-suave); font-size: .68rem; }
+/* A coluna do quarto tem 110px fixos (table-layout: fixed). Nome de ala longo
+   ("Embaixo da Recepção") saía da célula e, como é tabela, saía da TABELA: o
+   <table> recortava 26px do próprio conteúdo e a .mapa-rolagem não tinha como
+   rolar até lá — corte mudo. Com reticências, o que não cabe vira pista; o
+   nome inteiro fica no `title` da célula. */
+.mapa-uh {
+  width: 110px; text-align: left !important;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mapa-uh small {
+  display: block; color: var(--tinta-suave); font-size: .68rem;
+  overflow: hidden; text-overflow: ellipsis;
+}
 
 .mapa-meses th {
+  /* O nome do mês é maior que a faixa de dias dele quando o mês entra pela
+     ponta: o rótulo saía da célula e levava a TABELA junto (26px recortados
+     que a .mapa-rolagem não alcançava). Reticências dentro da própria célula. */
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   font-size: .68rem;
   letter-spacing: .18em;
   color: var(--madeira);
@@ -2436,7 +2451,7 @@ a.modulo-ativo:hover {
 }
 
 .grid-modulos {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(min(270px, 100%), 1fr));
   gap: 1rem; margin-bottom: 1.5rem;
 }
 .modulo-card {
@@ -2465,7 +2480,11 @@ a.modulo-ativo:hover {
   background: var(--perigo); border-radius: 99px;
 }
 .atencao-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: .8rem;
+  /* `min(300px, 100%)`, não `300px`: num celular de 320px a coluna da página
+     mede 282px, e uma faixa de mínimo 300px não encolhe — o cartão vazava 18px
+     para fora do contêiner. Com o `min()` a faixa cede quando a tela é menor
+     que ela. Vale para toda grade auto-fit da casa. */
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: .8rem;
 }
 .atencao-lista { display: flex; flex-direction: column; gap: .5rem; }
 .atencao-item {
@@ -2582,6 +2601,13 @@ a.modulo-ativo:hover {
      sem o teto a fileira passaria de 200px de altura. */
   aspect-ratio: 4 / 5;
   min-height: 128px; max-height: 176px;
+  /* `aspect-ratio` vale nos dois sentidos: com a coluna de 80px e o
+     `min-height: 128px` mandando na altura, a LARGURA voltava pela proporção
+     (128 × 4/5 = 102px) e cada porta vazava 21px da própria coluna — o
+     corredor estourava 10px a 320px. Fixando a largura na faixa da grade, só
+     a altura segue a proporção. */
+  width: 100%;
+  min-width: 0;
   border-radius: 10px 10px 5px 5px;
   border: 1px solid rgba(255, 255, 255, .08);
   background: linear-gradient(180deg, #1A3A4C, #122937);
@@ -2981,7 +3007,13 @@ div.porta.dica[data-dica] { cursor: default; }
 .ficha-reserva .num-ficha { font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
 
 .ficha { display: grid; gap: .7rem; margin: 0; }
-.ficha > div { display: grid; grid-template-columns: 130px 1fr; gap: .5rem; align-items: baseline; }
+/* `minmax(0, 1fr)`: com `1fr` puro o valor não encolhia abaixo do próprio
+   texto e a linha vazava 30px para fora da ficha num celular de 320px. */
+.ficha > div { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: .5rem; align-items: baseline; }
+/* Abaixo disto, 130px de rótulo + valor não convivem: o par vira duas linhas. */
+@media (max-width: 420px) {
+  .ficha > div { grid-template-columns: minmax(0, 1fr); gap: .1rem; }
+}
 .ficha dt { color: var(--tinta-suave); font-size: .8rem; }
 .ficha dd { margin: 0; font-size: .92rem; }
 .ficha-texto { margin: 1rem 0 0; font-size: .92rem; line-height: 1.5; }
@@ -3166,7 +3198,18 @@ form.filtros:not(.subnav) select:focus {
   transition: border-color .15s, box-shadow .15s;
 }
 .filtro-periodo:focus-within { border-color: var(--lampiao); box-shadow: 0 0 0 3px color-mix(in srgb, var(--lampiao) 22%, transparent); }
-.filtro-periodo input[type="date"] { border: none; border-radius: 0; box-shadow: none !important; }
+.filtro-periodo input[type="date"] { border: none; border-radius: 0; box-shadow: none !important; min-width: 0; }
+/* Os dois campos de data pedem 316px e a coluna do celular dá 164: com
+   `overflow:hidden` no pill, a SEGUNDA data simplesmente não existia — nem
+   rolava, nem avisava. Em tela estreita o par empilha. */
+@media (max-width: 560px) {
+  .filtro-periodo { flex-direction: column; align-items: stretch; }
+  .filtro-periodo input[type="date"] { width: 100%; }
+  .filtro-periodo .sep {
+    justify-content: center; padding: .1rem 0;
+    border-block: 1px solid var(--fio);
+  }
+}
 .filtro-periodo .sep { display: flex; align-items: center; color: var(--tinta-suave); font-size: .9rem; padding: 0 .1rem; }
 .filtro-aplicar { margin-left: auto; align-self: flex-end; height: 40px; }
 .filtro-aplicar:active { transform: scale(.98); }
@@ -3176,7 +3219,7 @@ form.filtros:not(.subnav) select:focus {
   display: flex; align-items: center; justify-content: space-between;
   gap: 1rem; flex-wrap: wrap; margin: .2rem 0 1.2rem;
 }
-.escala-semana { display: flex; align-items: center; gap: .5rem; }
+.escala-semana { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; justify-content: center; }
 .escala-semana .botao-neutro {
   min-width: 2.2rem; padding: .5rem .7rem; text-align: center; font-size: 1.05rem; line-height: 1;
 }
@@ -3352,7 +3395,7 @@ form.filtros:not(.subnav) select:focus {
 
 /* ── Quadro: faixa de urgências ── */
 .mk-urgencias {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
   gap: 14px; margin-bottom: 18px;
 }
 .mk-urg {
@@ -4060,6 +4103,10 @@ body.sem-rolagem { overflow: hidden; }
   }
   .tabela th.col-acao { background: var(--superficie-2); }
   .tabela tbody tr:hover td.col-acao { background: var(--superficie-2); }
+  /* O invólucro já rola: espremer o campo abaixo do próprio conteúdo não ganha
+     nada e recortava o número dentro da caixa (47px de conteúdo em 40px), sem
+     rolagem nem reticências — o valor digitado simplesmente sumia. */
+  .tabela-rol .tabela input[type="number"] { min-width: 5rem; }
 }
 
 /* ═══════════════════════════════════════════════════════════════

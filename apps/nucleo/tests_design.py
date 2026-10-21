@@ -558,6 +558,48 @@ class MenuLateralTests(TestCase):
                         "item do menu sem alvo de 44px no dedo")
 
 
+class DentroDoContainerTests(TestCase):
+    """O que vaza e o que é cortado calado.
+
+    Cada caso nasceu de uma medida no navegador a 320px: caixa de filho maior
+    que a do pai, ou conteúdo maior que a caixa com `overflow:hidden` e sem
+    reticências — o pior dos dois, porque não avisa que falta coisa.
+    """
+
+    def setUp(self):
+        self.css = CSS.read_text(encoding="utf-8").replace("\r\n", "\n")
+
+    def test_grade_elastica_cede_em_tela_estreita(self):
+        """`minmax(300px, 1fr)` não encolhe: num celular de 320px a coluna mede
+        282px e o cartão vaza 18px. A faixa mínima tem de ser `min(Npx, 100%)`
+        sempre que N passar da largura útil do celular."""
+        duras = re.findall(r"minmax\((\d+)px,", self.css)
+        self.assertEqual([n for n in duras if int(n) > 260], [],
+                         "faixa mínima maior que a coluna do celular sem min()")
+
+    def test_porta_do_corredor_nao_cresce_pela_proporcao(self):
+        """`aspect-ratio` vale nos dois sentidos: com o `min-height` mandando na
+        altura, a LARGURA voltava pela proporção e a porta vazava da coluna."""
+        bloco = re.search(r"\n\.porta \{([^}]*)\}", self.css)
+        self.assertIsNotNone(bloco)
+        self.assertIn("width: 100%", bloco.group(1))
+
+    def test_coluna_do_quarto_no_mapa_poe_reticencias(self):
+        """Nome de ala longo saía da célula e levava a TABELA junto: 26px que a
+        .mapa-rolagem não alcançava."""
+        for regra in (r"\n\.mapa-uh \{", r"\n\.mapa-meses th \{"):
+            bloco = re.search(regra + r"([^}]*)\}", self.css)
+            self.assertIsNotNone(bloco, regra)
+            self.assertIn("text-overflow: ellipsis", bloco.group(1), regra)
+
+    def test_periodo_personalizado_empilha_no_celular(self):
+        """Os dois campos de data pedem 316px e a coluna do celular dá 164: com
+        `overflow:hidden` no pill, a segunda data não existia."""
+        self.assertRegex(
+            self.css,
+            r"@media \(max-width: 560px\) \{\s*\n\s*\.filtro-periodo \{[^}]*flex-direction: column")
+
+
 class PortalDoHospedeTests(TestCase):
     """É a primeira experiência digital do hóspede — e era a tela mais fraca.
 
