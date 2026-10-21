@@ -40,13 +40,16 @@ class FocoVisivelTests(TestCase):
         self.assertIn("--foco-contorno", self.css)
 
     def test_todo_outline_none_tem_substituto_documentado(self):
-        """Sobraram 3 casos, todos de campo SEM borda própria dentro de um pill:
-        o anel fica no contêiner (:focus-within), e isso está escrito ali."""
+        """Sobraram 4 casos. Três de campo SEM borda própria dentro de um pill:
+        o anel fica no contêiner (:focus-within), e isso está escrito ali. O
+        quarto é o link do usuário no trilho, cuja caixa encolhe até 0px (só o
+        avatar aparece): o anel vai para o avatar."""
         ocorrencias = self.css.count("outline: none")
-        self.assertEqual(ocorrencias, 3, "apareceu um `outline:none` novo sem anel")
+        self.assertEqual(ocorrencias, 4, "apareceu um `outline:none` novo sem anel")
         self.assertIn(".paleta-busca:focus-within", self.css)
         self.assertIn(".input-reais:focus-within", self.css)
         self.assertIn(".quarto-card input:focus-visible", self.css)
+        self.assertIn(".app.recolhida .usuario-mini:focus-visible .avatar", self.css)
 
     def _token(self, nome):
         achado = re.search(rf"--{nome}:\s*(#[0-9A-Fa-f]{{6}})", self.css)
@@ -500,14 +503,17 @@ class MenuLateralTests(TestCase):
 
     def test_rotulo_recolhido_some_da_vista_mas_nao_da_leitura(self):
         """`display:none` tirava o rótulo da árvore de acessibilidade — era por
-        isso que os 32 itens ficavam sem nome. Agora ele só sai do fluxo."""
+        isso que os 32 itens ficavam sem nome. Ele também não pode sair do
+        FLUXO: tirado do fluxo (posição absoluta + clip), o item encolhia 2px e
+        os títulos de grupo sumiam — o 34º ícone subia 313px ao recolher.
+        Agora o rótulo só esmaece (opacidade), no mesmo lugar."""
         bloco = re.search(
             r"\.app\.recolhida \.nav-item \.rotulo,\n[^{]*\{([^}]*)\}", self.css)
         self.assertIsNotNone(bloco, "regra do rótulo recolhido sumiu")
         corpo = bloco.group(1)
-        self.assertNotIn("display: none", corpo)
-        self.assertIn("clip-path", corpo)
-        self.assertIn("position: absolute", corpo)
+        self.assertIn("opacity: 0", corpo)
+        for proibido in ("display: none", "visibility: hidden", "position: absolute"):
+            self.assertNotIn(proibido, corpo)
 
     def test_rotulo_nao_quebra_linha_durante_a_animacao(self):
         bloco = re.search(r"\n\.nav-item \.rotulo, [^{]*\{([^}]*)\}", self.css)
@@ -520,25 +526,33 @@ class MenuLateralTests(TestCase):
         self.assertIn("--sidebar-topo-h:", self.css)
         bloco = re.search(r"\n\.sidebar-topo \{([^}]*)\}", self.css)
         self.assertIsNotNone(bloco)
-        self.assertIn("min-height: var(--sidebar-topo-h)", bloco.group(1))
+        self.assertIn("height: var(--sidebar-topo-h)", bloco.group(1))
+        self.assertNotIn(".app.recolhida .sidebar-topo", self.css,
+                         "o topo não muda de desenho no trilho — só o que está dentro dele")
 
-    def test_nav_prende_o_que_sai_do_fluxo(self):
-        """No trilho, os títulos de grupo saem do fluxo. Sem `position: relative`
-        na <nav>, o ancestral posicionado mais próximo passa a ser a própria
-        `.sidebar`: eles escapam da rolagem do menu e esticam o DOCUMENTO (a
-        Visão geral ia de 900 para 1546px e ganhava barra de rolagem à toa)."""
+    def test_nav_nao_rola_de_lado_e_prende_o_posicionado(self):
+        """Sem `position: relative` na <nav>, o ancestral posicionado mais
+        próximo de quem é absoluto lá dentro passa a ser a própria `.sidebar`:
+        escapa da rolagem do menu e estica o DOCUMENTO (a Visão geral já foi de
+        900 para 1546px). E com só `overflow-y: auto` o x vira `auto`: abrindo
+        o menu, um rótulo mais largo que o trilho acendia uma barra de rolagem
+        lateral por 50ms."""
         bloco = re.search(r"\n\.sidebar nav \{([^}]*)\}", self.css)
         self.assertIsNotNone(bloco)
         self.assertIn("position: relative", bloco.group(1))
         self.assertIn("overflow-y: auto", bloco.group(1))
+        self.assertIn("overflow-x: hidden", bloco.group(1))
 
     def test_marca_continua_clicavel_no_trilho(self):
-        """Os dois logotipos saíram do fluxo para o topo não saltar; sem largura
-        explícita, a <a> da marca fica com 0px — o símbolo aparece e o link para
-        a Visão geral some."""
+        """Os dois logotipos saíram do fluxo para o topo não saltar; sem tamanho
+        explícito, a <a> da marca fica com 0px — o símbolo aparece e o link para
+        a Visão geral some. No trilho o link é a área acima do botão de recolher,
+        e o símbolo mora DENTRO dele."""
         bloco = re.search(r"\n\s*\.app\.recolhida \.marca \{([^}]*)\}", self.css)
         self.assertIsNotNone(bloco)
-        self.assertIn("width: 44px", bloco.group(1))
+        self.assertIn("width: 100%", bloco.group(1))
+        self.assertRegex(bloco.group(1), r"height: \d+px")
+        self.assertRegex(self.base, r'class="marca">[\s\S]{0,400}class="marca-icone"[\s\S]{0,40}</a>')
 
     def test_trilho_so_existe_no_desktop(self):
         """Toda regra do trilho (`.recolhida`) mora no `@media (width > 820px)`.
@@ -560,6 +574,87 @@ class MenuLateralTests(TestCase):
 
         andar(analisar(self.css), "")
         self.assertEqual(soltas, [], "regra do trilho que vale também na gaveta")
+
+    # ── O trilho é o menu aberto, recortado ─────────────────────────────
+    # Medido quadro a quadro (de 20 em 20ms, pausando a transição): abrindo,
+    # a cápsula "MFA off" saía 75px por cima da página, os rótulos 21px fora
+    # das pílulas e a <nav> acendia barra lateral; recolhendo, os ícones
+    # pulavam para o meio e voltavam, e o 34º item subia 313px.
+
+    def _regras_do_trilho(self):
+        from apps.nucleo.css_publico import analisar, dividir_seletores
+
+        regras = []
+
+        def andar(itens):
+            for item in itens:
+                if item["tipo"] == "regra":
+                    if any(".recolhida" in sel for sel in dividir_seletores(item["prelude"])):
+                        regras.append((re.sub(r"\s+", " ", item["prelude"]), item["corpo"]))
+                elif item["tipo"] == "at-bloco" and item["filhos"] is not None:
+                    andar(item["filhos"])
+
+        andar(analisar(self.css))
+        return regras
+
+    def test_trilho_nao_redesenha_so_esconde_e_desliza(self):
+        """No trilho só pode mudar o que não reflui: opacidade, cor, giro e o
+        que é posicionado (e desliza). Padding, margem, flex-direction,
+        justify-content, posição, display e clip mudavam o desenho num quadro
+        só — era daí que vinham os saltos."""
+        proibidas = ("position", "display", "flex-direction", "justify-content",
+                     "align-items", "padding", "margin", "gap", "clip-path",
+                     "font-size", "overflow", "flex")
+        achados = []
+        regras = self._regras_do_trilho()
+        self.assertTrue(regras)
+        for prelude, corpo in regras:
+            corpo = re.sub(r"/\*.*?\*/", "", corpo, flags=re.S).strip().strip("{}")
+            for decl in corpo.split(";"):
+                prop = decl.split(":")[0].strip()
+                if prop and any(prop == p or prop.startswith(p + "-") for p in proibidas):
+                    achados.append(f"{prelude} → {prop}")
+        self.assertEqual(achados, [], "o trilho voltou a redesenhar o menu")
+
+    def test_borda_da_sidebar_recorta_e_cada_janela_tambem(self):
+        """A borda direita é a cortina: nada passa dela para cima da página. E
+        cada coisa que pode encontrar outra no caminho tem a sua janela: o
+        logotipo termina antes do botão de recolher; o nome e a cápsula, antes
+        do Sair; o rótulo, dentro da pílula."""
+        for seletor in (r"\n\.sidebar \{", r"\n\.nav-item \{", r"\n\.acao-topo \{",
+                        r"\n\.marca-janela \{", r"\n\.usuario-texto \{", r"\n\.nav-titulo \{"):
+            bloco = re.search(seletor + r"([^}]*)\}", self.css)
+            self.assertIsNotNone(bloco, seletor)
+            self.assertIn("overflow: hidden", bloco.group(1), seletor)
+        self.assertRegex(self.base, r'<span class="marca-janela"><img[^>]*class="marca-full"')
+        self.assertRegex(self.base,
+                         r'<span class="usuario-texto">[\s\S]{0,200}usuario-nome[\s\S]{0,200}selo')
+
+    def test_o_que_muda_de_lugar_desliza_com_os_tokens(self):
+        """O botão de recolher e o Sair mudam de lugar entre os estados, e o
+        rodapé muda de altura: os três deslizam junto com a largura (mesmo
+        token e curva), em vez de pular no primeiro quadro."""
+        casos = {
+            r"\n\.sidebar-toggle \{": ("top var(--mov-padrao)", "right var(--mov-padrao)"),
+            r"\n\.sidebar-rodape \{": ("height var(--mov-padrao)",),
+            r"\n\.sidebar-rodape button\.link \{": ("right var(--mov-padrao)",
+                                                     "bottom var(--mov-padrao)"),
+            r"\n\.app \{": ("grid-template-columns var(--mov-padrao)",),
+        }
+        for seletor, trechos in casos.items():
+            bloco = re.search(seletor + r"([^}]*)\}", self.css)
+            self.assertIsNotNone(bloco, seletor)
+            for trecho in trechos:
+                self.assertIn(trecho, bloco.group(1), seletor)
+
+    def test_icones_moram_no_x_do_trilho(self):
+        """Aberto, o ícone ficava a 30px; no trilho, a 35,5px — 5px de pulo a
+        cada alternância. Todos agora partem do mesmo token."""
+        self.assertIn("--sidebar-ico-x: calc(var(--trilho-centro) - 9.5px)", self.css)
+        for seletor in (r"\n\.nav-item \{", r"\n\.acao-topo \{", r"\n\.nav-titulo \{"):
+            bloco = re.search(seletor + r"([^}]*)\}", self.css)
+            self.assertIsNotNone(bloco, seletor)
+            self.assertIn("var(--sidebar-ico-x)", bloco.group(1), seletor)
 
     def test_dica_do_item_so_no_trilho(self):
         """Aberto (ou na gaveta), o nome já está escrito ao lado do ícone: o

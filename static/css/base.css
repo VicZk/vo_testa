@@ -256,7 +256,17 @@
   --fio-mais-forte: #BDB3A3;
   --lampiao-tinta: #7A5A1E;   /* ouro legível como TEXTO sobre claro */
 
-  --sidebar-w: 258px;
+  /* Largura da sidebar aberta e do trilho (recolhida). `--sidebar-w` é a que
+     vale agora: o trilho a redefine em `.app.recolhida`. */
+  --sidebar-w-aberta: 258px;
+  --trilho-w: 72px;
+  --sidebar-w: var(--sidebar-w-aberta);
+  /* Onde moram os ícones do menu: no MESMO x aberto e recolhido — o centro do
+     trilho (72px menos a borda de 1px, ÷ 2 = 35,5px). Ícones, "Nova reserva",
+     símbolo, botão de recolher e avatar se alinham por aqui; ao alternar o
+     menu, nada anda de lado. `--sidebar-ico-x` = borda esquerda do ícone de 19px. */
+  --trilho-centro: calc((var(--trilho-w) - 1px) / 2);
+  --sidebar-ico-x: calc(var(--trilho-centro) - 9.5px);
   /* Altura do topo da sidebar (marca + botão de recolher). É a MESMA aberta e
      recolhida: é ela que impede o menu inteiro de saltar quando o logotipo
      grande dá lugar ao símbolo. */

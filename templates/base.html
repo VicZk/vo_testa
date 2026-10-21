@@ -173,7 +173,7 @@
   <aside class="sidebar">
     <div class="sidebar-topo">
       <a href="{% url 'dashboard' %}" class="marca">
-        <img src="{% static 'img/logotipo-pergaminho-limpo.png' %}" alt="Vô Testa · Pousada" class="marca-full">
+        <span class="marca-janela"><img src="{% static 'img/logotipo-pergaminho-limpo.png' %}" alt="Vô Testa · Pousada" class="marca-full"></span>
         <img src="{% static 'img/simbolo-dourado.png' %}" alt="Vô Testa" class="marca-icone">
       </a>
       {% comment %}aria-label/title são repostos por rotularSidebar() a cada
@@ -345,8 +345,12 @@
     <div class="sidebar-rodape">
       <a href="{% url 'mfa_config' %}" class="usuario-mini link-limpo" title="Verificação em duas etapas (MFA)">
         <span class="avatar">{{ user.get_full_name|default:user.username|slice:":1"|upper }}</span>
-        <span class="usuario-nome">{{ user }}</span>
-        {% if not user.mfa_ativo %}<span class="selo selo-alerta">MFA off</span>{% endif %}
+        {% comment %}Nome e cápsula numa janela própria: ela termina antes do botão Sair, e
+        ao recolher o menu o botão passa ao lado dela, nunca por cima.{% endcomment %}
+        <span class="usuario-texto">
+          <span class="usuario-nome">{{ user }}</span>
+          {% if not user.mfa_ativo %}<span class="selo selo-alerta">MFA off</span>{% endif %}
+        </span>
       </a>
       <form method="post" action="{% url 'logout' %}">
         {% csrf_token %}
