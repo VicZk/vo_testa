@@ -12,6 +12,7 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.core.management.base import BaseCommand
+from django.test.utils import override_settings
 from django.utils import timezone
 
 from apps.governanca import services as gov
@@ -65,9 +66,13 @@ class Command(BaseCommand):
     def _usuario(self):
         from django.contrib.auth import get_user_model
 
+        from apps.nucleo.sistema import usuario_de_sistema
+
         User = get_user_model()
+        # Banco novo sem superusuário: assina com um usuário de sistema (ver popular_demo).
         return (User.objects.filter(username="gvivan").first()
-                or User.objects.filter(is_superuser=True).first())
+                or User.objects.filter(is_superuser=True).first()
+                or usuario_de_sistema("_demo", "Dados de demonstração"))
 
     def _estoque_loja(self):
         self.loja_local = LocalEstoque.objects.filter(modulo="loja").first()
@@ -85,10 +90,13 @@ class Command(BaseCommand):
         ]
 
     def _abrir_caixa(self):
-        SessaoCaixa.objects.get_or_create(
-            operador=self.user, modulo="nucleo", status="aberta",
-            defaults={"fundo_troco": Decimal("300.00")},
-        )
+        # O caixa é por módulo: a recepção recebe as reservas e a Loja, a venda de
+        # balcão. Uma sessão do núcleo não serve a nenhum dos dois.
+        for modulo in ("reservas", "loja"):
+            SessaoCaixa.objects.get_or_create(
+                operador=self.user, modulo=modulo, status="aberta",
+                defaults={"fundo_troco": Decimal("300.00")},
+            )
         self.dinheiro = FormaPagamento.objects.get(tipo="dinheiro")
         self.pix = FormaPagamento.objects.get(tipo="pix")
 
@@ -144,7 +152,9 @@ class Command(BaseCommand):
                 gov.definir_status(uh, StatusLimpeza.Situacao.LIMPA, self.user)
             except Exception:
                 pass
-            conta = r.fazer_checkin(self.user)
+            # Hóspede de mentira não tem FNRH: só o seed passa pela trava.
+            with override_settings(FNRH_BLOQUEAR_CHECKIN=False):
+                conta = r.fazer_checkin(self.user)
             # Metade consome na Loja lançando na conta do quarto.
             if self.produtos_loja and random.random() < 0.55:
                 p = random.choice(self.produtos_loja)

@@ -10,7 +10,7 @@ from django.core.management.base import BaseCommand
 
 from apps.escala import services
 from apps.escala.models import Atribuicao, Ausencia, TrocaTurno, Turno
-from apps.nucleo.models import Funcionario
+from apps.nucleo.models import Funcionario, Pessoa
 
 Usuario = get_user_model()
 
@@ -29,11 +29,20 @@ class Command(BaseCommand):
         parser.add_argument("--limpar", action="store_true")
 
     def handle(self, *args, **opts):
-        op = Usuario.objects.filter(is_superuser=True).first() or Usuario.objects.first()
+        from apps.nucleo.sistema import usuario_de_sistema
+
+        # Banco novo sem ninguém: assina com um usuário de sistema (ver popular_demo).
+        op = (Usuario.objects.filter(is_superuser=True).first() or Usuario.objects.first()
+              or usuario_de_sistema("_demo", "Dados de demonstração"))
         funcs = list(Funcionario.objects.select_related("pessoa").order_by("pk"))
+        # Banco novo não tem equipe: cria quem falta para 3 recepção + 3 camareiras,
+        # marcados "(demo)" — antes o comando só reclamava e parava.
+        for i in range(len(funcs), 6):
+            cargo = "Recepcionista" if i < 3 else "Camareira"
+            pessoa = Pessoa.objects.create(nome=f"{cargo} {i + 1} (demo)")
+            Funcionario.objects.create(pessoa=pessoa, cargo=cargo)
         if len(funcs) < 6:
-            self.stderr.write("Precisa de ≥6 funcionários (3 recepção + 3 camareiras).")
-            return
+            funcs = list(Funcionario.objects.select_related("pessoa").order_by("pk"))
 
         if opts["limpar"]:
             Atribuicao.objects.all().delete()

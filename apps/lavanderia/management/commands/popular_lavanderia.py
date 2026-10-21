@@ -44,7 +44,11 @@ class Command(BaseCommand):
         parser.add_argument("--limpar", action="store_true")
 
     def handle(self, *args, **opts):
-        op = Usuario.objects.filter(is_superuser=True).first() or Usuario.objects.first()
+        from apps.nucleo.sistema import usuario_de_sistema
+
+        # Banco novo sem ninguém: assina com um usuário de sistema (ver popular_demo).
+        op = (Usuario.objects.filter(is_superuser=True).first() or Usuario.objects.first()
+              or usuario_de_sistema("_demo", "Dados de demonstração"))
         if not op:
             self.stderr.write("Crie um superusuário antes.")
             return
@@ -87,9 +91,11 @@ class Command(BaseCommand):
 
         # 3) Entregue e cobrada no caixa (precisa de caixa aberto → tenta, senão pula)
         from apps.nucleo.models import FormaPagamento, SessaoCaixa
-        sessao = SessaoCaixa.objects.filter(operador=op, status=SessaoCaixa.Status.ABERTA).first()
+        # O caixa é por módulo: a entrega cobra no caixa da Lavanderia.
+        sessao = SessaoCaixa.objects.filter(
+            operador=op, modulo="lavanderia", status=SessaoCaixa.Status.ABERTA).first()
         if not sessao:
-            SessaoCaixa.objects.create(operador=op, modulo="nucleo", fundo_troco=Decimal("0"))
+            SessaoCaixa.objects.create(operador=op, modulo="lavanderia", fundo_troco=Decimal("0"))
         o3 = services.abrir_ordem(op, rotulo="Balcão avulso")
         services.adicionar_item(o3, servicos["Passar (peça)"], 5, op)
         forma = FormaPagamento.objects.filter(tipo="dinheiro").first() or FormaPagamento.objects.first()

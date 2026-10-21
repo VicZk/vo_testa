@@ -1341,6 +1341,52 @@ class EstruturaInicialTests(TestCase):
         self.assertEqual(UH.objects.filter(numero__startswith="Quarto ").count(), 24)
 
 
+@override_settings(FNRH_BLOQUEAR_CHECKIN=True)   # como na produção
+class DemonstracaoBancoNovoTests(TestCase):
+    """A demonstração monta sozinha num banco novo — o caso do ambiente de teste na VPS.
+
+    Lá, num banco virgem, quebravam três coisas: `popular_demo` precisava de um
+    superusuário criado ANTES (passava `None` para `criado_por`); os seeds abriam o
+    caixa do núcleo, mas a reserva recebe no caixa de Reservas e a Lavanderia no
+    dela; e `popular_escala` só reclamava sem funcionário cadastrado. E o check-in
+    da demonstração esbarrava na trava da FNRH (hóspede de mentira não tem ficha).
+    """
+
+    def _rodar(self, comando, *args):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        call_command(comando, *args, stdout=StringIO(), stderr=StringIO())
+
+    def test_estrutura_e_demonstracao_sem_superusuario(self):
+        from apps.escala.models import Atribuicao
+        from apps.lavanderia.models import OrdemLavanderia
+        from apps.nucleo.models import Funcionario, SessaoCaixa, Usuario
+        from apps.reservas.models import Reserva
+
+        self.assertFalse(Usuario.objects.filter(is_superuser=True).exists())
+        self._rodar("estrutura_inicial", "--completo")
+        self._rodar("popular_demo")
+        self._rodar("popular_lavanderia", "--limpar")
+        self._rodar("popular_escala", "--limpar")
+        self._rodar("popular_lotacao")
+
+        self.assertTrue(Reserva.objects.filter(observacoes__icontains="[lotacao]",
+                                               status=Reserva.Status.HOSPEDADA).exists())
+        self.assertTrue(SessaoCaixa.objects.filter(modulo="loja").exists())
+        self.assertTrue(Reserva.objects.filter(observacoes__icontains="[demo]",
+                                               status=Reserva.Status.HOSPEDADA).exists())
+        self.assertTrue(SessaoCaixa.objects.filter(modulo="reservas").exists())
+        self.assertTrue(OrdemLavanderia.objects.filter(
+            status=OrdemLavanderia.Status.ENTREGUE).exists())
+        self.assertGreaterEqual(Funcionario.objects.count(), 6)
+        self.assertTrue(Atribuicao.objects.exists())
+        # A trava da FNRH continua valendo fora do seed.
+        from django.conf import settings
+        self.assertTrue(settings.FNRH_BLOQUEAR_CHECKIN)
+
+
 @override_settings(ROTINAS_MONITOR={})   # a URL de um .env local nunca recebe aviso de teste
 class RotinasAgendadasTests(TestCase):
     """`rotinas` roda as tarefas de um grupo, isolando falhas."""

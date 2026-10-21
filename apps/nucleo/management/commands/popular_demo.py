@@ -14,6 +14,7 @@ from decimal import Decimal
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.test.utils import override_settings
 from django.utils import timezone
 
 from apps.nucleo.models import (
@@ -65,10 +66,16 @@ class Command(BaseCommand):
     def _usuario(self):
         from django.contrib.auth import get_user_model
 
+        from apps.nucleo.sistema import usuario_de_sistema
+
         User = get_user_model()
+        # Banco novo (ambiente de teste, recuperação) ainda não tem superusuário: os
+        # lançamentos da demonstração são assinados por um usuário de sistema, em vez
+        # de quebrar no primeiro `criado_por`.
         return (
             User.objects.filter(username="gvivan").first()
             or User.objects.filter(is_superuser=True).first()
+            or usuario_de_sistema("_demo", "Dados de demonstração")
         )
 
     def _pessoas(self):
@@ -156,9 +163,10 @@ class Command(BaseCommand):
 
         dinheiro = FormaPagamento.objects.get(tipo="dinheiro")
         pix = FormaPagamento.objects.get(tipo="pix")
-        # Caixa aberto do operador para receber pagamentos/adiantamentos.
+        # Caixa aberto do operador para receber pagamentos/adiantamentos — o da
+        # RECEPÇÃO: o caixa é por módulo e a reserva recebe no de Reservas.
         SessaoCaixa.objects.get_or_create(
-            operador=self.user, modulo="nucleo", status="aberta",
+            operador=self.user, modulo="reservas", status="aberta",
             defaults={"fundo_troco": D("200.00")},
         )
 
@@ -201,14 +209,18 @@ class Command(BaseCommand):
         # Hospedada (entrada feita, conta aberta com consumo)
         r_hosp = cria(9, hosp("Carlos Eduardo Ramos"), -2, 3,
                       status=Reserva.Status.CONFIRMADA)
-        conta = r_hosp.fazer_checkin(self.user)
+        # A demonstração não preenche a FNRH dos hóspedes de mentira: só o check-in
+        # do seed passa pela trava (o sistema em pé segue com ela ligada).
+        with override_settings(FNRH_BLOQUEAR_CHECKIN=False):
+            conta = r_hosp.fazer_checkin(self.user)
         services.lancar_na_conta(conta, "consumo", "consumo",
                                  "Loja — refrigerante", D("7.00"), self.user)
         services.receber_pagamento(conta, self.user, dinheiro, D("200.00"))
         # Saída concluída (paga e encerrada)
         r_out = cria(1, hosp("Maria Silva"), -3, -1,
                      status=Reserva.Status.CONFIRMADA)
-        conta_out = r_out.fazer_checkin(self.user)
+        with override_settings(FNRH_BLOQUEAR_CHECKIN=False):
+            conta_out = r_out.fazer_checkin(self.user)
         services.receber_pagamento(conta_out, self.user, dinheiro, conta_out.saldo())
         r_out.fazer_checkout(self.user)
         # Cancelada e não compareceu
