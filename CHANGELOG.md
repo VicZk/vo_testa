@@ -9,6 +9,113 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 21/10/2026 — Pendências do visual, novidades do original e o R$ que saía cem vezes maior (`158133c` a `aab8ce7`)
+
+Sétimo bloco: as pendências do visual da auditoria, os seis commits que o original
+ganhou na noite de 20/10 (já adaptados às regras do fork) e um bug antigo de dinheiro
+que eles deixaram à vista.
+
+**O que melhorou**
+- **Valor em R$ que voltava do servidor saía cem vezes maior.** O campo de R$ tira os
+  pontos de milhar no envio. Um valor preenchido pelo servidor, como "650.00" vindo
+  da cotação, chegava ao backend como 65000. No «Ganhar», uma cotação convertida sem
+  mexer no campo virava diária cem vezes maior. O mesmo valia para qualquer formulário
+  de R$ que voltasse com erro na tela. Agora o campo já vem como "650,00". O bug é de
+  julho/2026 e **existe em produção no original**.
+- **Novidades do original** (Comercial):
+  - reabrir ou mover para qualquer etapa um lead ganho ou perdido, com permissão
+    própria (área `comercial_fechados`);
+  - no «Ganhar»:
+    - a diária da tabela de preços aparece, e a diferença para a diária vendida fica
+      na linha do tempo;
+    - o total da reserva aparece ao vivo;
+    - o sinal pode ser em R$ ou em %, sem o padrão de 30%;
+  - a barra de rolagem do funil virou trilho + polegar e não treme mais;
+  - a Tabela de Preços usa a largura toda.
+- **O que foi corrigido nelas ao juntar:**
+  - tirar um lead do Ganho cancela a reserva e devolve o que foi pago pelo caminho do
+    fork, a mesma devolução da tela da reserva. O código original quebrava com sinal
+    pago online e tentava estornar um estorno;
+  - pagamento online bloqueia o movimento e diz o valor a estornar em Pagamentos;
+  - voltar para Ganho exige uma reserva ativa;
+  - na tela, reabrir funciona: o campo "motivo da perda", escondido, impedia o envio
+    do formulário para qualquer etapa que não fosse «Perdido". O original chegou à
+    mesma correção na mesma noite, e ficou a versão dele;
+  - o sinal digitado como "150.50" virava 15050. Agora o ponto com até duas casas é
+    decimal;
+  - a regra da Tabela de Preços mudou de lugar: onde estava, perdia para a dos
+    620 px, que tem a mesma especificidade.
+- **CRM sem estilo escrito na tag:**
+  - os 610 `style="…"` estáticos viraram classe do design system (Marketing tinha 352);
+  - um teste impede que voltem, em qualquer tela;
+  - o funil perdeu as cápsulas de enfeite: origem e campanha viram texto, temperatura
+    e reativado viram selo, e fica uma cápsula por cartão.
+- **Portal do hóspede e página de pagamento mais leves:** baixam 6 KB de CSS (comprimido)
+  em vez de 52 KB, só o que usam do design system, gerado do `app.css`.
+- **Site:**
+  - os avisos e erros saem nas cores da casa, as mesmas do CRM. O erro de campo da
+    reserva passou de contraste 3,8:1 para ~7:1;
+  - a vitrine dos 24 quartos ganhou filtro por pessoas, tipo e qualidades, e ordem por
+    preço e por nome. O filtro fica no link, para mandar pelo WhatsApp.
+- **Mapa de reservas no celular:** a barra da reserva e o "+" da célula livre passaram
+  de ~25 px para 40–44 px de toque.
+- **Marketing:** a gaveta da campanha aberta pelo Quadro deixou de mostrar o ✕ e o ⧉
+  como botão cru do navegador.
+
+**O que foi modificado**
+- **Merges do original:**
+  - `eed0969` (cadb560), `6517a9c` (7147d78 e b95b158) e `8e5902e` (2abef84, 23908e5
+    e 379fe9d);
+  - Reservas ganhou `situacao_da_venda`, `exigir_venda_desfazivel` e `desfazer_venda`.
+    O Comercial não importa mais o model de Reserva.
+- **Núcleo:**
+  - `ReaisInput` agora no `apps/nucleo/forms.py`, usado por Comercial e Reservas;
+  - `apps/nucleo/css_publico.py`, o manifesto `css_publico.txt` e o comando
+    `gerar_base_css`, que gera o `static/css/base.css`.
+- **CSS:**
+  - as classes do lote de estilos (`.op-*`, `.mk-*`, `.lp-*`, modificadores
+    `.bloco-*`);
+  - `.qr-hospede*`, `.mkt-btn-ghost` e `.mkt-meta` no `app.css`;
+  - no site, cores semânticas no Tailwind (`perigo`, `alerta`, `sucesso`, `info`),
+    com o CSS do site recompilado.
+- **Site:**
+  - vitrine: `quartos_todos` com os filtros e `static/site/js/vitrine.js`;
+  - `.cartao-hospede` no Tailwind.
+- **Testes de contrato:** `EstiloForaDoAtributoTests`, ampliado para o sistema todo,
+  e `CssDasTelasPublicasTests`.
+- **Documentação:** `CLAUDE.md` e `docs/ARQUITETURA.md` (o recorte do CSS e o
+  comando).
+
+**Como foi testado**
+- **Visual:**
+  - cada mudança com capturas antes e depois, iguais pixel a pixel onde nada devia
+    mudar;
+  - o lote de estilos conferiu o estilo computado de 13.991 elementos em 88 telas,
+    170 de 182 capturas idênticas, e as 12 restantes são mudanças de propósito ou
+    telas que não se repetem sozinhas;
+  - portal e pagamento com o CSS recortado: estilo computado de 880 elementos, 14 de
+    14 telas iguais, e pixel 14 de 14.
+- **Dinheiro:**
+  - testes novos para o widget de R$;
+  - mover lead fechado: os 11 testes do original mais 6 do fork (pago online, Ganho
+    com reserva cancelada, duplo clique, estorno que desfaz o crédito sem reter nada,
+    e o motivo no formulário);
+  - no navegador, a ida e volta do campo de R$: "10.000,00" chega como 10000.00 e
+    antes chegava como 1.000.000.
+- **Um teste que dependia do dia:** o selo da temporada do site usava "hoje + 30"
+  e, rodado em 21/10, caiu em 20/11 (Consciência Negra). Agora pula feriado.
+- **Suíte completa no Windows:** 1.192 testes, só a falha conhecida do ambiente
+  (`test_webhook_audio_baixa_e_salva_arquivo`, que só falha no Windows). Ruff zero,
+  `makemigrations --check` limpo, `gerar_base_css --conferir` em dia.
+
+**Depois do deploy (no Railway)**
+- Nada obrigatório. Quem mexer no `app.css` numa regra do portal ou do pagamento roda
+  `manage.py gerar_base_css`; o teste avisa quando esquecer.
+- **Para o original:** o bug do R$ cem vezes maior está em produção lá. A correção é
+  o `ReaisInput.format_value` deste bloco, que dá para levar como está.
+
+---
+
 ## 20/10/2026 — Visual sem excesso de pílulas, fechamento do dia e base em dia (`e40ab34` a `f971a4d`)
 
 Sexto bloco: o pedido do dono sobre o visual saturado de pílulas, o último item "alto" da
