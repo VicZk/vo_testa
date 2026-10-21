@@ -170,8 +170,9 @@ aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% e
   </tbody>
 </table>
 
-{# Filtro sem nenhum quarto: a tabela ficava só com o cabeçalho, sem explicação —
-   e o estado vazio é uma boa hora para ensinar de onde vem cada estado. #}
+{% comment %}Filtro sem nenhum quarto: a tabela ficava só com o cabeçalho, sem
+explicação — e o estado vazio é uma boa hora para ensinar de onde vem cada
+estado.{% endcomment %}
 {% for e in ciclo %}
 <div class="estado-vazio" x-cloak
      x-show="f === '{{ e.cod }}' && (soMeus ? {{ e.minhas }} === 0 : {{ e.n }} === 0)">

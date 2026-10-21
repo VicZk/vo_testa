@@ -1306,6 +1306,12 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 /* Detalhe da reserva → painel Financeiro (total previsto, recebido, saldo e as cobranças). */
 .cartao.painel-financeiro { margin: 1.2rem 0 1.6rem; }
 .painel-financeiro .kpi-grade { margin: .6rem 0 0; }
+/* Teto por cartão: a 1760px os três KPIs viravam faixas de 540px, com o rótulo
+   num canto e o valor no outro. Agora crescem até 300px e param. */
+.painel-financeiro .kpi-grade {
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 300px));
+  justify-content: start;
+}
 .painel-financeiro .tabela-rol > .tabela { margin-top: 1rem; }
 .painel-financeiro .subtitulo { margin: .7rem 0 0; }
 .tabela th {
@@ -6249,5 +6255,8 @@ body.escala-dragging .escala-drop { cursor: copy; }
 .acao-painel-titulo { margin: 0 0 .2rem; font-size: 1.05rem; letter-spacing: -.01em; }
 .acao-painel .ajuda { display: block; margin: 0 0 .8rem; }
 .acao-painel .form-cartao { margin: 0; padding: 0; background: none; border: 0; box-shadow: none; }
-/* O formulário não estica até 1760px: largura de leitura, como o resto da casa. */
-.acao-painel .form-cartao, .acao-painel .aviso-politica { max-width: 760px; }
+/* O painel não estica até 1760px: largura de leitura, como o resto da casa. No
+   monitor grande um cartão de ponta a ponta com dois campos de data no canto
+   esquerdo era um vão dentro de uma moldura. */
+.acao-painel { max-width: 900px; }
+.acao-painel .form-cartao, .acao-painel .aviso-politica { max-width: 100%; }
