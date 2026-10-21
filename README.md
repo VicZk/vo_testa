@@ -189,7 +189,7 @@ e-mail é impresso no terminal (sem `EMAIL_HOST`, o backend é o de console).
 ### 2.5 Testes
 
 ```bash
-python manage.py test                    # suíte inteira (~1.230 testes, ~7 min)
+python manage.py test                    # suíte inteira (~1.320 testes, ~10 min)
 python manage.py test apps.reservas      # um app
 ```
 
@@ -423,6 +423,11 @@ com frases legíveis e exportação CSV.
 - Exportações CSV com neutralização de fórmulas; `Referrer-Policy: same-origin` para
   proteger tokens em URL.
 - No CI: pip-audit, bandit, regras de segurança do ruff, gitleaks e `check --deploy`.
+- Medição só com licença (LGPD): GA4, Google tag e Meta Pixel ficam no HTML como
+  `<script type="text/plain" data-consentimento>` e só ligam no "Aceitar" do aviso de
+  cookies (`templates/componentes/consentimento.html` + `static/js/consentimento.js`).
+  Vale no site, nas páginas de captação e nas LPs autocontidas de `LPs/`, onde o servidor
+  (`views_lp`) põe o aviso ao servir o arquivo; um teste barra LP nova com tag solta.
 
 ---
 
@@ -442,6 +447,14 @@ trava de check-in, pré-check-in por QR e BOH mensal com exportação. O detalhe
 reserva tem um painel financeiro: total previsto, o que já foi pago (pela gaveta,
 online ou faturado, líquido de estornos), o sinal pendente, o saldo e as cobranças de
 Pagamentos com o link público.
+Restrições de venda por período (`RestricaoVenda`, tela em Temporadas → "Restrições de
+venda"): estadia mínima — vale para qualquer estadia que toque o período, e com várias
+regras vale o maior mínimo —, fechado para chegada, fechado para saída e parar vendas,
+na casa toda, num tipo ou num quarto. No site a regra barra e diz o motivo; na recepção é
+aviso, e só "parar vendas" exige gerência (fica na trilha). Kit de contingência
+(`reservas:kit`): a folha A4 do dia — hospedados com saldo, chegadas com telefone,
+saídas, situação dos quartos — para a recepção seguir quando a internet cair, com cópia
+diária por e-mail.
 
 **Pagamentos.** `Cobranca` com token público, estados pendente → pago, estornado,
 cancelado ou expirado, e trilha `EventoPagamento`. Confirmação idempotente com trava de
@@ -457,6 +470,11 @@ check-out expresso. Ações registradas em nome do usuário de sistema `_portal`
 **Site (`core`).** Vitrine por quarto, busca de disponibilidade, seleção da unidade,
 resumo com a política de cancelamento, pré-reserva com retenção de 30 minutos, cobrança
 do sinal e e-mail de confirmação. Ainda carrega modelos do site antigo (recibo do canal).
+Venda pela internet (CDC art. 49): sem marcar "Li e aceito a política de cancelamento"
+não há reserva, e o recibo guarda quando o hóspede aceitou e o texto que estava na tela
+(vai também no e-mail). Prazo e retenção vêm de `CANCELAMENTO_ARREPENDIMENTO_DIAS` e
+`CANCELAMENTO_RETENCAO_PCT` — a mesma fonte do resumo, do cálculo da devolução e dos
+termos de serviço.
 
 **Loja e Restaurante.** PDV com carrinho e comandas por ponto de atendimento; cada item
 baixa o estoque na hora e a cobrança vai para o caixa do setor ou para a conta do quarto.
@@ -582,6 +600,7 @@ Railway em produção). As essenciais:
 | `SAFRAPAY_TIMEOUT` | segundos de espera pela Safrapay (padrão 10) |
 | `SENTRY_DSN` | monitoramento de erros no Sentry (sem corpo de requisição nem variáveis locais) |
 | `BACKUP_DIR` | pasta do `backup_banco` quando não há R2 (vazio e sem R2 = backup não roda) |
+| `KIT_CONTINGENCIA_EMAILS` | quem recebe a folha do dia por e-mail, separados por vírgula (vazio = ninguém) |
 
 A lista completa, com padrões e efeitos, está em
 [`docs/ARQUITETURA.md` §7](docs/ARQUITETURA.md). Durante os testes a flag `TESTING`
@@ -593,7 +612,7 @@ desliga a trava da FNRH, as taxas automáticas, o MFA e o limite de login.
 
 - **Onde:** dentro de cada app (`apps/<app>/tests.py` e `tests_*.py`), com `TestCase` do
   Django. Regras de dinheiro e de disponibilidade são sempre testadas.
-- **Quantos:** cerca de 1.230 testes. Os mais densos:
+- **Quantos:** cerca de 1.320 testes. Os mais densos:
   `comercial`, `nucleo`, `reservas`, `marketing`, `pagamentos`.
 - **Navegador:** `apps/site/tests_e2e.py` usa Playwright e é pulado se ele não estiver
   instalado (`pip install playwright && playwright install chromium`).
@@ -659,6 +678,7 @@ repositório, com as mesmas variáveis do serviço web e o arquivo de configura�
 | diarias | `enviar_conversoes_pendentes` | reenvia conversões de mídia pendentes |
 | diarias | `sincronizar_gastos_midia` | puxa o gasto das plataformas de anúncio |
 | diarias | `backup_banco` | cópia do banco para o R2 (ou `BACKUP_DIR`), apagando as de mais de 30 dias |
+| diarias | `enviar_kit_contingencia` | manda a folha do dia (kit de contingência) para `KIT_CONTINGENCIA_EMAILS`; vazio = não envia |
 
 **Backup:** além dos backups do Railway (ligue o PITR do Postgres lá), `backup_banco`
 guarda uma cópia fora dele todo dia: `pg_dump` quando disponível, senão JSON compactado
@@ -684,7 +704,9 @@ Toda tela do CRM nasce no design system; nada de estilo paralelo nem cor fixa no
   `--madeira`), canvas e superfícies, tinta, fios, cores semânticas (`--sucesso`,
   `--alerta`, `--perigo`, `--info`, `--andamento`), sombras, raios e fontes (Fraunces nos
   títulos, Hanken Grotesk na interface, IBM Plex Mono em dados). Mudança de visual
-  global se faz nos tokens.
+  global se faz nos tokens. Cor só por token também no `<style>` próprio de uma tela
+  (fundos suaves: `--sucesso-bg`, `--alerta-bg`, `--perigo-bg`, `--info-bg`); o teste
+  `CorSoPorTokenTests` barra hex e rgba escritos à mão.
 - **Componentes:** `.cartao`/`.cartao-el`, `.tabela`/`.quadro`, `.botao-primario`,
   `.botao-neutro`, `.botao-mini`, `.selo-*`, `.kpi`, combos de pessoa e quarto em
   `templates/componentes/`.
@@ -693,7 +715,12 @@ Toda tela do CRM nasce no design system; nada de estilo paralelo nem cor fixa no
   atalho `N` para nova reserva.
 - **Menu lateral:** nasce recolhido em trilho de ícones (⌘\ ou o botão alterna, e a
   escolha fica no navegador). No trilho cada item tem dica e nome para leitor de tela;
-  tudo o que é do trilho mora num `@media (width > 820px)`. Abaixo de 820 px o menu é
+  tudo o que é do trilho mora num `@media (width > 820px)`. O trilho é o menu aberto
+  recortado: ícones, "Nova reserva", símbolo e avatar ficam no mesmo x
+  (`--trilho-centro`) e na mesma altura nos dois estados; rótulos e títulos de grupo só
+  esmaecem; a borda direita anda e recorta. O que muda de lugar (botão de recolher,
+  Sair) desliza com os tokens de movimento. Regra do trilho só pode mexer em opacidade,
+  cor, giro e posição — o contrato está nos testes de design. Abaixo de 820 px o menu é
   gaveta e abre sempre inteiro, como diálogo: foco preso, Esc e o véu fecham, a página
   não rola por baixo e o foco volta ao botão.
 - **Responsivo:** nenhuma tela rola de lado entre 320 e 1440 px, com o menu aberto,

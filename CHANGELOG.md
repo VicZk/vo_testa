@@ -9,6 +9,168 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 21/10/2026 — O menu que não pula, o kit de contingência, as regras do Réveillon e o aceite da política (`28524ef` a `d60824b`)
+
+Nono bloco. Começou por um pedido sobre o menu — "aquela sidebar tem vários elementos
+que quando expande/contrai ficam meio fora, tipo overlap e extrusão" — e seguiu pelas
+pendências da auditoria que ainda estavam abertas. O kit de contingência e as
+restrições de venda foram feitos por agentes em cópias separadas do código e revisados
+no navegador antes do merge. O original não ganhou commit novo
+desde o último push (o `main` do fork foi sincronizado com o dele, que já estava todo no
+`dev`).
+
+**O que melhorou**
+- **Abrir e recolher o menu:** o bloco anterior tinha medido só os dois estados finais;
+  desta vez a animação foi filmada quadro a quadro (pausada de 20 em 20 ms):
+  - abrindo, no primeiro quadro a cápsula "MFA off" saía 75 px por cima da página e o
+    avatar encostava no Sair; até os 40 ms os nomes dos itens saíam das pílulas e do
+    "Nova reserva", e o menu acendia uma barra de rolagem lateral;
+  - recolhendo, todos os ícones pulavam para o meio do menu e voltavam deslizando, e
+    os itens subiam — o último, 313 px;
+  - agora o menu recolhido é o menu aberto recortado pela borda: ícones, avatar e
+    símbolo não saem do lugar em nenhum quadro, os nomes esmaecem (saem antes de a
+    largura fechar, entram depois que ela abriu), o botão de recolher e o Sair deslizam
+    até o lugar novo, e nada passa da borda. No recolhido, os grupos ganham um fio de
+    separação no lugar do título;
+  - com o menu aberto, ícones e textos andaram 5 px para a direita (para alinhar com o
+    recolhido). A gaveta do celular segue a mesma, com esse ajuste.
+- **Kit de contingência (para quando a internet cair):** uma folha A4 do dia, em
+  Reservas → "Kit de contingência" (botão na lista e no mapa de quartos, e no ⌘K):
+  - hospedados agora, quarto a quarto, com os hóspedes, entrada → saída e o **saldo da
+    conta**; chegadas de hoje com o **telefone** do hóspede, o total e o que já foi
+    pago; saídas de hoje com o saldo a receber; a situação dos 24 quartos (com a
+    limpeza, quando a Governança está ligada); chegadas de amanhã; e os totais;
+  - sai limpa na impressora — e, de quebra, qualquer tela do CRM mandada para a
+    impressora deixou de imprimir o menu, a barra de cima e os botões;
+  - cópia automática por e-mail toda madrugada para quem estiver em
+    `KIT_CONTINGENCIA_EMAILS` (vazio = não manda nada): com a internet da pousada fora
+    do ar, o retrato do dia abre no celular, no 4G.
+- **Restrições de venda (Réveillon e feriados):** até aqui o site vendia a noite solta de
+  31/12 e deixava as noites ao redor vazias. Agora, em Temporadas → "Restrições de
+  venda", dá para definir por período — na casa toda, num tipo de quarto ou num quarto:
+  - estadia mínima (vale para qualquer estadia que toque o período; com várias regras,
+    vale o maior mínimo), fechado para chegada, fechado para saída e parar vendas;
+  - no site, a busca não oferece o que a regra barra e **diz o motivo** ("Réveillon —
+    mínimo 3 noites: com entrada em 31/12, a saída precisa ser a partir de 03/01"),
+    com atalho para escolher outras datas; um envio forjado também é recusado;
+  - na recepção, a regra aparece como aviso ao vivo no formulário e não trava — hóspede
+    no balcão se negocia. "Parar vendas" é a exceção: só a gerência passa, e fica
+    registrado na trilha com o motivo. A conversão de lead do Comercial não trava;
+  - regra desativada fica guardada (o Réveillon deste ano serve de molde para o próximo).
+- **Reserva pelo site — aceite da política de cancelamento:**
+  - para concluir, o hóspede marca "Li e aceito a política de cancelamento e os termos
+    de serviço" (o navegador não deixa confirmar sem; o servidor confere de novo);
+  - a reserva guarda quando ele aceitou e o texto que estava na tela, e o e-mail de
+    confirmação leva os dois — numa disputa, dá para provar o que ele viu;
+  - os termos de serviço diziam "devolução de 90% dentro dos 7 dias", e o sistema
+    devolve 100% (o que o CDC pede para venda pela internet). Agora os termos saem da
+    mesma configuração do resumo e do cálculo da devolução.
+- **"Retemos 1E+1% do valor total":** era o que o passo 4 da reserva mostrava ao
+  hóspede, e "reter 1E+1%" o que o cancelamento no CRM gravava no motivo. Agora "10%".
+- **Minha reserva:** o exemplo do código tinha 4 caracteres no fim; o código real tem 6.
+- **LGPD — Google e Meta só com licença:** as três landing pages (Fundador, Fundador II
+  e a da inauguração, com campanha no ar) carregavam GA4 e Meta Pixel na hora, sem
+  aviso de cookies; o `<noscript>` do Pixel disparava até sem JavaScript. Agora nada
+  carrega antes do "Aceitar", e no "Recusar" nada carrega.
+- **Visual:**
+  - a tela do lead tinha 33 cores escritas à mão no próprio estilo (e quatro "tokens"
+    que nem existiam); agora tudo sai dos tokens da casa, e um teste impede a volta em
+    qualquer tela do CRM;
+  - **sem emoji nas telas do CRM:** eram 66, em 21 telas — rótulos ("⏱ Tempo de
+    casa"), filtros ("🌅 Vista lago"), estados vazios ("Nada pendente. 🎉"), status
+    ("🟢 janela 24h aberta") e até os botões de anexar e gravar áudio do WhatsApp. O
+    decorativo saiu, o status ficou na cor e no selo que já existiam, e os botões viraram
+    os ícones da casa. Emoji muda de desenho em cada aparelho e enchia a tela como as
+    pílulas enchiam. Site, e-mails e páginas públicas de captação ficaram como estão.
+- **Para o original:** as correções que valem também para a produção do Gefferson (R$
+  cem vezes maior, "1E+1%", termos × sistema e o aviso de cookies, que lá nem existe)
+  foram preparadas como patches em cima do `main` dele, para ele aplicar.
+
+**O que foi modificado**
+- **`static/css/app.css` (`28524ef`):** seção da sidebar reescrita — tokens
+  `--sidebar-w-aberta`, `--trilho-w`, `--trilho-centro`, `--sidebar-ico-x` e `--alvo`;
+  `.sidebar` com `overflow: hidden`; topo com posições fixas a partir da borda esquerda
+  e janela do logotipo (`.marca-janela`); rótulos e títulos no fluxo; rodapé com altura
+  animada e o Sair posicionado; o trilho (`.app.recolhida …`) só mexe em opacidade, cor,
+  giro e posição. `templates/base.html`: `.marca-janela` e `.usuario-texto`.
+- **`apps/nucleo/formatos.py` (`68d7e99`):** `pct_br()`, usado no resumo da política, na
+  nota do cancelamento e na descrição do ISS.
+- **Site (`2303d6b`, `994a48a`):** `core.Reserva` ganhou `politica_aceita_em` e
+  `politica_aceita` (migração `core.0009`); passo 4 com a caixa de aceite; os dois
+  caminhos de `finalizar_reserva` conferem o aceite; e-mail de confirmação (HTML e
+  texto); termos de serviço a partir de `descricao_politica()`; exemplo do código em
+  Minha reserva.
+- **LPs (`35f4eaf`):** tags de medição como `type="text/plain" data-consentimento`
+  nos três arquivos de `LPs/`; `views_lp._com_aviso_de_cookies()` põe o aviso do site
+  no fim do `<body>` ao servir cada LP.
+- **Cores (`f4ab374`):** `comercial/oportunidade.html` e mais quatro telas só com
+  tokens; teste `CorSoPorTokenTests`.
+- **Emoji (`b8bf5c0`):** 21 templates do CRM; SVG `.ico` nos botões de anexo e áudio
+  da conversa e no cadeado da Central de Módulos; ponto dourado no feriado do
+  calendário do colaborador (`.rc-dia .ferm`); teste `SemEmojiNoCrmTests`.
+- **Kit (`34d6edb`, `b8cf2d0`):** `reservas.services.kit_contingencia()` (consultas
+  constantes: reservas numa consulta, saldos em lote, limpeza pelo mesmo caminho do
+  mapa), view `reservas:kit` e `templates/reservas/kit.html`; comando
+  `enviar_kit_contingencia` no grupo `diarias` de `rotinas`, com e-mail HTML (estilo
+  inline) e texto; `KIT_CONTINGENCIA_EMAILS` no settings e no `.env.example`;
+  `Reserva.total_previsto(cfg)` e `precos.taxas(…, cfg)` aceitam a configuração já
+  carregada; `@media print` da casa no `app.css` (e no `base.css`).
+- **Restrições (`9a1b727` a `3a0bc43`):** model `RestricaoVenda` (migração
+  `reservas.0030`, CheckConstraints de escopo e de datas) e os services
+  `restricoes_da_estadia()` e `restricoes_no_periodo()`; `criar_prereserva(…,
+  respeitar_restricoes=)` — o canal site bloqueia, os internos avisam; busca e passos
+  do site; modal de nova reserva (`tarifa_preview` devolve as violações); telas
+  `reservas/restricoes.html` e `restricao_form.html` (área Temporadas); trilha lê
+  "restrição de venda"; duas correções do design system que a tela achou (caixa de
+  marcar com texto de ajuda e duas ações na mesma célula).
+- **Testes:** 4 contratos novos da sidebar e 4 reescritos para o desenho novo; cor só
+  por token; aceite da política (sem aceite não há reserva, com aceite fica gravado,
+  e-mail, termos); percentual; LPs sem tag solta; nenhum emoji em tela do CRM; kit
+  (24, em `tests_kit.py`);
+  restrições (47 em `tests_restricoes.py` e 9 no site).
+
+**Como foi testado**
+- **Menu, quadro a quadro** (0 a 300 ms, abrindo e recolhendo, a 1440 px com mouse e a
+  1024 px com toque): texto ou caixa fora do menu 2–3 quadros → 0; sobreposições 3 → 0;
+  barra lateral 3 quadros → 0; o x de cada ícone e o y de cada item constantes nos dois
+  sentidos (antes, até 313 px). Estados finais conferidos por captura; a gaveta sai
+  idêntica com o menu salvo recolhido ou aberto; Tab pelo menu nos dois estados com
+  todos os anéis de foco inteiros.
+- **Aceite:** POST sem a caixa, pelos dois caminhos (por tipo e por quarto), não cria
+  recibo nem pré-reserva; no navegador, sem marcar, o envio é barrado; o teste de ponta
+  a ponta marca a caixa e conclui a reserva.
+- **LPs no navegador:** zero requisições a Google/Meta antes da escolha em todas; o
+  Pixel carrega depois do "Aceitar". A da inauguração (que só mede no domínio oficial)
+  foi servida sob www.pousadavotesta.com.br para conferir: carrega depois do "Aceitar",
+  sem erro de JavaScript.
+- **Cores:** captura da tela do lead antes × depois — maior diferença de 4/255 num
+  canal, nenhum pixel acima de 8.
+- **Kit e restrições, na revisão antes do merge:** as telas novas (kit, lista e
+  formulário de restrições, Temporadas) a 1440 px com o menu recolhido e aberto, 821 px
+  com o menu aberto, 390 e 320 px — sem rolagem lateral, nada saindo da tela, nenhum
+  texto cortado sem reticências. Kit em PDF A4 real: 3 páginas, tabelas inteiras. Site
+  no Réveillon (390 e 1440 px): aviso com o motivo e atalho; a estadia de 4 noites que
+  atravessa o período passa. Modal da recepção: aviso ao vivo.
+- **Depois do merge:** as duas novidades do site nasceram em paralelo, e a suíte
+  apontou o encontro — os testes das restrições postavam a reserva sem o aceite da
+  política. Um deles falhou; outros dois continuavam verdes pelo motivo errado (a
+  recusa vinha do aceite, não da regra). Ajustados (`d60824b`) para cada um provar o
+  que diz.
+- **Suíte completa no Windows:** 1.324 testes no `d60824b` (antes dos merges, 1.243 no
+  `f4ab374`), só a falha conhecida do ambiente (`test_webhook_audio_baixa_e_salva_arquivo`,
+  que só falha no Windows). Ruff zero, `makemigrations --check` limpo, `base.css` em dia.
+
+**Depois do deploy (no Railway)**
+- As migrações (`core.0009` e `reservas.0030`) o deploy já roda sozinho.
+- Opcional: `KIT_CONTINGENCIA_EMAILS` com os e-mails de quem deve receber a folha do dia.
+- Operação, não código: cadastrar a regra do Réveillon em Temporadas → "Restrições de
+  venda" (ex.: 30/12 a 01/01, mínimo 3 noites) antes de abrir as vendas do feriado. No
+  campo de descrição, só o nome do período ("Réveillon"): ele entra na frase que o
+  hóspede lê — "Réveillon: a estadia mínima é de 3 noites. Com entrada em 31/12, a saída
+  precisa ser a partir de 03/01."
+
+---
+
 ## 21/10/2026 — Menus, o que vaza e o que corta, e o sistema inteiro no celular (`e650640` a `7ea1ce2`)
 
 Oitavo bloco: um pente-fino na interface pedido com estas palavras — "atenção na

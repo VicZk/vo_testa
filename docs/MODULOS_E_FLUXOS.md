@@ -54,6 +54,7 @@ preço, grupos (bloco de quartos), FNRH/BOH, estoque de colchões extra e berço
 | `TarifaTemporada` | preço por quarto numa **temporada específica** (Natal ≠ Ano Novo) | `valor`, `pessoa_adicional`; unique (`temporada`,`uh`) |
 | `Reserva` | a reserva | ciclo de estados, `canal`, `faturamento`/`titular`, lotação por faixa, arranjo de camas, `expira_em`, bloco FNRH; `valor_diaria` (média) + `valor_hospedagem` (total exato cotado); `valor_retido` (cancelamento) |
 | `GrupoReserva` | reserva-mãe (bloco de quartos) | `rotulo`, `titular`, `checkin/checkout`, `expira_em`, `encerrado_em`; status **derivado** das filhas (`situacao()`) |
+| `RestricaoVenda` | regra de venda por período (Réveillon, feriados) | `inicio`/`fim` (datas de NOITE, inclusive), escopo casa / `tipo_uh` / `uh` (CheckConstraint: nunca os dois), `min_noites` ("min stay through": vale se qualquer noite cair no período; o maior mínimo vence), `fechado_chegada`, `fechado_saida`, `parar_vendas`, `ativa` |
 | `ContaHospedagem` | folio: ou de um quarto, ou do grupo | `status` aberta/fechada; check-constraint `conta_reserva_xor_grupo` |
 | `LancamentoConta` | item do folio | `tipo` diaria/consumo/servico/taxa/desconto × `natureza` SERVIÇO/CONSUMO (obrigatória); imutável. `taxa` = ISS e taxa de turismo (lançados no check-in; fora da base da NFS-e). `competencia` = o dia a que o item se refere: a **noite**, na diária (todas lançadas no check-in, uma por noite); o dia do lançamento, no resto |
 | `FechamentoDiario` | fechamento do dia | um por dia (`data` única), gravado pela rotina da madrugada e **imutável**: quartos disponíveis/ocupados, chegadas, saídas, no-shows, diárias/serviço/consumo pela competência e saldo em aberto; `taxa_ocupacao`, `adr`, `revpar` derivados |
@@ -86,6 +87,13 @@ Tarifa e preço:
 `tarifa_da_unidade(uh, dia)`, `diaria_media_unidade(uh, ci, co)`,
 `tarifa_base_unidade(uh)`, `preco_unidade_noite(uh, dia) → (base, pessoa_adicional)`,
 `tarifa_minima_do_tipo(tipo)`.
+
+Restrições de venda e contingência:
+`restricoes_da_estadia(checkin, checkout, tipo_uh=, uh=)` → violações com a mensagem
+pronta para o hóspede; `restricoes_no_periodo(ci, co)` (uma consulta para a busca
+inteira); `criar_prereserva(…, respeitar_restricoes=)` — o canal site bloqueia, os
+internos avisam; `kit_contingencia(ler_limpeza=)` → o retrato do dia em tipos simples,
+com número de consultas constante.
 
 Disponibilidade: `reservas_ativas_qs()`, `reservas_no_periodo(uh, ci, co)`,
 `uh_disponivel(uh, ci, co, *, adultos=None, criancas=None)`,
@@ -177,6 +185,8 @@ Módulos auxiliares: `precos.py` (motor de preço), `colchoes.py` (arranjos de c
 |---|---|---|
 | `reservas:mapa` | mapa UH × dias, agrupado por **ala**, com bloqueio de manutenção por data e overlay de limpeza na coluna de hoje | `@requer_modulo` |
 | `reservas:mapa_quartos` | corredor de portas (visão operacional do dia) | `@requer_modulo` |
+| `reservas:kit` | kit de contingência: folha A4 do dia para quando a internet cair (também por e-mail, `enviar_kit_contingencia`) | `@requer_modulo` |
+| `reservas:restricoes` / `restricao_nova` / `restricao_editar` | restrições de venda (lista, criar, editar, ativar/desativar) | `@requer_area(TEMPORADAS)` |
 | `reservas:lista` | lista/filtros, atalhos de "saídas atrasadas" | `@requer_modulo` |
 | `reservas:nova` | criação (modal HTMX; `HX-Redirect` ao detalhe) | `@requer_modulo` |
 | `reservas:tarifa_preview` | JSON ao vivo: diária, temporada, itens (ISS/turismo), arranjo e status do pool de colchões | `@requer_modulo` |

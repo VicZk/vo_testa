@@ -160,7 +160,13 @@ e rode o comando — o teste `CssDasTelasPublicasTests` avisa quando o recorte f
   1440 px — nada de rolagem lateral, nada saindo do cartão, nada cortado sem reticências.
   A largura útil muda com o menu aberto/recolhido e o `@media` só enxerga a janela: o que
   divide espaço decide pelo espaço (`flex-wrap`, `minmax(min(Npx, 100%), 1fr)`, container
-  query). Regra do trilho (`.app.recolhida …`) só dentro do `@media (width > 820px)`.
+  query). Regra do trilho (`.app.recolhida …`) só dentro do `@media (width > 820px)`, e
+  só mexendo em opacidade, cor, giro e posição: o trilho é o menu aberto recortado (nada
+  reflui na troca — conferir animação quadro a quadro, não só os estados finais).
+- **Cor só por token, também no `<style>` próprio da tela:** fundo suave de semântica é
+  `--sucesso-bg`/`--alerta-bg`/`--perigo-bg`/`--info-bg`; tinta translúcida é
+  `color-mix(in srgb, var(--token) N%, transparent)`. O teste `CorSoPorTokenTests` barra
+  hex/rgba no CRM.
 - **Referências de princípio:** skill `apple-design` (resposta, tipografia ótica,
   materiais, simplicidade) e a memória [[design-lampiao]]. Ao mudar o "look" global,
   mexer nos **tokens** (propaga a tudo), não em cada template.

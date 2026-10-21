@@ -815,6 +815,7 @@ Tudo que varia por ambiente é lido em `config/settings.py` (`.env` em dev via
 | `LOG_LEVEL` | `INFO` (`WARNING` nos testes) | Nível do `LOGGING` que manda tudo para o stdout (logs do Railway). |
 | `REDIS_URL` | — | Cache compartilhado em Redis. Vazio: `DatabaseCache` na tabela `nucleo_cache`. Nos testes: memória. |
 | `BACKUP_DIR` | — | Pasta do `backup_banco` quando não há R2. Vazio e sem R2: o backup não roda (só avisa). |
+| `KIT_CONTINGENCIA_EMAILS` | — | Quem recebe a folha do dia (kit de contingência) toda madrugada, separados por vírgula. Vazio: não envia nada. |
 | `SENTRY_DSN` | — | Liga o Sentry (fora dos testes). Sem PII: `send_default_pii=False`, sem variáveis locais e sem corpo de requisição. Opcionais: `SENTRY_ENVIRONMENT`, `SENTRY_TRACES_SAMPLE_RATE`; a release vem de `RAILWAY_GIT_COMMIT_SHA`. |
 | `SECRET_KEY` | chave de dev versionada | Em produção (`DEBUG=0`, não `TESTING`) é **obrigatória** e não pode começar com `dev-inseguro` — senão `ImproperlyConfigured`. |
 | `ALLOWED_HOSTS` | `""` (lista separada por vírgula) | Com `DEBUG=1` e vazio, usa `localhost,127.0.0.1`. Sempre são adicionados os domínios do próprio serviço (`RAILWAY_PUBLIC_DOMAIN`, `RAILWAY_PRIVATE_DOMAIN`), `healthcheck.railway.app` e loopbacks. Sem curinga `.railway.app`: o domínio próprio (ex.: `www.pousadavotesta.com.br`) vai na variável. |
@@ -1388,7 +1389,7 @@ criar estilo paralelo nem hard-codear cor, raio ou sombra.
 | Elevação | `--sombra-1` (elementos pequenos), `--sombra-2`, `--sombra-3`, `--glow`, `--sombra-cartao` (float suave de cartão) |
 | Raio | `--raio-p` 10px, `--raio` 14px, `--raio-g` 20px |
 | Tipografia | `--fonte-titulo` (Fraunces), `--fonte-ui` (Hanken Grotesk), `--fonte-marca` (Rosaline, `@font-face` local), `--fonte-mono` (IBM Plex Mono) |
-| Layout | `--sidebar-w` 258px (72px no trilho), `--sidebar-topo-h` 116px (o topo do menu tem a mesma altura aberto e recolhido, e o menu não salta), `--topbar-h` 60px, `--vao-2-1` (vão do `.colunas-2-1`) |
+| Layout | `--sidebar-w` (vale agora: `--sidebar-w-aberta` 258px ou `--trilho-w` 72px), `--trilho-centro` (35,5px, o x de todo ícone do menu nos dois estados) e `--sidebar-ico-x`, `--alvo` (30px no mouse, 44px no dedo — botão de recolher e Sair), `--sidebar-topo-h` 116px (o topo do menu tem a mesma altura aberto e recolhido), `--topbar-h` 60px, `--vao-2-1` (vão do `.colunas-2-1`) |
 
 **Para mudar o “look” global, mexa nos tokens** — propaga para tudo.
 
@@ -1464,10 +1465,15 @@ curva da casa é `cubic-bezier(.2,.8,.2,1)`).
 - Ícones são **SVG inline** (sem sprite nem icon font); no rail recolhido o ícone é o
   único identificador, por isso cada módulo tem o seu em `componentes/icone_modulo.html`.
 - **Trilho (menu recolhido)**: é o estado padrão (`localStorage.sidebar` diferente de
-  `aberta`). O rótulo sai da vista, não da leitura (fora do fluxo + `clip-path`, nunca
-  `display:none`), e cada item traz `title`, que o `rotularSidebar()` deixa valer só no
-  trilho. Toda regra `.app.recolhida …` mora num único `@media (width > 820px)` — o teste
-  `test_trilho_so_existe_no_desktop` reprova regra solta fora dele.
+  `aberta`) e é o menu aberto recortado: cada peça no mesmo x e na mesma altura nos dois
+  estados, rótulos e títulos de grupo no fluxo só com opacidade (seguem na árvore de
+  acessibilidade; nunca `display:none`), a `.sidebar` com `overflow: hidden` como
+  cortina, janelas próprias para o logotipo (`.marca-janela`) e para nome + cápsula
+  (`.usuario-texto`), e o botão de recolher e o Sair deslizando com os tokens de
+  movimento. Cada item traz `title`, que o `rotularSidebar()` deixa valer só no trilho.
+  Toda regra `.app.recolhida …` mora num único `@media (width > 820px)` e só mexe em
+  opacidade, cor, giro e posição — `test_trilho_so_existe_no_desktop` e
+  `test_trilho_nao_redesenha_so_esconde_e_desliza` reprovam o contrário.
 - **Gaveta (≤ 820 px)**: abre sempre inteira, qualquer que seja a preferência do
   desktop. Fechada, `visibility:hidden` a tira da ordem de tabulação; aberta, é diálogo —
   `abrirSidebarMobile()` guarda o foco, o Tab circula dentro dela (`caixaAberta()`),
