@@ -9,6 +9,46 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 21/10/2026 — A demonstração monta sozinha num banco novo e o ambiente de teste na VPS (`f93c241` a `d1eb308`)
+
+Décimo terceiro bloco, pequeno: o que apareceu ao montar um ambiente de teste do zero.
+
+**O que melhorou**
+- **Ambiente de teste fora do Railway:** o sistema inteiro (site e CRM) roda numa VPS
+  própria, com dados só de demonstração, atrás de usuário e senha, fora dos buscadores
+  (`noindex`) e sem nenhuma integração real (pagamento, e-mail, WhatsApp, FNRH e fiscal
+  simulados; sem o bucket de mídia da produção). Serve para testar e mostrar sem tocar na
+  produção. A configuração do servidor fica fora do repositório.
+- **Os dados de demonstração montam num banco vazio.** Ali, os seeds quebraram ou não
+  fizeram nada: `popular_demo` exigia um superusuário criado antes ("criado_por não pode
+  ser nulo"); os seeds abriam o caixa do núcleo, mas desde o caixa por módulo a reserva
+  recebe no caixa de Reservas, a venda de balcão no da Loja e a entrega da lavanderia no
+  dela; `popular_escala` só reclamava sem funcionário cadastrado; e o check-in da
+  demonstração batia na trava da FNRH (hóspede de mentira não tem ficha). Agora os sete
+  comandos montam tudo em sequência num banco novo — o mesmo vale para um ambiente novo
+  do original ou uma recuperação de desastre.
+
+**O que foi modificado**
+- **Seeds (`f93c241`, `d1eb308`):** `popular_demo`, `popular_lotacao`,
+  `popular_lavanderia`, `popular_escala`, `popular_estoque` e `popular_manutencao` caem
+  num usuário de sistema (`_demo`) quando não há superusuário; caixas abertos no módulo
+  certo; `popular_escala` cria a equipe que falta ("(demo)"); o check-in do seed passa
+  pela trava da FNRH só dentro do comando (`override_settings`).
+- **README:** a ordem dos seeds e o que cada um precisa (§2.3).
+
+**Como foi testado**
+- Novo `DemonstracaoBancoNovoTests`: num banco de teste sem superusuário e com a trava
+  da FNRH ligada, `estrutura_inicial --completo` + os seis seeds montam reserva
+  hospedada, caixas de Reservas e da Loja, ordem de lavanderia entregue, equipe e escala
+  gerada — e a trava segue ligada depois. No código anterior, o teste quebra em
+  "criado_por: Este campo não pode ser nulo".
+- `apps.nucleo.tests`, `apps.lavanderia`, `apps.escala`, `apps.estoque` e
+  `apps.manutencao` OK; ruff zero.
+- Ambiente de teste conferido no navegador: site, entrada do CRM, Governança, Estoque,
+  Reservas e Pagamentos abrindo; certificado válido; sem senha, só o `/healthz/` responde.
+
+---
+
 ## 21/10/2026 — Copiar e mandar pelo WhatsApp, as ações da reserva à vista e a passada de usabilidade (`3123896` a `0477f85`)
 
 Décimo segundo bloco: o resto dos pedidos do dono — "dá para colocar um botãozinho de

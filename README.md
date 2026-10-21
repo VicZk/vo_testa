@@ -180,18 +180,27 @@ quarto no site, com 9 destaques). Os seeds de preço e camas dependem exatamente
 desses nomes de tipos e quartos. Use o fluxo completo em banco novo; os comandos
 chamados por `--completo` possuem efeitos próprios sobre camas, tarifas e vitrine.
 
-**Dados de demonstração (opcional).** Os seeds não acompanharam todas as regras novas:
+**Dados de demonstração (opcional).** Montam sozinhos num banco novo, nesta ordem:
 
-- `popular_lotacao` ocupa cerca de 80% dos quartos exercitando Reservas, Loja, Caixa e
-  Governança. Rode com a trava da FNRH desligada (`FNRH_BLOQUEAR_CHECKIN=0` no ambiente),
-  senão o check-in é recusado por falta de ficha.
-- `popular_manutencao`, `popular_marketing`, `popular_comercial`,
-  `popular_templates_email` e `popular_respostas_rapidas` funcionam direto.
-- `popular_lavanderia` e `popular_demo` exigem caixas abertos do usuário (o caixa é por
-  módulo, ver [§4.2](#42-o-núcleo)); `popular_demo` está desatualizado e pode falhar.
-  `popular_escala` exige ao menos 6 funcionários cadastrados.
+```bash
+python manage.py popular_demo          # reservas, caixa, contas, estoque e recados "[demo]"
+python manage.py popular_estoque       # catálogo, depósitos e kardex
+python manage.py popular_lavanderia --limpar
+python manage.py popular_escala --limpar
+python manage.py popular_manutencao --limpar
+python manage.py popular_lotacao       # ~80% de ocupação: Reservas, Loja, Caixa e Governança
+```
 
-Os seeds usam o usuário `gvivan` se existir, senão o primeiro superusuário.
+- Usam o usuário `gvivan` se existir, senão o primeiro superusuário, senão um usuário de
+  sistema (`_demo`) — não é preciso criar o superusuário antes.
+- Abrem o caixa do módulo certo (o caixa é por módulo, ver [§4.2](#42-o-núcleo)):
+  Reservas para as reservas, Loja para o balcão, Lavanderia para a entrega.
+- O check-in da demonstração passa pela trava da FNRH só dentro do comando (hóspede de
+  mentira não tem ficha); o sistema em pé continua com a trava ligada.
+- `popular_escala` cria a equipe que faltar (3 recepcionistas e 3 camareiras "(demo)").
+- `popular_marketing`, `popular_comercial`, `popular_templates_email` e
+  `popular_respostas_rapidas` funcionam direto.
+- O teste `DemonstracaoBancoNovoTests` monta a demonstração num banco vazio a cada push.
 
 ### 2.4 Subir
 
