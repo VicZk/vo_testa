@@ -10,7 +10,7 @@ trabalho local e ativação de serviços externos.
 |---|---|
 | Repositório | Fork pública `VicZk/vo_testa`, branch `dev` |
 | Base de código publicada revisada | [`3e30a11fa18ffbefb08136fa2b83ca4560dd8b1e`](https://github.com/VicZk/vo_testa/tree/3e30a11fa18ffbefb08136fa2b83ca4560dd8b1e) |
-| Publicação seguinte | Décimo primeiro bloco do [CHANGELOG](../CHANGELOG.md), no mesmo dia: os nove commits de interface listados abaixo, a Governança didática com a visão geral e o Estoque redesenhado |
+| Publicação seguinte | Décimo primeiro e décimo segundo blocos do [CHANGELOG](../CHANGELOG.md), no mesmo dia: os nove commits de interface listados abaixo, a Governança didática com a visão geral, o Estoque redesenhado e a usabilidade (copiar e mandar pelo WhatsApp, as ações da reserva numa barra, datas e valores corrigidos nos formulários) |
 | Natureza da revisão documental | Documentação (`784c208`); a publicação de código veio no bloco seguinte |
 | Produção e contas externas | Não consultadas nesta revisão |
 

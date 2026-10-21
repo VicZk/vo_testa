@@ -217,7 +217,7 @@ Módulos auxiliares: `precos.py` (motor de preço), `colchoes.py` (arranjos de c
 | `reservas:lista` | lista/filtros, atalhos de "saídas atrasadas" | `@requer_modulo` |
 | `reservas:nova` | criação (modal HTMX; `HX-Redirect` ao detalhe) | `@requer_modulo` |
 | `reservas:tarifa_preview` | JSON ao vivo: diária, temporada, itens (ISS/turismo), arranjo e status do pool de colchões | `@requer_modulo` |
-| `reservas:detalhe` | folio, transições, FNRH, política de cancelamento, troca de quarto | `@requer_modulo` |
+| `reservas:detalhe` | folio, transições, FNRH, política de cancelamento, troca de quarto — ações numa barra (`.acoes-reserva-barra`: o que fazer agora em destaque, alterações ao lado, o destrutivo separado em `.acoes-reserva-risco`), cada formulário num painel largo, um por vez; link do pré check-in e das cobranças com `{% copiar %}` | `@requer_modulo` |
 | `confirmar` / `checkin` / `checkout` / `cancelar` / `transferir` / `trocar_quarto` / `no_show` | transições (POST) | `@requer_modulo` |
 | `desfazer_no_show` | volta a confirmada o no-show (manual ou automático) quando o hóspede aparece; motivo obrigatório | `@requer_modulo` |
 | `lancamento_novo` / `pagamento_novo` / `adiantamento_novo` / `acompanhante_novo` | folio e caixa | `@requer_modulo`; **desconto exige gerência** (`views.py:645`) |

@@ -471,7 +471,12 @@ noite, grupos com conta-mãe, troca de quarto arrastando no mapa, FNRH por hósp
 trava de check-in, pré-check-in por QR e BOH mensal com exportação. O detalhe da
 reserva tem um painel financeiro: total previsto, o que já foi pago (pela gaveta,
 online ou faturado, líquido de estornos), o sinal pendente, o saldo e as cobranças de
-Pagamentos com o link público.
+Pagamentos com o link público (copiar ou mandar pelo WhatsApp na própria linha). As ações
+ficam numa barra logo abaixo da ficha: o que fazer agora em destaque (confirmar,
+check-in, check-out), as alterações ao lado (sinal, lotação, transferir datas, estender,
+trocar de quarto, QR, NFS-e) e o que desfaz separado no fim (não compareceu, cancelar,
+com confirmação); o formulário abre num painel largo, um por vez. O que impede o
+check-in (FNRH pendente, menor sem responsável) aparece antes do clique.
 Restrições de venda por período (`RestricaoVenda`, tela em Temporadas → "Restrições de
 venda"): estadia mínima — vale para qualquer estadia que toque o período, e com várias
 regras vale o maior mínimo —, fechado para chegada, fechado para saída e parar vendas,
@@ -486,7 +491,9 @@ o hóspede aparecer e o quarto ainda estiver livre.
 
 **Pagamentos.** `Cobranca` com token público, estados pendente → pago, estornado,
 cancelado ou expirado, e trilha `EventoPagamento`. Confirmação idempotente com trava de
-linha; sinal pago confirma a reserva. Link de pagamento público com Pix e cartão.
+linha; sinal pago confirma a reserva. Link de pagamento público com Pix e cartão. O
+link e o Pix copia-e-cola têm "Copiar" e "Enviar pelo WhatsApp" (mensagem pronta, com o
+telefone de quem paga), no detalhe da cobrança e na linha do painel.
 
 **Portal do hóspede.** Acesso por token ou QR durante a estadia: extrato, pedido ao
 restaurante (lançado na conta), limpeza extra, manutenção, pré-check-in da FNRH e
@@ -783,7 +790,10 @@ Toda tela do CRM nasce no design system; nada de estilo paralelo nem cor fixa no
   `CorSoPorTokenTests` barra hex e rgba escritos à mão.
 - **Componentes:** `.cartao`/`.cartao-el`, `.tabela`/`.quadro`, `.botao-primario`,
   `.botao-neutro`, `.botao-mini`, `.selo-*`, `.kpi`, combos de pessoa e quarto em
-  `templates/componentes/`.
+  `templates/componentes/`. Tudo o que a equipe manda a alguém (link de pagamento, Pix,
+  portal, pré check-in) usa `{% copiar texto rotulo=… recado=… telefone=… %}`: botão
+  "Copiar" (com plano B onde a área de transferência do navegador não existe, como no
+  `http://` da rede local) e "Enviar pelo WhatsApp" com a mensagem pronta.
 - **App shell** (`templates/base.html`): sidebar por permissão, navegação com
   `hx-boost`, paleta de comandos (⌘K ou `/`), toasts a partir das mensagens do Django,
   atalho `N` para nova reserva. Na troca de página só o conteúdo faz a transição (View

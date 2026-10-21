@@ -9,6 +9,93 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 21/10/2026 — Copiar e mandar pelo WhatsApp, as ações da reserva à vista e a passada de usabilidade (`3123896` a `0477f85`)
+
+Décimo segundo bloco: o resto dos pedidos do dono — "dá para colocar um botãozinho de
+copiar" o link de pagamento e mandar pelo WhatsApp em vez de copiar e colar à mão; "a
+mudança de quarto e o estender reserva ficam num dropdown muito pequeno, meio perdido";
+o copiar do FNRH; e uma passada de usabilidade pelos fluxos do dia a dia. Feito por um
+agente numa cópia separada do código e revisado no navegador antes do merge.
+
+**O que melhorou**
+- **Copiar e Enviar pelo WhatsApp** em tudo o que a equipe manda a alguém: link de
+  pagamento e Pix copia-e-cola (Pagamentos, no detalhe e na própria linha do painel), a
+  cobrança no detalhe da reserva, o link do portal do hóspede, o link do **pré check-in
+  (FNRH)** — agora também ao lado de "Preencher / editar FNRH" —, o link público da
+  página de captação e o texto e a proposta do painel de quartos do Comercial. O WhatsApp
+  abre com a mensagem pronta, em português, e com o telefone do hóspede (ou para escolher
+  o contato, quando não há telefone legível). O "Copiar" funciona também no servidor da
+  pousada aberto por `http://` na rede local, onde o navegador não deixa usar a área de
+  transferência pelo caminho normal, e o leitor de tela anuncia o "Copiado".
+- **As ações da reserva numa barra à vista**, logo abaixo da ficha: o que fazer agora em
+  destaque (Confirmar / Check-in / Check-out), as alterações ao lado (receber sinal,
+  alterar lotação, transferir datas, estender estadia, trocar de quarto, QR do hóspede,
+  emitir NFS-e) e o que desfaz separado no fim (não compareceu, cancelar — agora com
+  confirmação). O formulário abre num painel largo, um por vez. Antes eram caixinhas de
+  13 px no meio da página, e três formulários ficavam abertos para sempre, empurrando a
+  conta do quarto para baixo da dobra.
+- **Passada de usabilidade** (criar reserva → confirmar → check-in → consumo → receber,
+  PDV, comanda, caixa, funil, governança e manutenção, em 56 telas × 4 larguras):
+  - datas que **sumiam** ao reabrir a ficha: nascimento na FNRH, restrição de venda,
+    grupo e oportunidade voltavam com o campo em branco e pediam a data de novo;
+  - o aviso da tarifa dizia "R$ 940.00" e "ISS 4.0%" — agora "R$ 940,00", como a
+    recepção lê em voz alta (e o mesmo na frase da política de cancelamento);
+  - nova reserva abre com hoje → amanhã; "Receber pagamento" na estadia já abre com o
+    saldo; o que impede o check-in (FNRH pendente, menor sem responsável) aparece
+    **antes** do clique, com o caminho para a ficha;
+  - "Nenhuma cobrança" virou atalho para gerar a cobrança já apontada para a reserva;
+  - os dois campos "Valor" do detalhe tinham o mesmo id — clicar no rótulo de um punha
+    o cursor no outro;
+  - PDV da Loja: o cliente era uma lista com todas as pessoas; agora é a busca agrupada
+    do Restaurante;
+  - Escala: a grade ficava inerte quando não havia funcionário cadastrado; Restaurante
+    sem ponto de atendimento agora avisa e leva ao cadastro; BOH cortava "PERMANÊNCIA
+    MÉDIA" a 821 px;
+  - um comentário do template escrito em duas linhas aparecia como texto cru na tela do
+    PDV e na lista da Governança — e um teste de design barra a volta.
+- **Monitor grande, por dentro do detalhe:** o painel da ação para em 900 px e os
+  indicadores do Financeiro em 300 px, em vez de faixas com o rótulo num canto e o valor
+  no outro.
+- **Estados da FNRH com maiúscula** ("Completa", "Pendente", "Responsável", "Enviada",
+  "Pendente de envio").
+
+**O que foi modificado**
+- **Copiar (`3123896`, `1e64729`):** `{% copiar texto rotulo recado telefone mostrar %}`
+  (`templates/componentes/copiar.html` + `static/js/copiar.js`, ouvinte delegado com
+  plano B por `execCommand`); `apps/nucleo/compartilhar.py` (`telefone_whatsapp`,
+  `mensagem_whatsapp`, `link_whatsapp`); `reservas.services.contato_da_reserva` (para
+  quem mandar, sem import de models).
+- **Ações da reserva (`5160e06`, `bb0c7c5`):** barra `.acoes-reserva-barra` (com o destrutivo em `.acoes-reserva-risco`) e painéis no
+  `reserva_detalhe.html` (mesmas views e POSTs); sai `reservas/partials/alterar_reserva.html`;
+  sinal recebido no painel Financeiro; `Reserva.pode_receber_sinal` e `STATUS_SINAL`.
+- **Atritos (`8a89948`, `0b36447`):** `DataInput`/`DataHoraInput` do núcleo nos forms de
+  FNRH, restrição, grupo e oportunidade; `tarifa_preview` com `intcomma_brl`; `auto_id`
+  próprio nos dois forms do detalhe; combobox de pessoa no PDV; aviso de ponto de
+  atendimento; `bindRoster()` da Escala; teste de design contra `{# … #}` em duas linhas.
+- **Maiúsculas (`0477f85`):** selos da FNRH no detalhe e nas fichas.
+
+**Como foi testado**
+- 25+ testes novos (telefone e mensagem do WhatsApp, o componente, as telas de
+  Pagamentos/reserva/QR/captação, datas em ISO nos quatro forms, saldo pré-preenchido,
+  ids separados, aviso do check-in, barra de ações por estado e cada painel com o seu
+  botão).
+- Merge sobre o `dev` com conflito só no fim de `apps/reservas/tests.py` (os dois lados
+  acrescentaram testes); 1.201 testes dos apps tocados na árvore juntada, só a falha conhecida do Windows.
+- Revisão no navegador antes do merge: detalhe da reserva (confirmada e hospedada),
+  Pagamentos e PDV em 390, 821 (menu aberto), 1440 e 2560 px — sem rolagem lateral,
+  nada saindo do cartão; o "Copiar" e o "Enviar pelo WhatsApp" do FNRH ao lado do botão.
+- **Suíte completa no Windows:** 1.599 testes no `0477f85` (eram 1.547 no bloco anterior), só a falha conhecida do ambiente
+  (`test_webhook_audio_baixa_e_salva_arquivo`). Ruff zero, `makemigrations --check`
+  limpo.
+
+**Para a pousada decidir**
+- Cobrar o **saldo** online de uma reserva já confirmada ou hospedada ainda não tem
+  atalho: o painel de Pagamentos só aceita sinal de orçamento ou pré-reserva.
+- O seletor de quarto da nova reserva lista quartos ocupados e só acusa no envio.
+- Não há nenhum ponto de atendimento cadastrado no Restaurante (a tela agora avisa).
+
+---
+
 ## 21/10/2026 — A navegação sem piscar, as dicas no lugar, a governança que ensina e o Estoque redesenhado (`6f66d4f` a `7899e11`)
 
 Décimo primeiro bloco: os pedidos do dono depois de usar o sistema — o menu piscando a
