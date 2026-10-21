@@ -26,8 +26,9 @@
     </div>
     <div>
       <label for="codigo" class="block text-sm font-semibold text-madeira mb-1.5">Código da reserva</label>
+      {# O código real é VT-ddmmaa-XXXXXX (6 caracteres no fim): o exemplo mostrava 4. #}
       <input type="text" name="codigo" id="codigo" value="{{ codigo }}" required
-             placeholder="VT-000000-0000"
+             placeholder="Ex.: VT-311026-A1B2C3" autocomplete="off" autocapitalize="characters" spellcheck="false"
              class="w-full bg-white border border-madeira/20 rounded-lg px-4 py-2.5 text-noturno placeholder-madeira/35 uppercase tracking-wider focus:outline-none focus:border-lampiao focus:ring-2 focus:ring-lampiao/30 transition">
     </div>
     <button type="submit"
