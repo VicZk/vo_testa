@@ -905,6 +905,41 @@ textarea { resize: vertical; }
 input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 
 .ajuda { display: block; color: var(--tinta-suave); font-size: .74rem; margin-top: .25rem; }
+
+/* Apoio de bloco — o que vivia escrito à mão em `style=` tela a tela.
+   Título de seção tinha TRÊS medidas para o mesmo papel (1/1.4/1.6rem): o
+   padrão é a maior; as outras ficam como modificador até a normalização. */
+.secao-titulo { margin-top: 1.6rem; }
+.secao-titulo.respiro-medio { margin-top: 1.4rem; }
+.secao-titulo.respiro-curto { margin-top: 1rem; }
+.titulo-topo { margin-top: 0; }                 /* título que ABRE um bloco */
+.cartao.respiro, .bloco-respiro { margin-top: 1rem; }
+.bloco-fim { margin-bottom: 1.2rem; }
+.bloco-subtitulo { margin: 0 0 .6rem; font-size: .85rem; }
+.bloco-subtitulo.respiro { margin-bottom: .8rem; }
+.bloco-texto { margin: 0 0 1rem; color: var(--tinta-suave); font-size: .9rem; line-height: 1.55; }
+.lista-passos { margin: 0; padding-left: 1.2rem; line-height: 1.65; color: var(--tinta-suave); }
+.lista-passos.compacta { padding-left: 1.1rem; }
+.form-inline-largo { display: inline-flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
+.form-embutido { display: inline; }
+.campo-medio { max-width: 340px; }
+.total-de { opacity: .4; }                      /* o "/N" do "3 de 12" */
+.grafico-caixa { height: 210px; margin-top: .6rem; }
+.letreiro-medio { font-size: .8rem; }
+.texto-medio { font-size: .9rem; }
+.campo-empilhado { display: grid; gap: .3rem; }
+.filtro-linha { display: flex; gap: .6rem; align-items: flex-end; flex-wrap: wrap; margin: .9rem 0; }
+.bloco-colado { margin-top: .3rem; }
+.bloco-respiro-curto { margin-top: .6rem; }
+.bloco-respiro-largo { margin-top: 1.2rem; }
+.bloco-margem { margin: 1rem 0; }
+.linha-botoes { display: flex; gap: .5rem; }
+.conc-acao-painel { margin-top: .5rem; display: grid; gap: .4rem; min-width: 180px; }
+.subtitulo-colado { margin: .5rem 0 0; }
+.grade-graficos {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.2rem; margin-top: 1.2rem;
+}
 /* Como CÉLULA de tabela, .ajuda vale só como texto suave — sem block/margin
    (senão o td sai do fluxo e a linha divisória escalona). */
 .tabela td.ajuda { display: table-cell; margin-top: 0; font-size: .84rem; vertical-align: middle; }

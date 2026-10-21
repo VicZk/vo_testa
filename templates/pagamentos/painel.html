@@ -7,7 +7,7 @@
 <p class="pagina-eyebrow letreiro">Financeiro</p>
 <div class="pagina-cabecalho">
   <h1>Pagamentos Online</h1>
-  <div style="display:flex;gap:.5rem">
+  <div class="linha-botoes">
     <a href="{% url 'pagamentos:conciliacao' %}" class="botao-neutro">Conciliação</a>
     <a href="{% url 'pagamentos:safrapay' %}" class="botao-neutro">Safrapay · chaves</a>
   </div>
@@ -38,7 +38,7 @@
       </tbody>
     </table>
 
-    <h2 style="margin-top:1.4rem">Conciliação</h2>
+    <h2 class="secao-titulo respiro-medio">Conciliação</h2>
     <table class="tabela">
       <thead><tr><th>Situação</th><th class="num">Qtd</th><th class="num">Total</th></tr></thead>
       <tbody>
@@ -52,7 +52,7 @@
   </section>
 
   <section class="painel-bloco" x-data="{ fin: 'avulso', metodo: 'pix' }">
-    <h2 style="margin-top:0">Nova cobrança</h2>
+    <h2 class="titulo-topo">Nova cobrança</h2>
     <form method="post" action="{% url 'pagamentos:criar' %}" class="form-cartao">
       {% csrf_token %}
       <div class="campo"><label>Descrição</label><input type="text" name="descricao" placeholder="Ex.: Sinal reserva #12" required></div>
@@ -62,13 +62,13 @@
           <select name="metodo" x-model="metodo">{% for v, r in metodos %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select>
         </div>
       </div>
-      <div class="campo" x-show="metodo === 'cartao'" x-cloak style="display:none">
+      <div class="campo" x-show="metodo === 'cartao'" x-cloak>
         <label>Parcelas</label><input type="number" name="parcelas" min="1" max="12" value="1">
       </div>
       <div class="campo"><label>Finalidade</label>
         <select name="finalidade" x-model="fin">{% for v, r in finalidades %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select>
       </div>
-      <div class="campo" x-show="fin === 'sinal_reserva'" x-cloak style="display:none">
+      <div class="campo" x-show="fin === 'sinal_reserva'" x-cloak>
         <label>Reserva</label>
         <select name="reserva_id">
           <option value="">Escolha…</option>
