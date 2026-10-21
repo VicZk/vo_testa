@@ -33,7 +33,9 @@
         </div>
 
         <!-- Mobile menu button -->
-        <button id="menuBtn" class="lg:hidden text-pergaminho p-2 -mr-2 shrink-0" aria-label="Abrir menu">
+        {# p-3 (48px) e não p-2 (40px): é o alvo de toque mais usado do site. #}
+        <button id="menuBtn" class="lg:hidden text-pergaminho p-3 -mr-3 shrink-0"
+                aria-controls="mobileMenu" aria-expanded="false" aria-label="Abrir menu">
             <svg id="menuIcon" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
             <svg id="closeIcon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
         </button>

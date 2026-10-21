@@ -160,10 +160,22 @@ header { view-transition-name: site-header; }
 /* Menu mobile */
 .mobile-menu {
     transform: translateX(100%);
-    transition: transform 0.3s ease-in-out;
+    /* Fechado, sai da ordem de tabulação. Estava só fora da tela por
+       translateX: no celular o Tab percorria os 11 links invisíveis do menu
+       antes de chegar ao conteúdo. A visibilidade só volta a `hidden` no FIM
+       do deslize, para o menu não sumir de estalo ao fechar. */
+    visibility: hidden;
+    transition: transform 0.3s ease-in-out, visibility 0s linear 0.3s;
 }
 .mobile-menu.open {
     transform: translateX(0);
+    visibility: visible;
+    transition: transform 0.3s ease-in-out, visibility 0s;
+}
+@media (prefers-reduced-motion: reduce) {
+    .mobile-menu, .mobile-menu.open, .mobile-overlay, .mobile-overlay.open {
+        transition-duration: 1ms;
+    }
 }
 .mobile-overlay {
     opacity: 0;

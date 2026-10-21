@@ -98,7 +98,7 @@
   .sheet-etapa:active{background:var(--canvas)}
   .sheet-etapa .ponto{width:10px;height:10px;border-radius:50%;background:var(--cor-etapa,var(--lampiao));flex:0 0 auto}
   @media (prefers-reduced-motion: no-preference){
-    .sheet{animation:sheet-sobe .22s cubic-bezier(.22,.61,.36,1)}
+    .sheet{animation:sheet-sobe var(--mov-padrao) var(--curva-entrada)}
     @keyframes sheet-sobe{from{transform:translateY(14px);opacity:.5}to{transform:none;opacity:1}}
   }
 
@@ -462,7 +462,8 @@
     sheet.addEventListener('touchend', () => {
       if (!ativo) return;
       ativo = false;
-      sheet.style.transition = reduzir ? '' : 'transform .24s cubic-bezier(.22,.61,.36,1)';
+      sheet.style.transition = reduzir ? ''
+        : 'transform var(--mov-padrao) var(--curva-entrada)';
       if (dy > 90) {                                  // passou do limiar → fecha
         const data = Alpine.$data(document.querySelector('[x-data]'));
         sheet.style.transform = 'translateY(100%)';

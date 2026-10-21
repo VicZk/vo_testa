@@ -667,6 +667,16 @@ input[type="radio"] { accent-color: var(--lampiao); }
     min-height: 44px;
   }
   .botao-primario { display: inline-flex; align-items: center; justify-content: center; }
+  .pt-wrap input,
+  .pt-wrap select,
+  .pt-wrap textarea,
+  .pay input,
+  .pay select {
+    min-height: 44px;
+  }
+  .voltar {
+    display: inline-flex; align-items: center; min-height: 44px;
+  }
 }
 
 @media (max-width: 680px) {

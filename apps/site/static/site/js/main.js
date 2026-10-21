@@ -24,6 +24,17 @@ function toggleMenu() {
     menuIcon.classList.toggle('hidden', menuOpen);
     closeIcon.classList.toggle('hidden', !menuOpen);
     document.body.style.overflow = menuOpen ? 'hidden' : '';
+    // O botão dizia "Abrir menu" mesmo com o menu aberto.
+    menuBtn.setAttribute('aria-expanded', menuOpen ? 'true' : 'false');
+    menuBtn.setAttribute('aria-label', menuOpen ? 'Fechar menu' : 'Abrir menu');
+    // Aberto, o menu cobre a tela: o foco vai para dentro dele e, ao fechar,
+    // volta para o botão — ninguém perde o lugar.
+    if (menuOpen) {
+        const primeiro = mobileMenu.querySelector('a[href], button:not([disabled])');
+        if (primeiro) primeiro.focus();
+    } else if (mobileMenu.contains(document.activeElement)) {
+        menuBtn.focus();
+    }
 }
 
 if (menuBtn) {
@@ -34,6 +45,24 @@ if (menuBtn) {
         link.addEventListener('click', () => {
             if (menuOpen) toggleMenu();
         });
+    });
+
+    // Enquanto o menu está aberto ele é um diálogo: Esc fecha e o Tab circula
+    // dentro dele (antes o foco escapava para a página atrás do véu).
+    document.addEventListener('keydown', e => {
+        if (!menuOpen) return;
+        if (e.key === 'Escape') { toggleMenu(); return; }
+        if (e.key !== 'Tab') return;
+        const itens = Array.from(
+            mobileMenu.querySelectorAll('a[href], button:not([disabled])'));
+        if (!itens.length) return;
+        const primeiro = itens[0], ultimo = itens[itens.length - 1];
+        const dentro = mobileMenu.contains(document.activeElement);
+        if (e.shiftKey && (!dentro || document.activeElement === primeiro)) {
+            e.preventDefault(); ultimo.focus();
+        } else if (!e.shiftKey && (!dentro || document.activeElement === ultimo)) {
+            e.preventDefault(); primeiro.focus();
+        }
     });
 }
 

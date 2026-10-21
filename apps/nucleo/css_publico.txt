@@ -113,3 +113,9 @@ cancelado
 @media (pointer: coarse), (max-width: 820px) ‖ .botao-primario
 @media (pointer: coarse), (max-width: 820px) ‖ .botao-neutro
 @media (max-width: 680px) ‖ .form-grade
+@media (pointer: coarse), (max-width: 820px) ‖ .pt-wrap input
+@media (pointer: coarse), (max-width: 820px) ‖ .pt-wrap select
+@media (pointer: coarse), (max-width: 820px) ‖ .pt-wrap textarea
+@media (pointer: coarse), (max-width: 820px) ‖ .pay input
+@media (pointer: coarse), (max-width: 820px) ‖ .pay select
+@media (pointer: coarse), (max-width: 820px) ‖ .voltar

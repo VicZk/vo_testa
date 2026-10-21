@@ -48,6 +48,18 @@
             const achou = this.itens.find((it) => String(it.id) === String(inicial));
             if (achou) this.q = achou.nome;
           }
+          // Com o campo perto do fim da tela, a lista abria para FORA dela — e
+          // ela chega a 320px de altura. Antes de aparecer, escolhe o lado.
+          this.$watch("open", (aberto) => {
+            if (aberto) this.$nextTick(() => this.posicionar());
+          });
+        },
+        posicionar() {
+          const campo = this.$el.querySelector(".combo-input");
+          if (!campo) return;
+          const r = campo.getBoundingClientRect();
+          const abaixo = window.innerHeight - r.bottom;
+          this.$el.classList.toggle("combo-acima", abaixo < 200 && r.top > abaixo);
         },
         casaFiltro(it, f) { return it.nome.toLowerCase().includes(f); },
         get grupos() {

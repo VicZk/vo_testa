@@ -2953,7 +2953,9 @@ div.porta.dica[data-dica] { cursor: default; }
 .combo-input:focus { border-color: var(--lampiao); box-shadow: 0 0 0 3px color-mix(in srgb, var(--lampiao) 18%, transparent); }
 .combo-lista {
   position: absolute; z-index: 40; top: calc(100% + 4px); left: 0; right: 0;
-  max-height: 320px; overflow-y: auto;
+  /* Nunca mais alta que metade da tela: no celular deitado, 320px fixos já
+     nasciam saindo embaixo. */
+  max-height: min(320px, 46vh); overflow-y: auto;
   background: var(--superficie); border: 1px solid var(--fio); border-radius: var(--raio);
   box-shadow: var(--sombra-3); padding: 0 .3rem .3rem;
 }
@@ -2974,6 +2976,9 @@ div.porta.dica[data-dica] { cursor: default; }
 .combo-opcao:hover, .combo-opcao.destacada { background: color-mix(in srgb, var(--lampiao) 12%, var(--superficie)); }
 .combo-opcao.destacada { box-shadow: inset 0 0 0 2px var(--foco-contorno); }
 .combo-vazio { padding: .7rem .6rem; font-size: .88rem; color: var(--tinta-suave); }
+/* Sem espaço embaixo (campo no fim da tela), a lista abre para cima. Quem
+   decide é `posicionar()` no base.html — é posição na VIEWPORT, não no pai. */
+.combo.combo-acima .combo-lista { top: auto; bottom: calc(100% + 4px); }
 
 /* Manutenção */
 .colunas-2-1 { grid-template-columns: 2fr 1fr; }
@@ -3781,6 +3786,15 @@ form.filtros:not(.subnav) select:focus {
   position: fixed; top: 0; right: 0; bottom: 0; z-index: 81;
   width: min(520px, 94vw); display: flex; flex-direction: column;
   background: var(--superficie); border-left: 1px solid var(--fio); box-shadow: var(--sombra-3);
+}
+/* A gaveta aparecia inteira de um quadro para o outro (o HTMX injeta o HTML e
+   pronto). Entra deslizando da borda que ela ocupa, pelo token de sobreposição. */
+@media (prefers-reduced-motion: no-preference) {
+  .fx-gaveta { animation: gaveta-entra var(--mov-lento) var(--curva-entrada) both; }
+  @keyframes gaveta-entra {
+    from { transform: translateX(18px); opacity: 0; }
+    to { transform: none; opacity: 1; }
+  }
 }
 .fx-in {
   width: 100%; box-sizing: border-box; padding: 9px 11px;
@@ -4953,6 +4967,21 @@ body.escala-dragging .escala-drop { cursor: copy; }
   /* Link de texto na tabela: a área de toque cresce para a altura da linha
      sem mudar o desenho — o texto fica onde está. */
   .tabela td > a:not([class]) { display: inline-block; padding-block: .62rem; margin-block: -.62rem; }
+
+  /* ─── Telas que NÃO vivem dentro de `.conteudo` ───────────────────────────
+     Portal do hóspede, página de pagamento e login ficam fora da casca do CRM,
+     então a regra de 44px acima não os alcançava — e são justamente as três
+     que só abrem no celular. Campo de 40px e link de 20px de altura. */
+  .pt-wrap input, .pt-wrap select, .pt-wrap textarea,
+  .login-cartao input, .pay input, .pay select {
+    min-height: 44px;
+  }
+  /* Link que ocupa a linha inteira (voltar, "esqueci minha senha") vira alvo de
+     44px. Link no MEIO de uma frase fica de fora de propósito: crescer a caixa
+     dele quebraria o parágrafo, e a WCAG 2.5.8 isenta o alvo inline. */
+  .voltar, .voltar-site, .login-cartao p > a {
+    display: inline-flex; align-items: center; min-height: 44px;
+  }
 }
 
 /* Título de grupo dentro de um formulário longo. Dez campos seguidos sem

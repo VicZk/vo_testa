@@ -600,6 +600,79 @@ class DentroDoContainerTests(TestCase):
             r"@media \(max-width: 560px\) \{\s*\n\s*\.filtro-periodo \{[^}]*flex-direction: column")
 
 
+class FlutuantesTests(TestCase):
+    """Sobreposições: lista de combo, gaveta, bottom sheet.
+
+    Duas regras: a caixa que flutua tem de caber na TELA (não no pai), e o
+    movimento sai dos tokens — senão não some sob `prefers-reduced-motion`.
+    """
+
+    def setUp(self):
+        self.css = CSS.read_text(encoding="utf-8").replace("\r\n", "\n")
+        self.base = (Path(settings.BASE_DIR) / "templates" / "base.html").read_text(encoding="utf-8")
+
+    def test_lista_do_combo_cabe_na_tela(self):
+        """Com o campo perto do fim da tela, a lista abria 31px para FORA —
+        e ela chega a 320px de altura."""
+        bloco = re.search(r"\n\.combo-lista \{([^}]*)\}", self.css)
+        self.assertIsNotNone(bloco)
+        self.assertIn("max-height: min(", bloco.group(1))
+        self.assertIn(".combo.combo-acima .combo-lista", self.css)
+        self.assertIn("posicionar()", self.base)
+
+    def test_gaveta_do_marketing_entra_animada(self):
+        """O HTMX injeta o HTML e ela aparecia inteira de um quadro para o outro."""
+        self.assertIn("gaveta-entra", self.css)
+        bloco = re.search(r"\.fx-gaveta \{ animation: gaveta-entra ([^;]*);", self.css)
+        self.assertIsNotNone(bloco)
+        self.assertIn("var(--mov-lento)", bloco.group(1))
+
+    def test_bottom_sheet_do_funil_usa_os_tokens(self):
+        funil = (Path(settings.BASE_DIR) / "templates" / "comercial" / "funil.html"
+                 ).read_text(encoding="utf-8")
+        self.assertNotIn("cubic-bezier(.22,.61,.36,1)", funil)
+        self.assertIn("animation:sheet-sobe var(--mov-padrao)", funil)
+
+    def test_alvo_de_44px_nas_telas_fora_da_casca(self):
+        """Portal, pagamento e login não vivem dentro de `.conteudo`: a regra de
+        44px do CRM não os alcançava, e são as que só abrem no celular."""
+        blocos = re.findall(r"@media \(pointer: coarse\), \(max-width: 820px\) \{([\s\S]*?)\n\}",
+                            self.css)
+        corpo = "\n".join(blocos)
+        for sel in (".pt-wrap input", ".pay input", ".voltar-site"):
+            self.assertIn(sel, corpo, sel)
+
+
+class MenuDoSiteTests(TestCase):
+    """O menu do celular do site tinha os mesmos buracos do menu do CRM: fechado
+    seguia tabulável, aberto não prendia o foco e o botão não dizia o estado."""
+
+    def setUp(self):
+        base = Path(settings.BASE_DIR) / "apps" / "site" / "static" / "site"
+        self.css = (base / "css" / "animations.css").read_text(encoding="utf-8")
+        self.js = (base / "js" / "main.js").read_text(encoding="utf-8")
+        self.header = (Path(settings.BASE_DIR) / "apps" / "site" / "templates" / "site"
+                       / "partials" / "header.html").read_text(encoding="utf-8")
+
+    def test_menu_fechado_sai_da_tabulacao(self):
+        bloco = re.search(r"\n\.mobile-menu \{([^}]*)\}", self.css)
+        self.assertIsNotNone(bloco)
+        self.assertIn("visibility: hidden", bloco.group(1))
+
+    def test_menu_aberto_e_dialogo(self):
+        self.assertIn("'Escape'", self.js)
+        self.assertIn("e.preventDefault(); ultimo.focus();", self.js)
+        self.assertIn("aria-expanded", self.js)
+
+    def test_botao_do_menu_tem_alvo_de_toque(self):
+        self.assertRegex(self.header, r'id="menuBtn"[^>]*class="[^"]*\bp-3\b')
+        self.assertIn('aria-controls="mobileMenu"', self.header)
+
+    def test_movimento_do_menu_cede_a_quem_pede_menos(self):
+        self.assertRegex(self.css,
+                         r"@media \(prefers-reduced-motion: reduce\) \{[^}]*\.mobile-menu")
+
+
 class PortalDoHospedeTests(TestCase):
     """É a primeira experiência digital do hóspede — e era a tela mais fraca.
 
