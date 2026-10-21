@@ -1734,8 +1734,8 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 /* Próximo passo do quarto: UMA ação principal + as secundárias, todas na mesma
    linha-base e com a mesma altura. Antes conviviam ali um `.botao-neutro` de 40px,
    um `<summary>` sem altura e um `.botao-mini` — três alinhamentos diferentes, que
-   era exatamente o desalinho relatado. O `<td>` vira flex (as células desta tabela
-   já são cartões no celular, então não há fluxo de tabela a preservar aqui). */
+   era exatamente o desalinho relatado. Quem vira flex é a div de dentro (ver
+   abaixo), e todos os botões dela têm a mesma altura mínima — também no toque. */
 .acoes-quarto {
   display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end;
   gap: .4rem .5rem;
@@ -5502,8 +5502,12 @@ body.escala-dragging .escala-drop { cursor: copy; }
   .botao-primario, .botao-neutro, .botao-perigo, .botao-mini,
   .filtro-chip, .chip-limpeza, .lb-tab, .func-aba, .seg-filtro a, .segmentado .chip,
   .menu-mobile, .busca-global,
-  /* A ronda da governança é feita no corredor, de celular, com a mão ocupada. */
-  .botao-ronda, .acoes-quarto .botao-mini {
+  /* A ronda da governança é feita no corredor, de celular, com a mão ocupada. Os
+     botões do próximo passo vêm juntos: os 36 px deles (mais específicos que a
+     regra geral acima) deixavam «Aprovar limpeza» mais baixo que «Devolver para
+     limpar», lado a lado no tablet. */
+  .botao-ronda, .acoes-quarto .botao-mini,
+  .acoes-quarto .botao-primario, .acoes-quarto .botao-neutro {
     min-height: 44px;
   }
   /* O menu é o controle mais tocado do sistema no celular, e era o que tinha

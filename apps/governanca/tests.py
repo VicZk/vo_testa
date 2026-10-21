@@ -403,6 +403,8 @@ class DiscrepanciaTests(RondaBase):
         self.assertEqual(achados[self.uh2.pk]["tipo"], "nao_conferido")
         self.assertEqual(d["resumo"]["nao_conferido"], 2)
         self.assertEqual(d["conferidos"], 0)
+        # "Resolver" leva aonde a ronda se faz: a lista (a entrada virou a visão geral).
+        self.assertEqual(achados[self.uh.pk]["url"], reverse("governanca:quartos"))
 
     def test_conferido_sai_do_nao_conferido(self):
         services.registrar_conferencia(self.uh, "vago", usuario=self.user)
@@ -825,6 +827,27 @@ class ComecarLimpezaNumToqueTests(GovernancaBase):
         tarefa = TarefaGovernanca.objects.get(uh=self.uh)
         self.assertEqual(tarefa.status, TarefaGovernanca.Status.PENDENTE)
         self.assertEqual(services.situacao_uh(self.uh).situacao, "suja")
+
+    def test_toque_duplo_nao_devolve_o_quarto_para_a_limpar(self):
+        """O segundo POST achava a faxina já em andamento, mas antes marcava o quarto
+        como sujo: ficava «A limpar» com alguém limpando, e o botão da linha
+        («Começar limpeza» → iniciar) não o tirava mais de lá."""
+        for _ in range(2):
+            self.client.post(reverse("governanca:nova_tarefa"),
+                             {"uh": self.uh.pk, "tipo": "faxina_completa", "iniciar": "1"},
+                             headers={"hx-request": "true"})
+        self.assertEqual(TarefaGovernanca.objects.filter(uh=self.uh).count(), 1)
+        self.assertEqual(services.situacao_uh(self.uh).situacao, "em_limpeza")
+
+    def test_quarto_preso_em_a_limpar_se_acerta_no_botao_da_linha(self):
+        """Quem já ficou preso (faxina em andamento, quarto «A limpar») sai pelo
+        próprio botão principal da linha."""
+        tarefa = services.abrir_faxina(self.uh, usuario=self.user)
+        services.iniciar_tarefa(tarefa, self.user)
+        services.definir_status(self.uh, StatusLimpeza.Situacao.SUJA, self.user)
+        self.client.post(reverse("governanca:tarefa_acao", args=[tarefa.pk]),
+                         {"acao": "iniciar"}, headers={"hx-request": "true"})
+        self.assertEqual(services.situacao_uh(self.uh).situacao, "em_limpeza")
 
 
 class DevolverParaLimparTests(GovernancaBase):

@@ -31,16 +31,31 @@ def definir_status(uh, situacao, usuario=None):
 
 
 def abrir_faxina(uh, tipo=TarefaGovernanca.Tipo.FAXINA, usuario=None, origem="manual"):
-    """Marca o quarto como sujo e cria a tarefa de faxina (evita duplicar pendente)."""
-    definir_status(uh, StatusLimpeza.Situacao.SUJA, usuario)
-    tarefa = (
-        TarefaGovernanca.objects.filter(
-            uh=uh, tipo=tipo, status__in=["pendente", "em_andamento"]
+    """Marca o quarto como sujo e cria a tarefa de faxina (evita duplicar pendente).
+
+    Toque duplo e duas abas chegam aqui juntos («Começar limpeza» abre e já começa
+    a faxina). A trava na situação do quarto põe um pedido atrás do outro e o
+    segundo acha a tarefa do primeiro. Trava a linha da própria Governança, não a
+    UH: o check-out chega aqui por sinal, dentro da transação de Reservas. E faxina
+    que já começou não rebaixa o quarto para «A limpar» — ele ficava sujo com
+    alguém limpando, e o botão da linha não o tirava mais de lá.
+    """
+    from django.db import transaction
+
+    from apps.nucleo.sistema import travar
+
+    with transaction.atomic():
+        travar(situacao_uh(uh))
+        tarefa = TarefaGovernanca.objects.filter(
+            uh=uh, tipo=tipo,
+            status__in=[TarefaGovernanca.Status.PENDENTE, TarefaGovernanca.Status.EM_ANDAMENTO],
         ).first()
-    )
-    if tarefa:
-        return tarefa
-    return TarefaGovernanca.objects.create(uh=uh, tipo=tipo, origem=origem)
+        if tarefa and tarefa.status == TarefaGovernanca.Status.EM_ANDAMENTO:
+            return tarefa
+        definir_status(uh, StatusLimpeza.Situacao.SUJA, usuario)
+        if tarefa:
+            return tarefa
+        return TarefaGovernanca.objects.create(uh=uh, tipo=tipo, origem=origem)
 
 
 def gerar_arrumacoes_do_dia(usuario=None) -> int:
@@ -68,12 +83,24 @@ def gerar_arrumacoes_do_dia(usuario=None) -> int:
 
 
 def iniciar_tarefa(tarefa, usuario=None):
-    if tarefa.status != TarefaGovernanca.Status.PENDENTE:
-        return tarefa  # já iniciada/concluída — idempotente
-    tarefa.status = TarefaGovernanca.Status.EM_ANDAMENTO
-    tarefa.iniciada_em = timezone.now()
-    tarefa.save()
-    definir_status(tarefa.uh, StatusLimpeza.Situacao.EM_LIMPEZA, usuario)
+    from django.db import transaction
+
+    from apps.nucleo.sistema import travar
+
+    with transaction.atomic():
+        travar(tarefa)
+        if tarefa.status == TarefaGovernanca.Status.EM_ANDAMENTO:
+            # Já começou (toque duplo, outra aba). Se o quarto ficou «A limpar» com
+            # a limpeza em andamento, acerta: é o que ele está.
+            if situacao_uh(tarefa.uh).situacao == StatusLimpeza.Situacao.SUJA:
+                definir_status(tarefa.uh, StatusLimpeza.Situacao.EM_LIMPEZA, usuario)
+            return tarefa
+        if tarefa.status != TarefaGovernanca.Status.PENDENTE:
+            return tarefa  # concluída — idempotente
+        tarefa.status = TarefaGovernanca.Status.EM_ANDAMENTO
+        tarefa.iniciada_em = timezone.now()
+        tarefa.save()
+        definir_status(tarefa.uh, StatusLimpeza.Situacao.EM_LIMPEZA, usuario)
     return tarefa
 
 
@@ -685,7 +712,7 @@ def _acao_da_divergencia(cod, uh, pms, conferencia):
         pms_diz = "Livre"
     if cod == "nao_conferido":
         visto = "—"
-        url = reverse("governanca:painel")        # a ação é fazer a ronda
+        url = reverse("governanca:quartos")       # a ação é fazer a ronda (na lista)
     else:
         visto = conferencia.get_visto_display()
         url = (reverse("reservas:detalhe", args=[pms["reserva_id"]]) if pms
