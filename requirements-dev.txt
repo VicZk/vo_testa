@@ -5,6 +5,7 @@
 ruff==0.15.20        # lint + regras de segurança (S) — config em ruff.toml
 pip-audit==2.10.1    # auditoria de vulnerabilidades das dependências
 pytest==9.1.1        # execução alternativa de testes (a padrão é manage.py test)
+playwright==1.64.0   # testes no navegador (apps/site/tests_e2e.py); depois: playwright install chromium
 
 # Segurança (gate do CI + pre-commit) — ver .pre-commit-config.yaml e .github/workflows/security.yml
 bandit==1.9.4        # SAST Python

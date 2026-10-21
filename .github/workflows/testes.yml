@@ -69,3 +69,48 @@ jobs:
 
       - name: Suíte de testes
         run: python manage.py test --noinput
+
+  # Os fluxos no navegador de verdade (apps/site/tests_e2e.py): reserva no site do
+  # começo ao fim, calendário, funil (busca e arrasto), a LP da Inauguração (checkbox de
+  # LGPD no lugar, fotos e fontes carregando, medição só depois do "Aceitar") e o menu
+  # lateral do CRM (o trilho não pula). Na suíte de cima eles PULAM — lá não tem
+  # Playwright; aqui, com E2E_OBRIGATORIO, faltar o Playwright é erro, não pulo.
+  navegador:
+    name: Fluxos no navegador (Playwright + Chromium)
+    runs-on: ubuntu-24.04  # fixo: o ubuntu-latest vira Ubuntu 26 a partir de 19/10/2026
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: vo
+          POSTGRES_PASSWORD: vo_ci
+          POSTGRES_DB: crm_vo_testa
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DEBUG: "1"
+      DATABASE_URL: postgres://vo:vo_ci@localhost:5432/crm_vo_testa
+      E2E_OBRIGATORIO: "1"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+          cache: pip
+
+      - name: Instalar dependências e o Chromium
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt playwright==1.64.0
+          python -m playwright install --with-deps chromium
+
+      - name: Testes no navegador
+        run: python manage.py test apps.site.tests_e2e --noinput

@@ -1,11 +1,13 @@
 """Testes E2E (navegador real via Playwright) dos fluxos críticos.
 
 Rodam no próprio `manage.py test` usando StaticLiveServerTestCase (sobe um servidor
-de verdade) + Playwright headless. Pulam sozinhos se o Playwright/navegador não
-estiver instalado — não quebram a suíte de quem não tem.
+de verdade) + Playwright headless. Pulam sozinhos se o Playwright não estiver
+instalado — não quebram a suíte de quem não tem. No CI rodam num job próprio
+("Fluxos no navegador", testes.yml) com `E2E_OBRIGATORIO=1`: lá, faltar o Playwright
+é erro, para o job nunca ficar verde pulando tudo.
 
 Para rodar localmente:
-    .venv/bin/pip install playwright && .venv/bin/playwright install chromium
+    .venv/bin/pip install playwright==1.64.0 && .venv/bin/playwright install chromium
     .venv/bin/python manage.py test apps.site.tests_e2e
 """
 import os
@@ -21,6 +23,8 @@ try:
     from playwright.sync_api import sync_playwright
     _PLAYWRIGHT_OK = True
 except ImportError:  # pragma: no cover
+    if os.environ.get("E2E_OBRIGATORIO") == "1":
+        raise
     _PLAYWRIGHT_OK = False
 
 
@@ -320,3 +324,113 @@ class FunilMoverLeadE2ETests(_FunilComercialMixin, _BaseE2E):
         op.refresh_from_db()
         self.assertEqual(op.etapa_id, contato.id)
         self.assertEqual(op.status, Oportunidade.Status.ABERTA)
+
+
+@unittest.skipUnless(_PLAYWRIGHT_OK, "playwright não instalado (ver docstring)")
+class LpInauguracaoE2ETests(_BaseE2E):
+    """A LP da Inauguração no navegador. Guarda dois tropeços reais: o aviso de cookies
+    nasceu com a classe `.consent`, a mesma do checkbox de LGPD do RSVP — o
+    `position: fixed` do aviso arrancava o checkbox do formulário e o botão de enviar
+    subia por cima do texto; e as fotos e fontes saíram do HTML (2,1 MB → 89 KB) para
+    endereços próprios, que precisam carregar de verdade."""
+
+    URL = "/lp/inauguracao_31_10_2026/"
+
+    def _abrir(self, largura=390, altura=844):
+        self.page.set_viewport_size({"width": largura, "height": altura})
+        terceiros = []
+        base = self.live_server_url
+
+        def filtrar(rota):
+            if rota.request.url.startswith(base):
+                rota.continue_()
+            else:                       # nada sai para Google/Meta/Maps no teste
+                terceiros.append(rota.request.url)
+                rota.abort()
+        self.page.route("**/*", filtrar)
+        self.page.goto(self.url(self.URL), wait_until="load")
+        return terceiros
+
+    def test_checkbox_do_rsvp_fica_no_formulario_com_o_aviso_na_tela(self):
+        self._abrir()
+        self.page.locator("#consentimento").wait_for(state="visible")
+        geo = self.page.evaluate("""() => {
+            const f = document.getElementById('formInaug');
+            const l = f.querySelector('label.consent'), b = f.querySelector('button[type=submit]');
+            const rf = f.getBoundingClientRect(), rl = l.getBoundingClientRect(), rb = b.getBoundingClientRect();
+            return {posicao: getComputedStyle(l).position, dentro: rl.top >= rf.top && rl.bottom <= rf.bottom,
+                    botao_abaixo: rb.top >= rl.bottom - 1}; }""")
+        self.assertEqual(geo, {"posicao": "static", "dentro": True, "botao_abaixo": True})
+
+    def test_fotos_e_fontes_desembutidas_carregam(self):
+        self._abrir(1440, 900)
+        self.page.evaluate("() => document.fonts.ready")
+        self.page.evaluate("() => window.scrollTo(0, document.body.scrollHeight)")
+        self.page.wait_for_function(
+            "() => [...document.images].every(i => i.complete)", timeout=10000)
+        quebradas = self.page.evaluate(
+            "() => [...document.images].filter(i => i.currentSrc && !i.naturalWidth).map(i => i.currentSrc)")
+        self.assertEqual(quebradas, [])
+        self.assertTrue(self.page.evaluate(
+            "() => [...document.fonts].some(f => f.family.includes('Neco') && f.status === 'loaded')"))
+
+    def test_medicao_so_depois_do_aceite(self):
+        terceiros = self._abrir()
+        guardadas = "() => document.querySelectorAll('script[type=\"text/plain\"][data-consentimento]').length"
+        self.assertGreater(self.page.evaluate(guardadas), 0)
+        self.assertEqual([u for u in terceiros if "googletagmanager" in u or "facebook" in u], [])
+        self.page.get_by_role("button", name="Aceitar").click()
+        self.page.locator("#consentimento").wait_for(state="hidden")
+        self.assertEqual(self.page.evaluate(guardadas), 0)
+        self.assertEqual(self.page.evaluate("() => localStorage.getItem('votesta-consentimento')"), "aceito")
+        self.page.reload(wait_until="load")
+        self.page.wait_for_timeout(300)
+        self.assertFalse(self.page.locator("#consentimento").is_visible())
+
+
+@unittest.skipUnless(_PLAYWRIGHT_OK, "playwright não instalado (ver docstring)")
+class MenuLateralE2ETests(_BaseE2E):
+    """O menu lateral do CRM recolhe para o trilho sem pular: cada ícone fica no mesmo x
+    nos dois estados, os rótulos somem por opacidade no trilho e, aberto, nenhum rótulo
+    passa da borda do menu (o "elementos meio fora, overlap e extrusão" do pedido)."""
+
+    MEDIR = """() => {
+      const sb = document.querySelector('.sidebar').getBoundingClientRect();
+      const itens = [...document.querySelectorAll('.sidebar .nav-item, .sidebar .acao-topo')];
+      return {
+        largura: Math.round(sb.width),
+        icones: itens.map(i => +(i.querySelector('.ico').getBoundingClientRect().left - sb.left).toFixed(1)),
+        opacidades: itens.map(i => getComputedStyle(i.querySelector('.rotulo')).opacity),
+        fora: itens.filter(i => {
+          const r = i.querySelector('.rotulo').getBoundingClientRect();
+          return getComputedStyle(i.querySelector('.rotulo')).opacity !== '0' && r.right > sb.right + .5;
+        }).map(i => i.textContent.trim()),
+      };
+    }"""
+
+    def test_trilho_e_o_menu_aberto_recortado(self):
+        from apps.nucleo.models import Usuario
+        Usuario.objects.create_superuser(username="menu", password="forte-123-abc")
+        self.page.set_viewport_size({"width": 1440, "height": 900})
+        self.page.emulate_media(reduced_motion="reduce")
+        self.page.goto(self.url("/crm/entrar/"))
+        self.page.fill("input[name=username]", "menu")
+        self.page.fill("input[name=password]", "forte-123-abc")
+        self.page.press("input[name=password]", "Enter")
+        self.page.wait_for_selector(".sidebar")
+        self.page.evaluate("() => localStorage.setItem('sidebar', 'aberta')")
+        self.page.reload(wait_until="load")
+        self.page.wait_for_timeout(200)
+        aberta = self.page.evaluate(self.MEDIR)
+        self.page.click("#btn-recolher")
+        self.page.wait_for_function(
+            "() => Math.round(document.querySelector('.sidebar').getBoundingClientRect().width) < 100")
+        self.page.wait_for_timeout(200)
+        trilho = self.page.evaluate(self.MEDIR)
+
+        self.assertGreater(len(aberta["icones"]), 1)
+        self.assertEqual(aberta["icones"], trilho["icones"])          # nenhum ícone pula
+        self.assertEqual(set(trilho["opacidades"]), {"0"})            # rótulos somem no trilho
+        self.assertEqual(set(aberta["opacidades"]), {"1"})
+        self.assertEqual(aberta["fora"], [])                          # nada passa da borda
+        self.assertLess(trilho["largura"], aberta["largura"])
