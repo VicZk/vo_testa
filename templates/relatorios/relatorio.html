@@ -22,7 +22,7 @@ busca na folha.{% endcomment %}
   <div class="pagina-cabecalho">
     <h1>{{ titulo }}</h1>
     <div class="linha-botoes">
-      <a href="?{% if f.de %}de={{ f.de }}&ate={{ f.ate }}{% else %}mes={{ mes_sel }}&ano={{ ano_sel }}{% endif %}&export=csv" class="botao-neutro">Exportar CSV</a>
+      <a href="?{% if f.de %}de={{ f.de }}&ate={{ f.ate }}{% else %}mes={{ mes_sel }}&ano={{ ano_sel }}{% endif %}{% for c in controles %}&{{ c.nome }}={{ c.valor }}{% endfor %}&export=csv" class="botao-neutro">Exportar CSV</a>
       <button type="button" class="botao-neutro" onclick="window.print()">Imprimir / PDF</button>
       <a href="{% url 'relatorios:index' %}" class="botao-mini">Voltar</a>
     </div>
@@ -45,6 +45,16 @@ busca na folha.{% endcomment %}
         {% endfor %}
       </select>
     </div>
+    {% for c in controles %}
+      <div class="filtro-campo">
+        <label>{{ c.rotulo }}</label>
+        <select name="{{ c.nome }}" aria-label="{{ c.rotulo }}" onchange="this.form.submit()">
+          {% for valor, nome in c.escolhas %}
+            <option value="{{ valor }}" {% if valor == c.valor %}selected{% endif %}>{{ nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    {% endfor %}
     <details class="rel-personalizado">
       <summary>Período personalizado</summary>
       <div class="filtro-periodo">
@@ -58,6 +68,8 @@ busca na folha.{% endcomment %}
 </div>
 
 <p class="subtitulo">Período: {{ inicio|date:"d/m/Y" }} a {{ fim|date:"d/m/Y" }} ({{ rotulo }})</p>
+{# Como ler o relatório: o que entra, o que fica fora e o que é estimativa. #}
+{% if dados.nota %}<p class="subtitulo subtitulo-mini">{{ dados.nota }}</p>{% endif %}
 
 <div class="cartoes-indicadores colunas">
   {% for rotulo_kpi, valor in dados.kpis %}
