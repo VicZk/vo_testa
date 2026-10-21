@@ -162,6 +162,14 @@ DATABASES = {
         conn_max_age=600,
     )
 }
+# JIT do Postgres desligado na conexão do sistema. Com tabelas pequenas que nunca
+# passaram pelo ANALYZE (a pousada tem 24 quartos e poucas dezenas de pessoas: o
+# autovacuum só analisa depois de 50 mudanças), o planejador estima milhões de linhas
+# num JOIN e compila a consulta antes de rodar: o seletor de pessoas levava 185 ms de
+# compilação para 1,4 ms de consulta — no Funil e no modal de Nova reserva. Sistema de
+# formulário não ganha nada com JIT. `DB_JIT=1` religa, se um dia precisar.
+if os.environ.get("DB_JIT", "0") != "1":
+    DATABASES["default"].setdefault("OPTIONS", {})["options"] = "-c jit=off"
 
 # Cache compartilhado entre os workers: limites de tentativa (login, MFA, cartão, site)
 # e o token da Safrapay. Sem isto o Django usa um cache por processo: com 2 workers cada

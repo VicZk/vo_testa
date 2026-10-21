@@ -42,6 +42,7 @@ class ReservaForm(forms.ModelForm):
         # Day use sempre por último (senão "DAY-01" sobe na frente de "Quarto…").
         self.fields["uh"].queryset = (
             UH.objects.filter(status=UH.Status.ATIVA)
+            .select_related("tipo")   # o rótulo do quarto mostra o tipo: 1 consulta por opção
             .annotate(
                 _day_use=Case(
                     When(tipo__modalidade=TipoUH.Modalidade.DAY_USE, then=Value(1)),

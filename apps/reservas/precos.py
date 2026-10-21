@@ -36,6 +36,13 @@ def _cfg(nome: str) -> Decimal:
     return Decimal(str(getattr(settings, nome)))
 
 
+def _config():
+    """`ConfiguracaoReservas` — uma leitura por lote de preços
+    (`services.precos_em_lote()`); fora do lote, lê a cada chamada, como antes."""
+    from apps.reservas.services import configuracao_reservas
+    return configuracao_reservas()
+
+
 def taxas(hospedagem: Decimal, *, cobra_iss: bool = True,
           cobra_taxa_turismo: bool = True, diarias: int = 1, cfg=None) -> dict:
     """ISS (% sobre a hospedagem) + taxa de turismo (valor fixo × nº de diárias).
@@ -44,8 +51,7 @@ def taxas(hospedagem: Decimal, *, cobra_iss: bool = True,
     Valores vêm da `ConfiguracaoReservas` (editáveis na Tabela de Preços); `cfg` aceita
     a configuração já carregada, para quem calcula uma lista de reservas de uma vez.
     O mesmo cálculo está espelhado no JS de `resumo.html` (toggles ao vivo)."""
-    from apps.nucleo.models import ConfiguracaoReservas
-    cfg = cfg or ConfiguracaoReservas.carregar()
+    cfg = cfg or _config()
     iss_aliq = cfg.iss_aliquota
     taxa_un = cfg.taxa_turismo_diaria
     return {
@@ -61,12 +67,10 @@ def diaria_por_pessoas(base_noite: Decimal, pessoa_adicional: Decimal, *,
     """Diária de uma noite ajustada pela lotação (Manual §2). `base_noite` = diária de
     2 pax já resolvida. `meia` = valor da criança 6-15 (vazio = metade do adicional).
     O fator do hóspede sozinho vem da `ConfiguracaoReservas`."""
-    from apps.nucleo.models import ConfiguracaoReservas
-
     if meia is None:
         meia = pessoa_adicional / 2
     if adultos <= 1 and criancas_6_15 <= 0:
-        valor = base_noite * ConfiguracaoReservas.carregar().single_fator  # hóspede sozinho
+        valor = base_noite * _config().single_fator  # hóspede sozinho
     else:
         extra_adultos = max(0, adultos - 2)
         valor = (base_noite
@@ -82,7 +86,6 @@ def cotacao(*, uh=None, tipo=None, checkin: date, checkout: date,
     """Cotação itemizada: diárias (por pessoa) + ISS + taxa de turismo. Passe `uh`
     (venda por unidade) OU `tipo` (venda por tipo). `nao_reembolsavel` aplica o
     desconto pré-pago sobre a hospedagem (antes das taxas). Pura — não grava."""
-    from apps.nucleo.models import ConfiguracaoReservas
     from apps.reservas.services import (
         preco_unidade_noite,
         tarifa_day_use,
@@ -130,7 +133,7 @@ def cotacao(*, uh=None, tipo=None, checkin: date, checkout: date,
     # Tarifa não-reembolsável: desconto pré-pago sobre a hospedagem (antes das taxas).
     desconto_nr = Decimal("0.00")
     if nao_reembolsavel:
-        pct = ConfiguracaoReservas.carregar().nao_reembolsavel_desconto
+        pct = _config().nao_reembolsavel_desconto
         desconto_nr = _q(hospedagem * pct)
         hospedagem = _q(hospedagem - desconto_nr)
 

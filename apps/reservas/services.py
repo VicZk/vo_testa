@@ -82,6 +82,13 @@ def _memo(chave, calcular):
     return memoria[chave]
 
 
+def configuracao_reservas():
+    """`ConfiguracaoReservas.carregar()` memorizado no lote de preços: o painel de
+    quartos do lead relia a configuração uma vez por quarto (24 consultas)."""
+    from apps.nucleo.models.cadastros import ConfiguracaoReservas
+    return _memo(("configuracao_reservas",), ConfiguracaoReservas.carregar)
+
+
 def classificacao_do_dia(dia: date) -> str | None:
     """Classificação de temporada vigente na data (ou None = fora de temporada).
 
@@ -91,24 +98,40 @@ def classificacao_do_dia(dia: date) -> str | None:
     return _memo(("classificacao", dia), lambda: _classificacao_do_dia(dia))
 
 
-def _classificacao_do_dia(dia: date) -> str | None:
+def _classificacao_do_dia(dia: date, temporadas=None) -> str | None:
+    """`temporadas` = lista já carregada (de um período inteiro); sem ela, consulta."""
     from apps.nucleo.feriados import eh_feriado
-    from apps.nucleo.models.cadastros import ConfiguracaoReservas
 
     # Feriado automático só consulta a config nas datas que são realmente feriado,
     # para não bater no banco em todo dia comum.
-    if eh_feriado(dia) and ConfiguracaoReservas.carregar().feriados_automaticos:
+    if eh_feriado(dia) and configuracao_reservas().feriados_automaticos:
         return Temporada.Classificacao.FERIADO
 
+    if temporadas is None:
+        temporadas = Temporada.objects.filter(inicio__lte=dia, fim__gte=dia)
     vigentes = {
         t.classificacao
-        for t in Temporada.objects.filter(inicio__lte=dia, fim__gte=dia)
-        if t.vale_no_dia(dia)
+        for t in temporadas
+        if t.inicio <= dia <= t.fim and t.vale_no_dia(dia)
     }
     for classificacao in PRECEDENCIA_TEMPORADA:
         if classificacao in vigentes:
             return classificacao
     return None
+
+
+def precarregar_classificacoes(inicio: date, fim: date) -> None:
+    """Dentro de `precos_em_lote()`, a classificação de temporada de cada noite do
+    período [inicio, fim) numa consulta só — eram uma por noite. Fora do lote não faz
+    nada."""
+    memoria = _PRECOS_EM_LOTE.get()
+    if memoria is None or not inicio or not fim or fim <= inicio:
+        return
+    configuracao_reservas()   # lida uma vez, com ou sem feriado no período
+    temporadas = list(Temporada.objects.filter(inicio__lte=fim, fim__gte=inicio))
+    for n in range((fim - inicio).days):
+        dia = inicio + timedelta(days=n)
+        memoria.setdefault(("classificacao", dia), _classificacao_do_dia(dia, temporadas))
 
 
 def tarifa_do_dia(tipo_uh: TipoUH, dia: date) -> Decimal:
@@ -174,9 +197,10 @@ def tarifa_da_unidade(uh: UH, dia: date) -> Decimal:
 
 def precarregar_tarifas_unidade(uhs) -> None:
     """Dentro de `precos_em_lote()`, busca numa consulta só as TarifaUnidade de todos
-    esses quartos (a busca do site precisa de todas; antes era uma consulta por quarto).
-    Fora do lote não faz nada."""
-    from .models import TarifaUnidade
+    esses quartos (a busca do site precisa de todas; antes era uma consulta por quarto),
+    e noutra as TarifaTemporada (feriado específico do quarto). Fora do lote não faz
+    nada."""
+    from .models import TarifaTemporada, TarifaUnidade
 
     memoria = _PRECOS_EM_LOTE.get()
     if memoria is None:
@@ -187,6 +211,21 @@ def precarregar_tarifas_unidade(uhs) -> None:
     for uh_id in ids:
         for classificacao in Temporada.Classificacao.values:
             memoria[("tarifa_uh", uh_id, classificacao)] = por_chave.get((uh_id, classificacao))
+    especiais = {uh_id: [] for uh_id in ids}
+    for t in TarifaTemporada.objects.filter(uh_id__in=ids).select_related("temporada"):
+        especiais[t.uh_id].append(t)
+    for uh_id, lista in especiais.items():
+        memoria[("tarifas_temporada_uh", uh_id)] = lista
+
+
+def _tarifas_temporada_da_uh(uh: UH) -> list:
+    """Todas as TarifaTemporada do quarto (com a temporada), memorizadas no lote. Eram
+    lidas por quarto E por noite — 72 consultas no painel de quartos de um lead de 3
+    noites; agora uma por quarto (ou uma para todos, com `precarregar_tarifas_unidade`)."""
+    from .models import TarifaTemporada
+
+    return _memo(("tarifas_temporada_uh", uh.pk), lambda: list(
+        TarifaTemporada.objects.filter(uh=uh).select_related("temporada")))
 
 
 def _tarifa_unidade(uh: UH, classificacao: str):
@@ -227,7 +266,6 @@ def preco_unidade_noite(uh: UH, dia: date):
 
     `pessoa_adicional` e `meia` seguem a mesma fonte do valor; se a fonte não os
     definir, caem no do tipo / metade do adicional — nada muda até preencher."""
-    from .models import TarifaTemporada
 
     pa_tipo = uh.tipo.pessoa_adicional or Decimal("0.00")
 
@@ -236,12 +274,10 @@ def preco_unidade_noite(uh: UH, dia: date):
         meia = t.meia if t.meia is not None else (adic / 2)
         return t.valor, adic, meia
 
-    especiais = _memo(("tarifa_temporada", uh.pk, dia), lambda: [
-        t for t in TarifaTemporada.objects.filter(
-            uh=uh, temporada__inicio__lte=dia, temporada__fim__gte=dia,
-        ).select_related("temporada")
-        if t.temporada.vale_no_dia(dia)
-    ])
+    especiais = [
+        t for t in _tarifas_temporada_da_uh(uh)
+        if t.temporada.inicio <= dia <= t.temporada.fim and t.temporada.vale_no_dia(dia)
+    ]
     if especiais:  # período mais curto = mais específico
         return _resolve(min(especiais, key=lambda x: (x.temporada.fim - x.temporada.inicio).days))
 

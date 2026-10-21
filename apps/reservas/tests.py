@@ -2408,3 +2408,51 @@ class PercentualNoTextoDaPoliticaTests(TestCase):
         self.assertIn("reter 10% ", _nota_politica(fora))
         hospedado = {**fora, "cenario": "em_hospedagem", "dias_consumidos": 1}
         self.assertIn("+ 10% de retenção", _nota_politica(hospedado))
+
+
+class DesempenhoDoModalENoBancoTests(TestCase):
+    """O modal de nova reserva lia o tipo de cada quarto da lista (27 consultas) e o
+    JIT do Postgres compilava o seletor de pessoas a cada abertura (185 ms para uma
+    consulta de 1,4 ms)."""
+
+    def setUp(self):
+        from apps.nucleo.models import TipoUH
+        self.user = get_user_model().objects.create_superuser(username="perfres", password="senha-forte-123")
+        self.client.force_login(self.user)
+        self.tipo = TipoUH.objects.create(nome="Padrão", tarifa_base=Decimal("300"), capacidade=4)
+
+    def _contar(self, funcao):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+        with CaptureQueriesContext(connection) as ctx:
+            funcao()
+        return len(ctx.captured_queries)
+
+    def test_modal_de_nova_reserva_nao_consulta_por_quarto(self):
+        from django.urls import reverse
+
+        from apps.nucleo.models import UH
+        for i in range(3):
+            UH.objects.create(numero=f"Quarto {i + 1:02d}", tipo=self.tipo)
+        url = reverse("reservas:nova")
+        self.client.get(url, HTTP_HX_REQUEST="true")
+        com_tres = self._contar(lambda: self.client.get(url, HTTP_HX_REQUEST="true"))
+        for i in range(3, 12):
+            UH.objects.create(numero=f"Quarto {i + 1:02d}", tipo=self.tipo)
+        self.assertEqual(self._contar(lambda: self.client.get(url, HTTP_HX_REQUEST="true")), com_tres)
+
+    def test_configuracao_lida_uma_vez_no_lote_de_precos(self):
+        from . import precos, services
+        with services.precos_em_lote():
+            precos.taxas(Decimal("1000"))
+            depois = self._contar(lambda: [precos.taxas(Decimal("1000")) for _ in range(5)])
+        self.assertEqual(depois, 0)
+
+    def test_jit_do_postgres_desligado_na_conexao(self):
+        from django.conf import settings
+        from django.db import connection
+        self.assertIn("jit=off", settings.DATABASES["default"].get("OPTIONS", {}).get("options", ""))
+        with connection.cursor() as cur:
+            cur.execute("SHOW jit")
+            self.assertEqual(cur.fetchone()[0], "off")
+
