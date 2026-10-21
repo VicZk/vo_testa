@@ -152,7 +152,9 @@ telas (§11). O portal do hóspede e a página de pagamento carregam `static/css
 o recorte do app.css que elas usam (24 KB; 6 KB comprimido, contra 52 KB do app.css),
 GERADO por `manage.py gerar_base_css` a partir do manifesto `apps/nucleo/css_publico.txt`.
 Não se edita o base.css: muda-se o app.css e roda-se o comando (o teste
-`CssDasTelasPublicasTests` falha enquanto o recorte estiver para trás). Também: `static/js/fluid.js`, `static/img/` (logotipos e símbolo,
+`CssDasTelasPublicasTests` falha enquanto o recorte estiver para trás). Também:
+`static/js/dicas.js` (o balão único de todo `[data-dica]` do CRM),
+`static/js/tabela-rol.js`, `static/js/form-pt.js`, `static/js/fluid.js`, `static/img/` (logotipos e símbolo,
 `wpp-doodles.svg`), `static/fonts/Rosaline-Regular.woff2?` (fonte da marca),
 `static/lp/` e `static/comercial/`. Os estáticos do site ficam em
 `apps/site/static/site/` (`css/tailwind.css`, `js/`, `img/`, `fonts/`, `vendor/`,
@@ -330,8 +332,12 @@ Restaurante e Lavanderia **só** entram/baixam por estas funções.
 - `LocalEstoque` — depósito, vinculado a um `modulo` (almoxarifado central = `nucleo`).
 - `MovimentoEstoque` — **kardex imutável**; `quantidade` é **sinalizada** (positiva
   entra, negativa sai); saldo = soma. `save()`/`delete()` barram alteração/remoção.
-- `Inventario` / `ItemInventario` — `aplicar(usuario)` gera um ajuste por item com
-  diferença e audita `inventario_aplicado`.
+  `fornecedor` (FK Pessoa, opcional) na entrada por compra; `chave` (UUID único,
+  opcional) é a chave de envio do formulário — ver idempotência abaixo.
+- `Inventario` / `ItemInventario` — `aplicar(usuario, somente_contados=False)` gera um
+  ajuste por item com diferença e audita `inventario_aplicado`. A tela de contagem passa
+  `somente_contados=True`: o item com `contado=False` (ninguém conferiu) não vira ajuste —
+  senão uma venda feita durante a contagem era apagada pelo saldo da abertura.
 
 **Serviços públicos** (`saldo`, `posicao_estoque`, `produtos_abaixo_minimo`,
 `registrar_entrada`, `registrar_saida`, `transferir`, `ajustar`):
@@ -344,6 +350,15 @@ Restaurante e Lavanderia **só** entram/baixam por estas funções.
   `transferencia_estoque`.
 - `ajustar` leva o saldo do local a um valor e audita `ajuste_estoque` (no-op se a
   diferença for zero).
+- **Idempotência:** `registrar_entrada`, `registrar_saida` e `transferir` aceitam
+  `chave=`. Com uma chave já gravada, devolvem o movimento existente
+  (`movimento_da_chave`); numa corrida, a unicidade da chave estoura dentro do atomic (o
+  custo médio volta junto) e o motor devolve o que o primeiro envio gravou. Na
+  transferência a chave fica na perna de saída. Quem chama sem chave (Loja, Restaurante,
+  Lavanderia) não muda.
+- **Leitura para as telas** (não escrevem nada): `saldos_por_local` (uma consulta, de um
+  produto ou do catálogo), `resumo_locais` (itens, valor e alertas por depósito) e
+  `indicadores_estoque` (totais a partir das linhas da posição).
 
 ### 3.6 Logbook (recados do turno)
 
@@ -775,11 +790,11 @@ Tudo é declarado em **`config/urls.py`**, que compõe o domínio único:
 | `/crm/mfa/`, `/crm/mfa/ativar/`, `/crm/mfa/desafio/` | `apps.nucleo.mfa_views` | equipe | configuração, ativação (QR) e desafio TOTP |
 | `/crm/…` (raiz do CRM) | `apps.nucleo.urls` (**sem `app_name`** → nomes globais) | equipe | 40 rotas: `dashboard`, `busca_global`, `modulos_central`, funcionários, pessoas/hóspedes/agências/empresas/fornecedores, estrutura/tipos/UHs, `tabela_precos`, temporadas, caixa (abrir/movimento/fechar/sessões/reabrir/estorno), financeiro (lançamentos/contas/baixa), logbook |
 | `/crm/reservas/…` | `apps.reservas.urls` | equipe | 43 rotas: mapa, lista, detalhe, check-in/out, no-show e desfazer, FNRH, BOH, grupos, troca de quarto, colchões, kit de contingência, restrições de venda |
-| `/crm/estoque/…` | `apps.estoque.urls` | equipe | 13 rotas: posição, produtos, kardex, categorias, locais, movimentações, inventário |
+| `/crm/estoque/…` | `apps.estoque.urls` | equipe | posição, produtos (lista, novo, editar, kardex), cadastros (categorias e depósitos), entrada, saída, transferência, ajuste, inventários e a contagem |
 | `/crm/loja/…` | `apps.loja.urls` | equipe | 6 rotas: `pdv`, `finalizar`, `vendas`, `venda`, `cupom` (80 mm), `cancelar` |
 | `/crm/restaurante/…` | `apps.restaurante.urls` | equipe | 11 rotas (comandas, itens, fechamento, transferência, cupom de 80 mm) |
 | `/crm/lavanderia/…` | `apps.lavanderia.urls` | equipe | 14 rotas (ordens + rouparia + cupom de 80 mm) |
-| `/crm/governanca/…` | `apps.governanca.urls` | equipe | 6 rotas: `painel`, `discrepancias`, `nova_tarefa`, `tarefa_acao`, `status_marcar`, `ronda` |
+| `/crm/governanca/…` | `apps.governanca.urls` | equipe | 8 rotas: `painel` (a visão geral da casa), `quartos` (a lista de trabalho, aceita `?estado=`), `discrepancias`, `nova_tarefa` (com `iniciar` abre e já começa), `tarefa_acao`, `status_marcar`, `ronda`, `devolver` (formulário do motivo: modal com HTMX, página sem JS) |
 | `/crm/manutencao/…` | `apps.manutencao.urls` | equipe | 6 rotas (painel, nova, detalhe, iniciar, concluir, cancelar) |
 | `/crm/escala/…` | `apps.escala.urls` | equipe | 12 rotas: `grade`, `gerar`, `editar`, `publicar`, `relatorio`, `atribuir`, `remover_atribuicao`, `minha`, `turnos`, `ausencias`, `trocas`, `decidir_troca` |
 | `/crm/pagamentos/…` | `apps.pagamentos.urls` | equipe + **público** | 15 rotas. Painel/conciliação/criar/detalhe/simular/liquidar/cancelar/estornar são internas; **`/crm/pagamentos/pagar/<token>/`** (+ `confirmar/`, `cartao/`) é o **link de pagamento público, sem login**; `/crm/pagamentos/webhook/` é `csrf_exempt` |
@@ -1450,7 +1465,21 @@ curva da casa é `cubic-bezier(.2,.8,.2,1)`).
 - `<head>`: Google Fonts por `<link>` (em paralelo, não `@import`), `css/app.css?v=mob4`,
   `js/fluid.js`, **HTMX 2.0.4** e **Alpine 3.14.8** (de `static/vendor/`, `defer`).
 - A navegação da sidebar usa `hx-boost="true"` com
-  `hx-target="#conteudo" hx-select="#conteudo" hx-swap="outerHTML show:window:top"`.
+  `hx-target="#conteudo" hx-select="#conteudo" hx-swap="outerHTML show:window:top transition:true"`.
+- **Troca de página**: só a navegação do menu usa View Transition (`transition:true`); a
+  transição global do HTMX (`globalViewTransitions`) fica desligada — ela animava cada
+  troca parcial e a página inteira, menu incluído. O app.css dá nome próprio a
+  `.sidebar` (`menu`), `.topbar` (`topo`) e `.conteudo` (`conteudo`): menu e topo trocam
+  sem animação e só o conteúdo faz o cross-fade. `@view-transition { navigation: auto }`
+  estende a mesma troca à navegação comum, fora de `prefers-reduced-motion`.
+- **Dicas**: `static/js/dicas.js` desenha um balão fixo (`#dica-flutuante`) para todo
+  `[data-dica]` — centrado no que se vê do elemento (ou no ponteiro, num elemento largo),
+  em cima quando cabe e embaixo quando não, sempre dentro da tela. Mostra no mouse, no
+  foco do teclado e, no toque, por 2,5 s. No `.porta` do corredor vira cartão. No trilho,
+  `rotularSidebar()` troca o `title` dos itens por `data-dica` com `data-dica-lado="direita"`.
+- **Largura**: `.conteudo` para em `--conteudo-max` (1760 px) e centra; acima de 1800 px a
+  busca da barra do topo acompanha o começo do conteúdo. `.conteudo-largo` (bloco
+  `conteudo_classe`) tira o limite — mapa de reservas e calendário do Marketing.
 - **Toasts**: as `messages` do Django são renderizadas como `.toast toast-<tag>`; a
   função JS `toast(msg, tipo)` cria novos; saída automática em 5 s.
 - **Feedback de toda ação HTMX**: barra de progresso no topo (`#barra-progresso`) enquanto
@@ -1480,7 +1509,8 @@ curva da casa é `cubic-bezier(.2,.8,.2,1)`).
   acessibilidade; nunca `display:none`), a `.sidebar` com `overflow: hidden` como
   cortina, janelas próprias para o logotipo (`.marca-janela`) e para nome + cápsula
   (`.usuario-texto`), e o botão de recolher e o Sair deslizando com os tokens de
-  movimento. Cada item traz `title`, que o `rotularSidebar()` deixa valer só no trilho.
+  movimento. Cada item traz `title` no template (vale sem JS); o `rotularSidebar()` o
+  troca pela dica da casa, que só aparece no trilho.
   Toda regra `.app.recolhida …` mora num único `@media (width > 820px)` e só mexe em
   opacidade, cor, giro e posição — `test_trilho_so_existe_no_desktop` e
   `test_trilho_nao_redesenha_so_esconde_e_desliza` reprovam o contrário.

@@ -149,9 +149,10 @@ Governança registra tarefas de saída/arrumação, atribuição, andamento e co
 A inspeção opcional pode devolver a tarefa para retrabalho. Rondas registram
 situação física e permitem identificar discrepâncias com a recepção.
 
-O painel publicado e suas regras estão documentados em
-[Módulos e fluxos](MODULOS_E_FLUXOS.md). A visão gráfica e ajustes de interação mais
-recentes ainda locais estão identificados no [Estado atual](ESTADO_ATUAL.md).
+O painel e suas regras estão documentados em [Módulos e fluxos](MODULOS_E_FLUXOS.md):
+a entrada é a visão geral da casa (quartos em blocos pelo estado da limpeza, progresso do
+dia, o que pede ação, chegadas e carga das camareiras) e a lista de trabalho mostra o
+ciclo A limpar › Em limpeza › Limpo › Pronto com um próximo passo por quarto.
 
 Manutenção registra chamados e ordens, podendo bloquear a UH; há recorrência em
 ordens de serviço. Escala trabalha turnos, atribuições, ausências, trocas e publicação.

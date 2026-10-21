@@ -18,9 +18,10 @@ como desenvolver em cima dele. Dois documentos aprofundam o que aqui está resum
   diagramas.
 
 > **Revisão documental: 21/10/2026.** O [Estado atual](docs/ESTADO_ATUAL.md)
-> identifica a base de código publicada, as integrações e nove commits locais ainda
-> não publicados. O [índice da documentação](docs/README.md) separa manuais atuais,
-> planos e registros históricos.
+> identifica a base de código publicada e as integrações; os commits de interface que
+> a revisão listava como locais foram publicados no décimo primeiro bloco do
+> [CHANGELOG](CHANGELOG.md). O [índice da documentação](docs/README.md) separa manuais
+> atuais, planos e registros históricos.
 >
 > A [especificação](docs/ESPECIFICACAO.md) descreve o produto implementado.
 > O [CLAUDE.md](CLAUDE.md) reúne convenções de desenvolvimento. Uma funcionalidade
@@ -340,7 +341,10 @@ Peças que todo módulo usa:
   de recebimento. Movimentos são **imutáveis** (correção é estorno, com motivo) e o
   fechamento é por **conferência cega**.
 - **Motor de estoque.** Kardex imutável com quantidade sinalizada, custo médio
-  recalculado sob trava de linha e saída que nunca deixa saldo negativo.
+  recalculado sob trava de linha e saída que nunca deixa saldo negativo. Entrada,
+  saída e transferência aceitam uma `chave` de envio (como a `Venda.chave`): o reenvio
+  do mesmo formulário devolve o movimento já gravado. A entrada guarda o fornecedor, e o
+  inventário aplica só o que foi contado (`ItemInventario.contado`).
 
 ### 4.3 Modularidade e controle de acesso
 
@@ -510,9 +514,15 @@ documento fiscal (a NFC-e sai pelo Fiscal).
 rouparia interna como livro-razão de enxoval (limpa, em uso, suja, lavando). O mesmo
 cupom de 80 mm serve de comprovante na recepção da roupa e de recibo na entrega.
 
-**Governança.** Situação de cada quarto (suja, em limpeza, limpa, inspecionada) e fila
-de faxinas geradas pelo check-out, pela manutenção ou pelo portal. Inspeção com
-"Reprovar" (o quarto volta para a fila, com motivo). Na ronda, a camareira registra o que
+**Governança.** A entrada é "Como está a casa": os quartos em blocos pintados pelo
+estado da limpeza, o progresso do dia ("22 de 24 prontos", com a hora do check-in), o que
+pede ação agora, as chegadas de hoje e a carga de cada camareira. A aba Quartos é a
+lista de trabalho: o ciclo **A limpar › Em limpeza › Limpo › Pronto** à vista (e
+filtrando), uma frase por linha dizendo por que o quarto está ali e **um** botão por
+quarto com o nome do que acontece ("Começar limpeza", "Terminei a limpeza", "Aprovar
+limpeza"); "Só os meus" para a camareira e um "Como funciona" com o glossário. As faxinas
+nascem do check-out, da manutenção ou do portal. "Devolver para limpar" leva o motivo até
+a linha de quem vai limpar de novo. Na ronda, a camareira registra o que
 viu em cada quarto (vago, com bagagem, sem bagagem), e a aba "Discrepâncias" confronta com
 o sistema: hóspede que saiu sem passar na recepção (skip), saída não lançada, hóspede sem
 check-in (sleeper) e quarto não conferido — cada um com o que fazer. Relatórios do setor:
@@ -524,8 +534,14 @@ na disponibilidade e liberação com faxina automática.
 **Escala.** Turnos por setor, grade semanal, ausências que impedem escalar, trocas
 aprovadas pela gerência e "minha escala" para o funcionário.
 
-**Estoque.** Telas sobre o motor do núcleo: posição com alerta de mínimo, entradas,
-saídas, transferências, ajustes, kardex e inventário.
+**Estoque.** Telas sobre o motor do núcleo, em cinco abas (Posição, Produtos,
+Movimentar, Inventário, Cadastros). A posição mostra o valor parado em mercadoria, o que
+está abaixo do mínimo ou zerado e o movimento da semana; cada depósito é um cartão com o
+que guarda, e cada linha tem a régua saldo × mínimo e atalhos de entrada, saída e
+transferência já preenchidos. Movimentar tem busca de produto, saldo por depósito ao
+vivo, fornecedor e nota na entrada e a prévia "saldo hoje → fica com" (com o custo médio
+novo). Kardex com saldo corrente; contagem de inventário com progresso, busca e resumo.
+Quantidade como se fala ("55 un", "4,5 kg").
 
 **Comercial.** Funil Kanban com ganho só por conversão em reserva, cotação pelo motor de
 preços, sinal online, WhatsApp Cloud API dentro do card (janela de 24 h e template de
@@ -770,7 +786,14 @@ Toda tela do CRM nasce no design system; nada de estilo paralelo nem cor fixa no
   `templates/componentes/`.
 - **App shell** (`templates/base.html`): sidebar por permissão, navegação com
   `hx-boost`, paleta de comandos (⌘K ou `/`), toasts a partir das mensagens do Django,
-  atalho `N` para nova reserva.
+  atalho `N` para nova reserva. Na troca de página só o conteúdo faz a transição (View
+  Transition com nomes `menu`, `topo` e `conteudo`): menu e topo ficam parados.
+- **Dicas:** um balão só para todo o CRM — `data-dica="texto"` no elemento e o
+  `static/js/dicas.js` cuida do resto (centrado no que se vê, dentro da tela, em cima ou
+  embaixo; `data-dica-lado="direita"` no menu recolhido). Nada de dica em `::after`.
+- **Largura:** o conteúdo para em `--conteudo-max` (1760 px) e centra no monitor grande;
+  tela que vive de largura (mapa de reservas, calendário do Marketing) usa
+  `{% block conteudo_classe %}conteudo-largo{% endblock %}`.
 - **Menu lateral:** nasce recolhido em trilho de ícones (⌘\ ou o botão alterna, e a
   escolha fica no navegador). No trilho cada item tem dica e nome para leitor de tela;
   tudo o que é do trilho mora num `@media (width > 820px)`. O trilho é o menu aberto

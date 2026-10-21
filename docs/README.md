@@ -96,7 +96,7 @@ em Markdown acima é o mapa para interpretar esses arquivos.
 
 Ao alterar uma regra, atualize a especificação e o fluxo correspondente. Ao concluir
 uma integração, registre separadamente implementação, homologação e ambiente ativo.
-Ao publicar os commits locais descritos no Estado atual, registre a nova base.
+Ao publicar código, registre a nova base no Estado atual.
 Mantenha evidências antigas datadas; não reescreva resultados passados como testes novos.
 
 Não inclua `.env`, credenciais, bancos, logs, CSVs/JSONs com hóspedes ou leads reais

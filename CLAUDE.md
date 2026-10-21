@@ -168,6 +168,16 @@ e rode o comando — o teste `CssDasTelasPublicasTests` avisa quando o recorte f
   query). Regra do trilho (`.app.recolhida …`) só dentro do `@media (width > 820px)`, e
   só mexendo em opacidade, cor, giro e posição: o trilho é o menu aberto recortado (nada
   reflui na troca — conferir animação quadro a quadro, não só os estados finais).
+- **Dica = `data-dica`:** um balão só no CRM (`static/js/dicas.js`, no `base.html`);
+  `data-dica-lado="direita"` para o menu recolhido. Nunca criar tooltip em `::after` nem
+  reservar espaço para ele — o balão é fixo e não ocupa layout.
+- **Largura e transição:** o conteúdo para em `--conteudo-max` (1760 px) e centra; tela
+  que precisa da largura toda usa `{% block conteudo_classe %}conteudo-largo{% endblock %}`.
+  Na troca de página só `.conteudo` faz View Transition (menu e topo têm nome próprio e
+  ficam parados) — não reativar a transição global do HTMX.
+- **Texto da tela com maiúscula:** rótulo, status, nota de KPI e opção de filtro começam
+  com maiúscula; código gravado no banco ("no_show", "media") nunca aparece cru — vira
+  rótulo (ex.: `auditoria.formatacao.rotulo_acao`).
 - **Cor só por token, também no `<style>` próprio da tela:** fundo suave de semântica é
   `--sucesso-bg`/`--alerta-bg`/`--perigo-bg`/`--info-bg`; tinta translúcida é
   `color-mix(in srgb, var(--token) N%, transparent)`. O teste `CorSoPorTokenTests` barra
@@ -186,16 +196,21 @@ e rode o comando — o teste `CssDasTelasPublicasTests` avisa quando o recorte f
 ## Estado atual
 
 **Referência revisada em 21/10/2026:** [Estado atual](docs/ESTADO_ATUAL.md).
-Esse documento identifica o código publicado da fork, nove commits de interface
-ainda locais e limites de ativação/homologação externa.
+Esse documento identifica o código publicado da fork e os limites de
+ativação/homologação externa; o que entrou depois está no [CHANGELOG](CHANGELOG.md).
 
 - **Núcleo e operação:** cadastros, acessos, caixa, financeiro, estoque, reservas,
   loja, restaurante, lavanderia, governança, manutenção e escala implementados.
 - **Reservas:** FNRH local/BOH, grupos, capacidade/camas, conta, origens de crédito,
   restrições de venda, no-show configurável, fechamento por competência e contingência.
-- **Governança:** tarefas, arrumação, inspeção opcional, ronda e discrepâncias.
-  A nova visão gráfica e os últimos ajustes de interação estão no quadro de commits
-  locais; não descrevê-los como publicados sem conferir o remoto.
+- **Governança:** tarefas, arrumação, inspeção opcional, ronda e discrepâncias. A
+  entrada é a visão geral da casa (`governanca:painel`); a lista de trabalho é
+  `governanca:quartos`, com o ciclo de `services.CICLO` (fonte única dos rótulos da
+  tela: "Pronto" = inspecionado) e um próximo passo por quarto. `abrir_faxina` e
+  `iniciar_tarefa` travam a linha e são seguros a toque duplo.
+- **Estoque:** telas em cinco abas sobre o motor do núcleo; entrada, saída e
+  transferência com `chave` de envio (idempotência, como a `Venda.chave`), fornecedor
+  na entrada e inventário que aplica só o contado.
 - **Gestão:** relatórios de carteira, pickup, ritmo e distribuição; três relatórios
   de governança; auditoria de pendências, trilha e fechamento; conciliação OFX/cartão.
 - **Comercial/marketing:** funil, cotações, atividades, WhatsApp, e-mail, LPs, campanhas,

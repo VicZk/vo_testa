@@ -7,8 +7,8 @@
 Referência de desenvolvedor que complementa o [README](../README.md): cada módulo do
 CRM/PMS + site da **Pousada Vô Testa** (24 quartos de hospedagem + unidades de day use
 `DAY-0N`, Itá/SC) e os fluxos ponta a ponta. Conferido contra o código da branch `dev`
-em 21/10/2026. O [Estado atual](ESTADO_ATUAL.md) identifica a base publicada, as
-melhorias locais ainda não publicadas e limites das integrações. Prefira localizar
+em 21/10/2026. O [Estado atual](ESTADO_ATUAL.md) identifica a base publicada e os
+limites das integrações. Prefira localizar
 funções/classes pelos nomes; os números de linha de referências antigas variam.
 
 **Convenções que valem para todo o capítulo A**
@@ -1236,7 +1236,9 @@ evento. Alimenta o mapa de quartos e **bloqueia o check-in** em quarto sujo.
 `situacao_uh(uh)`, **`uh_pronta_para_checkin(uh)`** (guard consumido por Reservas),
 **`status_por_uh()`** → `{uh_id: situacao}` (mapa de quartos), `definir_status`,
 **`abrir_faxina(uh, tipo, usuario, origem)`** (marca sujo + cria tarefa, sem duplicar
-pendente), `iniciar_tarefa` (idempotente; quarto → em limpeza),
+pendente; trava a `StatusLimpeza` do quarto e não rebaixa para "a limpar" um quarto cuja
+faxina já começou), `iniciar_tarefa` (idempotente e travada; quarto → em limpeza; com a
+faxina já em andamento e o quarto "a limpar", acerta o quarto),
 `concluir_tarefa` (idempotente; quarto → limpo, auditado, emite sinal), `inspecionar`,
 `reprovar_inspecao(uh, usuario, motivo)` (devolve o quarto para a fila, auditado),
 `tarefas_ativas()`, `painel_limpeza(dia=None)` (uma linha por quarto físico, ordenada por
@@ -1252,6 +1254,15 @@ pelo veredito gravado, não por recálculo);
 **`gerar_arrumacoes_do_dia()`** — uma Arrumação (`origem="arrumacao_diaria"`) para cada
 quarto em que o hóspede fica além de hoje (`reservas.uhs_em_permanencia`), sem
 duplicar; roda no comando `gerar_arrumacoes`, do grupo diário do `rotinas`.
+**Texto da tela:** `CICLO` (os quatro estados na ordem, com rótulo de quem está
+começando — "Pronto" para inspecionado —, resumo, quem age e ajuda; fonte única da
+legenda, dos filtros e da tabela) e `explicar_estado(situacao, tarefa, status)` (a
+frase de cada linha: "O hóspede fez check-out. Na fila de Maria.", "Limpo às 11:05 por
+Maria. Falta a supervisora conferir."; o motivo da devolução viaja nas `observacoes` da
+faxina nova). **Visão geral:** `visao_geral(dia=None)` (portas pintadas pelo estado,
+progresso, chegadas de hoje, "precisa de atenção" com nível e URL filtrada — 12
+consultas, qualquer que seja o número de quartos) e `carga_das_camareiras(dia=None)`
+(fila, em andamento e entregue hoje, por pessoa).
 
 ### Sinais
 
@@ -1263,11 +1274,18 @@ duplicar; roda no comando `gerar_arrumacoes`, do grupo diário do `rotinas`.
 
 ### Telas/rotas (`/crm/governanca/`) — todas `@requer_modulo(Modulo.GOVERNANCA)`
 
-`governanca:painel` (aba Limpeza: quarto × status × tarefa ativa + **lista de montagem de
-camas das chegadas do dia**, vinda de `reservas.montagem_do_dia`, e o aviso com o número
-de divergências), `governanca:discrepancias` (aba Discrepâncias), `nova_tarefa`,
-`tarefa_acao` (atribuir camareira / iniciar / concluir / inspecionar / reprovar),
-`status_marcar`, `ronda` (registra a conferência do quarto; HTMX devolve só o quadro).
+`governanca:painel` (aba Visão geral, "Como está a casa": os quartos em blocos pelo
+estado da limpeza, progresso do dia com a hora do check-in, "Precisa de atenção agora",
+chegadas de hoje e carga das camareiras; com pouca largura, progresso e atenção vêm antes
+dos blocos), `governanca:quartos` (aba Quartos, a lista de trabalho: o ciclo à vista e
+filtrando — `?estado=` abre já filtrada —, uma frase por linha, **um** próximo passo por
+quarto, "Só os meus", o "Como funciona" com o glossário, a **lista de montagem de camas
+das chegadas do dia**, vinda de `reservas.montagem_do_dia`, e o aviso com o número de
+divergências), `governanca:discrepancias` (aba Discrepâncias), `nova_tarefa` (com
+`iniciar=1`, abre e já começa a faxina num toque), `tarefa_acao` (atribuir camareira /
+iniciar / concluir / inspecionar / reprovar), `status_marcar`, `ronda` (registra a
+conferência do quarto; HTMX devolve só o quadro), `devolver` (o formulário de "Devolver
+para limpar": modal da casa com HTMX, página própria sem JS; grava pelo `status_marcar`).
 
 ### Regras de negócio
 
@@ -1423,7 +1441,9 @@ arrasto), `atribuir`, `remover_atribuicao`, `minha` (via `Funcionario.usuario`),
 ## A.14 Estoque — `apps/estoque` (app de **telas**; motor no núcleo)
 
 **Responsabilidade.** Telas de gestão sobre o **motor de estoque do núcleo**. O app não
-tem `models.py` nem `migrations/` — só `forms.py`, `views.py` e `urls.py`.
+tem `models.py` nem `migrations/` — só `forms.py`, `views.py`, `urls.py`, `formato.py`
+(quantidade como se fala: "55 un", "4,5 kg"), o filtro `qtd` em `estoque_extras` e o
+comando `popular_estoque` (catálogo, depósitos e kardex de demonstração).
 
 - **Código:** `Modulo.ESTOQUE` · **Dependências declaradas:** nenhuma; é dependência de
   Loja, Restaurante e Lavanderia.
@@ -1437,18 +1457,24 @@ tem `models.py` nem `migrations/` — só `forms.py`, `views.py` e `urls.py`.
   depósito por módulo + almoxarifado do núcleo).
 - **`MovimentoEstoque`** — kardex **imutável**; `quantidade` **sinalizada**; `tipo`
   `entrada_compra | saida_venda | consumo_interno | perda | transf_saida |
-  transf_entrada | ajuste`; `custo_unitario`, `documento`, `transferencia_par`.
+  transf_entrada | ajuste`; `custo_unitario`, `documento`, `transferencia_par`,
+  `fornecedor` (FK Pessoa, opcional, na entrada) e `chave` (UUID único, opcional — a
+  chave de envio do formulário).
 - **`Inventario`** (`aberto → aplicado | cancelado`) + **`ItemInventario`**
-  (`saldo_sistema`, `quantidade_contada`, `diferenca`; unique por inventário × produto).
+  (`saldo_sistema`, `quantidade_contada`, `contado`, `diferenca`, `valor_diferenca`;
+  unique por inventário × produto).
 
 ### Interface pública (o motor)
 
-`saldo(produto, local=None)`, `posicao_estoque(local=None)`,
+`saldo(produto, local=None)`, `posicao_estoque(local=None)` (com `situacao`
+zerado/abaixo/ok, `nivel` 0–100 do mínimo e `nunca_movimentou`),
 `produtos_abaixo_minimo()`, `registrar_entrada(produto, local, qtd, custo_unitario,
-usuario, documento, observacao)`, `registrar_saida(produto, local, qtd, usuario,
-tipo=SAIDA_VENDA, documento, observacao)`, `transferir(produto, origem, destino, qtd,
-usuario, observacao)`, `ajustar(produto, local, nova_quantidade, usuario, motivo)`,
-`Inventario.aplicar(usuario)`.
+usuario, documento, observacao, fornecedor, chave)`, `registrar_saida(produto, local, qtd,
+usuario, tipo=SAIDA_VENDA, documento, observacao, chave)`, `transferir(produto, origem,
+destino, qtd, usuario, observacao, chave)`, `ajustar(produto, local, nova_quantidade,
+usuario, motivo)`, `Inventario.aplicar(usuario, somente_contados=False)`,
+`movimento_da_chave(chave)`; leitura para as telas: `saldos_por_local(produto=None)`,
+`resumo_locais()` e `indicadores_estoque(linhas)`.
 
 ### Sinais
 
@@ -1456,9 +1482,15 @@ Nenhum.
 
 ### Telas/rotas (`/crm/estoque/`) — todas `@requer_modulo(Modulo.ESTOQUE)`
 
-`estoque:posicao` (home, com filtro `?local=` e `?alerta=1`), `produtos` +
-`produto_novo`/`produto_editar`, `kardex/<pk>`, `categorias`, `locais`, `entrada`,
-`saida`, `transferencia`, `ajuste`, `inventarios`, `inventario/<pk>`.
+Cinco abas (Posição, Produtos, Movimentar, Inventário, Cadastros).
+`estoque:posicao` (home: indicadores, um cartão por depósito com o que ele guarda,
+busca/categoria/situação e, por linha, a régua saldo × mínimo e os atalhos de entrada,
+saída e transferência já preenchidos — `?produto=&local=`), `produtos` +
+`produto_novo`/`produto_editar`, `kardex/<pk>` (saldo corrente, filtros), `cadastros`
+(categorias e depósitos), `entrada`, `saida`, `transferencia`, `ajuste` (uma tela,
+`movimentar.html`, com busca de produto, saldo por depósito ao vivo e a prévia "saldo
+hoje → fica com"), `inventarios`, `inventario/<pk>` (contagem com progresso, busca e
+resumo).
 
 ### Regras de negócio
 
@@ -1473,9 +1505,16 @@ Nenhum.
 - `devolver_ao_estoque(produto, local, quantidade, usuario, motivo)` soma ao saldo de
   agora (com a trava), sem mexer no custo médio — é o que Loja e Restaurante usam para
   devolver item; `ajustar(saldo_lido + qtd)` dependia de um saldo lido antes da trava.
+- **Clique duplo não grava duas vezes:** a tela de movimentação nasce com uma chave por
+  abertura; o reenvio do mesmo formulário avisa "Essa movimentação já tinha sido
+  registrada." e não grava. No motor, a chave já gravada devolve o movimento existente;
+  numa corrida, a unicidade estoura dentro do atomic (o custo médio volta junto) e o
+  motor devolve o do primeiro envio. Ajuste fica de fora (é absoluto).
 - Inventário: abre com um item por produto ativo (contagem pré-preenchida com o saldo);
-  contagem não numérica é **ignorada com aviso** (não grava lixo); `aplicar` gera um
-  ajuste por item com diferença e audita `"inventario_aplicado"`.
+  contagem não numérica, não finita ("nan", "Infinity"), negativa ou grande demais
+  (acima de numeric(12,3)) é **ignorada com aviso** (não grava lixo); a tela aplica só o
+  que foi contado (`somente_contados=True`) e `aplicar` gera um ajuste por item com
+  diferença e audita `"inventario_aplicado"`.
 - `custo_medio` não é editável pelo `ProdutoForm`.
 
 ---

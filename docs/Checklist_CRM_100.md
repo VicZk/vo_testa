@@ -96,5 +96,5 @@ configurados. Não os execute como simples teste de leitura de ambiente.
 
 Continuam no backlog: coleta NPS/CRM do Hóspede, Canais/OTAs, telefonia integrada,
 painel completo de campanhas WhatsApp e os providers/stubs listados no
-[Estado atual](ESTADO_ATUAL.md). Os nove commits locais de interface identificados
-naquela revisão precisam de publicação de código separada desta entrega documental.
+[Estado atual](ESTADO_ATUAL.md). Os commits locais de interface identificados naquela
+revisão foram publicados depois, no décimo primeiro bloco do [CHANGELOG](../CHANGELOG.md).

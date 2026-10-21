@@ -10,8 +10,8 @@ trabalho local e ativação de serviços externos.
 |---|---|
 | Repositório | Fork pública `VicZk/vo_testa`, branch `dev` |
 | Base de código publicada revisada | [`3e30a11fa18ffbefb08136fa2b83ca4560dd8b1e`](https://github.com/VicZk/vo_testa/tree/3e30a11fa18ffbefb08136fa2b83ca4560dd8b1e) |
-| Checkout local adicional | `1f1aab660239a56f370778aa3b05efb95ce7ee34`, nove commits além da base |
-| Natureza desta entrega | Documentação; não publica os nove commits de código nem faz deploy |
+| Publicação seguinte | Décimo primeiro bloco do [CHANGELOG](../CHANGELOG.md), no mesmo dia: os nove commits de interface listados abaixo, a Governança didática com a visão geral e o Estoque redesenhado |
+| Natureza da revisão documental | Documentação (`784c208`); a publicação de código veio no bloco seguinte |
 | Produção e contas externas | Não consultadas nesta revisão |
 
 As contagens e durações de testes nas auditorias e no changelog são evidências
@@ -25,7 +25,7 @@ datadas. Não foram reexecutadas como parte desta revisão de texto.
 | Regras de venda | Restrições por período/tipo, sinal/cancelamento, tolerância de arredondamento e no-show configurável |
 | Financeiro | Caixa por operador e módulo, conferência, estorno, adiantamento, crédito online, faturamento e devolução |
 | Operação | Estoque e inventário, loja, restaurante, lavanderia, manutenção e escala |
-| Governança | Tarefas, arrumações, inspeção opcional, ronda, discrepâncias e três relatórios |
+| Governança | Visão geral da casa, lista com o ciclo do quarto e um próximo passo por linha, tarefas, arrumações, inspeção opcional, ronda, discrepâncias e três relatórios |
 | Gestão | Pendências, trilha de auditoria, fechamento diário e conciliação OFX/cartão |
 | Receita | Carteira de reservas (OTB), pickup, ritmo de vendas e custo de distribuição |
 | Continuidade | Kit imprimível de hospedados/chegadas/saídas/quartos, envio diário opcional e backup por rotina |
@@ -54,11 +54,14 @@ NPS é uma proposta com endpoints stub, sem coleta persistida de respostas.
 CRM do Hóspede e Canais/OTAs são evolução de catálogo. Telefonia/WebRTC continua
 planejada. Frigobar foi removido do catálogo e não possui app ativo.
 
-## Melhorias locais ainda não publicadas na data da revisão
+## Melhorias publicadas depois da revisão
 
-Os nove commits abaixo já existiam no checkout local em 21/10/2026, mas não na
-base remota revisada. Esta entrega documental registra as diferenças sem publicar
-os arquivos de código:
+Os nove commits abaixo existiam só no checkout local na hora da revisão documental e
+foram publicados no décimo primeiro bloco do [CHANGELOG](../CHANGELOG.md), junto com o
+Estoque redesenhado (`202a059` a `00b4d0a`, merge `1381a71`: posição com indicadores e
+cartão por depósito, movimentação com prévia e chave de envio contra clique duplo,
+contagem que aplica só o contado — migração `nucleo.0050`) e os commits `85543e0` e
+seguintes:
 
 | Commit local | Mudança |
 |---|---|
@@ -72,8 +75,8 @@ os arquivos de código:
 | `c218532` | Correção de acionamento duplicado por toque |
 | `1f1aab6` | Refinos de governança no celular, textos e hover |
 
-Este é um **snapshot datado**. Após uma publicação posterior de código, atualize
-a tabela com a versão remota efetivamente confirmada.
+Este é um **snapshot datado**. A cada publicação de código, o CHANGELOG registra o
+que entrou; atualize esta página quando a base revisada mudar.
 
 ## Como interpretar os documentos
 

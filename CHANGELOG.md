@@ -9,6 +9,147 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 21/10/2026 — A navegação sem piscar, as dicas no lugar, a governança que ensina e o Estoque redesenhado (`6f66d4f` a `7899e11`)
+
+Décimo primeiro bloco: os pedidos do dono depois de usar o sistema — o menu piscando a
+cada troca de página, as caixinhas de hover fora do centro, texto em minúsculo, espaço
+sobrando no monitor grande, os botões da governança desalinhados, um fluxo de faxina que
+ensine quem nunca trabalhou em hotel, uma visão da governança "mais gráfica" e o Estoque
+"simplório". Governança e Estoque foram feitos por agentes em cópias separadas do código,
+revisados no navegador e corrigidos antes do merge. Copiar e mandar link pelo WhatsApp e
+as ações da reserva vêm no próximo push. Entram também a revisão de documentação
+publicada no `dev` (`784c208`) e os dois commits novos do original (`bcd9ee8`, `5f57fb8`).
+
+**O que melhorou**
+- **Trocar de página não pisca mais.** A transição pegava a página inteira como um bloco
+  só: menu e barra do topo sumiam e voltavam a cada clique. Agora menu e topo ficam
+  parados e só o conteúdo troca, num cross-fade curto; a navegação comum (link que
+  recarrega a página) ganhou a mesma troca. As trocas parciais (item na comanda, filtro,
+  ronda) deixaram de animar a página inteira.
+- **Caixinhas de hover centradas, inteiras e iguais no sistema todo.** Eram três motores,
+  cada um com outra cara, e o balão era desenhado dentro do elemento: cortado pela tabela
+  no mapa e em Pessoas, vazando pela direita no detalhe da reserva, nascendo a até 363 px
+  do que se via no calendário do Marketing. Agora é um balão só — centrado no que se vê,
+  em cima quando cabe e embaixo quando não, sempre dentro da tela. Com o menu recolhido, o
+  nome do item aparece na hora ao lado do ícone. E passar o mouse numa porta do corredor
+  não empurra mais a tela de baixo (o espaço que o balão antigo reservava fazia tudo
+  descer 62 px).
+- **Nada de código cru nem frase em minúsculo.** A Auditoria mostrava "no_show",
+  "lead_fechado_movido", "SessaoCaixa" e gravidade "media"; a conciliação, "pendente".
+  Agora "Não comparecimento", "Lead fechado movido", "Caixa", "Média", "Pendente" — o
+  código continua no banco e no CSV. As frases soltas do painel, do PDV, da comanda, dos
+  tipos de quarto, da Manutenção, da Tabela de Preços e do Estoque começam com maiúscula.
+- **Monitor grande:** o conteúdo para em 1760 px e fica centrado, com a busca alinhada.
+  A 2560 px, o detalhe da reserva virava faixas de 2.300 px, com o valor do financeiro lá
+  na ponta. O mapa de reservas e o calendário do Marketing continuam de ponta a ponta.
+- **Governança que ensina quem nunca trabalhou em hotel:**
+  - o ciclo do quarto à vista e na ordem — **A limpar › Em limpeza › Limpo › Pronto** —,
+    que também filtra a lista; cada linha diz por que o quarto está ali ("O hóspede fez
+    check-out. Na fila de Maria.", "Limpo às 11:05 por Maria. Falta a supervisora
+    conferir.");
+  - **um** botão por quarto, com o nome do que acontece: "Começar limpeza", "Terminei a
+    limpeza", "Aprovar limpeza". Quarto sujo sem faxina na fila começa num toque só (eram
+    dois botões seguidos). "Devolver para limpar" abre na janela da casa, e o motivo
+    aparece na linha de quem vai limpar de novo;
+  - "Só os meus" para a camareira e um "Como funciona" com o glossário (ronda, inspeção,
+    faxina × arrumação, skip, sleeper);
+  - os botões da linha com a mesma altura e na mesma linha — também no celular e no
+    tablet, onde "Aprovar" saía 8 px mais baixo que "Devolver".
+- **Governança — "Como está a casa"**, a nova entrada do módulo: os quartos em blocos
+  pintados pelo estado da limpeza, "22 de 24 prontos" com a barra do dia e a hora em que o
+  primeiro hóspede pode entrar, o "Precisa de atenção agora" (chegada sem quarto pronto,
+  quarto esperando inspeção, divergência da ronda, quarto sem camareira), as chegadas de
+  hoje e a carga de cada camareira. Tudo clicável para a lista já filtrada. No celular, o
+  progresso e o que pede ação vêm antes dos blocos. A lista foi para a aba Quartos.
+- **Estoque redesenhado:**
+  - a posição virou tela de decisão: quanto dinheiro está parado em mercadoria, quantos
+    itens estão abaixo do mínimo, quantos acabaram e quanto se mexeu na semana;
+  - a escolha do depósito, que era um chip com o nome, virou um cartão por depósito com
+    o que ele guarda, quanto vale e quantos itens estão no limite — e, escolhido, a tela
+    mostra só o que aquele depósito guarda, em vez do catálogo inteiro em alarme;
+  - cada linha tem a régua saldo × mínimo e atalhos de entrar, tirar e transferir aquele
+    produto já preenchidos;
+  - registrar movimento tem busca de produto, saldo de cada depósito ao vivo, fornecedor
+    e nota na entrada e a prévia "saldo hoje → fica com" (com o custo médio novo);
+  - kardex com saldo corrente; contagem de inventário com progresso, busca e resumo — e o
+    item que ninguém contou não é mais mexido (antes, uma venda feita durante a contagem
+    era apagada no "Aplicar");
+  - quantidade como se fala: "55 un", "4,5 kg", "5 L".
+- **Clique duplo no Estoque não grava duas vezes.** Na entrada, dobrava o saldo e
+  deslocava o custo médio; na saída, baixava duas vezes. E um "nan" digitado na contagem
+  derrubava a tela.
+
+**O que foi modificado**
+- **Navegação (`6f66d4f`):** View Transition com nomes próprios (`menu`, `topo`,
+  `conteudo`), e só o conteúdo anima; `@view-transition { navigation: auto }` fora de
+  `prefers-reduced-motion`; no `base.html`, sai o `globalViewTransitions` do HTMX e entra
+  `transition:true` só no `hx-boost` do menu.
+- **Dicas (`f649111`, `1f1aab6`):** `static/js/dicas.js` — um balão fixo
+  (`#dica-flutuante`) para todo `[data-dica]`, com `data-dica-lado` para o menu recolhido;
+  saem a dica em `::after`, o `.mk-dica` e o `#fx-tip` do Marketing, e o
+  `.corredor-hero:has(.porta:hover)` que reservava espaço para o balão antigo.
+- **Rótulos (`fa79ddb`, `85543e0`):** `auditoria.formatacao.rotulo_acao/rotulo_alvo/
+  rotulo_gravidade` e os filtros no `auditoria_extras`; `pagamentos.services.conciliacao()`
+  leva o rótulo; `.filtro-barra input[type=search|text]` na moldura da casa.
+- **Tela grande (`45f9417`):** token `--conteudo-max` e a classe `.conteudo-largo`.
+- **Governança (`6eab595`, `e275059`, merge `d2d858d`, `c218532`, `1f1aab6`):**
+  `services.CICLO`, `explicar_estado`, `visao_geral` e `carga_das_camareiras`; rotas
+  `governanca:quartos` (a lista) e `governanca:devolver`; `painel` vira a visão geral;
+  `abrir_faxina` trava a situação do quarto e não rebaixa faxina já começada;
+  `iniciar_tarefa` acerta o quarto preso em "A limpar"; o "Resolver" do quarto sem ronda
+  leva à lista. Sem migração.
+- **Estoque (`202a059` a `00b4d0a`, merge `1381a71`):** `MovimentoEstoque.fornecedor` e
+  `chave` (idempotência, como a `Venda.chave`), `ItemInventario.contado` e
+  `Inventario.aplicar(somente_contados=)` — migração `nucleo.0050`; consultas
+  `saldos_por_local`, `resumo_locais`, `indicadores_estoque` e `movimento_da_chave`;
+  `apps/estoque/formato.py`; telas novas (`movimentar.html`, `cadastros.html`,
+  `produto_form.html`); `combo_pessoa.html` emite `combo-mudou`; comando
+  `popular_estoque`.
+- **Original (`bcd9ee8`, `5f57fb8`):** comando `zerar_reservas` (reset de ambiente de
+  teste, dry-run por padrão) e um commit vazio de redeploy.
+- **Docs:** revisão publicada em `784c208` (índice `docs/README.md`, `docs/ESTADO_ATUAL.md`)
+  e, neste push, README, `docs/ESTADO_ATUAL.md`, `docs/ARQUITETURA.md`,
+  `docs/MODULOS_E_FLUXOS.md` e CLAUDE.md em dia.
+
+**Como foi testado**
+- **Navegação:** quadro a quadro no Chromium (transição pausada de 0 a 200 ms), menu
+  aberto e recolhido — na faixa do menu, a diferença para a página em repouso caiu de
+  62–64 (numa escala de 255) para menos de 1.
+- **Dicas:** mouse de verdade em 8 telas, a 1440 e 390 px, sem nenhum problema; testes
+  `DicasTests` e `DicasE2ETests` (no navegador). O pulo do corredor medido: o bloco de
+  baixo descia de 1015 para 1077 px com o mouse numa porta; agora fica em 1015.
+- **Minúsculas:** varredura do texto visível em todas as telas do menu e em 21 detalhes:
+  de 30 textos em minúsculo para só dado (nome de usuário, área digitada numa OS).
+- **Tela grande:** medido a 2560 e 1920 px; nada muda até 1920 com o menu aberto.
+- **Governança:** 104 testes no app (ciclo, frase de cada estado, uma ação por estado, o
+  toque único, o modal e a página sem JS, o motivo na linha, "Só os meus", a visão geral
+  com consultas constantes). O toque duplo e o quarto preso falham no código anterior e
+  passam agora. Altura dos botões medida com toque emulado: antes 36 × 44 px, agora
+  44 × 44. Fluxo real nos dois papéis (camareira a 390 px, supervisora a 1440 px) e as
+  telas em 320, 390, 821 (menu aberto), 1440 e 1920 px.
+- **Estoque:** 64 testes no app — formatação, consulta constante (20 produtos a mais =
+  mesmas consultas), saldo corrente do kardex, atalhos preenchidos, contagem parcial e
+  inválida (nan, Infinity, 1e20) e dois POSTs com a mesma chave (um movimento, mesmo saldo
+  e mesmo custo médio). Fluxo real no navegador: entrada, transferência, saída sem saldo,
+  inventário aplicado e duplo envio (29 → 36 un, não 43). As nove telas em 390, 821 (menu
+  aberto) e 1440 px antes do merge.
+- **Suíte completa no Windows:** 1.547 testes no `7899e11` (eram 1.450 no bloco anterior), só a falha conhecida do ambiente
+  (`test_webhook_audio_baixa_e_salva_arquivo`). Ruff zero, `makemigrations --check`
+  limpo.
+
+**Depois do deploy (no Railway)**
+- A migração `nucleo.0050` o deploy roda sozinho.
+- Opcional: `manage.py popular_estoque` só para demonstração — não rodar com dados reais.
+- Decisões da pousada:
+  - estoque mínimo: hoje é um por produto, para a casa toda — por isso o depósito da
+    Loja aparece com quase tudo "abaixo do mínimo". Mínimo por depósito seria um campo
+    novo;
+  - governança: confirmar com a camareira e a supervisora os nomes dos passos
+    ("Começar limpeza", "Terminei a limpeza", "Aprovar limpeza") e da ronda ("Vago / Com
+    mala / Sem mala").
+
+---
+
 ## 21/10/2026 — Documentação revisada e índice do projeto
 
 - README, especificação, arquitetura, módulos e convenções alinhados ao código
