@@ -478,6 +478,86 @@ class MovimentoDaNavegacaoTests(TestCase):
         self.assertIn("transition: grid-template-columns", bloco.group(1))
 
 
+class MenuLateralTests(TestCase):
+    """O trilho recolhido é o estado PADRÃO do sistema, e era o menos cuidado:
+    32 itens sem nome nenhum para leitor de tela, o rodapé do usuário vazando
+    27px para fora da sidebar e o topo saltando 52px ao recolher."""
+
+    def setUp(self):
+        self.css = CSS.read_text(encoding="utf-8").replace("\r\n", "\n")
+        self.base = (Path(settings.BASE_DIR) / "templates" / "base.html").read_text(encoding="utf-8")
+
+    def _itens_do_menu(self):
+        """Cada <a class="nav-item"> / <button class="acao-topo"> do base.html."""
+        return re.findall(r"<(?:a|button)\s[^>]*class=\"(?:nav-item|acao-topo)[^\"]*\"[^>]*>",
+                          self.base)
+
+    def test_item_do_menu_tem_dica_quando_recolhido(self):
+        """Recolhido, o rótulo sai da vista: sem `title` o item vira um ícone
+        anônimo, sem nome e sem dica ao passar o mouse."""
+        sem = [t[:70] for t in self._itens_do_menu() if "title=" not in t]
+        self.assertEqual(sem, [], "item do menu sem title")
+
+    def test_rotulo_recolhido_some_da_vista_mas_nao_da_leitura(self):
+        """`display:none` tirava o rótulo da árvore de acessibilidade — era por
+        isso que os 32 itens ficavam sem nome. Agora ele só sai do fluxo."""
+        bloco = re.search(
+            r"\.app\.recolhida \.nav-item \.rotulo,\n[^{]*\{([^}]*)\}", self.css)
+        self.assertIsNotNone(bloco, "regra do rótulo recolhido sumiu")
+        corpo = bloco.group(1)
+        self.assertNotIn("display: none", corpo)
+        self.assertIn("clip-path", corpo)
+        self.assertIn("position: absolute", corpo)
+
+    def test_rotulo_nao_quebra_linha_durante_a_animacao(self):
+        bloco = re.search(r"\n\.nav-item \.rotulo, [^{]*\{([^}]*)\}", self.css)
+        self.assertIsNotNone(bloco)
+        self.assertIn("white-space: nowrap", bloco.group(1))
+
+    def test_topo_da_sidebar_tem_altura_fixa_nos_dois_estados(self):
+        """Sem ela, trocar o logotipo (86px) pelo símbolo (34px) empurrava todo
+        o menu 52px para cima num quadro só."""
+        self.assertIn("--sidebar-topo-h:", self.css)
+        bloco = re.search(r"\n\.sidebar-topo \{([^}]*)\}", self.css)
+        self.assertIsNotNone(bloco)
+        self.assertIn("min-height: var(--sidebar-topo-h)", bloco.group(1))
+
+    def test_botao_de_recolher_diz_o_que_vai_fazer(self):
+        """O rótulo era fixo em "Recolher menu" mesmo já recolhido, e o title
+        mostrava a barra invertida dobrada do template."""
+        self.assertIn("rotularSidebar", self.base)
+        self.assertIn("Expandir menu", self.base)
+        self.assertIn('aria-controls="menu-principal"', self.base)
+        self.assertNotIn("Recolher (⌘\\\\)", self.base)
+
+    def test_gaveta_fechada_sai_da_ordem_de_tabulacao(self):
+        """Fora da tela por `translateX(-100%)`, os 39 links do menu continuavam
+        tabuláveis: no celular o Tab passava por todos antes do conteúdo."""
+        bloco = re.search(r"\n  \.sidebar \{([^}]*)\}", self.css)
+        self.assertIsNotNone(bloco, "regra da gaveta sumiu")
+        self.assertIn("visibility: hidden", bloco.group(1))
+
+    def test_gaveta_usa_os_tokens_de_movimento(self):
+        """Era `.2s ease` cru: ignorava `prefers-reduced-motion`."""
+        bloco = re.search(r"\n  \.sidebar \{([^}]*)\}", self.css)
+        self.assertIn("var(--mov-padrao)", bloco.group(1))
+        self.assertNotIn(".2s ease", bloco.group(1))
+
+    def test_gaveta_aberta_prende_o_foco_e_trava_a_rolagem(self):
+        self.assertRegex(self.base, r"caixaAberta[\s\S]{0,500}sidebar-aberta")
+        self.assertIn("sem-rolagem", self.base)
+        self.assertIn("body.sem-rolagem { overflow: hidden; }", self.css)
+
+    def test_alvo_de_44px_tambem_no_menu(self):
+        """O menu é o controle mais tocado no celular e tinha os alvos mais
+        apertados do sistema (item de 37px)."""
+        blocos = re.findall(r"@media \(pointer: coarse\), \(max-width: 820px\) \{([\s\S]*?)\n\}",
+                            self.css)
+        self.assertTrue(blocos)
+        self.assertTrue(any(".sidebar .nav-item" in b for b in blocos),
+                        "item do menu sem alvo de 44px no dedo")
+
+
 class PortalDoHospedeTests(TestCase):
     """É a primeira experiência digital do hóspede — e era a tela mais fraca.
 

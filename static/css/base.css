@@ -257,6 +257,10 @@
   --lampiao-tinta: #7A5A1E;   /* ouro legível como TEXTO sobre claro */
 
   --sidebar-w: 258px;
+  /* Altura do topo da sidebar (marca + botão de recolher). É a MESMA aberta e
+     recolhida: é ela que impede o menu inteiro de saltar quando o logotipo
+     grande dá lugar ao símbolo. */
+  --sidebar-topo-h: 116px;
   /* Altura da barra de cima. Quem gruda abaixo dela (painel do PDV, filtro do
      BOH, rail de operação) calcula a partir daqui, em vez de repetir "76px". */
   --topbar-h: 60px;
