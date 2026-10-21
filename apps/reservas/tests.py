@@ -2277,11 +2277,13 @@ class NoShowAutomaticoTests(ReservasTestsBase):
         from apps.nucleo.models import TrilhaAuditoria
         r = self.reserva(dias=3, offset=-1)
         r.marcar_no_show(self.usuario)
+        self.assertIsNotNone(r.cancelada_em)        # saiu da carteira (pickup)
         with self.assertRaises(ValidationError):
             r.desfazer_no_show(self.usuario, "  ")
         r.desfazer_no_show(self.usuario, "voo atrasou")
         r.refresh_from_db()
         self.assertEqual(r.status, Reserva.Status.CONFIRMADA)
+        self.assertIsNone(r.cancelada_em)           # voltou: não conta como queda
         trilha = TrilhaAuditoria.objects.get(acao="no_show_desfeito", alvo_id=str(r.pk))
         self.assertEqual(trilha.detalhe, {"motivo": "voo atrasou"})
 
@@ -2291,8 +2293,10 @@ class NoShowAutomaticoTests(ReservasTestsBase):
         self.reserva(dias=2)                            # o T1 foi vendido de novo
         with self.assertRaisesMessage(ValidationError, "já foi vendido"):
             r.desfazer_no_show(self.usuario, "chegou")
+        self.assertIsNotNone(r.cancelada_em)        # recusado: a instância volta como era
         r.refresh_from_db()
         self.assertEqual(r.status, Reserva.Status.NO_SHOW)
+        self.assertIsNotNone(r.cancelada_em)
 
     def test_desfazer_recusa_estadia_que_ja_terminou(self):
         r = self.reserva(dias=1, offset=-3)

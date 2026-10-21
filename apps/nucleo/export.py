@@ -16,8 +16,15 @@ def sanitizar_celula(v):
 
 
 def resposta_csv(filename: str) -> HttpResponse:
-    """HttpResponse pronta para CSV pt-BR (charset utf-8-sig + BOM)."""
-    resp = HttpResponse(content_type="text/csv; charset=utf-8-sig")
+    """HttpResponse pronta para CSV pt-BR (utf-8 + um BOM no começo do arquivo).
+
+    O charset é `utf-8`, não `utf-8-sig`: o `HttpResponse.write` codifica CADA chamada
+    com o charset declarado, e o codec `utf-8-sig` escreve um BOM por chamada — ou seja,
+    uma marca invisível no começo de TODA linha do CSV (o `csv.writer` escreve linha por
+    linha). O BOM que o Excel pt-BR precisa é só o primeiro, escrito à mão aqui — mesmo
+    jeito dos outros dois exports da casa (BOH e conciliação).
+    """
+    resp = HttpResponse(content_type="text/csv; charset=utf-8")
     resp["Content-Disposition"] = f'attachment; filename="{filename}"'
     resp.write("﻿")  # BOM p/ Excel pt-BR
     return resp

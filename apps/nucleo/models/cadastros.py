@@ -538,6 +538,29 @@ class ConfiguracaoReservas(models.Model):
     hora_checkout = models.TimeField(
         "check-out até", default=datetime.time(12, 0),
     )
+    # Custo de vender por cada canal — o que o relatório "Custo de distribuição"
+    # desconta da receita bruta para chegar na líquida. Percentual sobre a hospedagem
+    # vendida. Só estimativa gerencial: nada é lançado no Financeiro por aqui.
+    custo_canal_ota = models.DecimalField(
+        "custo de venda — OTA (%)", max_digits=5, decimal_places=2,
+        default=Decimal("18.00"),
+        help_text="Comissão de Booking/Airbnb e afins (a praticada no mercado fica "
+                  "entre 15% e 20%).",
+    )
+    custo_canal_site = models.DecimalField(
+        "custo de venda — site (%)", max_digits=5, decimal_places=2,
+        default=Decimal("0.00"),
+        help_text="Taxa do meio de pagamento na venda direta. Zero enquanto o Pix "
+                  "sair por BR Code (sem taxa de adquirente).",
+    )
+    custo_canal_whatsapp = models.DecimalField(
+        "custo de venda — WhatsApp (%)", max_digits=5, decimal_places=2,
+        default=Decimal("0.00"),
+    )
+    custo_canal_balcao = models.DecimalField(
+        "custo de venda — balcão/telefone (%)", max_digits=5, decimal_places=2,
+        default=Decimal("0.00"),
+    )
 
     class NoShowAutomatico(models.IntegerChoices):
         DESLIGADO = 0, "Desligado"
@@ -568,3 +591,13 @@ class ConfiguracaoReservas(models.Model):
     def carregar(cls):
         obj, _ = cls.objects.get_or_create(pk=1)
         return obj
+
+    def custo_por_canal(self) -> dict:
+        """{canal: percentual} do custo de venda. As chaves espelham `Reserva.Canal`
+        (o núcleo não importa Reservas, por isso são texto)."""
+        return {
+            "balcao": self.custo_canal_balcao,
+            "whatsapp": self.custo_canal_whatsapp,
+            "site": self.custo_canal_site,
+            "ota": self.custo_canal_ota,
+        }

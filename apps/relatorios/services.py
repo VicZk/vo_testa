@@ -22,6 +22,33 @@ def _rs(v):
     return intcomma_brl(v or 0)
 
 
+def _n(v):
+    """Contagem com separador de milhar ("1.234") — número não é dinheiro."""
+    from apps.nucleo.templatetags.moeda import milhar
+    return milhar(v or 0)
+
+
+def _dec(v):
+    """Decimal em pt-BR sem zeros à direita ("34,5", "12")."""
+    from apps.nucleo.formatos import pct_br
+    return pct_br(v or 0)
+
+
+def _pc(v):
+    """Percentual em pt-BR ("64,9%")."""
+    return f"{_dec(v)}%"
+
+
+def _parte(parte, total):
+    """Quanto `parte` representa de `total`, em percentual."""
+    if not total:
+        return Decimal("0")
+    return (Decimal(parte) / Decimal(total) * 100).quantize(Decimal("0.1"))
+
+
+TRACO = "—"   # célula sem sentido naquela linha (não é zero)
+
+
 # ───────────────────────── Consolidados (cruzados) ─────────────────────────
 
 def _movimentos_por_forma(inicio, fim):
@@ -138,6 +165,177 @@ def rel_faturamento_modulos(inicio, fim):
     }
 
 
+# ─────────────── Receita vendida (olhando para a frente) ───────────────
+#
+# Produção e ocupação contam o que já aconteceu. Estes quatro contam a VENDA: o que
+# está na carteira para datas que ainda vão chegar, o que entrou e saiu nos últimos
+# dias, com quanta antecedência o mês vendeu e quanto custa cada canal. O cálculo é do
+# dono do dado (`reservas.services`); aqui é só a apresentação.
+
+
+def rel_carteira(inicio, fim):
+    """Carteira (OTB) por data de estadia — dia a dia, por canal e por faturamento."""
+    from apps.reservas.services import carteira
+    c = carteira(inicio, fim)
+
+    linhas = [[
+        lin["rotulo"], _n(lin["firmes"]), _pc(lin["ocupacao"]),
+        _rs(lin["receita_firme"]),
+        _n(lin["provisorias"]) if lin["provisorias"] else TRACO,
+        _rs(lin["receita_provisoria"]) if lin["provisorias"] else TRACO,
+    ] for lin in c["linhas"]]
+    linhas.append([
+        "Total do período", _n(c["noites_firmes"]), _pc(c["ocupacao"]),
+        _rs(c["receita_firme"]), _n(c["noites_provisorias"]),
+        _rs(c["receita_provisoria"]),
+    ])
+    # Os cortes só olham o firme — pré-reserva ainda pode cair, e creditá-la a um canal
+    # faria o canal parecer ter vendido o que não vendeu. A fatia de cada um vai no
+    # rótulo, não na coluna de ocupação: o denominador é outro (noites vendidas, não
+    # quartos disponíveis) e dois sentidos na mesma coluna confundem.
+    for grupo, rotulo in (("por_canal", "Canal"), ("por_faturamento", "Faturamento")):
+        for item in c[grupo]:
+            if not item["noites"]:
+                continue
+            fatia = _pc(_parte(item["noites"], c["noites_firmes"]))
+            linhas.append([f"{rotulo}: {item['rotulo']} · {fatia} das noites",
+                           _n(item["noites"]), TRACO,
+                           _rs(item["receita"]), TRACO, TRACO])
+
+    du = c["day_use"]
+    return {
+        "kpis": [
+            ("Quartos-noite vendidos", f"{_n(c['noites_firmes'])} de {_n(c['disponiveis'])}"),
+            ("Ocupação vendida",
+             f"{_pc(c['ocupacao'])} · {_pc(c['ocupacao_total'])} com a pré-reserva"),
+            ("Receita de hospedagem", _rs(c["receita_firme"])),
+            ("Diária média (ADR)", _rs(c["adr"])),
+            ("Pré-reserva (pode cair)",
+             f"{_n(c['noites_provisorias'])} noites · {_rs(c['receita_provisoria'])}"),
+            ("Dia na Pousada (à parte)",
+             f"{_n(du['reservas'])} reservas · {_rs(du['receita'])}"),
+        ],
+        "colunas": ["Data da estadia", "Quartos-noite", "Ocupação", "Receita",
+                    "Pré-reserva (noites)", "Pré-reserva (R$)"],
+        "linhas": linhas,
+        "nota": (
+            f"Carteira = o que segura quarto: confirmada, hospedada e saída (firme) + "
+            f"pré-reserva dentro da retenção, mostrada à parte. Cancelada, no-show e "
+            f"orçamento ficam fora. A noite entra no dia em que é dormida (estadia na "
+            f"virada do mês conta em cada mês o que é dele). Ocupação sobre os "
+            f"{c['quartos']} quartos de pernoite; o Dia na Pousada não é pernoite e "
+            f"aparece só no indicador à parte. Pré-reserva não entra nos cortes por "
+            f"canal e faturamento. É o que foi VENDIDO (preço da reserva); o fechamento "
+            f"do mês que passou é o relatório de Produção."
+        ),
+    }
+
+
+def rel_pickup(inicio, fim, janela=7):
+    """Pickup: o que entrou e saiu da carteira do período nos últimos N dias."""
+    from apps.reservas.services import pickup
+    p = pickup(inicio, fim, janela=janela)
+
+    def linha(rotulo, v):
+        return [rotulo,
+                _n(v["entrou_noites"]), _rs(v["entrou_receita"]),
+                _n(v["saiu_noites"]), _rs(v["saiu_receita"]),
+                _n(v["liquido_noites"]), _rs(v["liquido_receita"])]
+
+    linhas = [linha(lin["rotulo"], lin) for lin in p["linhas"]]
+    linhas.append(["Total da janela",
+                   _n(p["entrou"]["noites"]), _rs(p["entrou"]["receita"]),
+                   _n(p["saiu"]["noites"]), _rs(p["saiu"]["receita"]),
+                   _n(p["liquido"]["noites"]), _rs(p["liquido"]["receita"])])
+    linhas += [linha(f"Canal: {c['rotulo']}", c) for c in p["por_canal"]
+               if c["entrou_noites"] or c["saiu_noites"]]
+
+    return {
+        "kpis": [
+            (f"Janela (últimos {janela} dias)",
+             f"{p['desde']:%d/%m} a {p['ate']:%d/%m}"),
+            ("Entrou (quartos-noite)", _n(p["entrou"]["noites"])),
+            ("Entrou (receita)", _rs(p["entrou"]["receita"])),
+            ("Saiu (quartos-noite)", _n(p["saiu"]["noites"])),
+            ("Saiu (receita)", _rs(p["saiu"]["receita"])),
+            ("Pickup líquido",
+             f"{_n(p['liquido']['noites'])} noites · {_rs(p['liquido']['receita'])}"),
+        ],
+        "colunas": ["Dia da venda", "Entrou (noites)", "Entrou (R$)",
+                    "Saiu (noites)", "Saiu (R$)", "Líquido (noites)", "Líquido (R$)"],
+        "linhas": linhas,
+        "nota": (
+            "Só o movimento das estadias do período escolhido: entrou = reserva vendida "
+            "na janela (data da venda); saiu = reserva que deixou a carteira na janela "
+            "(cancelamento, retenção expirada ou no-show). Pickup líquido negativo = o "
+            "mês andou para trás. A data de saída passou a ser gravada nesta versão: "
+            "cancelamento mais antigo não aparece na coluna 'Saiu'."
+        ),
+    }
+
+
+def rel_ritmo(inicio, fim):
+    """Ritmo de vendas: curva acumulada da carteira por antecedência da venda."""
+    from apps.reservas.services import ritmo_de_vendas
+    r = ritmo_de_vendas(inicio, fim)
+    linhas = [[f["rotulo"], _n(f["noites"]), _pc(f["parte"]), _rs(f["receita"]),
+               _n(f["acumulado_noites"]), _pc(f["parte_acumulada"]),
+               _rs(f["acumulado_receita"])] for f in r["faixas"]]
+    return {
+        "kpis": [
+            ("Quartos-noite na carteira", _n(r["noites"])),
+            ("Receita na carteira", _rs(r["receita"])),
+            ("Antecedência média", f"{_dec(r['antecedencia_media'])} dias"),
+            ("Vendido com 30+ dias", _pc(r["parte_antecipada"])),
+            ("Última hora (até 6 dias)", _pc(r["parte_ultima_hora"])),
+        ],
+        "colunas": ["Antecedência da venda", "Quartos-noite", "% do total", "Receita",
+                    "Acumulado (noites)", "Acumulado (%)", "Receita acumulada"],
+        "linhas": linhas,
+        "nota": (
+            "Antecedência = dias entre a venda e a data de CHEGADA da reserva (a decisão "
+            "de compra é uma só, a da estadia). A curva acumula de cima para baixo: a "
+            "linha '30 a 59 dias' já traz dentro dela o que foi vendido com 60+ e 90+. "
+            "Comparada com a de um mês que já fechou, diz se este está adiantado ou "
+            "atrasado. Carteira = firme + pré-reserva na retenção."
+        ),
+    }
+
+
+def rel_distribuicao(inicio, fim):
+    """Custo de distribuição: bruta × custo de venda × líquida, por canal."""
+    from apps.reservas.services import custo_distribuicao
+    d = custo_distribuicao(inicio, fim)
+    linhas = [[lin["rotulo"], _n(lin["noites"]), _rs(lin["receita"]), _pc(lin["pct"]),
+               _rs(lin["custo"]), _rs(lin["liquida"])] for lin in d["linhas"]]
+    linhas.append(["Total", _n(sum(lin["noites"] for lin in d["linhas"])),
+                   _rs(d["bruta"]), _pc(d["custo_medio"]),
+                   _rs(d["custo"]), _rs(d["liquida"])])
+    # Abaixo do total de propósito: a comissão é outra conta, não soma com a de canal.
+    linhas += [[f"Comissão estimada: {c['rotulo']}", _n(c["noites"]), _rs(c["receita"]),
+                _pc(c["pct"]), _rs(c["comissao"]), TRACO] for c in d["comissoes"]]
+    return {
+        "kpis": [
+            ("Receita bruta (firme)", _rs(d["bruta"])),
+            ("Custo de venda estimado", _rs(d["custo"])),
+            ("Receita líquida", _rs(d["liquida"])),
+            ("Custo médio", _pc(d["custo_medio"])),
+            ("Comissão de agência (estimativa)", _rs(d["comissao_total"])),
+        ],
+        "colunas": ["Canal", "Quartos-noite", "Receita bruta", "Custo %",
+                    "Custo estimado", "Receita líquida"],
+        "linhas": linhas,
+        "nota": (
+            "Estimativa gerencial, não lançamento: os percentuais por canal são "
+            "parâmetro da casa (Cadastros → Tabela de preços → Custo de vender por "
+            "canal). Base = reservas firmes com noites no período (pré-reserva pode "
+            "cair). As linhas de agência/empresa usam a comissão do cadastro da agência "
+            "e ficam FORA do total de custo — como a comissão entra na contabilidade "
+            "ainda é decisão da pousada, então nada é lançado no Financeiro."
+        ),
+    }
+
+
 # ───────────────────────── Por módulo (individuais) ─────────────────────────
 
 def rel_estoque_consumo(inicio, fim):
@@ -189,11 +387,24 @@ def rel_reservas(inicio, fim):
 
 
 # Registro central. grupo = "Consolidados" | "Por módulo". `modulo` = exige ativo.
+# `periodo` = "proximo_mes" abre no mês que vem (relatório que olha para a frente).
+# `controles` = controle próprio além do período (ver CONTROLES).
 RELATORIOS = {
     "producao": {"nome": "Produção / Receita", "grupo": "Consolidados",
                  "builder": rel_producao, "modulo": Modulo.RESERVAS},
     "ocupacao": {"nome": "Ocupação & Diárias (ADR/RevPAR)", "grupo": "Consolidados",
                  "builder": rel_ocupacao, "modulo": Modulo.RESERVAS},
+    "carteira": {"nome": "Carteira de reservas (OTB)", "grupo": "Consolidados",
+                 "builder": rel_carteira, "modulo": Modulo.RESERVAS,
+                 "periodo": "proximo_mes"},
+    "pickup": {"nome": "Pickup — entrou × saiu", "grupo": "Consolidados",
+               "builder": rel_pickup, "modulo": Modulo.RESERVAS,
+               "periodo": "proximo_mes", "controles": ["janela"]},
+    "ritmo": {"nome": "Ritmo de vendas (antecedência)", "grupo": "Consolidados",
+              "builder": rel_ritmo, "modulo": Modulo.RESERVAS,
+              "periodo": "proximo_mes"},
+    "distribuicao": {"nome": "Custo de distribuição por canal", "grupo": "Consolidados",
+                     "builder": rel_distribuicao, "modulo": Modulo.RESERVAS},
     "caixa": {"nome": "Caixa / Financeiro", "grupo": "Consolidados",
               "builder": rel_caixa, "modulo": None},
     "faturamento_modulos": {"nome": "Faturamento por setor (caixa × quarto)",
@@ -217,3 +428,35 @@ def disponiveis():
             continue
         grupos.setdefault(r["grupo"], []).append({"chave": chave, "nome": r["nome"]})
     return grupos
+
+
+# ───────────────── Controles próprios de um relatório ─────────────────
+#
+# Alguns relatórios têm um botão a mais que o período (a janela do pickup). O registro
+# só declara o nome; a view lê do GET, valida contra as escolhas e passa por kwarg ao
+# builder — o template desenha o seletor e o CSV/impressão levam a escolha junto.
+
+CONTROLES = {
+    "janela": {
+        "rotulo": "Entrou nos últimos",
+        "escolhas": [(7, "7 dias"), (14, "14 dias"), (30, "30 dias")],
+        "padrao": 7,
+    },
+}
+
+
+def controles(request, chave) -> list:
+    """`[{nome, rotulo, escolhas, valor}]` do relatório, com a escolha já resolvida."""
+    resolvidos = []
+    for nome in RELATORIOS[chave].get("controles", ()):
+        spec = CONTROLES[nome]
+        validas = [v for v, _ in spec["escolhas"]]
+        try:
+            valor = type(spec["padrao"])(request.GET.get(nome))
+        except (TypeError, ValueError):
+            valor = spec["padrao"]
+        resolvidos.append({
+            "nome": nome, "rotulo": spec["rotulo"], "escolhas": spec["escolhas"],
+            "valor": valor if valor in validas else spec["padrao"],
+        })
+    return resolvidos

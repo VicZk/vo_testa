@@ -474,6 +474,11 @@ class Reserva(models.Model):
         "retenção até", null=True, blank=True,
         help_text="Pré-reserva de canal (site) segura o quarto só até aqui; depois expira.",
     )
+    # Quando a reserva SAIU da carteira (cancelamento, expiração da retenção ou
+    # no-show). O status diz que saiu, não quando: sem esta data o pickup não saberia
+    # dizer o que caiu nos últimos 7 dias. Preenchida daqui para frente — reserva
+    # cancelada antes desta versão fica sem a data e não entra na janela do pickup.
+    cancelada_em = models.DateTimeField("saiu da carteira em", null=True, blank=True)
     checkin_real = models.DateTimeField("entrada realizada em", null=True, blank=True)
     # Marco da confirmação (pagamento do sinal) — referência da janela de 7 dias de
     # arrependimento (CDC). Ver apps/reservas/cancelamento.py.
@@ -801,6 +806,7 @@ class Reserva(models.Model):
             raise ValidationError("Informe o motivo do cancelamento.")
         self.status = self.Status.CANCELADA
         self.motivo_cancelamento = motivo
+        self.cancelada_em = timezone.now()
         self.save()
         registrar_auditoria(
             usuario, "cancelamento_reserva", self, {"motivo": motivo}
@@ -817,6 +823,7 @@ class Reserva(models.Model):
     def marcar_no_show(self, usuario, motivo=""):
         self._exige_status(self.Status.CONFIRMADA)
         self.status = self.Status.NO_SHOW
+        self.cancelada_em = timezone.now()
         self.save()
         registrar_auditoria(usuario, "no_show", self, {"motivo": motivo} if motivo else {})
         from apps.nucleo.sinais import emitir
@@ -837,12 +844,14 @@ class Reserva(models.Model):
             raise ValidationError("Informe o motivo.")
         if self.checkout <= timezone.localdate():
             raise ValidationError("A estadia já terminou: faça uma reserva nova.")
+        saiu_em = self.cancelada_em
         self.status = self.Status.CONFIRMADA
+        self.cancelada_em = None   # voltou à carteira: o pickup não conta como queda
         try:
             with transaction.atomic():
                 self.save()
         except IntegrityError as erro:
-            self.status = self.Status.NO_SHOW
+            self.status, self.cancelada_em = self.Status.NO_SHOW, saiu_em
             raise ValidationError(
                 f"O {self.uh.numero} já foi vendido para essas noites: faça uma reserva "
                 "nova ou escolha outro quarto.") from erro

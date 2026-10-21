@@ -27,8 +27,10 @@ def relatorio(request, chave):
     r = services.RELATORIOS.get(chave)
     if not r or (r["modulo"] and chave not in _chaves_disponiveis()):
         raise Http404("Relatório indisponível.")
-    inicio, fim, rotulo = services.periodo(request)
-    dados = r["builder"](inicio, fim)
+    inicio, fim, rotulo = services.periodo(request, r.get("periodo"))
+    # Controles próprios do relatório (ex.: a janela do pickup) viram kwargs do builder.
+    controles = services.controles(request, chave)
+    dados = r["builder"](inicio, fim, **{c["nome"]: c["valor"] for c in controles})
 
     if request.GET.get("export") == "csv":
         from apps.nucleo.export import resposta_csv, sanitizar_celula
@@ -41,13 +43,16 @@ def relatorio(request, chave):
         w.writerow([sanitizar_celula(c) for c in dados["colunas"]])
         for linha in dados["linhas"]:
             w.writerow([sanitizar_celula(c) for c in linha])
+        if dados.get("nota"):
+            w.writerow([])
+            w.writerow([sanitizar_celula(dados["nota"])])
         return resp
 
     return render(request, "relatorios/relatorio.html", {
         "chave": chave, "titulo": r["nome"], "grupo": r["grupo"],
         "inicio": inicio, "fim": fim, "rotulo": rotulo,
-        "dados": dados, "f": request.GET,
-        **services.selecao_periodo(request),
+        "dados": dados, "f": request.GET, "controles": controles,
+        **services.selecao_periodo(request, r.get("periodo")),
     })
 
 

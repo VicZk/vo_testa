@@ -359,6 +359,7 @@ def expirar_vencidas() -> int:
         return 0
     n = Reserva.objects.filter(pk__in=vencidas, status=Reserva.Status.PRE_RESERVA).update(
         status=Reserva.Status.CANCELADA, motivo_cancelamento=motivo,
+        cancelada_em=timezone.now(),
     )
     # .update() não passa pelos signals da auditoria: o registro vai aqui, um por reserva.
     TrilhaAuditoria.objects.bulk_create([
@@ -1671,7 +1672,9 @@ def expirar_grupos_vencidos() -> int:
             for filha in grupo.filhas.filter(status__in=Reserva.STATUS_ATIVOS):
                 filha.status = Reserva.Status.CANCELADA
                 filha.motivo_cancelamento = "Pré-reserva de grupo expirada."
-                filha.save(update_fields=["status", "motivo_cancelamento"])
+                filha.cancelada_em = agora
+                filha.save(update_fields=["status", "motivo_cancelamento",
+                                          "cancelada_em"])
             grupo.motivo_cancelamento = "Pré-reserva de grupo expirada (retenção sem confirmação)."
             grupo.save(update_fields=["motivo_cancelamento", "atualizado_em"])
         n += 1
@@ -3043,6 +3046,37 @@ def diarias_periodo(inicio, fim) -> Decimal:
     return (LancamentoConta.objects.filter(
         competencia__range=(inicio, fim), tipo=LancamentoConta.Tipo.DIARIA
     ).aggregate(t=Sum("valor"))["t"] or Decimal("0"))
+
+
+# ── Receita vendida (carteira, pickup, ritmo, custo de canal) ────────────────
+#
+# O cálculo mora em `receita.py`; aqui ficam só as portas, porque é por esta
+# interface que o Relatórios entra.
+
+
+def carteira(inicio: date, fim: date) -> dict:
+    """Carteira (OTB): o que já está vendido para as estadias do período, dia a dia."""
+    from .receita import carteira as _carteira
+    return _carteira(inicio, fim)
+
+
+def pickup(inicio: date, fim: date, *, janela: int = 7) -> dict:
+    """Quartos-noite e receita que entraram e saíram da carteira do período nos
+    últimos `janela` dias."""
+    from .receita import pickup as _pickup
+    return _pickup(inicio, fim, janela=janela)
+
+
+def ritmo_de_vendas(inicio: date, fim: date) -> dict:
+    """Curva acumulada da carteira do período por antecedência da venda."""
+    from .receita import ritmo_de_vendas as _ritmo
+    return _ritmo(inicio, fim)
+
+
+def custo_distribuicao(inicio: date, fim: date) -> dict:
+    """Receita bruta, custo de venda estimado e líquida por canal no período."""
+    from .receita import custo_distribuicao as _custo
+    return _custo(inicio, fim)
 
 
 # ── Fechamento do dia (auditoria noturna) ────────────────────────────────────
