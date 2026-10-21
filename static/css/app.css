@@ -4928,6 +4928,14 @@ body.escala-dragging .escala-drop { cursor: copy; }
   background: var(--superficie); border: 1px solid var(--fio); border-radius: var(--raio-g);
   box-shadow: var(--sombra-cartao); overflow: hidden;
 }
+/* Tabela simples (sem `.tabela`) direto no quadro rola de lado em QUALQUER
+   largura, não só abaixo de 820px: a largura que sobra depende do menu estar
+   aberto, e o `@media` só enxerga a janela. A 821px com o menu aberto a coluna
+   mede 486px, os cabeçalhos (que não quebram) pedem 516px e o `overflow:hidden`
+   cortava calado a última coluna — a das ações. A `.tabela` fica de fora de
+   propósito: o tabela-rol.js já a embrulha num invólucro que rola, e só embrulha
+   se o pai NÃO rolar. Quando a tabela cabe, nada muda: sem sobra, sem barra. */
+.quadro:has(> table:not(.tabela)) { overflow-x: auto; overflow-y: hidden; }
 .eleg table, .quadro table { width: 100%; border-collapse: collapse; }
 .eleg thead th, .quadro thead th {
   text-align: left; padding: .85rem 1rem; font-size: .68rem; font-weight: 600; letter-spacing: .07em;

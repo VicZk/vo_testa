@@ -675,6 +675,15 @@ class DentroDoContainerTests(TestCase):
         celular = self.css.index("@media (max-width: 560px) {\n  .filtro-periodo {")
         self.assertLess(sep, celular, "o @media do período ficou antes da regra que ele ajusta")
 
+    def test_quadro_com_tabela_simples_rola_em_qualquer_largura(self):
+        """A 821px com o menu aberto, a lista de Páginas (tabela simples num
+        `.quadro`) pedia 516px numa coluna de 486 e o `overflow:hidden` do
+        quadro cortava calado a coluna das ações. O `@media (max-width: 820px)`
+        que fazia o quadro rolar só enxerga a janela, não o menu aberto."""
+        self.assertIn(
+            ".quadro:has(> table:not(.tabela)) { overflow-x: auto; overflow-y: hidden; }",
+            self.css)
+
     def test_enviar_do_whatsapp_nao_estica_no_desktop(self):
         """Com `flex: 1 1 auto` o botão dividia a sobra da linha com o campo: no
         desktop o "Enviar" ficava com 363px e o campo de texto perdia 280px. Ele
