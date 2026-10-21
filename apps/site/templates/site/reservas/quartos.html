@@ -23,6 +23,20 @@
     </span>
 </div>
 
+{% comment %}Regra do período (estadia mínima, fechado para chegada/saída, vendas
+paradas): quando não sobra nada, o hóspede lê o MOTIVO e o caminho — não um
+"indisponível" mudo que o manda embora.{% endcomment %}
+{% if avisos_restricao %}
+<div class="bg-lampiao/10 border border-lampiao/30 rounded-xl px-4 py-3 mb-6">
+    <p class="text-madeira text-sm font-semibold mb-1">Estas datas têm regra de reserva</p>
+    {% for aviso in avisos_restricao %}
+    <p class="text-madeira/70 text-sm leading-snug">{{ aviso }}</p>
+    {% endfor %}
+    <a href="{% url 'core:reservar' %}{% if busca.modalidade %}?modalidade={{ busca.modalidade }}{% endif %}"
+       class="text-madeira text-sm font-semibold mt-2 inline-block">Escolher outras datas</a>
+</div>
+{% endif %}
+
 <div class="space-y-4 mb-8">
     {% for r in resultados %}
     {% if r.disponivel %}
@@ -76,7 +90,9 @@
     {% else %}
     <div class="bg-white/50 rounded-2xl overflow-hidden border border-madeira/5 opacity-60 relative">
         <div class="absolute inset-0 bg-white/50 z-10 flex items-center justify-center backdrop-blur-[1px]">
-            <span class="bg-madeira/10 text-madeira/60 text-sm font-semibold px-5 py-2 rounded-xl border border-madeira/10">Indisponível para este período</span>
+            <span class="bg-madeira/10 text-madeira/60 text-sm font-semibold px-5 py-2 rounded-xl border border-madeira/10 max-w-sm text-center leading-snug">
+                {% if r.motivos %}{{ r.motivos.0 }}{% else %}Indisponível para este período{% endif %}
+            </span>
         </div>
         <div class="flex flex-col md:flex-row">
             <div class="md:w-72 aspect-video md:aspect-auto bg-gradient-to-br from-pergaminho to-pergaminho/40 flex items-center justify-center flex-shrink-0">
