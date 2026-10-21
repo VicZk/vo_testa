@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+{% load moeda estoque_extras %}
+
+{% block titulo %}{{ config.titulo }} — Estoque{% endblock %}
+
+{% block conteudo %}
+<p class="pagina-eyebrow letreiro">Vendas &amp; Estoque</p>
+<div class="pagina-cabecalho">
+  <h1>Movimentar estoque</h1>
+  <a href="{% url 'estoque:posicao' %}" class="botao-neutro">Ver posição</a>
+</div>
+{% include "estoque/partials/nav.html" %}
+
+{% comment %}As quatro operações eram quatro itens na navegação do módulo, cada
+uma com o mesmo formulário genérico. Agora são um segmentado só: a pessoa vê
+que são quatro jeitos de mexer no mesmo saldo, e troca sem sair da tela.
+{% endcomment %}
+<div class="est-seg" role="tablist" aria-label="Tipo de movimentação">
+  {% for chave, op in operacoes.items %}
+    <a href="{% url 'estoque:'|add:chave %}" role="tab"
+       aria-selected="{% if chave == operacao %}true{% else %}false{% endif %}"
+       class="{% if chave == operacao %}ativo{% endif %}">{{ op.rotulo }}</a>
+  {% endfor %}
+</div>
+
+<form method="post" class="est-mov" x-data="movEstoque()"
+      @combo-mudou="if ($event.detail.campo === 'produto') produto = $event.detail.id">
+  {% csrf_token %}
+  {% comment %}O catálogo entra uma vez só: o mesmo json_script alimenta o
+  combobox (pelo include) e a prévia (pelo componente Alpine abaixo).{% endcomment %}
+  {{ locais_json|json_script:"locais-data" }}
+
+  <section class="cartao-el est-mov-campos">
+    <h2 class="est-mov-titulo">{{ config.titulo }}</h2>
+    <p class="eleg-intro est-mov-intro">{{ config.intro }}</p>
+
+    {% if form.non_field_errors %}
+      <div class="mensagem error">{{ form.non_field_errors|join:" " }}</div>
+    {% endif %}
+
+    <div class="campo est-passo">
+      <label for="id_produto">1. Produto</label>
+      {% include "componentes/combo_pessoa.html" with dados=produtos_json dados_id="produtos-data" campo="produto" placeholder="Buscar produto pelo nome…" valor_id=escolhido autofocus=1 %}
+      {% for erro in form.produto.errors %}<small class="erro">{{ erro }}</small>{% endfor %}
+      <small class="ajuda" x-show="p" x-cloak>
+        <span x-text="p ? p.grupo : ''"></span> ·
+        saldo na pousada <strong x-text="p ? fmt(p.total) + ' ' + p.unidade : ''"></strong>
+      </small>
+    </div>
+
+    {% if operacao == 'transferencia' %}
+      <div class="campo est-passo">
+        <label id="rot-origem">2. Sai de</label>
+        <div class="est-locais-escolha" role="radiogroup" aria-labelledby="rot-origem">
+          {% for lo in locais %}
+            <label class="est-local-opt">
+              <input type="radio" name="origem" value="{{ lo.pk }}" x-model="origem"
+                     {% if local_escolhido == lo.pk|stringformat:"s" %}checked{% endif %}>
+              <span class="est-local-opt-nome">{{ lo.nome }}</span>
+              <span class="est-local-opt-saldo" x-text="saldoTexto({{ lo.pk }})">—</span>
+            </label>
+          {% endfor %}
+        </div>
+        {% for erro in form.origem.errors %}<small class="erro">{{ erro }}</small>{% endfor %}
+      </div>
+      <div class="campo est-passo">
+        <label id="rot-destino">3. Vai para</label>
+        <div class="est-locais-escolha" role="radiogroup" aria-labelledby="rot-destino">
+          {% for lo in locais %}
+            <label class="est-local-opt">
+              <input type="radio" name="destino" value="{{ lo.pk }}" x-model="destino">
+              <span class="est-local-opt-nome">{{ lo.nome }}</span>
+              <span class="est-local-opt-saldo" x-text="saldoTexto({{ lo.pk }})">—</span>
+            </label>
+          {% endfor %}
+        </div>
+        {% for erro in form.destino.errors %}<small class="erro">{{ erro }}</small>{% endfor %}
+      </div>
+    {% else %}
+      <div class="campo est-passo">
+        <label id="rot-local">2. {{ form.local.label }}</label>
+        <div class="est-locais-escolha" role="radiogroup" aria-labelledby="rot-local">
+          {% for lo in locais %}
+            <label class="est-local-opt">
+              <input type="radio" name="local" value="{{ lo.pk }}" x-model="local"
+                     {% if local_escolhido == lo.pk|stringformat:"s" %}checked{% endif %}>
+              <span class="est-local-opt-nome">{{ lo.nome }}</span>
+              <span class="est-local-opt-saldo" x-text="saldoTexto({{ lo.pk }})">—</span>
+            </label>
+          {% endfor %}
+        </div>
+        {% for erro in form.local.errors %}<small class="erro">{{ erro }}</small>{% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="est-mov-grade">
+      <div class="campo">
+        <label for="id_quantidade">{% if operacao == 'transferencia' %}4{% else %}3{% endif %}. {{ form.quantidade.label }}</label>
+        <div class="est-campo-unidade">
+          <input type="number" id="id_quantidade" name="quantidade" step="0.001" min="{% if operacao == 'ajuste' %}0{% else %}0.001{% endif %}"
+                 value="{{ form.quantidade.value|default_if_none:'' }}" x-model.number="qtd" required>
+          <span class="est-unidade" x-text="p ? p.unidade : ''"></span>
+        </div>
+        {% for erro in form.quantidade.errors %}<small class="erro">{{ erro }}</small>{% endfor %}
+      </div>
+
+      {% if operacao == 'entrada' %}
+        <div class="campo">
+          <label for="id_custo_unitario">{{ form.custo_unitario.label }}</label>
+          <div class="est-campo-unidade est-campo-moeda">
+            <span class="est-unidade est-unidade-antes">R$</span>
+            <input type="number" id="id_custo_unitario" name="custo_unitario" step="0.0001" min="0"
+                   value="{{ form.custo_unitario.value|default_if_none:'' }}" x-model.number="custo" required>
+          </div>
+          <small class="ajuda">{{ form.custo_unitario.help_text }}</small>
+          {% for erro in form.custo_unitario.errors %}<small class="erro">{{ erro }}</small>{% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+    {% if operacao == 'saida' %}
+      <div class="campo est-passo">
+        <label id="rot-motivo">4. {{ form.tipo.label }}</label>
+        <div class="est-motivos" role="radiogroup" aria-labelledby="rot-motivo">
+          {% for valor, texto in form.fields.tipo.choices %}
+            <label class="est-motivo">
+              <input type="radio" name="tipo" value="{{ valor }}" x-model="motivo">
+              <span class="est-motivo-nome">{{ texto }}</span>
+              <span class="est-motivo-nota">
+                {% if valor == 'saida_venda' %}Vendeu fora da Loja/Restaurante.
+                {% elif valor == 'consumo_interno' %}Usou na operação — café da equipe, limpeza, cortesia.
+                {% else %}Quebrou, venceu, estragou. Entra no custo como perda.{% endif %}
+              </span>
+            </label>
+          {% endfor %}
+        </div>
+        {% for erro in form.tipo.errors %}<small class="erro">{{ erro }}</small>{% endfor %}
+      </div>
+    {% endif %}
+
+    {% if operacao == 'entrada' %}
+      <div class="campo">
+        <label for="id_fornecedor">Fornecedor <span class="rotulo-opcional">(opcional)</span></label>
+        {% include "componentes/combo_pessoa.html" with dados=fornecedores_json dados_id="fornecedores-data" campo="fornecedor" placeholder="Buscar fornecedor…" %}
+        {% for erro in form.fornecedor.errors %}<small class="erro">{{ erro }}</small>{% endfor %}
+      </div>
+      <div class="est-mov-grade">
+        <div class="campo">
+          <label for="id_documento">Documento (NF)</label>
+          <input type="text" id="id_documento" name="documento" value="{{ form.documento.value|default_if_none:'' }}" placeholder="Ex.: NF 1234">
+        </div>
+        <div class="campo">
+          <label for="id_observacao">Observação</label>
+          <input type="text" id="id_observacao" name="observacao" value="{{ form.observacao.value|default_if_none:'' }}">
+        </div>
+      </div>
+    {% elif operacao == 'ajuste' %}
+      <div class="campo">
+        <label for="id_motivo">5. {{ form.motivo.label }}</label>
+        <input type="text" id="id_motivo" name="motivo" value="{{ form.motivo.value|default_if_none:'' }}"
+               placeholder="Ex.: contagem da prateleira, quebra não lançada" required>
+        <small class="ajuda">{{ form.motivo.help_text }}</small>
+        {% for erro in form.motivo.errors %}<small class="erro">{{ erro }}</small>{% endfor %}
+      </div>
+    {% else %}
+      <div class="campo">
+        <label for="id_observacao">Observação <span class="rotulo-opcional">(opcional)</span></label>
+        <input type="text" id="id_observacao" name="observacao" value="{{ form.observacao.value|default_if_none:'' }}">
+      </div>
+    {% endif %}
+  </section>
+
+  {% comment %}A prévia: o que vai acontecer com o saldo, antes de clicar.
+  É conta de tela — quem decide é o motor, com a linha do produto travada.
+  {% endcomment %}
+  <aside class="cartao-el est-previa">
+    <h3 class="letreiro">O que vai acontecer</h3>
+
+    <template x-if="!p">
+      <p class="est-previa-vazia">Escolha o produto para ver o saldo de antes e o de depois.</p>
+    </template>
+
+    <template x-if="p">
+      <div>
+        <p class="est-previa-produto" x-text="p.nome"></p>
+
+        <template x-if="'{{ operacao }}' !== 'transferencia'">
+          <dl class="est-previa-linhas">
+            <div><dt>Local</dt><dd x-text="nomeLocal(local) || '—'"></dd></div>
+            <div><dt>Saldo hoje</dt><dd x-text="local ? fmt(saldoEm(local)) + ' ' + p.unidade : '—'"></dd></div>
+            <div><dt x-text="rotuloMovimento"></dt><dd class="est-previa-delta" x-text="deltaTexto"></dd></div>
+            <div class="est-previa-destaque">
+              <dt>Fica com</dt>
+              <dd :class="depoisNegativo && 'est-previa-erro'"
+                  x-text="local && qtd ? fmt(depois) + ' ' + p.unidade : '—'"></dd>
+            </div>
+          </dl>
+        </template>
+
+        <template x-if="'{{ operacao }}' === 'transferencia'">
+          <dl class="est-previa-linhas">
+            <div><dt x-text="'Sai de ' + (nomeLocal(origem) || '—')"></dt>
+                <dd x-text="origem && qtd ? fmt(saldoEm(origem)) + ' → ' + fmt(saldoEm(origem) - qtd) + ' ' + p.unidade : '—'"
+                    :class="depoisNegativo && 'est-previa-erro'"></dd></div>
+            <div class="est-previa-destaque"><dt x-text="'Vai para ' + (nomeLocal(destino) || '—')"></dt>
+                <dd x-text="destino && qtd ? fmt(saldoEm(destino)) + ' → ' + fmt(saldoEm(destino) + qtd) + ' ' + p.unidade : '—'"></dd></div>
+            <div><dt>Total na pousada</dt><dd>não muda</dd></div>
+          </dl>
+        </template>
+
+        {% if operacao == 'entrada' %}
+          <dl class="est-previa-linhas est-previa-custo">
+            <div><dt>Custo médio</dt>
+              <dd x-text="dinheiro(p.custo) + (custo && qtd ? ' → ' + dinheiro(custoNovo) : '')"></dd></div>
+            <div><dt>Valor da compra</dt><dd x-text="dinheiro((custo || 0) * (qtd || 0))"></dd></div>
+          </dl>
+        {% endif %}
+
+        <p class="est-previa-aviso" x-show="depoisNegativo" x-cloak>
+          Não há esse saldo no local. O sistema vai recusar — confira a quantidade ou o local.
+        </p>
+      </div>
+    </template>
+
+    <button type="submit" class="botao-primario est-previa-botao" :disabled="!completo">{{ config.acao }}</button>
+    <p class="ajuda est-previa-nota">Movimento de estoque não se apaga: correção é um novo movimento (ajuste), com autor e motivo na trilha.</p>
+  </aside>
+</form>
+
+<script>
+  // Prévia da movimentação. Só conta de TELA: quem grava é o motor do núcleo,
+  // com a linha do produto travada — por isso aqui número de JS é suficiente.
+  function movEstoque() {
+    return {
+      produtos: JSON.parse(document.getElementById('produtos-data').textContent),
+      locais: JSON.parse(document.getElementById('locais-data').textContent),
+      produto: '{{ escolhido }}',
+      local: '{{ local_escolhido }}',
+      origem: '{{ local_escolhido }}',
+      destino: '',
+      motivo: 'consumo_interno',
+      qtd: null,
+      custo: null,
+      operacao: '{{ operacao }}',
+      get p() {
+        return this.produtos.find((x) => String(x.id) === String(this.produto)) || null;
+      },
+      saldoEm(localId) {
+        if (!this.p || !localId) return 0;
+        return this.p.saldos[String(localId)] || 0;
+      },
+      saldoTexto(localId) {
+        if (!this.p) return '';
+        return this.fmt(this.saldoEm(localId)) + ' ' + this.p.unidade;
+      },
+      nomeLocal(id) {
+        const achou = this.locais.find((l) => String(l.id) === String(id));
+        return achou ? achou.nome : '';
+      },
+      get sinal() { return this.operacao === 'entrada' ? 1 : -1; },
+      get rotuloMovimento() {
+        if (this.operacao === 'entrada') return 'Entra';
+        if (this.operacao === 'ajuste') return 'Diferença';
+        return 'Sai';
+      },
+      get delta() {
+        const q = this.qtd || 0;
+        if (this.operacao === 'ajuste') return q - this.saldoEm(this.local);
+        return this.sinal * q;
+      },
+      get deltaTexto() {
+        if (!this.qtd && this.operacao !== 'ajuste') return '—';
+        const d = this.delta;
+        const sinal = d > 0 ? '+' : (d < 0 ? '−' : '');
+        return sinal + this.fmt(Math.abs(d)) + ' ' + this.p.unidade;
+      },
+      get depois() {
+        if (this.operacao === 'ajuste') return this.qtd || 0;
+        return this.saldoEm(this.local) + this.delta;
+      },
+      get depoisNegativo() {
+        if (this.operacao === 'transferencia') {
+          return !!this.qtd && this.origem && this.saldoEm(this.origem) - this.qtd < 0;
+        }
+        if (this.operacao === 'ajuste') return false;
+        return !!this.qtd && !!this.local && this.depois < 0;
+      },
+      get custoNovo() {
+        if (!this.p) return 0;
+        const saldo = this.p.total, q = this.qtd || 0;
+        if (saldo + q <= 0) return this.custo || 0;
+        return (saldo * this.p.custo + q * (this.custo || 0)) / (saldo + q);
+      },
+      get completo() {
+        if (!this.produto) return false;
+        if (this.operacao === 'transferencia') {
+          return !!(this.origem && this.destino && this.origem !== this.destino && this.qtd > 0);
+        }
+        if (this.operacao === 'ajuste') return !!(this.local && this.qtd !== null && this.qtd >= 0);
+        return !!(this.local && this.qtd > 0);
+      },
+      fmt(v) {
+        return Number(v || 0).toLocaleString('pt-BR', { maximumFractionDigits: 3 });
+      },
+      dinheiro(v) {
+        return 'R$ ' + Number(v || 0).toLocaleString('pt-BR', {
+          minimumFractionDigits: 2, maximumFractionDigits: 2,
+        });
+      },
+    };
+  }
+</script>
+{% endblock %}

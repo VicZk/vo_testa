@@ -13,8 +13,14 @@ Parâmetros do include:
 {% endcomment %}
 {% firstof campo_id "id_"|add:campo as id_combo %}
 {{ dados|json_script:dados_id }}
+{% comment %}O `x-effect` avisa quem está em volta a cada escolha (evento
+`combo-mudou`, com o nome do campo e o id). Quem não escuta não perde nada — o
+POST continua indo pelo <input type=hidden>. É assim que a tela de movimentação
+do Estoque recalcula a prévia "saldo hoje → depois" ao trocar de produto.
+{% endcomment %}
 <div class="combo" x-data="comboPessoa" data-dados="{{ dados_id }}" data-sel="{{ valor_id|default:'' }}"
-     @click.outside="fechar()">
+     @click.outside="fechar()"
+     x-effect="$dispatch('combo-mudou', { campo: '{{ campo }}', id: sel })">
   <input type="hidden" name="{{ campo }}" :value="sel">
   <input type="text" id="{{ id_combo }}" class="combo-input" autocomplete="off"
          placeholder="{{ placeholder|default:'Buscar…' }}"{% if autofocus %} autofocus{% endif %}
