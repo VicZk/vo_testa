@@ -323,7 +323,7 @@
   {# Modal — Motivo da perda no drag #}
   <div class="modal-overlay" x-show="perda" x-cloak @click.self="perda = false">
     <div class="modal-caixa estreita">
-      <form method="post" :action="'/crm/comercial/' + perdaOp + '/mover/'" class="modal-form">
+      <form method="post" :action="'{% url 'comercial:mover' 0 %}'.replace('/0/', '/' + perdaOp + '/')" class="modal-form">
         {% csrf_token %}
         <input type="hidden" name="etapa" :value="perdaEtapa">
         <header class="modal-cabecalho">
@@ -421,7 +421,7 @@
       return;
     }
     const form = document.getElementById('form-mover');
-    form.action = '/crm/comercial/' + opId + '/mover/';
+    form.action = '{% url "comercial:mover" 0 %}'.replace('/0/', '/' + opId + '/');
     document.getElementById('mover-etapa').value = etapaId;
     form.submit();
   }

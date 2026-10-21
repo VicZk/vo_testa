@@ -10,6 +10,7 @@ from django.core.validators import validate_email
 from django.db.models import Count, Sum
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
 from django.views.decorators.cache import never_cache
@@ -239,7 +240,8 @@ def mover(request, pk):
         except ValidationError as erro:
             messages.error(request, " ".join(erro.messages))
     destino = request.POST.get("next", "")
-    if destino.startswith("/crm/"):
+    # Só volta para dentro do CRM — e o CRM pode morar sob um prefixo (URL_PREFIX).
+    if destino.startswith(reverse("dashboard")):
         return redirect(destino)
     return redirect("comercial:funil")
 
@@ -787,7 +789,6 @@ def captacao_publica(request, slug):
 @requer_modulo(Modulo.COMERCIAL)
 def enviar_proposta_sinal(request, pk):
     """Gera a cobrança do sinal (Safrapay/simulado), monta o link público e envia no WhatsApp."""
-    from django.urls import reverse
     op = get_object_or_404(Oportunidade, pk=pk)
     if request.method == "POST":
         try:

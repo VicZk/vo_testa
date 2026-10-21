@@ -133,8 +133,9 @@ def _ator(request):
         return None  # leitura não escreve; nada a atribuir
     from apps.nucleo.sistema import usuario_de_sistema
 
+    # `path_info`, não `path`: sob um prefixo (URL_PREFIX) o `path` começa por ele.
     for prefixo, username, nome in _ATORES_PUBLICOS:
-        if request.path.startswith(prefixo):
+        if request.path_info.startswith(prefixo):
             return usuario_de_sistema(username, nome)
     return usuario_de_sistema("_site", "Site")
 

@@ -1389,6 +1389,96 @@ class DemonstracaoBancoNovoTests(TestCase):
         self.assertTrue(settings.FNRH_BLOQUEAR_CHECKIN)
 
 
+_SOB_PREFIXO = override_settings(FORCE_SCRIPT_NAME="/votesta",
+                                 STATIC_URL="/votesta/static/",
+                                 MEDIA_URL="/votesta/media/")
+
+
+class PrefixoDeUrlTests(TestCase):
+    """O sistema roda sob um prefixo (`URL_PREFIX` → `FORCE_SCRIPT_NAME`), como em
+    https://viczk.cloud/votesta: o nginx tira o prefixo, o Django o devolve em todo link
+    — e nada pode apontar para a raiz do domínio, que é de outro projeto."""
+
+    def setUp(self):
+        # O WSGIHandler de verdade põe o prefixo (FORCE_SCRIPT_NAME) a cada requisição;
+        # o client de teste não — então o teste faz o que o servidor faz.
+        from django.urls import get_script_prefix, set_script_prefix
+
+        anterior = get_script_prefix()
+        self.addCleanup(set_script_prefix, anterior)
+
+    def _prefixo(self):
+        from django.urls import set_script_prefix
+
+        set_script_prefix("/votesta/")
+
+    def test_nenhum_caminho_fixo_nos_templates_e_no_js(self):
+        import re
+        from pathlib import Path
+
+        from django.conf import settings
+
+        raiz = Path(settings.BASE_DIR)
+        caminho_js = re.compile(r"""[`'"]/(crm|hospede|lp|static|media)/""")
+        atributo = re.compile(r"""\b(href|src|action|hx-get|hx-post)=["']/(?![/{])""")
+        arquivos = (list((raiz / "templates").rglob("*.html"))
+                    + list((raiz / "apps").glob("*/templates/**/*.html"))
+                    + list((raiz / "static" / "js").glob("*.js")))
+        achados = []
+        for arquivo in arquivos:
+            texto = arquivo.read_text(encoding="utf-8", errors="ignore")
+            for n, linha in enumerate(texto.splitlines(), 1):
+                if caminho_js.search(linha) or atributo.search(linha):
+                    achados.append(f"{arquivo.relative_to(raiz)}:{n}: {linha.strip()[:90]}")
+        self.assertEqual(achados, [], "Use {% url %}/{% static %}: caminho fixo ignora o prefixo")
+
+    @_SOB_PREFIXO
+    def test_crm_sob_prefixo_gera_links_com_ele(self):
+        self._prefixo()
+        user = Usuario.objects.create_superuser(username="prefixo", password="senha-forte-123")
+        self.client.force_login(user)
+        r = self.client.get("/crm/")
+        html = r.content.decode()
+        self.assertEqual(r.status_code, 200)
+        self.assertIn('href="/votesta/crm/', html)
+        self.assertIn("/votesta/static/", html)
+        self.assertNotIn("'/crm/", html)
+        self.assertNotIn('href="/crm/', html)
+
+    @_SOB_PREFIXO
+    def test_lp_sob_prefixo_aponta_para_dentro_dele(self):
+        self._prefixo()
+        for caminho in ("/lp/fundador/", "/lp/fundador-2/", "/lp/inauguracao_31_10_2026/"):
+            html = self.client.get(caminho).content.decode()
+            self.assertNotIn('src="/static/', html, caminho)
+            self.assertNotIn('href="/privacidade/', html, caminho)
+            self.assertNotIn("/votesta/votesta/", html, caminho)   # o aviso já vem prefixado
+        self.assertIn('src="/votesta/static/lp/', self.client.get("/lp/fundador-2/").content.decode())
+
+    @_SOB_PREFIXO
+    def test_redirecionamento_da_captacao_fica_no_prefixo(self):
+        self._prefixo()
+        r = self.client.get("/captacao/fundador-2/")
+        self.assertEqual(r["Location"], "/votesta/lp/fundador-2/")
+
+    def test_trilha_atribui_o_portal_pelo_caminho_sem_o_prefixo(self):
+        from django.contrib.auth.models import AnonymousUser
+        from django.test import RequestFactory
+
+        from apps.nucleo.audit import _ator
+
+        req = RequestFactory().post("/hospede/abc/", SCRIPT_NAME="/votesta")
+        req.user = AnonymousUser()
+        self.assertEqual(req.path, "/votesta/hospede/abc/")
+        self.assertEqual(_ator(req).username, "_portal")
+
+    def test_sem_prefixo_nada_muda(self):
+        from django.conf import settings
+
+        self.assertIsNone(settings.FORCE_SCRIPT_NAME)
+        self.assertEqual(self.client.get("/captacao/fundador-2/")["Location"], "/lp/fundador-2/")
+
+
 @override_settings(ROTINAS_MONITOR={})   # a URL de um .env local nunca recebe aviso de teste
 class RotinasAgendadasTests(TestCase):
     """`rotinas` roda as tarefas de um grupo, isolando falhas."""

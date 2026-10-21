@@ -17,6 +17,7 @@ from urllib import request as urlrequest
 from django.conf import settings
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.urls import reverse
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -74,7 +75,7 @@ class GatewaySimulado:
                 f"00020126VOTESTA{gid}5204000053039865802BR6009SAOPAULO62070503***6304SIM"
             )
         elif cobranca.metodo == cobranca.Metodo.CARTAO:
-            dados["payload"]["checkout_url"] = f"/crm/pagamentos/pagar/{cobranca.token}/"
+            dados["payload"]["checkout_url"] = reverse("pagamentos:pagar", args=[cobranca.token])
             dados["payload"]["instrucao"] = "Sandbox: use «Já paguei» para simular o cartão."
         elif cobranca.metodo == cobranca.Metodo.BOLETO:
             dados["payload"]["linha_digitavel"] = (
@@ -276,7 +277,7 @@ class GatewaySafrapay:
                 "expira_em": timezone.now() + timezone.timedelta(hours=24),
                 "payload": {
                     "aguardando_cartao": True,
-                    "checkout_url": f"/crm/pagamentos/pagar/{cobranca.token}/",
+                    "checkout_url": reverse("pagamentos:pagar", args=[cobranca.token]),
                 },
             }
         if cobranca.metodo == cobranca.Metodo.BOLETO:
@@ -395,7 +396,7 @@ class GatewaySafrapay:
             "payload": {
                 "safrapay": _redigir_resposta(data),
                 "merchantChargeId": merchant_charge_id,
-                "checkout_url": f"/crm/pagamentos/pagar/{cobranca.token}/",
+                "checkout_url": reverse("pagamentos:pagar", args=[cobranca.token]),
             },
         }
 

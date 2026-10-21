@@ -317,6 +317,23 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 SESSION_COOKIE_NAME = "vo_testa_sessionid"
 CSRF_COOKIE_NAME = "vo_testa_csrftoken"
 
+# Sob um prefixo (ex.: https://viczk.cloud/votesta — ambiente de teste numa VPS que
+# serve vários projetos por caminho): o nginx tira o prefixo e o Django o devolve em
+# toda URL que gera ({% url %}, reverse, redirect, STATIC_URL/MEDIA_URL, que são
+# relativos de propósito). Vazio na produção: nada muda lá.
+URL_PREFIX = os.environ.get("URL_PREFIX", "").strip().strip("/")
+if URL_PREFIX:
+    FORCE_SCRIPT_NAME = "/" + URL_PREFIX
+    # O domínio é dividido com outros projetos: os cookies ficam só neste caminho.
+    SESSION_COOKIE_PATH = CSRF_COOKIE_PATH = FORCE_SCRIPT_NAME + "/"
+    # Estáticos e mídia com o prefixo escrito: o storage guarda a URL base no primeiro
+    # uso, e o WhiteNoise o usa na subida do servidor — antes de qualquer requisição
+    # dizer qual é o prefixo (sairia "/static/…" sem ele). O WhiteNoise tira o
+    # FORCE_SCRIPT_NAME sozinho na hora de casar o caminho pedido.
+    STATIC_URL = FORCE_SCRIPT_NAME + "/static/"
+    if not MEDIA_URL.startswith("http"):   # mídia no R2 já é URL completa
+        MEDIA_URL = FORCE_SCRIPT_NAME + "/media/"
+
 # Referer nunca vaza para outra origem — protege tokens que ficam na URL
 # (portal do hóspede /hospede/<token>, link de pagamento /pagar/<token>). TM-003.
 SECURE_REFERRER_POLICY = "same-origin"

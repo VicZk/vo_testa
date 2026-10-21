@@ -237,7 +237,7 @@ desenhadas à mão, indistinguíveis dos chips de dado do quadro.{% endcomment %
     ev.currentTarget.style.background = 'var(--superficie-2)';
     if (!arrastado) return;
     const form = document.getElementById('form-mover-mkt');
-    form.action = '/crm/marketing/campanha/' + arrastado + '/fase/';
+    form.action = '{% url "marketing:mover_fase" 0 %}'.replace('/0/', '/' + arrastado + '/');
     document.getElementById('mover-mkt-fase').value = fase;
     form.submit();
   };

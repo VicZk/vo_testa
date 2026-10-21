@@ -14,7 +14,7 @@ from django.core.cache import cache
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.template.loader import render_to_string
-from django.urls import reverse
+from django.urls import get_script_prefix, reverse
 from django.utils.cache import patch_cache_control
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
@@ -24,6 +24,28 @@ from . import services
 
 _LP_PATH = Path(settings.BASE_DIR) / "LPs" / "LP_Fundador" / "LP_Fundador.html"
 _LP_CACHE = {"html": None}
+
+# O JS das LPs posta o lead em '/lp/<slug>/lead/'.
+_LEAD_NO_JS = re.compile(r"""(["'`])/lp/""")
+
+
+def _no_prefixo(html: str) -> str:
+    """O HTML das LPs é feito fora do Django, com caminhos absolutos. Sob um prefixo
+    (URL_PREFIX, ex.: /votesta) eles apontariam para a raiz do domínio — outro projeto.
+    Sem prefixo (a produção), devolve o HTML como veio.
+
+    Troca o caminho absoluto de atributo (href="/privacidade/", src="/static/…", o
+    /lp/arquivo/<hash> do _desembutir) e de url(/…) no CSS; "//cdn…" e o que já vem
+    com o prefixo (o aviso de cookies sai do {% url %}) ficam como estão."""
+    prefixo = get_script_prefix().rstrip("/")
+    if not prefixo:
+        return html
+    pula = r"(?!/|" + re.escape(prefixo.lstrip("/")) + r"/)"
+    atributo = re.compile(r"""((?:href|src|action|poster|content)=["'])/""" + pula)
+    url_css = re.compile(r"""(url\(\s*["']?)/""" + pula)
+    html = atributo.sub(lambda m: m.group(1) + prefixo + "/", html)
+    html = url_css.sub(lambda m: m.group(1) + prefixo + "/", html)
+    return _LEAD_NO_JS.sub(lambda m: m.group(1) + prefixo + "/lp/", html)
 
 # Anti-abuso do endpoint público de lead (não é auth — só corta spam/bot):
 _RATE_MAX = 6            # nº de leads aceitos por IP
@@ -112,7 +134,7 @@ def servir_lp_fundador(request):
     Conta 1 visita por navegador (cookie `lpv_fundador`) — reload/back não infla.
     """
     html = _lp_html().replace("__GTAG_ID__", getattr(settings, "GOOGLE_TAG_ID", "") or "")
-    resp = HttpResponse(html)
+    resp = HttpResponse(_no_prefixo(html))
     if not request.COOKIES.get(_VISITA_COOKIE):
         try:
             _contar_visita_lp(request)
@@ -274,7 +296,7 @@ def servir_lp_fundador_2(request):
     html = _lp2_html().replace("__GTAG_ID__", getattr(settings, "GOOGLE_TAG_ID", "") or "")
     n = _qtd_fundadores()
     html = html.replace("__QTD_FUNDADORES__", str(n) if n else "56")  # fallback seguro
-    resp = HttpResponse(html)
+    resp = HttpResponse(_no_prefixo(html))
     if not request.COOKIES.get(_VISITA2_COOKIE):
         try:
             _contar_visita_pagina(request, _LP2_SLUG)
@@ -327,7 +349,7 @@ def _lpinaug_html() -> str:
 @never_cache
 def servir_lp_inauguracao(request):
     """LP Inauguração 31/10 (HTML autocontido) em /lp/inauguracao_31_10_2026/."""
-    resp = HttpResponse(_lpinaug_html())
+    resp = HttpResponse(_no_prefixo(_lpinaug_html()))
     if not request.COOKIES.get(_VISITA_INAUG_COOKIE):
         try:
             _contar_visita_pagina(request, _LPINAUG_SLUG)

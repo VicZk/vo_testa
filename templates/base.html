@@ -736,9 +736,9 @@
     {% endif %}
     { rotulo: 'Visão geral', tipo: 'Ir para', url: '{% url "dashboard" %}' },
     {% if user|pode_modulo:'reservas' %}
-    { rotulo: 'Mapa de reservas', tipo: 'Ir para', url: '/crm/reservas/' },
-    { rotulo: 'Mapa de quartos', tipo: 'Ir para', url: '/crm/reservas/quartos/' },
-    { rotulo: 'Lista de reservas', tipo: 'Ir para', url: '/crm/reservas/lista/' },
+    { rotulo: 'Mapa de reservas', tipo: 'Ir para', url: '{% url "reservas:mapa" %}' },
+    { rotulo: 'Mapa de quartos', tipo: 'Ir para', url: '{% url "reservas:mapa_quartos" %}' },
+    { rotulo: 'Lista de reservas', tipo: 'Ir para', url: '{% url "reservas:lista" %}' },
     { rotulo: 'Kit de contingência (imprimir)', tipo: 'Ir para', url: '{% url "reservas:kit" %}' },
     {% endif %}
     {% if user|pode_area:'caixa' or user|pode_area:'financeiro' %}
@@ -762,8 +762,8 @@
     { rotulo: 'Temporadas', tipo: 'Ir para', url: '{% url "temporadas" %}' },
     {% endif %}
     {% if user|pode_modulo:'estoque' %}
-    { rotulo: 'Estoque', tipo: 'Ir para', url: '/crm/estoque/' },
-    { rotulo: 'Produtos', tipo: 'Ir para', url: '/crm/estoque/produtos/' },
+    { rotulo: 'Estoque', tipo: 'Ir para', url: '{% url "estoque:posicao" %}' },
+    { rotulo: 'Produtos', tipo: 'Ir para', url: '{% url "estoque:produtos" %}' },
     {% endif %}
     {% if user|pode_area:'logbook' %}
     { rotulo: 'Recados do turno', tipo: 'Ir para', url: '{% url "logbook" %}' },
