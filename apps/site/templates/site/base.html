@@ -108,8 +108,9 @@
     <div class="fixed top-20 left-1/2 -translate-x-1/2 z-[60] w-[min(92vw,32rem)] space-y-2 pointer-events-none" role="status">
         {% for message in messages %}
         <div class="pointer-events-auto rounded-xl px-4 py-3 text-sm shadow-lg border
-            {% if message.tags == 'error' %}bg-red-50 border-red-200 text-red-900
-            {% elif message.tags == 'warning' %}bg-amber-50 border-amber-200 text-amber-950
+            {% if message.tags == 'error' %}bg-perigo-bg border-perigo/30 text-perigo
+            {% elif message.tags == 'warning' %}bg-alerta-bg border-alerta/30 text-alerta
+            {% elif message.tags == 'success' %}bg-sucesso-bg border-sucesso/30 text-sucesso
             {% else %}bg-pergaminho border-lampiao/40 text-madeira{% endif %}">
             {{ message }}
         </div>

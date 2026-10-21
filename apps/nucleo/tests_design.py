@@ -279,6 +279,24 @@ class TokensUnicosTests(TestCase):
             self.assertIsNotNone(no_site, nome)
             self.assertEqual(no_css.group(1).upper(), no_site.group(1).upper(), nome)
 
+    def test_cores_de_aviso_tem_o_mesmo_valor_do_site(self):
+        """Os avisos do site usavam o vermelho e o âmbar genéricos do Tailwind; agora usam
+        as semânticas da casa, com o valor do CRM."""
+        tw = (Path(settings.BASE_DIR) / "tailwind.config.js").read_text(encoding="utf-8")
+        for nome in ("perigo", "perigo-bg", "alerta", "alerta-bg", "sucesso", "sucesso-bg",
+                     "info", "info-bg"):
+            no_css = re.search(rf"--{nome}:\s*(#[0-9A-Fa-f]{{6}})", self.css)
+            no_site = re.search(rf"\"?{nome}\"?:\s*\"(#[0-9A-Fa-f]{{6}})\"", tw)
+            self.assertIsNotNone(no_css, nome)
+            self.assertIsNotNone(no_site, nome)
+            self.assertEqual(no_css.group(1).upper(), no_site.group(1).upper(), nome)
+
+    def test_site_sem_vermelho_e_ambar_genericos(self):
+        site = Path(settings.BASE_DIR) / "apps" / "site" / "templates"
+        achados = [str(t.relative_to(site)) for t in site.rglob("*.html")
+                   if re.search(r"\b(bg|text|border)-(red|amber)-\d", t.read_text(encoding="utf-8"))]
+        self.assertEqual(achados, [])
+
     def test_tokens_usados_existem(self):
         """Variável sem definição cai no fallback em silêncio — `--fonte-corpo`,
         `--musgo-bg`, `--alerta-claro` e outras quatro estavam nesse estado."""
