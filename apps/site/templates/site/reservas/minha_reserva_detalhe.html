@@ -4,8 +4,7 @@
 {% block title %}Reserva {{ reserva.codigo }} | Pousada Vô Testa{% endblock %}
 
 {% block hospede_card %}
-<div class="w-full max-w-md rounded-[10px] border border-lampiao/45 p-7 md:p-8"
-     style="background: linear-gradient(180deg,#FBF6E9,#F8F0DD); box-shadow: 0 0 0 6px rgba(215,160,72,.07), 0 30px 60px rgba(2,10,16,.55);">
+<div class="cartao-hospede w-full max-w-md rounded-[10px] border border-lampiao/45 p-7 md:p-8">
   <p class="text-[11px] uppercase tracking-wider font-semibold text-madeira/75 mb-1">Área do hóspede</p>
   <h1 class="font-display text-2xl font-bold text-noturno mb-5">Olá, {{ reserva.hospede.nome.split.0 }}!</h1>
 

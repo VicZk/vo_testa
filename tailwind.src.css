@@ -1,3 +1,12 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+  /* Cartão da área do hóspede ("Minha reserva" e o detalhe dela): papel claro sobre a
+     noite, com o halo dourado. Morava num style="" repetido nos dois templates. */
+  .cartao-hospede {
+    background: linear-gradient(180deg, #FBF6E9, #F8F0DD);
+    box-shadow: 0 0 0 6px theme('colors.lampiao / 7%'), 0 30px 60px rgb(2 10 16 / .55);
+  }
+}
