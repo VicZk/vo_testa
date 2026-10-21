@@ -3271,9 +3271,11 @@ form.filtros:not(.subnav) select:focus {
 }
 .filtro-periodo:focus-within { border-color: var(--lampiao); box-shadow: 0 0 0 3px color-mix(in srgb, var(--lampiao) 22%, transparent); }
 .filtro-periodo input[type="date"] { border: none; border-radius: 0; box-shadow: none !important; min-width: 0; }
+.filtro-periodo .sep { display: flex; align-items: center; color: var(--tinta-suave); font-size: .9rem; padding: 0 .1rem; }
 /* Os dois campos de data pedem 316px e a coluna do celular dá 164: com
    `overflow:hidden` no pill, a SEGUNDA data simplesmente não existia — nem
-   rolava, nem avisava. Em tela estreita o par empilha. */
+   rolava, nem avisava. Em tela estreita o par empilha. (Este @media vem DEPOIS
+   da regra do `.sep`: antes dela, o `padding` de cima vencia o daqui.) */
 @media (max-width: 560px) {
   .filtro-periodo { flex-direction: column; align-items: stretch; }
   .filtro-periodo input[type="date"] { width: 100%; }
@@ -3282,7 +3284,6 @@ form.filtros:not(.subnav) select:focus {
     border-block: 1px solid var(--fio);
   }
 }
-.filtro-periodo .sep { display: flex; align-items: center; color: var(--tinta-suave); font-size: .9rem; padding: 0 .1rem; }
 .filtro-aplicar { margin-left: auto; align-self: flex-end; height: 40px; }
 .filtro-aplicar:active { transform: scale(.98); }
 

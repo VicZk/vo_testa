@@ -669,6 +669,22 @@ class DentroDoContainerTests(TestCase):
         self.assertRegex(
             self.css,
             r"@media \(max-width: 560px\) \{\s*\n\s*\.filtro-periodo \{[^}]*flex-direction: column")
+        # O @media vem DEPOIS da regra do `.sep`: mesma especificidade, quem vem
+        # depois vence — antes dela, o `padding` do celular nunca valia.
+        sep = self.css.index("\n.filtro-periodo .sep {")
+        celular = self.css.index("@media (max-width: 560px) {\n  .filtro-periodo {")
+        self.assertLess(sep, celular, "o @media do período ficou antes da regra que ele ajusta")
+
+    def test_enviar_do_whatsapp_nao_estica_no_desktop(self):
+        """Com `flex: 1 1 auto` o botão dividia a sobra da linha com o campo: no
+        desktop o "Enviar" ficava com 363px e o campo de texto perdia 280px. Ele
+        só ocupa a linha inteira no celular, quando já desceu sozinho."""
+        tpl = (Path(settings.BASE_DIR) / "templates" / "comercial" / "oportunidade.html"
+               ).read_text(encoding="utf-8")
+        self.assertIn(".wpp-form .botao-primario{flex:none;margin-left:auto}", tpl)
+        celular = re.search(r"@media \(max-width: 640px\)\{([\s\S]*?)\n  \}", tpl)
+        self.assertIsNotNone(celular)
+        self.assertIn(".wpp-form .botao-primario{min-height:44px;flex:1 1 auto}", celular.group(1))
 
 
 class FlutuantesTests(TestCase):

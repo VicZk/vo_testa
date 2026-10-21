@@ -506,7 +506,9 @@
   /* `min-width:0` + `flex-wrap`: campo de texto nasce com largura mínima
      própria e não encolhia; o "Enviar" saía 118px para fora da tela a 320px. */
   .wpp-form input{flex:1 1 140px;min-width:0;padding:.6rem .8rem;border:1px solid var(--fio);border-radius:12px;font:inherit;background:var(--superficie)}
-  .wpp-form .botao-primario{flex:1 1 auto}
+  /* O "Enviar" não estica no desktop (com flex-grow ele dividia a sobra com o
+     campo e ficava com 363px). Quando desce de linha, vai para a direita. */
+  .wpp-form .botao-primario{flex:none;margin-left:auto}
   .wpp-mic{flex:0 0 auto;width:42px;min-height:42px;border:1px solid var(--fio);border-radius:12px;background:var(--superficie);font-size:18px;cursor:pointer;line-height:1}
   .wpp-mic:hover{border-color:var(--fio-forte)} .wpp-mic:active{transform:scale(.95)}
   .wpp-gravando{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-top:.5rem;font-size:13px;color:var(--tinta-suave)}
@@ -520,10 +522,10 @@
   @media (max-width: 640px){
     .wpp-thread{height:min(440px,52dvh)}
     .wpp-form input{font-size:16px}            /* 16px evita o zoom automático do iOS ao focar */
-    .wpp-form .botao-primario{min-height:44px} /* alvo de toque */
+    .wpp-form .botao-primario{min-height:44px;flex:1 1 auto} /* alvo de toque; no celular, a linha toda */
     .wpp-topo{flex-wrap:wrap}                  /* nome + selos quebram em vez de empurrar a largura */
     .wpp-topo-dir{margin-left:52px;flex-wrap:wrap}
-    .wpp-chip{min-height:38px;display:inline-flex;align-items:center}  /* alvo de toque nas respostas rápidas */
+    .wpp-chip{min-height:44px;display:inline-flex;align-items:center}  /* alvo de toque nas respostas rápidas */
   }
   .lead-info .l{display:flex;justify-content:space-between;gap:1rem;font-size:.9rem;padding:.42rem 0;border-bottom:1px solid var(--fio)}
   .lead-info .l:last-child{border-bottom:none}
