@@ -3025,12 +3025,14 @@ div.porta.dica[data-dica] { cursor: default; }
 /* A base em PORCENTAGEM (e não 0 nem px) dá a mesma largura que o grid dava
    — dois terços e um terço, descontado o vão — enquanto as duas couberem na
    linha. O `min-width` é o que dispara a quebra, e por isso vence de
-   propósito o `min-width: 0` das grades lá de cima. */
+   propósito o `min-width: 0` das grades lá de cima; vai em `min(…, 100%)`
+   porque um mínimo em px não cede no celular — ele empurrava a página
+   100px para o lado em sete telas a 320px. */
 .colunas-2-1 > :first-child {
-  flex: 2 1 calc(66.667% - var(--vao-2-1) * 2 / 3); min-width: 380px;
+  flex: 2 1 calc(66.667% - var(--vao-2-1) * 2 / 3); min-width: min(380px, 100%);
 }
 .colunas-2-1 > :last-child {
-  flex: 1 1 calc(33.333% - var(--vao-2-1) / 3); min-width: 280px;
+  flex: 1 1 calc(33.333% - var(--vao-2-1) / 3); min-width: min(280px, 100%);
 }
 .aviso-inline {
   display: flex; align-items: center; gap: .5rem;
@@ -4531,8 +4533,8 @@ body.sem-rolagem { overflow: hidden; }
 /* Ficha do Funcionário (RH) — blocos lado a lado, campos em grade */
 .ficha-cols { display: flex; flex-wrap: wrap; gap: 18px; align-items: start; }
 /* Mesma conta da `.colunas-2-1`, com a proporção 1,25 para 1 desta ficha. */
-.ficha-cols > :first-child { flex: 1.25 1 calc(55.556% - 10px); min-width: 380px; }
-.ficha-cols > :last-child { flex: 1 1 calc(44.444% - 8px); min-width: 300px; }
+.ficha-cols > :first-child { flex: 1.25 1 calc(55.556% - 10px); min-width: min(380px, 100%); }
+.ficha-cols > :last-child { flex: 1 1 calc(44.444% - 8px); min-width: min(300px, 100%); }
 .bloco-ficha { background: var(--superficie); border: 1px solid var(--fio); border-radius: var(--raio); box-shadow: var(--sombra-1); padding: 16px 18px; }
 .bloco-ficha h4 { margin: 0 0 12px; font-size: .72rem; color: var(--tinta-suave); }
 .ficha-func .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }

@@ -620,6 +620,12 @@ class DentroDoContainerTests(TestCase):
             self.assertIsNotNone(bloco, regra)
             self.assertIn("flex-wrap: wrap", bloco.group(1), regra)
             self.assertNotIn("grid-template-columns", bloco.group(1), regra)
+        # O `min-width` dessas colunas é o que dispara a quebra — e tem de ceder
+        # no celular: em px puro ele empurrava a página 100px para o lado em
+        # sete telas a 320px.
+        duros = re.findall(r"\.(?:colunas-2-1|ficha-cols) > :(?:first|last)-child \{[^}]*"
+                           r"min-width: (\d+px)", self.css)
+        self.assertEqual(duros, [], "mínimo em px não cede em tela estreita")
 
     def test_tabela_quebra_na_palavra_e_nao_na_letra(self):
         """`overflow-wrap: anywhere` entra no cálculo da largura MÍNIMA da
