@@ -420,16 +420,28 @@
 
   // O botão dizia "Recolher menu" mesmo já recolhido, e o title mostrava a
   // barra invertida dobrada do template. Agora o rótulo acompanha o estado.
+  // A dica (`title`) dos itens só vale no TRILHO: aberto — ou na gaveta do
+  // celular, que abre sempre inteira — o nome já está escrito ao lado do ícone
+  // e o balão repetiria a mesma palavra. O template traz o `title` (vale sem
+  // JS); aqui ele é guardado e reposto conforme o estado.
+  const GAVETA = window.matchMedia('(max-width: 820px)');
   function rotularSidebar() {
+    const recolhida = APP.classList.contains('recolhida');
+    const trilho = recolhida && !GAVETA.matches;
+    document.querySelectorAll('.sidebar .nav-item, .sidebar .acao-topo').forEach((el) => {
+      if (el.dataset.nomeItem === undefined) el.dataset.nomeItem = el.getAttribute('title') || '';
+      if (trilho && el.dataset.nomeItem) el.setAttribute('title', el.dataset.nomeItem);
+      else el.removeAttribute('title');
+    });
     const b = document.getElementById('btn-recolher');
     if (!b) return;
-    const recolhida = APP.classList.contains('recolhida');
     const verbo = recolhida ? 'Expandir menu' : 'Recolher menu';
     b.setAttribute('aria-expanded', recolhida ? 'false' : 'true');
     b.setAttribute('aria-label', verbo);
     b.title = verbo + ' (⌘\\)';
   }
   rotularSidebar();
+  GAVETA.addEventListener('change', rotularSidebar);
 
   function alternarSidebar() {
     APP.classList.toggle('recolhida');

@@ -536,9 +536,37 @@ class MenuLateralTests(TestCase):
         """Os dois logotipos saíram do fluxo para o topo não saltar; sem largura
         explícita, a <a> da marca fica com 0px — o símbolo aparece e o link para
         a Visão geral some."""
-        bloco = re.search(r"\n\.app\.recolhida \.marca \{([^}]*)\}", self.css)
+        bloco = re.search(r"\n\s*\.app\.recolhida \.marca \{([^}]*)\}", self.css)
         self.assertIsNotNone(bloco)
         self.assertIn("width: 44px", bloco.group(1))
+
+    def test_trilho_so_existe_no_desktop(self):
+        """Toda regra do trilho (`.recolhida`) mora no `@media (width > 820px)`.
+        Fora dele, a gaveta do celular herdava o trilho e tinha de repor
+        propriedade por propriedade — e no estado PADRÃO (recolhido) sobravam o
+        logotipo cortado a 44px de altura e a cápsula do MFA sem forma."""
+        from apps.nucleo.css_publico import analisar, dividir_seletores
+
+        soltas = []
+
+        def andar(itens, media):
+            for item in itens:
+                if item["tipo"] == "regra":
+                    for sel in dividir_seletores(item["prelude"]):
+                        if ".recolhida" in sel and media != "@media (width > 820px)":
+                            soltas.append(f"{media or 'fora de @media'} → {sel}")
+                elif item["tipo"] == "at-bloco" and item["filhos"] is not None:
+                    andar(item["filhos"], re.sub(r"\s+", " ", item["prelude"]))
+
+        andar(analisar(self.css), "")
+        self.assertEqual(soltas, [], "regra do trilho que vale também na gaveta")
+
+    def test_dica_do_item_so_no_trilho(self):
+        """Aberto (ou na gaveta), o nome já está escrito ao lado do ícone: o
+        `title` repetiria a mesma palavra num balão. Ele só volta no trilho."""
+        self.assertRegex(self.base, r"const trilho = recolhida && !GAVETA\.matches")
+        self.assertIn("el.removeAttribute('title')", self.base)
+        self.assertIn("GAVETA.addEventListener('change', rotularSidebar)", self.base)
 
     def test_botao_de_recolher_diz_o_que_vai_fazer(self):
         """O rótulo era fixo em "Recolher menu" mesmo já recolhido, e o title

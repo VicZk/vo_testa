@@ -472,7 +472,7 @@ a:hover { color: var(--lampiao-tinta); }
   /* A largura da sidebar mudava em salto ao recolher (⌘\). */
   transition: grid-template-columns var(--mov-padrao) var(--curva);
 }
-.app.recolhida { --sidebar-w: 72px; }
+/* A largura do trilho (`.app.recolhida`) está na seção SIDEBAR RECOLHIDA. */
 
 .ico {
   width: 19px; height: 19px; flex-shrink: 0;
@@ -507,15 +507,6 @@ a:hover { color: var(--lampiao-tinta); }
   padding: 1rem 1rem .85rem 1.15rem;
   border-bottom: 1px solid color-mix(in srgb, var(--pergaminho) 10%, transparent);
 }
-/* No trilho, marca e botão não cabem lado a lado (34 + 30 + folgas > 72px):
-   a marca ficava com 0px de largura e o símbolo saía da própria caixa. Empilhados,
-   os dois nascem centrados dentro da mesma altura. */
-.app.recolhida .sidebar-topo {
-  flex-direction: column;
-  justify-content: center;
-  gap: .55rem;
-  padding: .7rem .5rem;
-}
 
 .marca {
   position: relative;
@@ -528,10 +519,6 @@ a:hover { color: var(--lampiao-tinta); }
   height: 86px;
   overflow: hidden;   /* o logotipo grande é recortado, nunca vaza do trilho */
 }
-/* Largura explícita: com os dois logotipos fora do fluxo, a <a> da marca
-   ficava com 0px e deixava de ser clicável (o símbolo aparecia, mas o link
-   para a Visão geral não existia mais). 44px = a régua do dedo. */
-.app.recolhida .marca { flex: 0 0 auto; width: 44px; height: 44px; }
 /* Os dois logotipos trocam por opacidade (não por display): a troca acompanha
    a animação da largura em vez de piscar. Os DOIS ficam fora do fluxo — com o
    logotipo grande em fluxo, ele continuava medindo 86px de altura mesmo
@@ -544,9 +531,6 @@ a:hover { color: var(--lampiao-tinta); }
 }
 .marca-full { height: 86px; }
 .marca-icone { height: 34px; opacity: 0; }
-/* Sidebar recolhida: mostra só a cartola dourada */
-.app.recolhida .marca-full { opacity: 0; }
-.app.recolhida .marca-icone { opacity: 1; }
 
 .sidebar-toggle {
   display: grid; place-items: center;
@@ -558,7 +542,6 @@ a:hover { color: var(--lampiao-tinta); }
   transition: background .15s, color .15s;
 }
 .sidebar-toggle:hover { color: var(--pergaminho); background: color-mix(in srgb, var(--lampiao) 14%, transparent); }
-.app.recolhida .sidebar-toggle .ico { transform: rotate(180deg); }
 
 .acao-topo {
   display: flex; align-items: center; gap: .55rem;
@@ -606,7 +589,6 @@ a:hover { color: var(--lampiao-tinta); }
   background: var(--sucesso); color: #fff;
   font-size: 11px; font-weight: 800; line-height: 1; border-radius: 100px;
 }
-.app.recolhida .nav-badge { top: 2px; right: 6px; }
 .nav-item {
   position: relative;
   display: flex;
@@ -676,39 +658,72 @@ button.link:hover { color: var(--lampiao); background: rgba(255, 255, 255, .05);
    na árvore de acessibilidade. A dica ao passar o mouse vem do `title` do
    template: a <nav> rola, e um balão posicionado aqui dentro seria recortado
    por ela.
+
+   O trilho só existe ACIMA de 820px. Abaixo, o menu é a gaveta do celular, que
+   abre sempre inteira, qualquer que seja a preferência guardada no navegador —
+   por isso TUDO o que é do trilho mora dentro do @media abaixo, e a gaveta não
+   tem nada a desfazer. Antes ela herdava o trilho e repunha propriedade por
+   propriedade; no estado padrão (recolhido) sobravam o logotipo cortado a 44px
+   de altura, a cápsula do MFA sem forma e o "Nova reserva" mais apertado.
+   `width > 820px` é o complemento exato do `max-width: 820px` da gaveta: com
+   `min-width: 821px`, uma janela de 820,5px (zoom do navegador) ficaria sem
+   nenhum dos dois.
    ═══════════════════════════════════════════════════════════════ */
 .nav-item .rotulo, .acao-topo .rotulo, .usuario-nome, .nav-titulo {
   white-space: nowrap;   /* nunca quebra em duas linhas no meio da animação */
   transition: opacity var(--mov-rapido) var(--curva);
 }
-.app.recolhida .marca-txt,
-.app.recolhida .acao-topo .rotulo,
-.app.recolhida .nav-item .rotulo,
-.app.recolhida .nav-titulo,
-.app.recolhida .usuario-nome {
-  position: absolute;
-  width: 1px; height: 1px;
-  margin: 0; padding: 0;
-  overflow: hidden;
-  clip-path: inset(50%);
-  opacity: 0;
-  pointer-events: none;
+@media (width > 820px) {
+  .app.recolhida { --sidebar-w: 72px; }
+
+  /* No trilho, marca e botão não cabem lado a lado (34 + 30 + folgas > 72px):
+     a marca ficava com 0px de largura e o símbolo saía da própria caixa.
+     Empilhados, os dois nascem centrados dentro da mesma altura. */
+  .app.recolhida .sidebar-topo {
+    flex-direction: column;
+    justify-content: center;
+    gap: .55rem;
+    padding: .7rem .5rem;
+  }
+  /* Largura explícita: com os dois logotipos fora do fluxo, a <a> da marca
+     ficava com 0px e deixava de ser clicável (o símbolo aparecia, mas o link
+     para a Visão geral não existia mais). 44px = a régua do dedo. */
+  .app.recolhida .marca { flex: 0 0 auto; width: 44px; height: 44px; justify-content: center; }
+  /* Só a cartola dourada. */
+  .app.recolhida .marca-full { opacity: 0; }
+  .app.recolhida .marca-icone { opacity: 1; }
+  .app.recolhida .sidebar-toggle .ico { transform: rotate(180deg); }
+  .app.recolhida .nav-badge { top: 2px; right: 6px; }
+
+  .app.recolhida .marca-txt,
+  .app.recolhida .acao-topo .rotulo,
+  .app.recolhida .nav-item .rotulo,
+  .app.recolhida .nav-titulo,
+  .app.recolhida .usuario-nome {
+    position: absolute;
+    width: 1px; height: 1px;
+    margin: 0; padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .app.recolhida .nav-item { justify-content: center; padding: .5rem; }
+  .app.recolhida .acao-topo { justify-content: center; padding: .6rem; }
+  /* O rodapé cabia 126px (avatar + nome + cápsula "MFA off") num trilho de
+     72px: vazava 27px para fora da sidebar dos DOIS lados, em toda tela do
+     sistema. No trilho fica só o avatar — o aviso de MFA vira um ponto no
+     canto dele. */
+  .app.recolhida .sidebar-rodape { flex-direction: column; padding: .75rem .5rem; }
+  .app.recolhida .usuario-mini { position: relative; }
+  .app.recolhida .usuario-mini .selo {
+    position: absolute; top: -2px; right: -2px;
+    width: 10px; height: 10px; padding: 0; margin: 0;
+    overflow: hidden; font-size: 0;   /* o texto segue legível para o leitor de tela */
+    border-radius: 50%; background: var(--alerta); border: 2px solid var(--noturno-2);
+  }
+  .app.recolhida .usuario-mini .selo::before { display: none; }
 }
-.app.recolhida .nav-item { justify-content: center; padding: .5rem; }
-.app.recolhida .acao-topo { justify-content: center; padding: .6rem; }
-.app.recolhida .marca { justify-content: center; }
-/* O rodapé cabia 126px (avatar + nome + cápsula "MFA off") num trilho de 72px:
-   vazava 27px para fora da sidebar dos DOIS lados, em toda tela do sistema.
-   No trilho fica só o avatar — o aviso de MFA vira um ponto no canto dele. */
-.app.recolhida .sidebar-rodape { flex-direction: column; padding: .75rem .5rem; }
-.app.recolhida .usuario-mini .selo {
-  position: absolute; top: -2px; right: -2px;
-  width: 10px; height: 10px; padding: 0; margin: 0;
-  overflow: hidden; font-size: 0;   /* o texto segue legível para o leitor de tela */
-  border-radius: 50%; background: var(--alerta); border: 2px solid var(--noturno-2);
-}
-.app.recolhida .usuario-mini .selo::before { display: none; }
-.app.recolhida .usuario-mini { position: relative; }
 
 /* ---------- Topbar ---------- */
 
@@ -4096,25 +4111,7 @@ form.filtros:not(.subnav) select:focus {
     visibility: visible; transform: none; box-shadow: var(--sombra-3);
     transition: transform var(--mov-padrao) var(--curva-entrada), visibility 0s;
   }
-  .app.recolhida .sidebar { --sidebar-w: 258px; }
-  .app.recolhida .sidebar .marca-txt, .app.recolhida .sidebar .nav-item .rotulo,
-  .app.recolhida .sidebar .nav-titulo, .app.recolhida .sidebar .acao-topo .rotulo,
-  .app.recolhida .sidebar .usuario-nome {
-    position: static; width: auto; height: auto; clip-path: none;
-    overflow: visible; opacity: 1; pointer-events: auto;
-  }
-  .app.recolhida .sidebar .nav-titulo { padding: 0 .75rem .35rem; }
-  .app.recolhida .sidebar-topo { flex-direction: row; gap: .5rem; padding: 1rem 1rem .85rem 1.15rem; }
-  .app.recolhida .marca { flex: 1; }
-  .app.recolhida .marca-full { opacity: 1; }
-  .app.recolhida .marca-icone { opacity: 0; }
-  .app.recolhida .nav-item, .app.recolhida .acao-topo { justify-content: flex-start; }
-  .app.recolhida .nav-item { padding: .5rem .75rem; }
-  .app.recolhida .sidebar-rodape { flex-direction: row; padding: .75rem 1rem; }
-  .app.recolhida .usuario-mini .selo {
-    position: static; width: auto; height: auto; font-size: .8rem;
-    overflow: visible; border: 0; border-radius: 999px; background: none;
-  }
+  /* Nada do trilho para desfazer aqui: ele mora num `@media (width > 820px)`. */
   .sidebar-toggle { display: none; }
   /* O véu entra com cross-fade. Com `display:none → block` ele não tinha como
      animar: aparecia inteiro num quadro, enquanto a gaveta ainda deslizava. */
