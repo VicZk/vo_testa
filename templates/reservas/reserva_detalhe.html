@@ -354,7 +354,7 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
 {# ---------- FNRH (Ficha Nacional de Registro de Hóspedes) ---------- #}
 <h2>FNRH — Ficha de hóspedes
   {% if fnrh_pronta %}
-    <span class="selo selo-ok">completa</span>
+    <span class="selo selo-ok">Completa</span>
   {% else %}
     <span class="selo selo-alerta">{{ fnrh_completas }}/{{ fnrh_total }} preenchida{{ fnrh_total|pluralize }}</span>
   {% endif %}
@@ -367,9 +367,9 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
     <tbody>
       {% for f in reserva.fichas_fnrh.all %}
         <tr>
-          <td>{{ f.nome|default:"—" }} {% if f.titular %}<span class="selo selo-neutro">responsável</span>{% endif %}</td>
+          <td>{{ f.nome|default:"—" }} {% if f.titular %}<span class="selo selo-neutro">Responsável</span>{% endif %}</td>
           <td>{{ f.documento_numero|default:"—" }}</td>
-          <td>{% if f.completa %}<span class="selo selo-ok">completa</span>{% else %}<span class="selo selo-alerta">pendente</span>{% endif %}</td>
+          <td>{% if f.completa %}<span class="selo selo-ok">Completa</span>{% else %}<span class="selo selo-alerta">Pendente</span>{% endif %}</td>
           <td>{{ f.get_origem_display }}</td>
         </tr>
       {% endfor %}
@@ -393,11 +393,11 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
   <p class="fnrh-sinc">
     <span class="letreiro">FNRH Digital (Embratur):</span>
     {% if reserva.fnrh_status == 'enviada' %}
-      <span class="selo selo-ok">enviada</span> em {{ reserva.fnrh_sincronizada_em|date:"d/m/Y H:i" }}
+      <span class="selo selo-ok">Enviada</span> em {{ reserva.fnrh_sincronizada_em|date:"d/m/Y H:i" }}
     {% elif reserva.fnrh_status == 'erro' %}
-      <span class="selo selo-alerta">erro</span> <small class="ajuda">{{ reserva.fnrh_erro }}</small>
+      <span class="selo selo-alerta">Erro</span> <small class="ajuda">{{ reserva.fnrh_erro }}</small>
     {% else %}
-      <span class="selo selo-neutro">pendente de envio</span>
+      <span class="selo selo-neutro">Pendente de envio</span>
     {% endif %}
     {% if eh_gerente and reserva.fnrh_status != 'enviada' %}
       <form method="post" action="{% url 'reservas:fnrh_reenviar' reserva.pk %}" class="form-embutido">
