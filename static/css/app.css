@@ -823,6 +823,11 @@ a.cartao-link:hover, .cartao-link:hover {
 }
 /* Formulário de coluna única continua na medida antiga. */
 .form-cartao:not(:has(.form-grade)) { max-width: 620px; }
+/* Modificador p/ formulários largos (tabelas que precisam da tela toda, ex.: Tabela
+   de preços) — tira o teto de 620px e usa a largura inteira da área de conteúdo;
+   rola na horizontal só se faltar espaço. Fica DEPOIS da regra dos 620px: as duas
+   têm a mesma especificidade. */
+.form-cartao.form-largo { max-width: none; overflow-x: auto; }
 
 .campo { margin-bottom: .9rem; }
 /* Caixa de marcar: o rótulo vai AO LADO, e a linha não precisa da altura de um
@@ -4195,6 +4200,12 @@ form.filtros:not(.subnav) select:focus {
 .op-acoes .campo label { display: block; font-size: .78rem; color: var(--tinta-suave); margin-bottom: .25rem; }
 /* Valor que o sistema calcula e a pessoa só lê (ex.: a diária praticada da tabela). */
 .op-acoes input.campo-calculado[readonly] { background: var(--canvas); color: var(--tinta-suave); }
+/* «Ganhar»: o total da reserva (calculado, mas é o número que importa) e o sinal em R$ ou %. */
+.op-acoes input.campo-total[readonly] { background: var(--canvas); font-weight: 600; }
+.op-sinal-linha { display: flex; gap: .4rem; align-items: center; }
+.op-sinal-linha input { flex: 1; }
+.op-acoes .op-sinal-linha select { width: 4.5rem; }
+.op-sinal-resultado { color: var(--tinta-suave); }
 
 /* ============================================================
    RESERVAS — camada Apple "Fluid Interfaces" (escopo .tela-reservas)

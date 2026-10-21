@@ -216,7 +216,7 @@
       <a href="{% url 'comercial:enviar_email_lead' op.pk %}" class="botao-neutro botao-largo op-botao-bloco">Enviar por e-mail</a>
       <details class="op-det op-det-ganhar">
         <summary>Ganhar → criar reserva</summary>
-        <form method="post" action="{% url 'comercial:converter' op.pk %}" id="formGanhar">
+        <form method="post" action="{% url 'comercial:converter' op.pk %}" id="formGanhar" data-quartos="{{ op.quartos }}">
           {% csrf_token %}
           <div class="campo">{{ conversao_form.checkin|rotulo }}{{ conversao_form.checkin }}</div>
           <div class="campo">{{ conversao_form.checkout|rotulo }}{{ conversao_form.checkout }}</div>
@@ -234,9 +234,25 @@
                    placeholder="escolha quarto + datas">
           </div>
           <div class="campo">{{ conversao_form.valor_diaria|rotulo }}{{ conversao_form.valor_diaria }}</div>
+          <div class="campo">
+            <label for="totalReserva">Total da reserva</label>
+            <input type="text" id="totalReserva" class="campo-total" readonly tabindex="-1" placeholder="—">
+          </div>
           {% if pagamentos_ativo %}
             <label class="check-inline">{{ conversao_form.criar_sinal }} {{ conversao_form.criar_sinal.label }}</label>
-            <div class="campo">{{ conversao_form.valor_sinal|rotulo }}{{ conversao_form.valor_sinal }}</div>
+            <div class="campo">
+              <label for="sinalEntrada">Valor do sinal</label>
+              <div class="op-sinal-linha">
+                <input type="text" id="sinalEntrada" inputmode="decimal" placeholder="0">
+                <select id="sinalUnidade" aria-label="Sinal em reais ou em porcentagem">
+                  <option value="reais">R$</option>
+                  <option value="pct">%</option>
+                </select>
+              </div>
+              <small id="sinalResultado" class="op-sinal-resultado"></small>
+              {# valor em R$ que vai pro backend (o % é só conveniência de digitação) #}
+              <input type="hidden" name="valor_sinal" id="sinalValor">
+            </div>
           {% endif %}
           <button type="submit" class="botao-primario botao-largo">Criar reserva</button>
         </form>
@@ -249,36 +265,69 @@
         const vend = form.querySelector('[name=valor_diaria]');
         const ci = form.querySelector('[name=checkin]');
         const co = form.querySelector('[name=checkout]');
-        // "420.00" → "420,00" (pt-BR, com milhar) para a máscara/submit entenderem.
-        const brMoeda = (s) => { const n = parseFloat(s); return isNaN(n) ? '' :
-          n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+        const totalEl = document.getElementById('totalReserva');
+        const quartos = parseInt(form.dataset.quartos || '1', 10) || 1;
+        const sinalEntrada = document.getElementById('sinalEntrada');
+        const sinalUnidade = document.getElementById('sinalUnidade');
+        const sinalValor = document.getElementById('sinalValor');     // name=valor_sinal (R$)
+        const sinalResultado = document.getElementById('sinalResultado');
+        // número → "1.420,00" (pt-BR) p/ exibir; e "1.420,00"/"1420.00" → número.
+        const brMoeda = (n) => { const v = typeof n === 'number' ? n : parseFloat(n);
+          return isNaN(v) ? '' : v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+        // "1.420,00" (pt-BR) → 1420; "150.50" ou "150.5" (ponto decimal, até 2 casas, sem
+        // vírgula) → 150,5 — tirar o ponto dele fazia 15050, cem vezes o sinal.
+        const parseNum = (s) => { if (!s) return 0;
+          const t = String(s).trim();
+          if (!t.includes(',') && /^\d+\.\d{1,2}$/.test(t)) return parseFloat(t) || 0;
+          return parseFloat(t.replace(/\./g, '').replace(',', '.')) || 0; };
+        const noites = () => { if (!ci || !co || !ci.value || !co.value) return 0;
+          const d = (new Date(co.value) - new Date(ci.value)) / 86400000; return d > 0 ? Math.round(d) : 0; };
+        const total = () => parseNum(vend ? vend.value : 0) * noites() * quartos;
+
+        function atualizarSinal() {
+          if (!sinalValor) return;
+          const num = parseNum(sinalEntrada ? sinalEntrada.value : '');
+          const rs = (sinalUnidade && sinalUnidade.value === 'pct') ? total() * num / 100 : num;
+          sinalValor.value = rs > 0 ? rs.toFixed(2) : '';                 // R$ p/ o backend
+          if (sinalResultado) sinalResultado.textContent = rs > 0 ? ('Sinal: R$ ' + brMoeda(rs)) : '';
+        }
+        function atualizarTotal() {
+          const t = total();
+          if (totalEl) totalEl.value = t > 0 ? ('R$ ' + brMoeda(t)) : '';
+          atualizarSinal();
+        }
+
         // Cotação pré-preenchida já conta como "vendida mexida" (não sobrescreve).
         let vendidaTocada = !!(vend && vend.value);
-        if (vend) vend.addEventListener('input', () => { vendidaTocada = true; });
+        if (vend) vend.addEventListener('input', () => { vendidaTocada = true; atualizarTotal(); });
         async function atualizar(ev) {
-          if (!prat || !ci || !co) return;
-          const uh = form.querySelector('[name=uh]');
-          const tipo = form.querySelector('[name=tipo_uh]');
-          // No evento 'quarto-mudou' o Alpine ainda não propagou o value do input;
-          // usa o id do detail (fresco). Nos demais eventos, lê o input já estável.
-          const uhVal = (ev && ev.detail && ev.detail.id !== undefined)
-                      ? ev.detail.id : (uh ? uh.value : '');
-          const sel = uhVal ? ('uh=' + uhVal)
-                    : (tipo && tipo.value ? ('tipo_uh=' + tipo.value) : '');
-          if (!sel || !ci.value || !co.value) { prat.value = ''; return; }
-          try {
-            const url = prat.dataset.url + '?' + sel + '&checkin=' + ci.value + '&checkout=' + co.value;
-            const d = await (await fetch(url, { headers: { 'X-Requested-With': 'fetch' } })).json();
-            if (d.diaria == null) { prat.value = ''; return; }
-            prat.value = brMoeda(d.diaria);
-            if (vend && !vendidaTocada) vend.value = brMoeda(d.diaria);  // sugere a vendida
-          } catch (e) { /* mantém o que está */ }
+          if (prat) {
+            const uh = form.querySelector('[name=uh]');
+            const tipo = form.querySelector('[name=tipo_uh]');
+            // No evento 'quarto-mudou' o Alpine ainda não propagou o value do input;
+            // usa o id do detail (fresco). Nos demais eventos, lê o input já estável.
+            const uhVal = (ev && ev.detail && ev.detail.id !== undefined)
+                        ? ev.detail.id : (uh ? uh.value : '');
+            const sel = uhVal ? ('uh=' + uhVal)
+                      : (tipo && tipo.value ? ('tipo_uh=' + tipo.value) : '');
+            if (sel && ci && co && ci.value && co.value) {
+              try {
+                const url = prat.dataset.url + '?' + sel + '&checkin=' + ci.value + '&checkout=' + co.value;
+                const d = await (await fetch(url, { headers: { 'X-Requested-With': 'fetch' } })).json();
+                prat.value = d.diaria == null ? '' : brMoeda(d.diaria);
+                if (d.diaria != null && vend && !vendidaTocada) vend.value = brMoeda(d.diaria);
+              } catch (e) { /* mantém o que está */ }
+            } else { prat.value = ''; }
+          }
+          atualizarTotal();
         }
         form.addEventListener('quarto-mudou', atualizar);
         if (ci) ci.addEventListener('change', atualizar);
         if (co) co.addEventListener('change', atualizar);
         const tipo = form.querySelector('[name=tipo_uh]');
         if (tipo) tipo.addEventListener('change', atualizar);
+        if (sinalEntrada) sinalEntrada.addEventListener('input', atualizarSinal);
+        if (sinalUnidade) sinalUnidade.addEventListener('change', atualizarSinal);
         atualizar();  // caso já venha pré-preenchido (cotação)
       })();
       </script>
@@ -364,10 +413,14 @@
             {% for e in etapas_todas %}<option value="{{ e.id }}" data-tipo="{{ e.tipo }}" {% if e.id == op.etapa_id %}disabled{% endif %}>{{ e.nome }}</option>{% endfor %}
           </select>
         </div>
-        {# x-if, e não x-show: escondido, o select obrigatório travaria o envio para as outras etapas. #}
-        <template x-if="tipo === 'perdido'">
-          <div class="campo">{{ perda_form.motivo|rotulo }}{{ perda_form.motivo }}</div>
-        </template>
+        <div class="campo" x-show="tipo === 'perdido'" x-cloak>
+          <label for="moverMotivo">Motivo da perda</label>
+          {# :disabled quando escondido — campo required oculto bloqueia o submit (não é focável) #}
+          <select name="motivo" id="moverMotivo" required :disabled="tipo !== 'perdido'">
+            <option value="">—</option>
+            {% for m in motivos_perda %}<option value="{{ m.pk }}">{{ m.nome }}</option>{% endfor %}
+          </select>
+        </div>
         <div class="campo">
           <label for="moverJustificativa">Motivo do movimento (obrigatório)</label>
           <input type="text" name="justificativa" id="moverJustificativa" maxlength="255" required

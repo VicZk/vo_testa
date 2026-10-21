@@ -538,6 +538,42 @@ class ConversaoTests(TestCase):
         self.assertFalse(oport.atividades.filter(
             descricao__icontains="diária vendida").exists())
 
+    def test_sinal_marcado_sem_valor_nao_cobra_30pct(self):
+        oport = services.criar_oportunidade(usuario=self.op, pessoa=self.pessoa, titulo="SN")
+        hoje = timezone.localdate()
+        services.converter_em_reserva(
+            oport, usuario=self.op, uh=self.uh,
+            checkin=hoje + timedelta(days=5), checkout=hoje + timedelta(days=7),
+            criar_sinal=True, valor_sinal=None)
+        oport.refresh_from_db()
+        self.assertIsNone(oport.cobranca_sinal_id)  # sem padrão de 30%
+
+    def test_sinal_usa_valor_informado(self):
+        from apps.pagamentos.models import Cobranca
+        oport = services.criar_oportunidade(usuario=self.op, pessoa=self.pessoa, titulo="SV")
+        hoje = timezone.localdate()
+        services.converter_em_reserva(
+            oport, usuario=self.op, uh=self.uh,
+            checkin=hoje + timedelta(days=5), checkout=hoje + timedelta(days=7),
+            criar_sinal=True, valor_sinal=Decimal("100.00"))
+        oport.refresh_from_db()
+        self.assertIsNotNone(oport.cobranca_sinal_id)
+        self.assertEqual(Cobranca.objects.get(pk=oport.cobranca_sinal_id).valor,
+                         Decimal("100.00"))
+
+    def test_form_sinal_marcado_sem_valor_invalido(self):
+        from apps.comercial.forms import ConversaoForm
+        oport = services.criar_oportunidade(usuario=self.op, pessoa=self.pessoa, titulo="F")
+        hoje = timezone.localdate()
+        form = ConversaoForm(data={
+            "tipo_uh": self.tipo.pk,
+            "checkin": (hoje + timedelta(days=5)).isoformat(),
+            "checkout": (hoje + timedelta(days=7)).isoformat(),
+            "criar_sinal": "on", "valor_sinal": "",
+        }, oportunidade=oport)
+        self.assertFalse(form.is_valid())
+        self.assertIn("valor_sinal", form.errors)
+
 
 class GestaoLeadFechadoTests(TestCase):
     """Reabrir/mover leads já fechados (área `comercial_fechados`): cancela a reserva
@@ -745,14 +781,16 @@ class GestaoLeadFechadoTests(TestCase):
             services.mover_lead_fechado(op, novo, self.op, justificativa="2º clique")
         self.assertEqual(op.atividades.filter(descricao__icontains="Reaberto").count(), 1)
 
-    def test_motivo_da_perda_so_entra_no_form_quando_o_destino_e_perdido(self):
+    def test_motivo_da_perda_so_vale_quando_o_destino_e_perdido(self):
         """Escondido com x-show, o select obrigatório travava o envio para as outras
-        etapas (o navegador não envia form com campo obrigatório vazio)."""
+        etapas (o navegador não envia form com campo obrigatório vazio). Fica desligado
+        (:disabled) enquanto o destino não é Perdido — nem valida nem vai no POST."""
         op = services.criar_oportunidade(usuario=self.op, pessoa=self.pessoa, titulo="F")
         services.marcar_perdida(op, MotivoPerda.objects.first(), self.op)
         self.client.login(username="com", password="senha-forte-123")
         r = self.client.get(reverse("comercial:oportunidade", args=[op.pk]))
-        self.assertContains(r, """<template x-if="tipo === 'perdido'">""")
+        self.assertContains(r, """:disabled="tipo !== 'perdido'\"""")
+        self.assertContains(r, '<label for="moverMotivo">')
 
 
 class CotacaoConversaoPorQuartoTests(TestCase):

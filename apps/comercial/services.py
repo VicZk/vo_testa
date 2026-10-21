@@ -1173,9 +1173,8 @@ def converter_em_reserva(oportunidade, *, tipo_uh=None, uh=None, checkin, checko
     if criar_sinal and not sinal_pago and modulo_ativo(Modulo.PAGAMENTOS):
         from apps.pagamentos.models import Cobranca
         from apps.pagamentos.services import criar_cobranca
+        # Sinal sempre explícito aqui (sem o padrão de 30%): valor informado na tela.
         valor = valor_sinal
-        if valor is None:
-            valor = (oportunidade.valor_estimado * fracao_sinal()).quantize(Decimal("0.01"))
         if valor and valor > 0:
             _cancelar_sinal_pendente(oportunidade, usuario)
             cobranca = criar_cobranca(
