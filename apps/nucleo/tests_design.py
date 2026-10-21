@@ -451,12 +451,23 @@ class MovimentoDaNavegacaoTests(TestCase):
         self.css = CSS.read_text(encoding="utf-8").replace("\r\n", "\n")
         self.base = (Path(settings.BASE_DIR) / "templates" / "base.html").read_text(encoding="utf-8")
 
-    def test_view_transitions_ligadas_de_forma_independente_de_ordem(self):
-        """Vai como <meta>: o htmx carrega com `defer`, então um script inline
-        rodaria antes dele e `htmx.config` ainda não existiria."""
-        self.assertIn('name="htmx-config"', self.base)
-        self.assertIn("globalViewTransitions", self.base)
-        self.assertIn("::view-transition-new(root)", self.css)
+    def test_so_o_conteudo_anima_na_troca_de_pagina(self):
+        """A transição pegava a página inteira como um bloco só: menu e barra do
+        topo esmaeciam e subiam junto com o conteúdo a cada clique — a "piscada"
+        (diferença média de 62/255 na faixa do menu aos 40 ms; agora < 1). E valia
+        para TODA troca do HTMX, até cada tecla num filtro."""
+        self.assertNotIn('"globalViewTransitions": true', self.base)
+        nav = re.search(r'<nav id="menu-principal"[^>]*>', self.base).group(0)
+        self.assertIn("transition:true", nav)
+        self.assertRegex(self.css, r"@view-transition \{ navigation: auto; \}")
+        for seletor, nome in ((".sidebar", "menu"), (".topbar", "topo"), (".conteudo", "conteudo")):
+            self.assertIn(f"{seletor} {{ view-transition-name: {nome}; }}", self.css)
+        parados = re.search(r"::view-transition-group\(root\)[^{]*\{\s*animation: none;", self.css)
+        self.assertIsNotNone(parados)
+        for nome in ("menu", "topo"):
+            self.assertIn(f"::view-transition-old({nome})", parados.group(0))
+            self.assertIn(f"::view-transition-new({nome})", parados.group(0))
+        self.assertIn("::view-transition-new(conteudo)", self.css)
 
     def test_existe_plano_b_sem_view_transitions(self):
         self.assertIn(".htmx-swapping", self.css)

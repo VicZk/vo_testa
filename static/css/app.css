@@ -2468,8 +2468,26 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
   from { opacity: 0; transform: translateY(var(--desloca)); }
   to { opacity: 1; transform: none; }
 }
-::view-transition-old(root) { animation: ct-sai var(--mov-rapido) var(--curva) both; }
-::view-transition-new(root) { animation: ct-entra var(--mov-padrao) var(--curva) both; }
+/* Troca de página: só o conteúdo se mexe. O menu e a barra do topo têm nome
+   próprio na transição e trocam de estalo — são iguais nas duas páginas. Antes a
+   transição pegava a página inteira como um bloco só: menu e topo esmaeciam e
+   subiam junto com o conteúdo a cada clique (a "piscada"). Vale para o clique no
+   menu (hx-boost com `transition:true`) e para a navegação comum (@view-transition,
+   Chromium 126+; onde não existe, a página troca como sempre). */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition { navigation: auto; }
+}
+.sidebar { view-transition-name: menu; }
+.topbar { view-transition-name: topo; }
+.conteudo { view-transition-name: conteudo; }
+::view-transition-group(root), ::view-transition-old(root), ::view-transition-new(root),
+::view-transition-group(menu), ::view-transition-old(menu), ::view-transition-new(menu),
+::view-transition-group(topo), ::view-transition-old(topo), ::view-transition-new(topo) {
+  animation: none;
+}
+/* A página velha sai no tempo do toque: some antes de a nova chegar, sem fantasma. */
+::view-transition-old(conteudo) { animation: ct-sai var(--mov-toque) var(--curva) both; }
+::view-transition-new(conteudo) { animation: ct-entra var(--mov-padrao) var(--curva) both; }
 @keyframes ct-sai { to { opacity: 0; } }
 @keyframes ct-entra { from { opacity: 0; transform: translateY(var(--desloca)); } }
 

@@ -570,13 +570,10 @@ input[type="radio"] { accent-color: var(--lampiao); }
   .form-grade { grid-template-columns: 1fr; }
 }
 
-::view-transition-old(root) { animation: ct-sai var(--mov-rapido) var(--curva) both; }
-
-::view-transition-new(root) { animation: ct-entra var(--mov-padrao) var(--curva) both; }
-
-@keyframes ct-sai { to { opacity: 0; } }
-
-@keyframes ct-entra { from { opacity: 0; transform: translateY(var(--desloca)); } }
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
 
 @supports selector(::details-content) {
   :root { interpolate-size: allow-keywords; }
