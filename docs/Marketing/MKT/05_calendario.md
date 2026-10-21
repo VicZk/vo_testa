@@ -2,7 +2,9 @@
 
 > Base para planejar campanhas, preço por temporada e conteúdo. Fuso: America/Sao_Paulo.
 > ⚠️ Confirmar no CRM as datas de início/fim de cada temporada (só as faixas de preço
-> estão cadastradas, ver `01_servicos_e_precos.md`). Data exata de inauguração: **a definir**.
+> estão cadastradas na referência antiga, ver `01_servicos_e_precos.md`). O
+> [plano de inauguração](../Plano_Marketing_Inauguracao.md) usa **31/10/2026** como
+> data planejada; esta revisão não confirma realização, agenda ou calendário oficial.
 
 ## Feriados nacionais 2026
 | Data | Dia | Feriado | Feriadão? |

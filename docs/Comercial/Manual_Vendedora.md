@@ -1,5 +1,9 @@
 # Manual rápido da vendedora
 
+> **Referência operacional — contexto em 21/10/2026.** Use este guia junto das
+> condições vigentes na Tabela de Preços e da cotação emitida pelo CRM. Valores,
+> percentuais e regras citados abaixo não foram reconferidos no banco de produção.
+
 > Preço, pagamento, cancelamento, berço e cama extra — o essencial para atender sem
 > errar. O sistema já calcula tudo; este guia é para você explicar com segurança.
 

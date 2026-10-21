@@ -1,5 +1,9 @@
 # Proposta NPS — Portal do Hóspede + API
 
+> **Status confirmado no código revisado em 21/10/2026:** permanece proposta com
+> API stub, sem persistência de respostas. Veja [Estado atual](ESTADO_ATUAL.md).
+> Recursos descritos como próximos passos abaixo continuam evolução.
+
 **Status:** proposta registrada (não implementada)  
 **Fase prevista:** CRM do Hóspede (fase 2, ESPECIFICACAO §8)  
 **Código:** `apps/nps/` · painel `/crm/nps/` · API stub `/api/nps/v1/` · UI hóspede `/hospede/<token>/nps/`

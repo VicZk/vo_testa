@@ -1,5 +1,9 @@
 # Religar o Funil à Fase 6 (motor de preço + políticas) + layout
 
+> **Plano e diagnóstico de 11/10/2026.** As pendências abaixo são do recorte original;
+> não devem ser tomadas automaticamente como defeitos atuais. Confira o fluxo de
+> cotação publicado em [Módulos e fluxos](../MODULOS_E_FLUXOS.md) antes de retomar itens.
+
 > Plano aberto (11/10/2026). O painel **"Quartos para este lead"** (WIP *Descritivo de
 > Quartos*, `apps/comercial/quartos.py` + `templates/comercial/_painel_quartos.html` /
 > `_comparar_quartos.html`) foi escrito **antes** da Fase 6 e nunca foi religado ao motor

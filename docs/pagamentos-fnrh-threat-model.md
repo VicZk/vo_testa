@@ -1,5 +1,9 @@
 # Threat Model — Pagamentos + FNRH (CRM Vô Testa)
 
+> **Modelo de ameaças datado.** Preservado como referência da análise original;
+> não comprova execução atual de todos os controles no ambiente. Para implementação
+> e limites de integração, consulte [Estado atual](ESTADO_ATUAL.md).
+
 _AppSec threat model, ancorado no código. Escopo: `apps/pagamentos` (Safrapay, cobranças,
 webhook, link público, captura de cartão) e FNRH (`apps/reservas/fnrh_gateway.py`,
 `FichaFNRH`, portal de pré check-in). Gerado com a skill `security-threat-model`._

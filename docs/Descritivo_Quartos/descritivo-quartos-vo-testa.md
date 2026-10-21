@@ -1,5 +1,10 @@
 # Descritivo dos Quartos — Pousada Vô Testa
 
+> **Referência física/comercial.** O descritivo foi preservado; medidas e condições
+> físicas não foram verificadas nesta revisão. Nomes de categorias comerciais podem
+> diferir dos quatro tipos técnicos do bootstrap. Para disponibilidade e capacidade
+> vendável, prevalecem cadastros e regras do CRM.
+
 29/09/2026 · Gefferson Vivan
 
 ## Como usar este descritivo

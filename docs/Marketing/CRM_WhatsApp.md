@@ -1,5 +1,9 @@
 # CRM + WhatsApp — conversa dentro do funil (+ PWA)
 
+> **Leitura atualizada em 21/10/2026.** Cloud API, mensagens, mídia/áudio e webhook
+> têm implementação; a disponibilidade real depende da conta Meta. Planos e
+> evidências no corpo permanecem datados. Consulte [Estado atual](../ESTADO_ATUAL.md).
+
 > Plano de implementação. Traz a conversa do WhatsApp para **dentro do card do lead**
 > (histórico, respostas rápidas, responder sem sair do CRM) e, como anexo, transforma o
 > CRM num **aplicativo instalável no celular (PWA)**. Sem abreviaturas.

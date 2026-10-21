@@ -1,5 +1,9 @@
 # ROTEIRO — conectar os pacotes de design ao CRM
 
+> **Registro histórico.** Este roteiro preserva o handoff e as etapas da época.
+> O escopo implementado e as pendências atuais estão no [Estado atual](docs/ESTADO_ATUAL.md).
+> Resultados de testes e etapas marcadas abaixo não foram reexecutados nesta revisão.
+
 Plano de execução para ligar o trabalho em `SIteCRM_Vo_Testa_Design/` ao sistema
 Django existente. **Nada que já funciona é reescrito.** Cada passo diz o que muda,
 quais arquivos, o critério de aceite verificável e de que depende.

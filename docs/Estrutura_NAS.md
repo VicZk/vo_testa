@@ -1,5 +1,9 @@
 # Estrutura do NAS — Synology DS925+ (Vo_Testa)
 
+> **Referência de infraestrutura externa.** Topologia, equipamentos e procedimentos
+> abaixo não foram verificados no ambiente na revisão documental de 21/10/2026.
+> Este arquivo não substitui o inventário real nem o manual de deploy do CRM.
+
 > Guia de configuração do NAS da Pousada Vô Testa: papel do equipamento, discos,
 > pastas, permissões e proteção. Atualizado em 15/09/2026 · IP local: **192.168.1.8**.
 > **Hardware:** CPU AMD 4 núcleos (**sem GPU/CUDA**) · **32 GB RAM** (instalados) —

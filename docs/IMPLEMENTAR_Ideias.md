@@ -1,10 +1,14 @@
 # Ideias a Implementar — Backlog priorizado
 
+> **Backlog de ideias.** Itens abaixo não representam compromissos de entrega nem
+> funcionalidades prontas. Compare com a [Especificação](ESPECIFICACAO.md) e o
+> [Estado atual](ESTADO_ATUAL.md) antes de iniciar ou reabrir uma implementação.
+
 Ideias extraídas da análise da proposta **Foco Multimídia**, cruzadas com o estado atual
 do CRM. Foco: **aquisição, conversão e distribuição** — a camada onde ainda temos espaço
 (o núcleo do PMS já está em paridade).
 
-📎 **PDF de referência:** [`docs/Foco_Tecnologia.pdf`](./Foco_Tecnologia.pdf)
+📎 **PDF de referência:** `Foco_Tecnologia.pdf` (anexo externo, não versionado nesta cópia)
 
 **Legenda de esforço:** 🟢 baixo · 🟡 médio · 🔴 alto
 **Prioridade:** ordenada por impacto ÷ esforço (topo = fazer primeiro).
@@ -200,4 +204,4 @@ Ter isso na mão do **vendedor** (informar o hóspede + ajustar a oferta) é aci
 Começar pelo **selo de escassez + comparador de preço** na vitrine do site — menor
 esforço, retorno imediato, apoia-se em dados que já temos.
 
-*Fonte: [`docs/Foco_Tecnologia.pdf`](./Foco_Tecnologia.pdf) · relacionado: [`docs/Tarifario.pdf`](./Tarifario.pdf), [`docs/ESPECIFICACAO.md`](./ESPECIFICACAO.md) (§8)*
+*Fonte: `Foco_Tecnologia.pdf` (anexo externo, não versionado nesta cópia) · relacionado: [`docs/Tarifario.pdf`](./Tarifario.pdf), [`docs/ESPECIFICACAO.md`](./ESPECIFICACAO.md) (§8)*

@@ -1,5 +1,10 @@
 # Plano de implementação — Áudio (mensagens de voz) no WhatsApp do CRM
 
+> **Status do código em 21/10/2026:** envio/recebimento de áudio e mídia já têm
+> implementação no Comercial e no gateway Cloud. Os itens abaixo preservam o plano
+> original; não são uma lista atual de tudo que falta. Entrega real depende da conta
+> e deve ser validada conforme o [checklist](../Checklist_CRM_100.md).
+
 > Passo a passo para **receber** e **enviar** mensagens de **áudio/voz** pela conversa
 > de WhatsApp do funil, usando a Cloud API da Meta. Espelha o fluxo de texto que já
 > existe e reaproveita o storage (R2) do projeto.

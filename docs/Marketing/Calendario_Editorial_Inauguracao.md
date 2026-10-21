@@ -1,5 +1,9 @@
 # Calendário Editorial + Roteiros — Inauguração Vô Testa
 
+> **Calendário planejado.** Este documento preserva a programação da campanha,
+> não um registro de publicações já realizadas. Confirme datas, conteúdos e condições
+> comerciais com a operação antes de reutilizar.
+
 > Companheiro do `Plano_Marketing_Inauguracao.md`. Aqui está o que **gravar e postar**,
 > dia a dia, das 9 semanas até 31/10. Rosto da marca: **Dr. Flávio (o neto)**.
 > Documento sem abreviaturas — "Chamada para Ação" = a frase final que diz ao público o

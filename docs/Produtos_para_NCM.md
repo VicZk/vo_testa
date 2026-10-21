@@ -1,5 +1,9 @@
 # Relação de produtos para NCM — Pousada Vô Testa
 
+> **Modelo de levantamento.** Preenchimento e classificação devem ser validados
+> pelo responsável fiscal. A existência de cadastro no CRM não comprova emissão
+> autorizada; veja o [guia Fiscal](Implementar_fiscal.md).
+
 Documento para o **contador** preencher os códigos fiscais dos produtos **revendidos**
 (restaurante, loja, frigobar) — necessários para a **NFC-e** (consumo/ICMS).
 

@@ -1,5 +1,9 @@
 # Precificação — Pousada Vô Testa
 
+> **Estudo comercial datado.** Projeções, custos, indicadores e preços abaixo foram
+> preservados sem consulta atual ao mercado ou à produção. Confirme tarifas vigentes
+> no CRM. Restrições de venda já estão implementadas; veja [Especificação](../ESPECIFICACAO.md).
+
 > Documento-guia **vivo**. Serve para (1) **estruturar os preços** dos 24 quartos e
 > (2) **orientar a construção do CRM** (quais modelos/telas suportam essa lógica).
 > Atualizar conforme decisões forem tomadas e a operação der feedback.
@@ -127,8 +131,10 @@ categoria. Inventário, diferenciais, experiências inclusas e **projeção de o
   como as categorias já refletem o tamanho, ele foi **neutralizado por quarto**.
 - **PCD (04 e 14):** mesmo preço do Padrão — acessibilidade é inclusão, não upsell.
 - **Como recarregar:** `manage.py carregar_tarifas` (idempotente; perfis por quarto).
-  **Rodar no deploy.**
-- **Mínimo de noites** em Réveillon/Carnaval/feriados longos — ⬜ ainda a implementar (§5).
+  Execute apenas quando a carga de tarifas fizer parte da entrega autorizada;
+  o deploy padrão não roda esse seed automaticamente.
+- **Mínimo de noites:** implementado por `RestricaoVenda`, junto de outras restrições
+  por período/tipo. As datas e os valores comerciais precisam ser configurados no CRM.
 
 **Projeção & inauguração** (detalhe no PDF, §4):
 - **Inauguração 31/10/2026** — cai no **feriadão de Finados**; estratégia de **escassez**

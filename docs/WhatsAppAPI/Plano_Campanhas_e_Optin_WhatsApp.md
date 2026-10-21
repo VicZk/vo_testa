@@ -1,5 +1,9 @@
 # Plano de implementação — Campanhas de WhatsApp + Opt-in nas LPs
 
+> **Plano de evolução.** Existe comando manual `enviar_campanha_whatsapp` e fluxo de
+> consentimento nos services; o painel completo de campanhas e as mudanças de
+> captação propostas aqui continuam backlog. Consulte [Estado atual](../ESTADO_ATUAL.md).
+
 > Passo a passo para implementar **futuramente** duas peças que faltam para
 > operar marketing por WhatsApp pelo CRM:
 > **(A)** check-box de aceite (opt-in) nas landing pages / form do site;

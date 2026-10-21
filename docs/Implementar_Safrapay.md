@@ -1,12 +1,14 @@
 # Implementar Safrapay (pagamento online)
 
-Estado: **código pronto e os 3 meios VALIDADOS na HML** (Pix, cartão e boleto batem na
-API de verdade; **cartão autoriza e captura** com os cartões homologados; webhook confirma
-a reserva; site já cria a cobrança e mostra "Pagar agora"). O gargalo é o **processo de
-homologação com a Safrapay** — não é programação.
+**Código revisado em 21/10/2026:** o adapter Safrapay cobre Pix, cartão e boleto,
+diagnóstico de credenciais, timeout (`SAFRAPAY_TIMEOUT`) e tratamento de falhas.
+O site integra criação de cobrança e a jornada de pagamento. A confirmação e o
+crédito precisam ser verificados com a origem correta do recebimento.
 
-> **Atalho para acelerar:** não espere o cartão. **Pix já está 100%.** Assim que o Token
-> chegar, dá para vender no site por Pix imediatamente; cartão e boleto vêm logo atrás.
+As evidências HML abaixo são de **01/10/2026** e foram preservadas. Não comprovam
+credenciamento, token, entrega de webhook ou liquidação em produção. Após obter
+credenciais, valide a jornada completa no ambiente correspondente antes de ativar
+vendas reais. Consulte o [Estado atual](ESTADO_ATUAL.md).
 
 ## Pix direto (fora do PSP) — implementado 01/10/2026
 

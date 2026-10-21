@@ -1,10 +1,12 @@
 # Pousada Vô Testa — Serviços e Preços
 
-> Fonte: CRM de produção (tabelas de tarifa por classificação de temporada).
-> Atualize este arquivo sempre que mudar preço no CRM. Valores em R$, diária de casal.
+> Referência comercial histórica derivada de tabelas de tarifa. Preços de produção
+> não foram consultados na revisão documental de 21/10/2026: confirme valores,
+> temporadas e disponibilidade no CRM antes de usar em uma proposta.
 
 ## A pousada em números
-- **24 quartos** de hospedagem + **8 unidades de day use** ("Dia na Pousada").
+- **24 quartos** de hospedagem + **4 unidades ativas de day use** ("Dia na Pousada")
+  no cadastro inicial. Existem oito registros históricos, quatro inativados por migração.
 - Localização: **Itá, Santa Catarina — às margens do Lago**.
 - Inauguração: **2026** (fase atual: captação de fundadores).
 - Site/reservas: **www.pousadavotesta.com.br**

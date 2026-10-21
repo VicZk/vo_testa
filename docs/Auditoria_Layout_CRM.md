@@ -1,5 +1,10 @@
 # Auditoria de Layout — CRM Pousada Vô Testa
 
+> **Registro histórico de interface.** Os resultados abaixo descrevem as telas e
+> testes da época. O código recebeu mudanças posteriores; os refinamentos ainda
+> locais estão no [Estado atual](ESTADO_ATUAL.md). Esta revisão documental não
+> constitui nova validação visual de todas as telas.
+
 > **STATUS 05/10/2026 — TODAS as correções aplicadas e verificadas** (737 testes OK,
 > `makemigrations --check` limpo, telas-chave reconferidas por screenshot desktop+mobile).
 > Ainda **não commitado** (aguarda ordem). Resumo das correções no fim do documento.

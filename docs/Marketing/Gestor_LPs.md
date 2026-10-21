@@ -1,5 +1,9 @@
 # Gestor de Páginas de Captação (Landing Pages) — Comercial
 
+> **Status do código em 21/10/2026:** o gestor de páginas/LPs e captação já existe
+> no Comercial. O desenho e as etapas abaixo foram preservados como referência;
+> consulte [Módulos e fluxos](../MODULOS_E_FLUXOS.md) para a implementação publicada.
+
 > Plano de implementação. Uma **Página de Captação** ("Landing Page") vira **dado
 > editável** dentro do módulo Comercial: você cria, publica, acompanha, e os cadastros
 > caem no **funil** que já existe. Sem abreviaturas: "Página de Captação" = página única

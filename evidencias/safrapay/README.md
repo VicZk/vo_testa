@@ -1,5 +1,9 @@
 # Evidências Safrapay (homologação)
 
+> **Pacote histórico de homologação.** Os artefatos desta pasta e os resultados
+> de 01/10/2026 não comprovam ativação em produção. Procedimentos e limites atuais:
+> [Implementar Safrapay](../../docs/Implementar_Safrapay.md).
+
 Pasta para o pacote enviado à SafraPay **antes** do Token ser liberado.
 
 | Item | Onde |

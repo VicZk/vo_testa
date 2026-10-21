@@ -1,5 +1,10 @@
 # Auditoria completa do CRM — ponta a ponta
 
+> **Auditoria histórica — contexto revisado em 21/10/2026.** Achados, percentuais de
+> conclusão e testes abaixo pertencem às revisões registradas no corpo do documento.
+> Não são uma nova auditoria da produção. Consulte [Estado atual](ESTADO_ATUAL.md)
+> e [Checklist de operação](Checklist_CRM_100.md) para a situação da entrega atual.
+
 Documento vivo. Objetivo: auditar **cada módulo** por 5 lentes e validar os **fluxos-mestre**
 que cruzam módulos (onde moram os bugs). Marque `[x]` o que passar; registre achados no fim.
 

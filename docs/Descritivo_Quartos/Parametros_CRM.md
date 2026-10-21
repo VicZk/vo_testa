@@ -1,9 +1,15 @@
 # Parâmetros dos Quartos para o CRM — fonte do seed
 
+> **Contexto em 21/10/2026:** proposta histórica de oito categorias comerciais.
+> A [especificação atual](../ESPECIFICACAO.md) e o bootstrap de quatro tipos técnicos
+> descrevem o código publicado. Não aplique este levantamento como migração automática.
+
 > Consolidação de `Manual_de_Vendas_Vo_Testa.pdf` + plantas (`Projeto_Pousada/`) +
 > decisões confirmadas pelo dono (06/10/2026). Vira o comando de seed que carrega os 24
-> quartos, 8 categorias, 4 temporadas e o motor de preço. **CRM em beta** → pode remodelar
-> os tipos/quartos livremente (sem migrar reserva).
+> quartos, 8 categorias comerciais, 4 temporadas e o motor de preço. Esta é uma
+> **proposta histórica de modelagem**, não uma autorização para remodelar cadastros
+> operacionais. O bootstrap atual usa quatro tipos técnicos de pernoite; mudanças
+> de tipos/quartos exigem conferir reservas, tarifas, vínculos e migração.
 >
 > ⏳ Pendências do dono (não bloqueiam o resto): (1) colchão extra por quarto, (2) berço,
 > (3) metragem dos 13 quartos de corredor (03-15).

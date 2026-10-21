@@ -1,5 +1,9 @@
 # Plano de Implementação — Estoque de Colchões Extra + Avisos
 
+> **Plano e evidências de implementação.** O controle de capacidade/colchões já
+> integra Reservas. Resultados de testes abaixo pertencem às execuções registradas;
+> estoque e montagem física precisam ser conferidos na instalação.
+
 > Plano **fechado** (08/10/2026), decidido com o dono. Fonte de regras:
 > [`CONFIGURACAO_QUARTOS.md`](CONFIGURACAO_QUARTOS.md) + `Manual_de_Vendas_Vo_Testa.pdf` +
 > as 14 respostas + 3 confirmações do dono. **CRM em beta → pode remodelar quartos/seed.**

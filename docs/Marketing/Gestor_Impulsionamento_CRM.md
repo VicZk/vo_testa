@@ -1,5 +1,9 @@
 # Gestor de Impulsionamento (Anúncios) — Comercial
 
+> **Guia com fases históricas.** O código contém recursos de campanhas e Meta CAPI;
+> Google e etapas adicionais do plano não devem ser presumidos concluídos. Contas,
+> permissões e gasto real não foram consultados. Matriz: [Estado atual](../ESTADO_ATUAL.md).
+
 > **Estado (implementado):** Fases **A, B e C** construídas no Comercial
 > (`/crm/comercial/impulsionamento/`), com `MIDIA_GATEWAY=simulado` por padrão. Para
 > ligar de verdade: **Meta** (Conversions API + Insights) precisa de `META_CAPI_TOKEN` +

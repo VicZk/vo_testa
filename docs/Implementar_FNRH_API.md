@@ -1,7 +1,10 @@
 # Integração com a API FNRH Digital (Embratur/Serpro)
 
-Estado: **scaffold pronto** (gateway `simulado` funcionando). Falta ligar o provider
-real (`serpro`) quando houver credenciais.
+**Estado do código em 21/10/2026:** gateways `simulado` e `serpro` escritos,
+com integração do check-in e reenvio de pendências. Credenciais, dados exigidos,
+contrato vigente da API e homologação precisam ser conferidos no ambiente.
+A documentação externa abaixo é a referência de origem do adapter, não uma nova
+verificação de disponibilidade do serviço. Veja [Estado atual](ESTADO_ATUAL.md).
 
 Fonte: [Documentação da API FNRH v2 (gov.br, 09/03/2026)](https://www.gov.br/turismo/pt-br/acesso-a-informacao/acoes-e-programas/programas-projetos-acoes-obras-e-atividades/ficha-nacional-de-registro-de-hospedes/modulo-meio-de-hospedagem/meios-de-hospedagem-com-pms/documentacao-api-v2-20260309.pdf)
 

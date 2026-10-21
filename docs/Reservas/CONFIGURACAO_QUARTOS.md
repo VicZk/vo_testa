@@ -1,5 +1,9 @@
 # Configuração de Quartos e Estoque de Colchões — Pousada Vô Testa
 
+> **Decisões de configuração incorporadas ao projeto.** O histórico abaixo não
+> substitui a conferência da montagem e capacidade no banco atual. Consulte a
+> [Especificação](../ESPECIFICACAO.md) para a separação entre estrutura inicial e operação.
+
 ## Objetivo
 
 Implementar no PMS (Django) o cadastro de configuração de camas das 24 unidades da pousada e o controle de um **estoque global de colchões**. O estoque limita quantas camas podem ser montadas por noite.

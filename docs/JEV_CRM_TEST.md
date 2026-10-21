@@ -1,6 +1,9 @@
 # JEV_CRM_TEST — Piloto de lead scoring com Jev (TypeSafe AI)
 
-**Status:** proposta / plano (nada implementado).
+**Estado do código em 21/10/2026:** existem `decisao_gateway.py`, simulador,
+adapter JEV e comando `jev_replay`. Este documento preserva o plano do piloto;
+execução do serviço externo, contrato e resultados em sombra não foram verificados
+nesta revisão. Consulte o [Estado atual](ESTADO_ATUAL.md).
 **Escopo:** um único ponto de decisão — o **score de lead do módulo Comercial** —
 rodando **em sombra** (shadow) ao lado da heurística atual, sem trocar o que já funciona.
 **Data do plano:** 27/09/2026.

@@ -1,5 +1,10 @@
 # Gestor de E-mail Marketing (Campanhas em Massa) — Comercial
 
+> **Estado do código em 21/10/2026:** campanhas, seleção de destinatários e envio
+> agendado estão implementados. O adapter SES continua stub. O gateway chamado
+> `simulado` usa o backend Django e pode enviar por SMTP real. Planos de domínio,
+> conta e provedores abaixo não comprovam configuração externa ativa.
+
 > Documento vivo. Guia para implementarmos ao longo do tempo, por fases.
 > **Decisões já tomadas:** caminho **A** (campanha vive **dentro do CRM**, ao lado do
 > funil) · provedor de envio **Amazon SES** · envio de marketing por **subdomínio
@@ -21,7 +26,8 @@ uma ferramenta externa para montar a campanha.
   Descadastro visível e respeitado (LGPD).
 - **Gateway plugável**, igual aos outros módulos (`WHATSAPP_GATEWAY`,
   `PAGAMENTOS_GATEWAY`, `FISCAL_GATEWAY`): `EMAIL_GATEWAY = simulado | ses`.
-  `simulado` é o default (sandbox, sem rede) — dev e testes nunca disparam de verdade.
+  `simulado` é o default e usa o backend Django. Com SMTP configurado, **envia de
+  verdade**; para testes sem envio, use console/locmem e destinatários sintéticos.
 - **Movimentos imutáveis.** Cada envio a um destinatário é um registro append-only
   (`EnvioEmail`) — status, message-id, bounce, reclamação, abertura. Correção = novo
   registro, nunca update destrutivo.
@@ -100,7 +106,8 @@ Roda 100% no gateway `simulado`. Entregável testável antes de qualquer conta A
 ## 1.1 Gateway plugável — `apps/comercial/email_gateways.py`
 - `get_email_gateway()` lê `settings.EMAIL_GATEWAY` (`simulado` default).
 - Interface: `enviar(destinatario, assunto, html, texto, headers) -> {message_id, status}`.
-- `simulado`: não faz rede, gera `message_id` fake, loga; permite forçar bounce em teste.
+- `simulado`: envia pelo backend Django (console ou SMTP conforme configuração) e
+  gera identificador local. O nome não garante ausência de rede nem entrega ao destinatário.
 - `ses`: preenchido na Fase 2.
 
 ## 1.2 Models — `apps/comercial/models.py`

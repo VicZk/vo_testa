@@ -9,6 +9,19 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 21/10/2026 — Documentação revisada e índice do projeto
+
+- README, especificação, arquitetura, módulos e convenções alinhados ao código
+  publicado; removidas descrições obsoletas de Frigobar, stack, bootstrap e CI.
+- Novo índice em `docs/README.md` e snapshot em `docs/ESTADO_ATUAL.md`, separando
+  implementação publicada, nove commits locais de interface e ativação externa.
+- Guias e checklist distinguem simuladores, providers pendentes e homologação;
+  corrigido o aviso de que `EMAIL_GATEWAY=simulado` pode enviar SMTP real.
+- Planos, estudos, auditorias e evidências antigos identificados como históricos;
+  preços, contas externas e resultados de testes passados não foram revalidados.
+- Entrega somente documental: sem mudança de código, migração ou deploy. Revisão
+  de links, referências, UTF-8 e diff; suíte funcional não reexecutada nesta entrega.
+
 ## 21/10/2026 — Telas rápidas, a LP leve, o cupom da térmica, o no-show da madrugada e os relatórios de receita e de governança (`2e1ae94` a `a8a3f1a`)
 
 Décimo bloco: o que ainda estava aberto no relatório da auditoria, tirando dados

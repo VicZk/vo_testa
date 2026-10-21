@@ -1,7 +1,13 @@
 # Implementar Fiscal — CRM Pousada Vô Testa
 
-Plano de implementação da emissão de nota fiscal eletrônica (módulo Fiscal, §14 / fase 2).
-Documento vivo — atualizar conforme contador/prefeitura confirmarem os parâmetros.
+Guia do módulo Fiscal e registro do planejamento de emissão eletrônica.
+**Revisão do código em 21/10/2026:** models, telas, eventos e simulador existem;
+os providers `focus` e `governo` continuam stubs com `NotImplementedError`.
+
+Os dados contábeis, preços de fornecedores e referências normativas abaixo são
+**históricos de julho/2026**, preservados sem revalidação nesta revisão.
+Confirme parâmetros e requisitos com o contador/provedor antes de configurar emissão.
+Veja o [Estado atual](ESTADO_ATUAL.md) e o [checklist](Checklist_contador.md).
 
 > **Município:** Itá/SC · **Última atualização:** julho/2026
 
@@ -25,8 +31,9 @@ Contador **Escritório Contábil Itá Ltda**.
 - **Produtos revendidos:** o contador precisa da **relação com NCM** → template em
   `docs/Produtos_para_NCM.md` (a pousada completa; o contador preenche os códigos).
 
-**Conclusão de prioridade:** **NFS-e (hospedagem) já pode ser homologada** (falta só o
-certificado A1 + conta no provedor). **NFC-e** aguarda a **Inscrição Estadual**.
+**Prioridade registrada em julho/2026:** preparar a NFS-e de hospedagem e resolver
+os requisitos da NFC-e. Além de credenciais/documentos e parâmetros atualizados,
+a homologação pelo CRM exige **implementar um provider fiscal real**.
 
 ---
 
@@ -36,10 +43,11 @@ O alicerce fiscal **já está pronto**: a 4ª "veia" transversal do sistema clas
 **toda linha** vendável e **todo lançamento de conta** como:
 
 - **SERVIÇO** → diária/hospedagem, lavanderia do hóspede, taxas, day use → **NFS-e** (ISS)
-- **CONSUMO** → loja, restaurante, frigobar → **NFC-e / NF-e** (ICMS)
+- **CONSUMO** → produtos de loja/restaurante; o módulo Frigobar foi removido.
 
 Isso é obrigatório desde a fase 1 (`NaturezaFiscal.SERVICO | CONSUMO`, sem default), justamente
-para permitir a nota separada depois. Falta o **motor de emissão** (este documento).
+para permitir documentos separados. O fluxo local/simulado existe; falta o adapter
+real de emissão. Campos IBS/CBS no código não representam homologação tributária.
 
 ---
 
@@ -137,20 +145,20 @@ ao virar **produção**.
 
 ---
 
-## 7. Desenho do módulo `apps/fiscal` (a implementar)
+## 7. Implementação atual e trabalho pendente
 
-Mesmo padrão do `apps/pagamentos` (gateway plugável):
+| Parte | Estado do código |
+|---|---|
+| `ConfigFiscalProduto` | Cadastro fiscal de produto |
+| `DocumentoFiscal` / `EventoFiscal` | Documento, itens/payload, status e eventos |
+| Telas e services | Preparação, emissão/cancelamento pelo gateway e acompanhamento |
+| `FISCAL_GATEWAY=simulado` | Fluxo de desenvolvimento e testes |
+| `FISCAL_GATEWAY=focus` / `governo` | Stubs; falta integrar o provider e tratar seu contrato real |
+| Campos tributários | Estrutura de dados; preenchimento e envio precisam de validação fiscal |
 
-- **Cadastro fiscal** — por **produto** (NCM, CFOP, CST/CSOSN, origem) e por **serviço**
-  (código LC 116, alíquota ISS). Dados vindos do contador.
-- **Gateway fiscal plugável** (`fiscal/gateways.py`) — provider (PlugNotas/Focus) com
-  `PAGAMENTOS_GATEWAY`-like setting; **sandbox/homologação** por padrão.
-- **Emissão** — ao fechar conta/venda, monta o payload a partir dos lançamentos (natureza,
-  valores, tomador/hóspede, códigos fiscais), chama o provedor, guarda o retorno (número,
-  chave, XML, PDF/DANFE, status). NFS-e para serviço; NFC-e para consumo.
-- **Cancelamento / contingência / carta de correção**.
-- **Conciliação** — nota × lançamento (extrato por natureza já existe na conta).
-- **Trilha de auditoria** (padrão do projeto).
+Cancelamento, contingência e demais operações no ambiente autorizado devem ser
+homologados conforme o provider implementado. Não inferir suporte real pela
+existência de botões ou respostas do simulador.
 
 ---
 
@@ -159,7 +167,8 @@ Mesmo padrão do `apps/pagamentos` (gateway plugável):
 1. **Contador:** confirmar (a) regime tributário e (b) se **Itá já está no Emissor Nacional**.
 2. **Certificado A1** (se ainda não tiver).
 3. Abrir conta de **homologação** no PlugNotas ou Focus NFe (grátis).
-4. **Implementar o `apps/fiscal`** (esqueleto plugável) mirando **NFS-e Nacional + NFC-e**.
+4. **Implementar o provider real** no `apps/fiscal` existente, com payload/retorno,
+   autenticação, idempotência, falhas e parâmetros conferidos com o contador.
 5. **Homologação:** emitir notas de teste (1 NFS-e de diária, 1 NFC-e do restaurante),
    validar retorno/DANFE/QR/cancelamento.
 6. **Virada para produção** — primeiras notas reais conferidas com o contador.

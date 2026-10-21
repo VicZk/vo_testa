@@ -1,26 +1,30 @@
-# MKT — Base de conhecimento para Comercial & Marketing
+# MKT — Base de conhecimento para Comercial e Marketing
 
-Documentos de referência da **Pousada Vô Testa** para usar no **Projeto do Claude**
-(claude.ai) que acompanha as ações comerciais e de marketing.
+Referência da Pousada Vô Testa para consulta pela equipe e preparação de materiais.
+**Revisão documental: 21/10/2026.** Os arquivos comerciais são snapshots e devem ser
+conferidos com políticas, preços e campanhas vigentes.
 
-## O que subir no "Contexto" do Projeto
-| Arquivo | Conteúdo |
+| Arquivo | Uso |
 |---|---|
-| `01_servicos_e_precos.md` | Tipos de quarto, capacidade, preços por temporada, day use, eventos |
-| `02_guia_de_marca.md` | História, tom de voz, paleta, tipografia, público |
-| `03_leads_e_funil.md` | Etapas do funil, leitura do snapshot, como reexportar |
-| `04_lp_fundador.md` | Estratégia e copy oficial da LP de captação |
-| `05_calendario.md` | Feriados 2026, faixas de temporada, datas de campanha |
-| `leads_funil.csv` | Dados brutos dos leads (**LGPD — não versionar**) |
-
-> Suba os `.md` como Contexto do Projeto. O `leads_funil.csv` você atualiza e sobe
-> manualmente de tempos em tempos (ele muda; os `.md` são mais estáveis).
+| [Serviços e preços](01_servicos_e_precos.md) | Estrutura e referência comercial; confirmar tarifa no CRM |
+| [Guia de marca](02_guia_de_marca.md) | Identidade, tom de voz e público |
+| [Leads e funil](03_leads_e_funil.md) | Como interpretar/exportar dados; snapshot original datado |
+| [LP Fundador](04_lp_fundador.md) | Estratégia e copy da campanha |
+| [Calendário](05_calendario.md) | Planejamento de datas/temporadas, sujeito a confirmação |
 
 ## Manutenção
-- Preços mudaram no CRM? Atualize `01_servicos_e_precos.md`.
-- Novos leads? Reexporte o CSV (comando em `03_leads_e_funil.md`) e suba de novo.
-- Definiu a condição de fundador / data de abertura? Atualize `04_` e `05_`.
 
-## Aviso LGPD
-`leads_funil.csv` contém nome, telefone e e-mail de pessoas reais. Não commitar, não
-subir em local público, usar só para a operação comercial da pousada.
+- Preços ou regras mudaram: atualize a referência a partir da configuração aprovada no CRM.
+- Nova campanha/data/condição: registre a decisão e atualize os materiais correspondentes.
+- Snapshot de leads: identifique data e origem; não confunda dados exportados com
+  disponibilidade ou situação atual do funil.
+- Consulte o [Estado atual](../../ESTADO_ATUAL.md) para saber quais recursos do
+  Comercial e Marketing estão implementados.
+
+## Dados de leads
+
+`leads_funil.csv` contém dados pessoais e não integra esta documentação pública.
+Não versionar nem publicar CSV/JSON de clientes. Exemplos para documentação e
+ferramentas externas devem usar dados sintéticos ou conteúdo previamente autorizado.
+
+[Índice geral da documentação](../../README.md).

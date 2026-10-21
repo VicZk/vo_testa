@@ -1,5 +1,8 @@
 # Resposta à Safrapay — novo teste com dados obrigatórios (01/10/2026)
 
+> **Resposta preparada em 01/10/2026.** Preservada como registro do pacote HML.
+> Esta revisão não enviou mensagens à Safrapay nem confirmou credenciamento de produção.
+
 **Anexo:** `evidencias-safrapay-2026-10-01.json`
 **Estabelecimento (HML):** SafraPay HOMOL EC 1001188 · **Ambiente:** Homologação
 
