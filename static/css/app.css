@@ -272,6 +272,7 @@
   /* Altura da barra de cima. Quem gruda abaixo dela (painel do PDV, filtro do
      BOH, rail de operação) calcula a partir daqui, em vez de repetir "76px". */
   --topbar-h: 60px;
+  --conteudo-max: 1760px;   /* até onde o conteúdo cresce num monitor grande */
 }
 
 * { box-sizing: border-box; }
@@ -906,6 +907,17 @@ button.link:hover { color: var(--lampiao); background: rgba(255, 255, 255, .05);
 /* ---------- Conteúdo ---------- */
 
 .conteudo { padding: 2rem 2.4rem 3.2rem; width: 100%; }
+/* Monitor grande: o conteúdo para em --conteudo-max e centra no espaço ao lado do
+   menu, e a busca da barra do topo acompanha o começo dele. Sem limite, a 2560 px o
+   detalhe da reserva virava faixas de 2.300 px — o valor do financeiro lá na ponta e
+   os formulários soltos, com vãos enormes entre eles. Tela que vive de largura (mapa
+   de reservas, calendário do Marketing) sai do limite com .conteudo-largo. */
+.conteudo { max-width: var(--conteudo-max); margin-inline: auto; }
+.conteudo.conteudo-largo { max-width: none; }
+@media (width > 1800px) {
+  .topbar { padding-inline: max(1.6rem, calc((100% - var(--conteudo-max)) / 2 + 1.6rem)); }
+  .main:has(.conteudo-largo) .topbar { padding-inline: 1.6rem; }
+}
 
 .pagina-eyebrow { color: var(--tinta-suave); margin-bottom: .4rem; }
 

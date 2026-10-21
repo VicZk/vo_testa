@@ -1239,3 +1239,19 @@ class DicasTests(TestCase):
         funcao = funcao[:funcao.index("rotularSidebar();")]
         self.assertIn("el.removeAttribute('title')", funcao)
         self.assertIn("el.setAttribute('data-dica-lado', 'direita')", funcao)
+
+
+class TelaGrandeTests(TestCase):
+    """Num monitor grande o conteúdo esticava até a borda: a 2560 px o detalhe da
+    reserva tinha 2.300 px de largura, com o valor do financeiro lá na ponta. O
+    conteúdo para em --conteudo-max e centra; o mapa de reservas sai do limite."""
+
+    def test_conteudo_tem_limite_e_centra(self):
+        css = CSS.read_text(encoding="utf-8")
+        self.assertRegex(css, r"--conteudo-max: \d+px;")
+        self.assertIn(".conteudo { max-width: var(--conteudo-max); margin-inline: auto; }", css)
+        self.assertIn(".conteudo.conteudo-largo { max-width: none; }", css)
+
+    def test_mapa_de_reservas_usa_a_largura_toda(self):
+        mapa = (Path(settings.BASE_DIR) / "templates" / "reservas" / "mapa.html").read_text(encoding="utf-8")
+        self.assertIn("conteudo-largo", mapa)

@@ -277,6 +277,7 @@
   /* Altura da barra de cima. Quem gruda abaixo dela (painel do PDV, filtro do
      BOH, rail de operação) calcula a partir daqui, em vez de repetir "76px". */
   --topbar-h: 60px;
+  --conteudo-max: 1760px;   /* até onde o conteúdo cresce num monitor grande */
 }
 
 * { box-sizing: border-box; }
