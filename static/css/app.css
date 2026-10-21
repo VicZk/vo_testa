@@ -1058,6 +1058,11 @@ a.cartao-link:hover, .cartao-link:hover {
    deixava a linha torta e a caixinha solta no meio do nada). */
 .campo-marcador { display: flex; align-items: center; min-height: 42px; }
 .campo-marcador label { margin: 0; }
+/* Caixa de marcar COM texto de ajuda: a ajuda é a linha DE BAIXO, não uma coluna ao
+   lado. Na fila, ela disputava a largura com o rótulo e empurrava "Fechado para
+   chegada" para debaixo da caixinha. Alinhada ao texto do rótulo (caixa + gap). */
+.campo-marcador:has(> .ajuda) { flex-wrap: wrap; align-items: baseline; }
+.campo-marcador > .ajuda { flex: 1 0 100%; margin-left: calc(17px + .45rem); }
 /* A alça de redimensionar livre deixava o textarea sair do cartão. */
 textarea { resize: vertical; }
 
@@ -1400,7 +1405,8 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 .selo.mapa-cor-checkout, .selo.mapa-cor-orcamento { --selo-cor: var(--fio-forte); }
 .selo-limpa, .selo-concluida, .selo-ok, .selo-sucesso, .selo-pub,
 .selo-pg-pago, .selo.mapa-cor-confirmada          { --selo-cor: var(--sucesso); }
-.selo-inspecionada, .selo.prioridade-media        { --selo-cor: var(--info); }
+.selo-inspecionada, .selo-programada,
+.selo.prioridade-media                            { --selo-cor: var(--info); }
 .selo-suja, .selo-pendente, .selo-rasc, .selo-pg-pendente,
 .selo.prioridade-alta, .selo.mapa-cor-pre_reserva { --selo-cor: var(--alerta); }
 .selo-em_limpeza, .selo-em_andamento              { --selo-cor: var(--andamento); }
@@ -1742,6 +1748,35 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
   .tabela-pessoas col.c-papeis { width: 45%; }
 }
 .tabela-fixa td { overflow: hidden; text-overflow: ellipsis; }
+
+/* Restrições de venda — seis colunas numa tabela que nem sempre tem largura.
+   Até 820px a casa já resolve igual para todas as tabelas: o quadro rola, a primeira
+   coluna e a de ações ficam grudadas. O caso sem dono é o DESKTOP com o menu aberto:
+   a 821px a tabela mede 484px (menos que no celular) e não tem nada grudado. Ali
+   "onde vale" e "regras" saem das suas colunas e viram a segunda linha do período, e
+   as ações saem — o nome do período leva à edição, e é lá que mora o "ativa". Quem
+   decide é a largura da TABELA (container query), não a da janela. Sem
+   `table-layout: fixed` ela não encolheria: dentro de um invólucro que rola, a
+   largura disponível é infinita e cada coluna fica do tamanho do conteúdo. */
+.restricao-resumo { display: none; }
+@media (width > 820px) {
+  .tabela-rol:has(> .tabela-restricoes) { container-type: inline-size; }
+  /* Texto corrido, não rótulo de dado: `.rotulo-dado` não quebra linha e a coluna do
+     período inchava para caber "Casa inteira · mínimo 3 noites · sem chegada". */
+  .restricao-resumo { font-size: .78rem; color: var(--tinta-suave); }
+  /* 789px é a largura natural das seis colunas: abaixo disso elas não cabem de
+     jeito nenhum, e é melhor três colunas inteiras que seis cortadas. */
+  @container (max-width: 789px) {
+    .tabela-restricoes { table-layout: fixed; }
+    .tabela-restricoes .c-onde, .tabela-restricoes .c-regras,
+    .tabela-restricoes .col-acao { display: none; }
+    .tabela-restricoes col.c-periodo { width: 46%; }
+    .tabela-restricoes col.c-noites  { width: 32%; }
+    .tabela-restricoes col.c-sit     { width: 22%; }
+    .tabela-restricoes th { white-space: normal; }
+    .restricao-resumo { display: block; margin-top: .2rem; }
+  }
+}
 
 /* BOH: quadros lado a lado */
 .boh-quadros {
@@ -2108,6 +2143,10 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 .taxas-toggle { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem 1rem; }
 .taxas-toggle .letreiro { flex-basis: 100%; }
 .check-inline { display: inline-flex; align-items: center; gap: .45rem; cursor: pointer; font-size: .88rem; }
+/* `.campo label` (0,1,1) vence `.check-inline` (0,1,0) e devolvia o rótulo para
+   `display: block`: a caixinha ficava numa linha e o texto na de baixo. No celular,
+   onde o alvo de toque estica o input para 44px de altura, ficava escancarado. */
+.campo .check-inline { display: inline-flex; }
 .check-inline input { width: auto; margin: 0; flex: none; }
 .form-cartao .check-inline input[type="checkbox"] { width: 17px; height: 17px; }
 
@@ -4764,6 +4803,9 @@ body.sem-rolagem { overflow: hidden; }
 .celula-sub { display: block; font-size: .8rem; color: var(--tinta-suave); margin-top: .15rem; }
 .tabela td.col-acao, .tabela th.col-acao { text-align: right; white-space: nowrap; }
 .tabela td.col-acao .botao-mini { display: inline-block; padding: .3rem .8rem; }
+/* Duas ações na mesma célula (um link e um POST): o <form> nasce bloco e jogava o
+   botão para a linha de baixo, dobrando a altura de cada linha da tabela. */
+.tabela td.col-acao form { display: inline; margin-left: .35rem; }
 
 /* ============ Logbook — Recados do turno (tópicos com thread + status) ============ */
 .lb-compose { display: block; }

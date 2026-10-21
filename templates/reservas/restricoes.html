@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block titulo %}Restrições de venda — CRM Vô Testa{% endblock %}
+
+{% block conteudo %}
+<p class="pagina-eyebrow letreiro">Cadastros · Temporadas</p>
+<div class="pagina-cabecalho">
+  <h1>Restrições de venda</h1>
+  <a href="{% url 'temporadas' %}" class="botao-neutro">Temporadas</a>
+  <a href="{% url 'reservas:restricao_nova' %}" class="botao-primario">Nova restrição</a>
+</div>
+<p class="subtitulo">Quando a data pode ser vendida — <strong>não</strong> por quanto.
+  Serve para o feriado não sair como noite solta: no Réveillon, estadia mínima de 3
+  noites; na véspera cheia, fechado para chegada. No site a regra barra e explica o
+  motivo; na recepção ela vira aviso, e <em>parar vendas</em> só a gerência dispensa.</p>
+
+{% comment %}Em tabela estreita (celular, ou 821px com o menu aberto) "onde vale" e
+"regras" saem das suas colunas e viram a segunda linha do período, e as ações saem —
+o nome do período leva à edição, onde mora o "ativa". Larguras no app.css
+(`.tabela-restricoes`): sem elas a tabela não encolhe dentro do invólucro que rola.
+{% endcomment %}
+<div class="quadro">
+  <table class="tabela tabela-restricoes">
+    <colgroup>
+      <col class="c-periodo"><col class="c-noites"><col class="c-onde">
+      <col class="c-regras"><col class="c-sit"><col class="c-acao">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Período</th>
+        <th>Noites</th>
+        <th class="c-onde">Onde vale</th>
+        <th class="c-regras">Regras</th>
+        <th>Situação</th>
+        <th class="col-acao">Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in restricoes %}
+        <tr>
+          <td>
+            <a href="{% url 'reservas:restricao_editar' r.pk %}">{{ r.descricao }}</a>
+            <span class="restricao-resumo"><span class="r-escopo">{{ r.escopo }}</span><span class="r-regras"> · {{ r.regras|join:" · " }}</span></span>
+          </td>
+          <td>{{ r.inicio|date:"d/m/Y" }} a {{ r.fim|date:"d/m/Y" }}</td>
+          <td class="c-onde"><span class="rotulo-dado">{{ r.escopo }}</span></td>
+          <td class="c-regras">
+            {% for regra in r.regras %}<span class="rotulo-dado">{{ regra }}</span>{% if not forloop.last %} · {% endif %}{% endfor %}
+          </td>
+          <td>{% with s=r.situacao %}<span class="selo {{ s.0 }}">{{ s.1 }}</span>{% endwith %}</td>
+          <td class="col-acao">
+            <a href="{% url 'reservas:restricao_editar' r.pk %}" class="botao-mini">Editar</a>
+            <form method="post" action="{% url 'reservas:restricao_alternar' r.pk %}" class="form-inline">
+              {% csrf_token %}
+              <button type="submit" class="botao-mini">{% if r.ativa %}Desativar{% else %}Reativar{% endif %}</button>
+            </form>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6" class="vazio">Nenhuma restrição cadastrada — o site vende qualquer
+          data, com qualquer número de noites. Crie uma para o Réveillon e os feriados.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include "componentes/paginacao.html" with pagina=pagina %}
+{% endblock %}

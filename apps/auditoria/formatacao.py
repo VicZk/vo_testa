@@ -24,6 +24,7 @@ ALVOS = {
     "Comanda": "comanda",
     "OrdemLavanderia": "ordem de lavanderia",
     "EntradaLogbook": "recado de turno",
+    "RestricaoVenda": "restrição de venda",
 }
 
 # Verbos de movimento de caixa.
@@ -83,6 +84,7 @@ def frase(registro) -> str:
         "confirmar_reserva": "Confirmou a reserva",
         "cancelamento": "Cancelou a reserva",
         "fechamento_grupo": "Encerrou o grupo",
+        "restricao_dispensada": "Vendeu com as vendas paradas (gerência)",
     }
     if acao in semanticas:
         extra = ""

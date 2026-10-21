@@ -43,6 +43,12 @@ urlpatterns = [
     path("<int:pk>/acompanhante/", views.acompanhante_novo, name="acompanhante_novo"),
     path("<int:pk>/fnrh/", views.fnrh, name="fnrh"),
     path("<int:pk>/fnrh/reenviar/", views.fnrh_reenviar, name="fnrh_reenviar"),
+    # Restrições de venda — tela da área Temporadas, não do módulo Reservas.
+    path("restricoes/", views.restricoes, name="restricoes"),
+    path("restricoes/nova/", views.restricao_form, name="restricao_nova"),
+    path("restricoes/<int:pk>/", views.restricao_form, name="restricao_editar"),
+    path("restricoes/<int:pk>/alternar/", views.restricao_alternar,
+         name="restricao_alternar"),
     path("boh/", views.boh, name="boh"),
     path("colchoes/", views.painel_colchoes, name="painel_colchoes"),
 ]

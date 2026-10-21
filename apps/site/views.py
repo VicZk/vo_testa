@@ -317,6 +317,25 @@ def _vitrines_publicadas():
     )
 
 
+def _motivos_restricao(checkin, checkout, *, uh=None, tipo_uh=None, regras=None):
+    """Mensagens de restrição de venda (estadia mínima, chegada/saída fechadas, parada
+    de vendas) — o MOTIVO que o hóspede lê, em vez de um "indisponível" mudo. Vazio =
+    pode vender. Fonte: `reservas.services.restricoes_da_estadia` (interface pública)."""
+    from apps.reservas import services as reservas
+    return [v['mensagem'] for v in reservas.restricoes_da_estadia(
+        checkin, checkout, tipo_uh=tipo_uh, uh=uh, regras=regras)]
+
+
+def _avisos_da_busca(resultados):
+    """Motivos distintos que apareceram na busca, na ordem — para o aviso acima da lista."""
+    avisos = []
+    for r in resultados or ():
+        for motivo in r.get('motivos') or ():
+            if motivo not in avisos:
+                avisos.append(motivo)
+    return avisos
+
+
 def _buscar_unidades(checkin, checkout, hospedes):
     """Disponibilidade e preço POR QUARTO (venda por unidade), formato do template."""
     from apps.reservas import services as reservas
@@ -328,6 +347,9 @@ def _buscar_unidades(checkin, checkout, hospedes):
     # colchões), em vez de varrer por quarto — evita N scans na página pública.
     disponiveis_ids = set(reservas.uhs_disponiveis(
         checkin, checkout, adultos=hospedes).values_list('pk', flat=True))
+    # Restrições de venda do período: uma consulta para a busca inteira (a regra é do
+    # calendário, não do quarto) — conferir quarto a quarto é só comparar em memória.
+    regras = reservas.restricoes_no_periodo(checkin, checkout)
     resultados = []
     # Temporada e tarifas memorizadas no lote: antes eram consultadas de novo para cada
     # quarto e cada noite (334 consultas para 3 noites, 682 para 7).
@@ -336,13 +358,15 @@ def _buscar_unidades(checkin, checkout, hospedes):
         vitrines = list(vitrines)
         reservas.precarregar_tarifas_unidade([v.uh for v in vitrines])
         for v in vitrines:
-            disponivel = v.uh_id in disponiveis_ids
+            motivos = _motivos_restricao(checkin, checkout, uh=v.uh, regras=regras)
+            disponivel = v.uh_id in disponiveis_ids and not motivos
             base = reservas.tarifa_base_unidade(v.uh)
             preco_noite = reservas.diaria_media_unidade(v.uh, checkin, checkout)
             resultados.append({
                 'quarto': _card_de_uh(v, base),
                 'eh_unidade': True,
                 'disponivel': disponivel,
+                'motivos': motivos,
                 'preco_base': base,
                 'temporada': temporada,
                 'tem_ajuste': preco_noite != base,
@@ -368,17 +392,21 @@ def _buscar_quartos(checkin, checkout, hospedes, modalidade=""):
     if modalidade in ('hospedagem', 'day_use'):
         qs = qs.filter(tipo_uh__modalidade=modalidade)
     quartos = list(qs)
+    regras = reservas.restricoes_no_periodo(checkin, checkout)
     resultados = []
     with reservas.precos_em_lote():
         temporada = _temporada_de(checkin)
         for quarto in quartos:
-            disponivel = reservas.tipo_disponivel(
+            motivos = _motivos_restricao(
+                checkin, checkout, tipo_uh=quarto.tipo_uh, regras=regras)
+            disponivel = not motivos and reservas.tipo_disponivel(
                 quarto.tipo_uh, checkin, checkout, adultos=hospedes)
             preco_noite = reservas.diaria_media(quarto.tipo_uh, checkin, checkout)
             day = getattr(quarto.tipo_uh, 'modalidade', '') == 'day_use'
             resultados.append({
                 'quarto': quarto,
                 'disponivel': disponivel,
+                'motivos': motivos,
                 'preco_base': quarto.preco_base,
                 'temporada': temporada,
                 'tem_ajuste': preco_noite != quarto.preco_base,
@@ -545,7 +573,8 @@ def reservar(request):
             from apps.nucleo.models import UH
             from apps.reservas import services as reservas
             uh = UH.objects.filter(pk=uh_id, status=UH.Status.ATIVA).first()
-            if uh and reservas.uh_disponivel(uh, checkin, checkout, adultos=hospedes):
+            if (uh and reservas.uh_disponivel(uh, checkin, checkout, adultos=hospedes)
+                    and not _motivos_restricao(checkin, checkout, uh=uh)):
                 destino = reverse('core:selecionar_unidade', args=[uh.pk])
                 return redirect(
                     f"{destino}?checkin={checkin:%Y-%m-%d}"
@@ -577,6 +606,12 @@ def reservar(request):
         'modalidade': modalidade, 'uh_id': uh_id,
         'quarto_escolhido': quarto_escolhido,
         'eh_day_use': modalidade == 'day_use',
+        # Motivo em vez de silêncio: quando nada sobra, o aviso acima da lista explica
+        # a regra do período (estadia mínima, chegada/saída, vendas paradas) e sugere a
+        # data que resolve. Com quartos livres, o motivo fica no cartão bloqueado.
+        'avisos_restricao': (
+            _avisos_da_busca(resultados) if num_disponiveis == 0 else []
+        ),
     }
     if passo == 2:
         return render(request, 'site/reservas/quartos.html', context)
@@ -624,6 +659,10 @@ def selecionar_quarto(request, quarto_id):
         return redirect_busca(checkin, checkout, hospedes, modalidade)
     if not reservas.tipo_disponivel(quarto.tipo_uh, checkin, checkout, adultos=hospedes):
         messages.error(request, 'Esta opção não está mais disponível nessas datas.')
+        return redirect_busca(checkin, checkout, hospedes, modalidade)
+    motivos = _motivos_restricao(checkin, checkout, tipo_uh=quarto.tipo_uh)
+    if motivos:
+        messages.error(request, ' '.join(motivos))
         return redirect_busca(checkin, checkout, hospedes, modalidade)
 
     context = {
@@ -673,6 +712,10 @@ def selecionar_unidade(request, uh_id):
         return redirect_busca(checkin, checkout, hospedes)
     if not reservas.uh_disponivel(uh, checkin, checkout, adultos=hospedes):
         messages.error(request, 'Este quarto não está mais disponível nessas datas.')
+        return redirect_busca(checkin, checkout, hospedes)
+    motivos = _motivos_restricao(checkin, checkout, uh=uh)
+    if motivos:
+        messages.error(request, ' '.join(motivos))
         return redirect_busca(checkin, checkout, hospedes)
 
     context = {
@@ -736,6 +779,10 @@ def _resumo_reserva_unidade(request):
     if (hospedes > uh.tipo.capacidade
             or not reservas.uh_disponivel(uh, checkin, checkout, adultos=hospedes)):
         messages.error(request, 'Este quarto não está mais disponível nessas datas.')
+        return redirect_busca(checkin, checkout, hospedes)
+    motivos = _motivos_restricao(checkin, checkout, uh=uh)
+    if motivos:
+        messages.error(request, ' '.join(motivos))
         return redirect_busca(checkin, checkout, hospedes)
 
     from apps.reservas.cancelamento import descricao_politica
@@ -813,6 +860,10 @@ def resumo_reserva(request):
             or not reservas.tipo_disponivel(
                 quarto.tipo_uh, checkin, checkout, adultos=hospedes)):
         messages.error(request, 'Esta opção não está mais disponível nessas datas.')
+        return redirect_busca(checkin, checkout, hospedes, modalidade)
+    motivos = _motivos_restricao(checkin, checkout, tipo_uh=quarto.tipo_uh)
+    if motivos:
+        messages.error(request, ' '.join(motivos))
         return redirect_busca(checkin, checkout, hospedes, modalidade)
 
     from apps.reservas.cancelamento import descricao_politica

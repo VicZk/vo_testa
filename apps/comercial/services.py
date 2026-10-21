@@ -1130,6 +1130,11 @@ def converter_em_reserva(oportunidade, *, tipo_uh=None, uh=None, checkin, checko
         canal="site" if oportunidade.origem == "site" else "balcao",
         faturamento=oportunidade.faturamento, adultos=oportunidade.hospedes,
         valor_diaria=valor_diaria,
+        # Aqui `canal` guarda de ONDE veio o lead, não quem vendeu: converter é venda
+        # NEGOCIADA por alguém da casa. A restrição de venda do período (estadia
+        # mínima, chegada/saída, parada de vendas) não trava a conversão — ela trava o
+        # autoatendimento. Ver `reservas.services.CANAIS_AUTOATENDIMENTO`.
+        respeitar_restricoes=False,
     )
     if uh is not None:
         # Pré-atribui o quarto cotado; se estiver ocupado no período, aloca qualquer

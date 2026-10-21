@@ -6,7 +6,14 @@ from django.db.models import Case, IntegerField, Value, When
 from apps.nucleo.forms import ReaisInput
 from apps.nucleo.models import UH, FormaPagamento, Pessoa, TipoUH
 
-from .models import Acompanhante, FichaFNRH, GrupoReserva, LancamentoConta, Reserva
+from .models import (
+    Acompanhante,
+    FichaFNRH,
+    GrupoReserva,
+    LancamentoConta,
+    Reserva,
+    RestricaoVenda,
+)
 
 
 class DataInput(forms.DateInput):
@@ -252,6 +259,33 @@ FichaFNRHFormSet = forms.modelformset_factory(
 FichaFNRHRecepcaoFormSet = forms.modelformset_factory(
     FichaFNRH, form=FichaFNRHRecepcaoForm, extra=0,
 )
+
+
+class RestricaoVendaForm(forms.ModelForm):
+    """Restrição de venda de um período (ver `RestricaoVenda` para a semântica).
+    Escopo: tipo OU quarto OU nenhum dos dois (casa inteira) — o model valida."""
+
+    class Meta:
+        model = RestricaoVenda
+        fields = [
+            "descricao", "inicio", "fim", "tipo_uh", "uh", "min_noites",
+            "fechado_chegada", "fechado_saida", "parar_vendas", "ativa",
+        ]
+        widgets = {
+            "inicio": DataInput(),
+            "fim": DataInput(),
+            "descricao": forms.TextInput(attrs={"placeholder": "Ex.: Réveillon"}),
+            "min_noites": forms.NumberInput(attrs={"min": 1, "placeholder": "—"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for campo in ("tipo_uh", "uh", "min_noites"):
+            self.fields[campo].required = False
+        self.fields["tipo_uh"].queryset = TipoUH.objects.order_by("nome")
+        self.fields["uh"].queryset = (
+            UH.objects.select_related("tipo").order_by("numero")
+        )
 
 
 class GrupoForm(forms.ModelForm):

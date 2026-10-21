@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block titulo %}{{ titulo }} — CRM Vô Testa{% endblock %}
+
+{% block conteudo %}
+<p class="pagina-eyebrow letreiro">Cadastros · Temporadas</p>
+<h1>{{ titulo }}</h1>
+<p class="subtitulo">As datas são de <strong>noite</strong>, as duas inclusive: o Réveillon
+  com as noites de 29/12 a 01/01 vai de 29/12 a 01/01. Restrição não mexe em preço.</p>
+
+<form method="post" class="form-cartao">
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+    <div class="mensagem error">{{ form.non_field_errors|join:" " }}</div>
+  {% endif %}
+
+  <h2 class="grupo-campos">Período</h2>
+  <div class="form-grade">
+    {% include "reservas/partials/campo.html" with campo=form.descricao classe="col-2" %}
+    {% include "reservas/partials/campo.html" with campo=form.inicio %}
+    {% include "reservas/partials/campo.html" with campo=form.fim %}
+  </div>
+
+  <h2 class="grupo-campos">Onde vale</h2>
+  <p class="subtitulo subtitulo-mini">Deixe os dois vazios para valer na casa inteira.
+    Escolha o tipo <em>ou</em> o quarto — nunca os dois.</p>
+  <div class="form-grade">
+    {% include "reservas/partials/campo.html" with campo=form.tipo_uh %}
+    {% include "reservas/partials/campo.html" with campo=form.uh %}
+  </div>
+
+  <h2 class="grupo-campos">Regras</h2>
+  <div class="form-grade">
+    {% include "reservas/partials/campo.html" with campo=form.min_noites classe="col-2" %}
+    {% include "reservas/partials/campo.html" with campo=form.fechado_chegada classe="col-2" %}
+    {% include "reservas/partials/campo.html" with campo=form.fechado_saida classe="col-2" %}
+    {% include "reservas/partials/campo.html" with campo=form.parar_vendas classe="col-2" %}
+    {% include "reservas/partials/campo.html" with campo=form.ativa classe="col-2" %}
+  </div>
+
+  <div class="acoes">
+    <button type="submit" class="botao-primario">Salvar</button>
+    <a href="{% url 'reservas:restricoes' %}" class="botao-neutro">Cancelar</a>
+  </div>
+</form>
+{% endblock %}
