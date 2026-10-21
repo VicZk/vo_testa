@@ -7,6 +7,7 @@ app_name = "reservas"
 urlpatterns = [
     path("", views.mapa, name="mapa"),
     path("quartos/", views.mapa_quartos, name="mapa_quartos"),
+    path("kit/", views.kit, name="kit"),
     path("lista/", views.lista, name="lista"),
     path("nova/", views.nova, name="nova"),
     path("tarifa-preview/", views.tarifa_preview, name="tarifa_preview"),

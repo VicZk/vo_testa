@@ -502,6 +502,12 @@ DEFAULT_FROM_EMAIL = os.environ.get(
 # URL pública do site (links em e-mail). Em produção: https://www.pousadavotesta.com.br
 SITE_PUBLIC_URL = os.environ.get("SITE_PUBLIC_URL", "http://127.0.0.1:8000").rstrip("/")
 
+# Kit de contingência (reservas:kit): quem recebe a folha do dia por e-mail, para ter o
+# retrato no celular quando a internet da pousada cair. Vazio (padrão) = não envia nada.
+KIT_CONTINGENCIA_EMAILS = [
+    e.strip() for e in os.environ.get("KIT_CONTINGENCIA_EMAILS", "").split(",") if e.strip()
+]
+
 # Modo da raiz "/": "lp_fundador" serve a LP Fundador (site ainda não pronto);
 # vazio = site público normal. Reversível por env (Railway) sem mexer no código.
 HOME_MODO = os.environ.get("HOME_MODO", "")

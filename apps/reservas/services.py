@@ -2383,6 +2383,155 @@ def mapa_quartos_hoje(*, ler_limpeza: bool = True) -> dict:
     }
 
 
+# ---------- Kit de contingência (a folha que vale quando a internet cai) ----------
+
+
+def kit_contingencia(*, dia=None, ler_limpeza: bool = True) -> dict:
+    """Retrato de hoje para a recepção trabalhar NO PAPEL: quem está em casa e com
+    quanto de saldo, quem chega, quem sai, como estão os quartos e quem chega amanhã.
+
+    O sistema é todo em nuvem e a internet de Itá cai. A recepção imprime esta folha a
+    cada turno (e o gerente recebe por e-mail) — é o que o mercado faz (OPERA, Visual
+    Matrix). Devolve tipos simples, sem model: a página imprimível e o e-mail renderizam
+    sem tocar no banco.
+
+    Consultas CONSTANTES (não crescem com o nº de reservas): as reservas de interesse
+    vêm numa só; os saldos em lote (`ContaHospedagem.saldos`); os adiantamentos num
+    agregado; a situação dos quartos pelo mesmo caminho do mapa, que já lê a Governança
+    quando ela está ativa (nada de importar models de outro módulo).
+    """
+    from django.db.models import Q, Sum
+
+    from apps.nucleo.models import ConfiguracaoReservas, modulo_ativo
+    from apps.nucleo.modulos import Modulo
+
+    hoje = dia or timezone.localdate()
+    amanha = hoje + timedelta(days=1)
+    a_chegar = [Reserva.Status.PRE_RESERVA, Reserva.Status.CONFIRMADA]
+
+    # Uma consulta cobre as quatro seções: em casa + chegadas de hoje e de amanhã.
+    # Cancelada e no-show ficam de fora por não entrarem em nenhum dos filtros.
+    reservas = list(
+        Reserva.objects.filter(
+            Q(status=Reserva.Status.HOSPEDADA)
+            | Q(status__in=a_chegar, checkin__in=[hoje, amanha])
+        )
+        .select_related("hospede", "uh", "uh__tipo", "titular", "grupo", "conta")
+        .prefetch_related("fichas_fnrh")
+        .order_by("uh__numero")
+    )
+    em_casa = [r for r in reservas if r.status == Reserva.Status.HOSPEDADA]
+
+    contas = [c for c in (getattr(r, "conta", None) for r in em_casa) if c]
+    saldos = ContaHospedagem.saldos(contas)
+    adiantados = {
+        linha["reserva_id"]: linha["t"] or Decimal("0.00")
+        for linha in Adiantamento.objects.filter(reserva_id__in=[r.pk for r in reservas])
+        .order_by().values("reserva_id").annotate(t=Sum("valor"))
+    }
+    # A configuração (ISS, taxa de turismo) é lida UMA vez e repassada ao cálculo do
+    # total; sem isso, cada chegada faria a sua consulta.
+    cfg = ConfiguracaoReservas.carregar()
+
+    def saldo_de(reserva):
+        conta = getattr(reserva, "conta", None)
+        return saldos.get(conta.pk) if conta else None
+
+    def chegada(reserva):
+        return {
+            "codigo": reserva.pk,
+            "titular": reserva.hospede.nome,
+            "telefone": reserva.hospede.telefone,
+            # Agência/empresa: quem paga não é quem se hospeda.
+            "pagador": reserva.titular.nome if reserva.titular_id else "",
+            "quarto": reserva.uh.numero,
+            "nome_quarto": reserva.uh.nome_tematico,
+            "noites": reserva.noites,
+            "adultos": reserva.adultos,
+            "criancas": reserva.criancas,
+            "hospedes": reserva.total_hospedes,
+            "total": reserva.total_previsto(cfg=cfg),
+            "pago": adiantados.get(reserva.pk, Decimal("0.00")),
+            "status": reserva.get_status_display(),
+            "observacoes": reserva.observacoes,
+        }
+
+    hospedados = [{
+        "quarto": r.uh.numero,
+        "nome_quarto": r.uh.nome_tematico,
+        "titular": r.hospede.nome,
+        # Fichas da FNRH: a lista de quem dorme no quarto (titular primeiro, por Meta).
+        "acompanhantes": [f.nome for f in r.fichas_fnrh.all() if not f.titular and f.nome],
+        "checkin": r.checkin,
+        "checkout": r.checkout,
+        "adultos": r.adultos,
+        "criancas": r.criancas,
+        "saldo": saldo_de(r),
+        # ECA, art. 82: menor sem os pais/responsável nem autorização conferida.
+        "menores": [f.nome or "sem nome" for f in r.menores_pendentes],
+        "observacoes": r.observacoes,
+        # Em grupo, a diária está no folio-mãe: o saldo do quarto é só o consumo.
+        "grupo": r.grupo.rotulo if r.grupo_id else "",
+        "saida_hoje": r.checkout == hoje,
+        "saida_atrasada": r.checkout < hoje,
+    } for r in em_casa]
+
+    saidas = [{
+        "quarto": r.uh.numero,
+        "nome_quarto": r.uh.nome_tematico,
+        "titular": r.hospede.nome,
+        "checkout": r.checkout,
+        "saldo": saldo_de(r),
+        "atrasada": r.checkout < hoje,
+    } for r in em_casa if r.checkout <= hoje]
+
+    mostrar_limpeza = bool(ler_limpeza and modulo_ativo(Modulo.GOVERNANCA))
+    mapa = mapa_quartos_hoje(ler_limpeza=ler_limpeza)
+    quartos = [{
+        "numero": q["uh"].numero,
+        "nome": q["uh"].nome_tematico,
+        "situacao": q["situacao"],
+        "label": q["label"],
+        "limpeza": q["limpeza_label"],
+        "motivo": q["motivo_bloqueio"],
+        "hospede": q["reserva"].hospede.nome if q["reserva"] else "",
+        "day_use": False,
+    } for q in mapa["quartos"]]
+    # Day use não entra no mapa dos 24; na folha ele só aparece com gente dentro hoje.
+    quartos += [{
+        "numero": r.uh.numero,
+        "nome": r.uh.nome_tematico,
+        "situacao": "ocupada",
+        "label": SITUACOES_QUARTO["ocupada"],
+        "limpeza": "",
+        "motivo": "",
+        "hospede": r.hospede.nome,
+        "day_use": True,
+    } for r in em_casa if r.uh.tipo.modalidade == TipoUH.Modalidade.DAY_USE]
+
+    zero = Decimal("0.00")
+    return {
+        "hoje": hoje,
+        "amanha": amanha,
+        "gerado_em": timezone.now(),
+        "hospedados": hospedados,
+        "chegadas": [chegada(r) for r in reservas
+                     if r.status in a_chegar and r.checkin == hoje],
+        "saidas": saidas,
+        "quartos": quartos,
+        "chegadas_amanha": [chegada(r) for r in reservas
+                            if r.status in a_chegar and r.checkin == amanha],
+        "mostrar_limpeza": mostrar_limpeza,
+        "totais": {
+            "quartos_ocupados": sum(1 for q in quartos if q["situacao"] == "ocupada"),
+            "hospedes": sum(h["adultos"] + h["criancas"] for h in hospedados),
+            "saldo_total": sum((h["saldo"] or zero for h in hospedados), zero),
+            "livres": mapa["contagem"]["livre"],
+            "bloqueados": mapa["contagem"]["bloqueada"],
+        },
+    }
+
+
 def dados_graficos() -> dict:
     """Séries para os gráficos do dashboard (ocupação, receita, canais, funil)."""
     from collections import defaultdict

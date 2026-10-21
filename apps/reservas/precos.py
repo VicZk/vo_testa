@@ -37,14 +37,15 @@ def _cfg(nome: str) -> Decimal:
 
 
 def taxas(hospedagem: Decimal, *, cobra_iss: bool = True,
-          cobra_taxa_turismo: bool = True, diarias: int = 1) -> dict:
+          cobra_taxa_turismo: bool = True, diarias: int = 1, cfg=None) -> dict:
     """ISS (% sobre a hospedagem) + taxa de turismo (valor fixo × nº de diárias).
     **Fonte única** das taxas — usada pela cotação, pelo lançamento no check-in
     (`ContaHospedagem.lancar_taxas`) e pelo resumo do site, para não divergirem.
-    Valores vêm da `ConfiguracaoReservas` (editáveis na Tabela de Preços).
+    Valores vêm da `ConfiguracaoReservas` (editáveis na Tabela de Preços); `cfg` aceita
+    a configuração já carregada, para quem calcula uma lista de reservas de uma vez.
     O mesmo cálculo está espelhado no JS de `resumo.html` (toggles ao vivo)."""
     from apps.nucleo.models import ConfiguracaoReservas
-    cfg = ConfiguracaoReservas.carregar()
+    cfg = cfg or ConfiguracaoReservas.carregar()
     iss_aliq = cfg.iss_aliquota
     taxa_un = cfg.taxa_turismo_diaria
     return {

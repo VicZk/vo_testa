@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% load moeda %}
+
+{% block titulo %}Kit de contingência — CRM Vô Testa{% endblock %}
+{% block conteudo_classe %}kit-folha{% endblock %}
+
+{% block conteudo %}
+{% comment %}Folha A4 retrato para a recepção trabalhar sem sistema. O desenho da
+impressão mora no @media print do app.css (seção "Kit de contingência"): aqui só as
+classes. A tela é o design system de sempre.{% endcomment %}
+<div class="pagina-cabecalho kit-cabecalho">
+  <div class="kit-identidade">
+    <p class="pagina-eyebrow letreiro">Reservas · Contingência</p>
+    <h1>Pousada Vô Testa — Kit de contingência</h1>
+  </div>
+  <div class="linha-botoes kit-acoes">
+    <button type="button" class="botao-primario" onclick="window.print()">Imprimir</button>
+    <a href="{% url 'reservas:mapa_quartos' %}" class="botao-mini">Voltar</a>
+  </div>
+</div>
+
+<p class="kit-meta">
+  Gerado em {{ kit.gerado_em|date:"d/m/Y" }} às {{ kit.gerado_em|date:"H:i" }}
+  {% if gerado_por %}por {{ gerado_por }}{% endif %} ·
+  Situação de {{ kit.hoje|date:"d/m/Y" }}
+</p>
+<p class="kit-aviso">Guarde impresso: esta folha vale até a próxima impressão.</p>
+
+<section class="kit-secao">
+  <h2 class="kit-titulo">Hospedados agora <span class="kit-contagem">{{ kit.hospedados|length }}</span></h2>
+  <table class="tabela kit-tabela">
+    <thead>
+      <tr>
+        <th>Quarto</th>
+        <th>Hóspedes</th>
+        <th>Entrada → Saída</th>
+        <th class="num">Pax</th>
+        <th class="num">Saldo</th>
+        <th>Observações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for h in kit.hospedados %}
+        <tr>
+          <td class="kit-quarto">
+            <strong>{{ h.quarto }}</strong>
+            {% if h.nome_quarto %}<span class="kit-sub">{{ h.nome_quarto }}</span>{% endif %}
+          </td>
+          <td>
+            <strong>{{ h.titular }}</strong>
+            {% if h.acompanhantes %}<span class="kit-sub">{{ h.acompanhantes|join:" · " }}</span>{% endif %}
+            {% if h.grupo %}<span class="rotulo-dado">Folio do grupo {{ h.grupo }}</span>{% endif %}
+            {% if h.menores %}
+              <span class="selo selo-alerta">Menor sem autorização: {{ h.menores|join:", " }}</span>
+            {% endif %}
+          </td>
+          <td class="nao-quebra">
+            {{ h.checkin|date:"d/m" }} → {{ h.checkout|date:"d/m" }}
+            {% if h.saida_atrasada %}<span class="selo selo-perigo">Saída atrasada</span>
+            {% elif h.saida_hoje %}<span class="rotulo-dado">Sai hoje</span>{% endif %}
+          </td>
+          <td class="num nao-quebra">{{ h.adultos }}A{% if h.criancas %} · {{ h.criancas }}C{% endif %}</td>
+          <td class="num nao-quebra">{% if h.saldo is None %}—{% else %}{{ h.saldo|intcomma_brl }}{% endif %}</td>
+          <td class="kit-obs">{{ h.observacoes|default:"" }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6" class="vazio">Nenhum hóspede em casa.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="kit-secao">
+  <h2 class="kit-titulo">Chegadas de hoje <span class="kit-contagem">{{ kit.chegadas|length }}</span></h2>
+  <table class="tabela kit-tabela">
+    <thead>
+      <tr>
+        <th>Reserva</th>
+        <th>Hóspede</th>
+        <th>Telefone</th>
+        <th>Quarto</th>
+        <th class="num">Noites · Pax</th>
+        <th class="num">Total / pago</th>
+        <th>Observações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in kit.chegadas %}
+        <tr>
+          <td class="nao-quebra">#{{ c.codigo }}<span class="kit-sub">{{ c.status }}</span></td>
+          <td>
+            <strong>{{ c.titular }}</strong>
+            {% if c.pagador %}<span class="kit-sub">Paga: {{ c.pagador }}</span>{% endif %}
+          </td>
+          <td class="nao-quebra">{{ c.telefone|default:"—" }}</td>
+          <td class="kit-quarto">
+            <strong>{{ c.quarto }}</strong>
+            {% if c.nome_quarto %}<span class="kit-sub">{{ c.nome_quarto }}</span>{% endif %}
+          </td>
+          <td class="num nao-quebra">{{ c.noites }} · {{ c.adultos }}A{% if c.criancas %}+{{ c.criancas }}C{% endif %}</td>
+          <td class="num nao-quebra">
+            {{ c.total|intcomma_brl }}
+            <span class="kit-sub">pago {{ c.pago|intcomma_brl }}</span>
+          </td>
+          <td class="kit-obs">{{ c.observacoes|default:"" }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7" class="vazio">Nenhuma chegada prevista para hoje.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="kit-secao">
+  <h2 class="kit-titulo">Saídas de hoje <span class="kit-contagem">{{ kit.saidas|length }}</span></h2>
+  <table class="tabela kit-tabela kit-tabela-curta">
+    <thead>
+      <tr>
+        <th>Quarto</th>
+        <th>Hóspede</th>
+        <th class="num">Saldo a receber</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in kit.saidas %}
+        <tr>
+          <td class="kit-quarto">
+            <strong>{{ s.quarto }}</strong>
+            {% if s.nome_quarto %}<span class="kit-sub">{{ s.nome_quarto }}</span>{% endif %}
+          </td>
+          <td>
+            {{ s.titular }}
+            {% if s.atrasada %}<span class="selo selo-perigo">Saída era {{ s.checkout|date:"d/m" }}</span>{% endif %}
+          </td>
+          <td class="num nao-quebra">{% if s.saldo is None %}—{% else %}{{ s.saldo|intcomma_brl }}{% endif %}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="3" class="vazio">Nenhuma saída prevista para hoje.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="kit-secao">
+  <h2 class="kit-titulo">Situação dos quartos <span class="kit-contagem">{{ kit.quartos|length }}</span></h2>
+  <table class="tabela kit-tabela kit-quartos">
+    <thead>
+      <tr>
+        <th>Quarto</th>
+        <th>Situação</th>
+        {% if kit.mostrar_limpeza %}<th>Limpeza</th>{% endif %}
+        <th>Quem está / por quê</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for q in kit.quartos %}
+        <tr>
+          <td class="kit-quarto">
+            <strong>{{ q.numero }}</strong>
+            {% if q.nome %}<span class="kit-sub">{{ q.nome }}</span>{% endif %}
+            {% if q.day_use %}<span class="rotulo-dado">Day use</span>{% endif %}
+          </td>
+          <td><span class="selo selo-{{ q.situacao }}">{{ q.label }}</span></td>
+          {% if kit.mostrar_limpeza %}<td>{{ q.limpeza|default:"—" }}</td>{% endif %}
+          <td class="kit-obs">{{ q.hospede }}{{ q.motivo }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4" class="vazio">Nenhum quarto cadastrado.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="kit-secao">
+  <h2 class="kit-titulo">Chegadas de amanhã <span class="kit-contagem">{{ kit.chegadas_amanha|length }}</span></h2>
+  <p class="kit-sub-secao">{{ kit.amanha|date:"d/m/Y" }}</p>
+  <table class="tabela kit-tabela kit-tabela-curta">
+    <thead>
+      <tr><th>Reserva</th><th>Hóspede</th><th>Telefone</th><th>Quarto</th></tr>
+    </thead>
+    <tbody>
+      {% for c in kit.chegadas_amanha %}
+        <tr>
+          <td class="nao-quebra">#{{ c.codigo }}</td>
+          <td>{{ c.titular }}</td>
+          <td class="nao-quebra">{{ c.telefone|default:"—" }}</td>
+          <td class="nao-quebra">{{ c.quarto }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4" class="vazio">Nenhuma chegada prevista para amanhã.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<footer class="kit-rodape">
+  <div class="kit-total">
+    <span class="letreiro">Quartos ocupados</span>
+    <strong class="num">{{ kit.totais.quartos_ocupados }}</strong>
+  </div>
+  <div class="kit-total">
+    <span class="letreiro">Hóspedes na casa</span>
+    <strong class="num">{{ kit.totais.hospedes }}</strong>
+  </div>
+  <div class="kit-total">
+    <span class="letreiro">Saldo em aberto</span>
+    <strong class="num">{{ kit.totais.saldo_total|intcomma_brl }}</strong>
+  </div>
+  <div class="kit-total">
+    <span class="letreiro">Quartos livres</span>
+    <strong class="num">{{ kit.totais.livres }}</strong>
+  </div>
+  <div class="kit-total">
+    <span class="letreiro">Bloqueados</span>
+    <strong class="num">{{ kit.totais.bloqueados }}</strong>
+  </div>
+</footer>
+{% endblock %}
