@@ -522,6 +522,14 @@ class MenuLateralTests(TestCase):
         self.assertIsNotNone(bloco)
         self.assertIn("min-height: var(--sidebar-topo-h)", bloco.group(1))
 
+    def test_marca_continua_clicavel_no_trilho(self):
+        """Os dois logotipos saíram do fluxo para o topo não saltar; sem largura
+        explícita, a <a> da marca fica com 0px — o símbolo aparece e o link para
+        a Visão geral some."""
+        bloco = re.search(r"\n\.app\.recolhida \.marca \{([^}]*)\}", self.css)
+        self.assertIsNotNone(bloco)
+        self.assertIn("width: 44px", bloco.group(1))
+
     def test_botao_de_recolher_diz_o_que_vai_fazer(self):
         """O rótulo era fixo em "Recolher menu" mesmo já recolhido, e o title
         mostrava a barra invertida dobrada do template."""

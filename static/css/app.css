@@ -525,7 +525,10 @@ a:hover { color: var(--lampiao-tinta); }
   height: 86px;
   overflow: hidden;   /* o logotipo grande é recortado, nunca vaza do trilho */
 }
-.app.recolhida .marca { flex: 0 0 auto; height: 34px; }
+/* Largura explícita: com os dois logotipos fora do fluxo, a <a> da marca
+   ficava com 0px e deixava de ser clicável (o símbolo aparecia, mas o link
+   para a Visão geral não existia mais). 44px = a régua do dedo. */
+.app.recolhida .marca { flex: 0 0 auto; width: 44px; height: 44px; }
 /* Os dois logotipos trocam por opacidade (não por display): a troca acompanha
    a animação da largura em vez de piscar. Os DOIS ficam fora do fluxo — com o
    logotipo grande em fluxo, ele continuava medindo 86px de altura mesmo
