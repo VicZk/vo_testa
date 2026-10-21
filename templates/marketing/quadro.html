@@ -10,10 +10,10 @@ terra(#9A4429/#B25837) → --madeira (não há --terra); texto < 11px pisado em 
 descrição → abas → faixa → verba → quadro. Papel vem de request.user (sem seletor).{% endcomment %}
 
 {# ── Título (breadcrumb → título → descrição) ── #}
-<div style="margin-bottom:16px">
-  <div style="display:flex;align-items:center;gap:7px;font-size:11px;letter-spacing:.11em;color:var(--tinta-suave);font-weight:700;margin-bottom:7px">MARKETING<span aria-hidden="true">›</span><span style="color:var(--musgo)">CAMPANHAS</span></div>
-  <h1 style="margin:0;font-family:var(--fonte-titulo);font-size:31px;font-weight:700;letter-spacing:-.015em;color:var(--tinta)">Quadro de campanhas</h1>
-  <p style="margin:7px 0 0;font-size:13.5px;line-height:1.55;color:var(--tinta-suave);max-width:64ch">Cada campanha está numa fase só. Criativo, envolvidos e custos são campos da ficha, não colunas. Arraste para avançar — o quadro recusa quando falta o que a próxima fase exige.</p>
+<div class="mk-pagina-tit">
+  <div class="mk-trilha">MARKETING<span aria-hidden="true">›</span><span class="mk-trilha-atual">CAMPANHAS</span></div>
+  <h1 class="mk-titulo">Quadro de campanhas</h1>
+  <p class="mk-descricao">Cada campanha está numa fase só. Criativo, envolvidos e custos são campos da ficha, não colunas. Arraste para avançar — o quadro recusa quando falta o que a próxima fase exige.</p>
 </div>
 
 {% comment %}Navegação e filtro nos componentes da casa: eram cinco cápsulas
@@ -33,21 +33,21 @@ desenhadas à mão, indistinguíveis dos chips de dado do quadro.{% endcomment %
 
 {# ── Faixa de urgências: dois cartões lado a lado (Parte 2) ── #}
 {% if proximos or atrasados %}
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-bottom:18px">
+<div class="mk-urgencias">
   {% if proximos %}
-  <section style="border-radius:18px;background:var(--superficie);border:1px solid var(--fio);box-shadow:var(--sombra-1);overflow:hidden">
-    <div style="display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--fio)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="var(--madeira)" stroke-width="2" style="width:18px;height:18px"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
-      <span style="font-size:13.5px;font-weight:700;color:var(--tinta)">Próximos dias</span>
-      <span style="margin-left:auto;font-size:11.5px;color:var(--tinta-suave)">{{ proximos_resumo }}</span>
+  <section class="mk-urg">
+    <div class="mk-urg-cab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--madeira)" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+      <span class="mk-urg-tit">Próximos dias</span>
+      <span class="mk-urg-resumo">{{ proximos_resumo }}</span>
     </div>
-    <div style="padding:10px 12px 14px;display:flex;flex-direction:column;gap:6px;max-height:232px;overflow-y:auto">
+    <div class="mk-urg-lista">
       {% for p in proximos %}
       <a href="{% url 'marketing:ficha' p.id %}" hx-get="{% url 'marketing:ficha' p.id %}" hx-target="#ficha-slot" hx-swap="innerHTML"
-         style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:12px;background:var(--superficie-2);border:1px solid var(--fio);cursor:pointer;text-decoration:none">
-        <span style="flex:1;min-width:0">
-          <span style="display:block;font-size:12.5px;font-weight:700;color:var(--tinta);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.nome }}</span>
-          <span style="display:block;margin-top:2px;font-size:11px;color:var(--tinta-suave);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.campanha }} · {{ p.canal }} · {{ p.responsavel }}</span>
+         class="mk-urg-item">
+        <span class="mk-elastico">
+          <span class="mk-item-nome">{{ p.nome }}</span>
+          <span class="mk-item-sub">{{ p.campanha }} · {{ p.canal }} · {{ p.responsavel }}</span>
         </span>
         {# Data é dado; só "sai hoje" vira cápsula, porque pede ação agora. #}
         {% if p.hoje %}<span class="selo selo-pendente">{{ p.quando }}</span>
@@ -59,21 +59,21 @@ desenhadas à mão, indistinguíveis dos chips de dado do quadro.{% endcomment %
   {% endif %}
 
   {% if atrasados %}
-  <section style="border-radius:18px;background:var(--superficie);border:1px solid var(--perigo);box-shadow:var(--sombra-1);overflow:hidden">
-    <div style="display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--perigo);background:var(--perigo-bg)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="var(--perigo)" stroke-width="2" style="width:18px;height:18px"><path d="M12 2 1 21h22z"/><path d="M12 9v5M12 17v.5"/></svg>
-      <span style="font-size:13.5px;font-weight:700;color:var(--perigo)">Atrasado</span>
-      <span style="margin-left:auto;font-size:11.5px;color:var(--perigo)">{{ atrasos_resumo }}</span>
+  <section class="mk-urg atraso">
+    <div class="mk-urg-cab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--perigo)" stroke-width="2"><path d="M12 2 1 21h22z"/><path d="M12 9v5M12 17v.5"/></svg>
+      <span class="mk-urg-tit">Atrasado</span>
+      <span class="mk-urg-resumo">{{ atrasos_resumo }}</span>
     </div>
-    <div style="padding:10px 12px 14px;display:flex;flex-direction:column;gap:6px;max-height:232px;overflow-y:auto">
+    <div class="mk-urg-lista">
       {% for a in atrasados %}
       <a href="{% url 'marketing:ficha' a.id %}" hx-get="{% url 'marketing:ficha' a.id %}" hx-target="#ficha-slot" hx-swap="innerHTML"
-         style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:12px;background:var(--superficie-2);border:1px solid var(--fio);cursor:pointer;text-decoration:none">
+         class="mk-urg-item">
         {# O bloco inteiro já é o alerta (moldura vermelha): o tipo é rótulo. #}
         <span class="rotulo-dado mkt-tipo">{{ a.tipo }}</span>
-        <span style="flex:1;min-width:0">
-          <span style="display:block;font-size:12.5px;font-weight:700;color:var(--tinta);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.texto }} · {{ a.canal }}</span>
-          <span style="display:block;margin-top:2px;font-size:11px;color:var(--tinta-suave);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.campanha }} · {{ a.dono }} · {{ a.desde }}</span>
+        <span class="mk-elastico">
+          <span class="mk-item-nome">{{ a.texto }} · {{ a.canal }}</span>
+          <span class="mk-item-sub">{{ a.campanha }} · {{ a.dono }} · {{ a.desde }}</span>
         </span>
       </a>
       {% endfor %}
@@ -84,133 +84,133 @@ desenhadas à mão, indistinguíveis dos chips de dado do quadro.{% endcomment %
 {% endif %}
 
 {# ── Verba do mês ── #}
-<section style="border-radius:20px;background:var(--superficie);border:1px solid var(--fio);box-shadow:var(--sombra-cartao);padding:18px 22px;margin-bottom:18px">
-  <div style="display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-bottom:13px">
-    <div style="flex:1;min-width:190px">
-      <div style="font-size:11px;letter-spacing:.07em;color:var(--tinta-suave);font-weight:700">VERBA DE {{ mes_nome|upper }}</div>
-      <div style="display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin-top:5px">
-        <span class="num" style="font-family:var(--fonte-titulo);font-size:27px;font-weight:700;color:var(--tinta);white-space:nowrap">{{ verba.disponivel|intcomma_brl }}</span>
-        <span style="font-size:12.5px;color:var(--tinta-suave);white-space:nowrap">livres de {{ verba.teto|intcomma_brl }}</span>
+<section class="mk-verba">
+  <div class="mk-verba-topo">
+    <div class="mk-verba-saldo">
+      <div class="mk-verba-rotulo">VERBA DE {{ mes_nome|upper }}</div>
+      <div class="mk-verba-linha">
+        <span class="num mk-verba-valor">{{ verba.disponivel|intcomma_brl }}</span>
+        <span class="mk-verba-de">livres de {{ verba.teto|intcomma_brl }}</span>
       </div>
     </div>
-    <div style="display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start">
-      <span style="display:block">
-        <span style="display:block;font-size:11px;letter-spacing:.06em;color:var(--tinta-suave);font-weight:700">TRAVADA</span>
-        <span class="num" style="display:block;margin-top:3px;font-size:15px;font-weight:700;color:var(--alerta)">{{ verba.travada|intcomma_brl }}</span></span>
-      <span style="display:block">
-        <span style="display:block;font-size:11px;letter-spacing:.06em;color:var(--tinta-suave);font-weight:700">GASTA</span>
-        <span class="num" style="display:block;margin-top:3px;font-size:15px;font-weight:700;color:var(--perigo)">{{ verba.gasta|intcomma_brl }}</span></span>
-      <span style="display:block">
-        <span style="display:block;font-size:11px;letter-spacing:.06em;color:var(--tinta-suave);font-weight:700">TETO DO MÊS</span>
+    <div class="mk-verba-nums">
+      <span class="mk-verba-num">
+        <span class="mk-rotulo bloco">TRAVADA</span>
+        <span class="num mk-verba-n mk-tom-alerta">{{ verba.travada|intcomma_brl }}</span></span>
+      <span class="mk-verba-num">
+        <span class="mk-rotulo bloco">GASTA</span>
+        <span class="num mk-verba-n mk-tom-perigo">{{ verba.gasta|intcomma_brl }}</span></span>
+      <span class="mk-verba-num">
+        <span class="mk-rotulo bloco">TETO DO MÊS</span>
         {% if eh_gerente %}
-        <form method="post" action="{% url 'marketing:editar_teto' %}" style="display:flex;align-items:center;gap:5px;margin-top:3px">
+        <form method="post" action="{% url 'marketing:editar_teto' %}" class="mk-teto-form">
           {% csrf_token %}<input type="hidden" name="mes" value="{{ verba.mes }}">
-          <input type="text" name="valor" class="js-moeda" value="{{ verba.teto|intcomma_brl }}" style="width:128px;padding:5px 9px;border:1px solid var(--fio);border-radius:12px;font-weight:700;font-size:13px;color:var(--tinta)">
-          <button type="submit" style="border:none;background:none;font-size:11px;font-weight:700;color:var(--madeira);cursor:pointer">Salvar</button>
+          <input type="text" name="valor" class="js-moeda mk-teto-campo" value="{{ verba.teto|intcomma_brl }}">
+          <button type="submit" class="mk-teto-salvar">Salvar</button>
         </form>
         {% else %}
-        <span class="num" style="display:block;margin-top:3px;font-size:15px;font-weight:700;color:var(--tinta)">{{ verba.teto|intcomma_brl }}</span>
+        <span class="num mk-verba-n">{{ verba.teto|intcomma_brl }}</span>
         {% endif %}
       </span>
     </div>
   </div>
-  <div style="height:11px;border-radius:99px;background:var(--superficie-2);overflow:hidden;display:flex">
-    <span style="width:{{ pct_gasta }}%;background:linear-gradient(90deg,var(--madeira),var(--madeira));transition:width .3s"></span>
-    <span style="width:{{ pct_trav_extra }}%;background:repeating-linear-gradient(45deg,var(--lampiao) 0 5px,var(--alerta) 5px 10px);transition:width .3s"></span>
+  <div class="mk-verba-trilho">
+    <span class="mk-verba-gasta" style="width:{{ pct_gasta }}%"></span>
+    <span class="mk-verba-travada" style="width:{{ pct_trav_extra }}%"></span>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:11px">
-    <span style="font-size:12px;color:var(--tinta-suave)">{{ verba.pct }}% do mês comprometido</span>
-    {% if verba.alerta %}<span style="display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;background:var(--perigo-bg);color:var(--perigo);border-radius:99px;padding:5px 12px">Teto quase no limite</span>{% endif %}
+  <div class="mk-verba-pe">
+    <span class="mk-verba-pct">{{ verba.pct }}% do mês comprometido</span>
+    {% if verba.alerta %}<span class="mk-verba-limite">Teto quase no limite</span>{% endif %}
   </div>
 </section>
 
 {# ── Aviso de filtro vazio (só os meus) ── #}
 {% if so_meus and not meus_count %}
-<div style="display:flex;align-items:center;gap:12px;padding:14px 18px;margin-bottom:16px;border-radius:16px;background:var(--perigo-bg);border:1px solid var(--fio)">
-  <span style="flex:1;min-width:0;font-size:13px;line-height:1.45;color:var(--perigo)">Nada seu aqui — há campanhas de outras pessoas no quadro.</span>
-  <a href="{% url 'marketing:quadro' %}" style="flex:none;height:34px;display:inline-flex;align-items:center;padding:0 14px;border-radius:11px;border:1px solid var(--fio);background:var(--superficie);color:var(--tinta);font-size:12.5px;font-weight:700;text-decoration:none">Mostrar todas</a>
+<div class="mk-aviso">
+  <span class="mk-aviso-txt">Nada seu aqui — há campanhas de outras pessoas no quadro.</span>
+  <a href="{% url 'marketing:quadro' %}" class="mk-aviso-acao">Mostrar todas</a>
 </div>
 {% endif %}
 
 {# ── Colunas ── #}
-<div style="display:flex;gap:13px;overflow-x:auto;padding:2px 2px 16px;align-items:flex-start">
+<div class="mk-colunas">
   {% for col in colunas %}
-  <div data-fase="{{ col.fase }}" style="flex:none;width:268px;background:var(--superficie-2);border:1px solid var(--fio);border-radius:14px"
+  <div data-fase="{{ col.fase }}" class="mk-coluna"
        ondragover="colDragOver(event)" ondragleave="colDragLeave(event)" ondrop="soltarMkt(event, '{{ col.fase }}')">
-    <div style="padding:13px 15px 11px;border-bottom:1px solid var(--fio);position:sticky;top:0;background:var(--superficie-2);border-radius:14px 14px 0 0;z-index:1">
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="flex:1;min-width:0;font-family:var(--fonte-titulo);font-size:14px;font-weight:700;color:var(--tinta)">{{ col.label }}</span>
-        {% if col.portao %}<svg viewBox="0 0 24 24" fill="none" stroke="var(--madeira)" stroke-width="2" style="width:16px;height:16px" aria-label="Portão: só o gestor libera"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V8a5 5 0 0 1 10 0v3"/></svg>{% endif %}
+    <div class="mk-coluna-cab">
+      <div class="mk-coluna-linha">
+        <span class="mk-coluna-nome">{{ col.label }}</span>
+        {% if col.portao %}<svg viewBox="0 0 24 24" fill="none" stroke="var(--madeira)" stroke-width="2" aria-label="Portão: só o gestor libera"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V8a5 5 0 0 1 10 0v3"/></svg>{% endif %}
         <span class="mkt-conta num">{{ col.conta }}</span>
       </div>
-      <div style="margin-top:3px;font-size:11.5px;color:var(--tinta-suave);line-height:1.35">{{ col.sub }}</div>
-      {% if col.total %}<div class="num" style="margin-top:6px;font-size:11.5px;font-weight:700;color:var(--alerta)">{{ col.total|intcomma_brl }}</div>{% endif %}
+      <div class="mk-coluna-sub">{{ col.sub }}</div>
+      {% if col.total %}<div class="num mk-coluna-total">{{ col.total|intcomma_brl }}</div>{% endif %}
     </div>
 
-    <div style="padding:11px;display:flex;flex-direction:column;gap:9px;min-height:74px">
+    <div class="mk-coluna-cards">
       {% for c in col.cards %}
       <article draggable="true" data-camp="{{ c.obj.id }}"
                hx-get="{% url 'marketing:ficha' c.obj.id %}" hx-target="#ficha-slot" hx-swap="innerHTML"
                ondragstart="cardMktStart(event, '{{ c.obj.id }}')" ondragend="cardMktEnd(event)"
-               style="background:var(--superficie);border:1px solid var(--fio);border-radius:14px;padding:12px;box-shadow:var(--sombra-1);cursor:grab">
-        <div style="display:flex;align-items:flex-start;gap:8px">
-          <span style="flex:1;min-width:0;font-family:var(--fonte-titulo);font-size:13.5px;font-weight:700;line-height:1.3;color:var(--tinta)">{{ c.obj.nome }}</span>
-          <span style="flex:none;font-family:var(--fonte-mono);font-size:11px;color:var(--tinta-suave)">{{ c.codigo }}</span>
+               class="mk-card">
+        <div class="mk-card-topo">
+          <span class="mk-card-nome">{{ c.obj.nome }}</span>
+          <span class="mk-card-cod">{{ c.codigo }}</span>
         </div>
         {% if c.obj.etapa_funil %}
-        <div style="margin-top:7px">
+        <div class="mk-card-etapa">
           {# Etapa do funil é estado informativo: bolinha + texto, como no resto da casa. #}
           <span class="selo mkt-etapa-{{ c.obj.etapa_funil }}">{{ c.obj.etapa_funil|capfirst }}{% if c.obj.objetivo_tipo %} · {{ c.obj.get_objetivo_tipo_display }}{% endif %}</span>
         </div>
         {% endif %}
         {% if c.canais %}
-        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px">
+        <div class="mk-card-canais">
           {% for ch in c.canais %}<span class="rotulo-dado">{{ ch }}</span>{% endfor %}
         </div>
         {% endif %}
-        <div style="display:flex;align-items:center;gap:8px;margin-top:9px">
-          <span style="flex:none;width:24px;height:24px;border-radius:50%;background:var(--superficie-2);border:1px solid var(--fio);color:var(--tinta);font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center">{{ c.iniciais }}</span>
-          <span style="flex:1;min-width:0;font-size:11.5px;color:var(--tinta-suave);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.responsavel }}</span>
-          {% if c.verba %}<span class="num" style="flex:none;font-size:12px;font-weight:700;color:var(--tinta)">{{ c.verba|intcomma_brl }}</span>{% endif %}
+        <div class="mk-card-dono">
+          <span class="mk-av">{{ c.iniciais }}</span>
+          <span class="mk-card-resp">{{ c.responsavel }}</span>
+          {% if c.verba %}<span class="num mk-card-verba">{{ c.verba|intcomma_brl }}</span>{% endif %}
         </div>
-        <div style="display:flex;align-items:center;gap:7px;margin-top:8px">
-          <span style="flex:1;height:5px;border-radius:99px;background:var(--superficie-2);overflow:hidden"><span style="display:block;height:100%;width:{{ c.pct_check }}%;background:{% if c.check_completo %}var(--musgo){% else %}var(--lampiao){% endif %}"></span></span>
-          <span style="flex:none;font-size:11px;font-weight:700;color:{% if c.check_completo %}var(--musgo){% else %}var(--alerta){% endif %};white-space:nowrap">{{ c.check_texto }}</span>
+        <div class="mk-card-prog">
+          <span class="mk-trilho"><span style="width:{{ c.pct_check }}%;background:{% if c.check_completo %}var(--musgo){% else %}var(--lampiao){% endif %}"></span></span>
+          <span class="mk-card-prog-txt{% if c.check_completo %} ok{% endif %}">{{ c.check_texto }}</span>
         </div>
         {% if c.etapas_abertas %}
-        <div style="display:flex;align-items:center;gap:5px;margin-top:6px;font-size:11px;color:var(--tinta-suave)">{{ c.etapas_abertas }} etapa{{ c.etapas_abertas|pluralize }} aberta{{ c.etapas_abertas|pluralize }}</div>
+        <div class="mk-card-linha">{{ c.etapas_abertas }} etapa{{ c.etapas_abertas|pluralize }} aberta{{ c.etapas_abertas|pluralize }}</div>
         {% endif %}
         {% if c.tem_pecas %}
-        <div style="display:flex;align-items:center;gap:7px;margin-top:6px">
-          <span style="flex:1;height:5px;border-radius:99px;background:var(--superficie-2);overflow:hidden"><span style="display:block;height:100%;width:{{ c.pct_pecas }}%;background:var(--musgo)"></span></span>
-          <span style="flex:none;font-size:11px;color:var(--tinta-suave)">{{ c.pecas_texto }} peças</span>
+        <div class="mk-card-prog pecas">
+          <span class="mk-trilho"><span class="pecas" style="width:{{ c.pct_pecas }}%"></span></span>
+          <span class="mk-card-pecas">{{ c.pecas_texto }} peças</span>
         </div>
         {% endif %}
         {% if c.motivo_meu %}
-        <div style="display:flex;align-items:center;gap:5px;margin-top:6px;font-size:11px;font-weight:700;color:var(--alerta)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;flex:none"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>{{ c.motivo_meu }}
+        <div class="mk-card-meu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>{{ c.motivo_meu }}
         </div>
         {% endif %}
         {% if eh_gerente and col.fase == 'aprovacao' %}
-        <div style="display:flex;gap:6px;margin-top:10px">
-          <form method="post" action="{% url 'marketing:mover_fase' c.obj.id %}" style="flex:1" onclick="event.stopPropagation()">
+        <div class="mk-card-acoes">
+          <form method="post" action="{% url 'marketing:mover_fase' c.obj.id %}" onclick="event.stopPropagation()">
             {% csrf_token %}<input type="hidden" name="fase" value="estruturacao">
-            <button type="submit" style="width:100%;height:32px;border-radius:10px;border:none;background:linear-gradient(180deg,var(--musgo),var(--musgo));color:var(--superficie);font-size:12px;font-weight:700;cursor:pointer">Aprovar</button>
+            <button type="submit" class="mk-btn-aprovar">Aprovar</button>
           </form>
-          <form method="post" action="{% url 'marketing:mover_fase' c.obj.id %}" style="flex:none" onclick="event.stopPropagation()">
+          <form method="post" action="{% url 'marketing:mover_fase' c.obj.id %}" onclick="event.stopPropagation()">
             {% csrf_token %}<input type="hidden" name="fase" value="proposta">
-            <button type="submit" style="height:32px;padding:0 12px;border-radius:10px;border:1px solid var(--fio);background:var(--superficie);color:var(--perigo);font-size:12px;font-weight:700;cursor:pointer">Reprovar</button>
+            <button type="submit" class="mk-btn-reprovar">Reprovar</button>
           </form>
         </div>
         {% endif %}
       </article>
       {% empty %}
-      <div style="padding:18px 12px;text-align:center;border-radius:12px;border:1px dashed var(--fio-forte);font-size:11.5px;line-height:1.45;color:var(--tinta-suave)">{{ col.vazio_texto }}</div>
+      <div class="mk-coluna-vazio">{{ col.vazio_texto }}</div>
       {% endfor %}
       {% if col.fase == 'ideia' %}
       <form hx-post="{% url 'marketing:nova_campanha' %}" hx-target="#ficha-slot" hx-swap="innerHTML">
         {% csrf_token %}
-        <button type="submit" style="width:100%;height:36px;border-radius:11px;border:1px dashed var(--fio-forte);background:transparent;color:var(--tinta-suave);font-size:12.5px;font-weight:700;cursor:pointer">+ Nova ideia</button>
+        <button type="submit" class="mk-nova-ideia">+ Nova ideia</button>
       </form>
       {% endif %}
     </div>
@@ -222,7 +222,7 @@ desenhadas à mão, indistinguíveis dos chips de dado do quadro.{% endcomment %
 <div id="ficha-slot"></div>
 {% include "marketing/_moeda_js.html" %}
 
-<form id="form-mover-mkt" method="post" style="display:none">{% csrf_token %}
+<form id="form-mover-mkt" method="post" class="mk-form-oculto">{% csrf_token %}
   <input type="hidden" name="fase" id="mover-mkt-fase">
 </form>
 <script>

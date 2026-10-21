@@ -6,78 +6,73 @@
 {% block conteudo %}
 {# Transcrição do protótipo (linha do tempo). Cores → tokens; terra → --madeira. #}
 
-<div style="margin-bottom:14px">
-  <div style="display:flex;align-items:center;gap:7px;font-size:11px;letter-spacing:.11em;color:var(--tinta-suave);font-weight:700;margin-bottom:7px">MARKETING<span aria-hidden="true">›</span><span style="color:var(--musgo)">CAMPANHAS</span></div>
-  <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
-    <a href="{% url 'marketing:quadro' %}" style="font-size:13px;padding:7px 15px;border-radius:99px;text-decoration:none;background:var(--superficie);color:var(--tinta-suave);border:1px solid var(--fio)">Quadro</a>
-    <a href="{% url 'marketing:calendario' %}" style="font-size:13px;font-weight:700;padding:7px 15px;border-radius:99px;text-decoration:none;background:var(--tinta);color:var(--superficie)">Calendário</a>
-    <a href="{% url 'marketing:ocupacao' %}" style="font-size:13px;padding:7px 15px;border-radius:99px;text-decoration:none;background:var(--superficie);color:var(--tinta-suave);border:1px solid var(--fio)">Ocupação</a>
-    <a href="{% url 'marketing:relatorio' %}" style="font-size:13px;padding:7px 15px;border-radius:99px;text-decoration:none;background:var(--superficie);color:var(--tinta-suave);border:1px solid var(--fio)">Relatório</a>
+<div class="mk-topo">
+  <div class="mk-trilha">MARKETING<span aria-hidden="true">›</span><span class="mk-trilha-atual">CAMPANHAS</span></div>
+  <div class="mk-abas">
+    <a href="{% url 'marketing:quadro' %}" class="mk-aba">Quadro</a>
+    <a href="{% url 'marketing:calendario' %}" class="mk-aba on">Calendário</a>
+    <a href="{% url 'marketing:ocupacao' %}" class="mk-aba">Ocupação</a>
+    <a href="{% url 'marketing:relatorio' %}" class="mk-aba">Relatório</a>
   </div>
 </div>
 
-<style>
-  /* Gantt rola na horizontal em telas estreitas (eixo de dias não espreme) */
-  .cal-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .cal-track { min-width: 680px; }
-</style>
-<section style="border-radius:20px;background:var(--superficie-2);border:1px solid var(--fio);box-shadow:var(--sombra-cartao);overflow:hidden">
-  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:15px 20px;border-bottom:1px solid var(--fio)">
-    <a href="?vista={{ escala }}&ano={{ prev.ano }}&mes={{ prev.mes }}" style="width:32px;height:32px;flex:none;border-radius:10px;border:1px solid var(--fio);background:var(--superficie);display:inline-flex;align-items:center;justify-content:center;font-size:18px;color:var(--tinta-suave);text-decoration:none" aria-label="Anterior">‹</a>
-    <h2 style="margin:0;min-width:120px;font-family:var(--fonte-titulo);font-size:17px;font-weight:700;color:var(--tinta);text-transform:capitalize">{{ tl.titulo }}</h2>
-    <a href="?vista={{ escala }}&ano={{ next.ano }}&mes={{ next.mes }}" style="width:32px;height:32px;flex:none;border-radius:10px;border:1px solid var(--fio);background:var(--superficie);display:inline-flex;align-items:center;justify-content:center;font-size:18px;color:var(--tinta-suave);text-decoration:none" aria-label="Próximo">›</a>
-    <span style="width:1px;height:22px;background:var(--fio)"></span>
-    <a href="?vista=mes&ano={{ ano }}&mes={{ mes }}" style="font-size:12.5px;font-weight:700;padding:6px 13px;border-radius:99px;text-decoration:none;{% if escala == 'mes' %}background:var(--tinta);color:var(--superficie){% else %}background:var(--superficie);color:var(--tinta-suave);border:1px solid var(--fio){% endif %}">Mês</a>
-    <a href="?vista=ano&ano={{ ano }}&mes={{ mes }}" style="font-size:12.5px;font-weight:700;padding:6px 13px;border-radius:99px;text-decoration:none;{% if escala == 'ano' %}background:var(--tinta);color:var(--superficie){% else %}background:var(--superficie);color:var(--tinta-suave);border:1px solid var(--fio){% endif %}">Ano</a>
+<section class="mk-secao tom fim">
+  <div class="mk-cal-cab">
+    <a href="?vista={{ escala }}&ano={{ prev.ano }}&mes={{ prev.mes }}" class="mk-cal-nav" aria-label="Anterior">‹</a>
+    <h2 class="mk-cal-mes">{{ tl.titulo }}</h2>
+    <a href="?vista={{ escala }}&ano={{ next.ano }}&mes={{ next.mes }}" class="mk-cal-nav" aria-label="Próximo">›</a>
+    <span class="mk-sep"></span>
+    <a href="?vista=mes&ano={{ ano }}&mes={{ mes }}" class="mk-pil larga{% if escala == 'mes' %} on{% endif %}">Mês</a>
+    <a href="?vista=ano&ano={{ ano }}&mes={{ mes }}" class="mk-pil larga{% if escala == 'ano' %} on{% endif %}">Ano</a>
   </div>
 
   {% comment %}As posições das barras saem em % — forçar PONTO decimal: a localização
   pt-BR geraria "left:80,65%", CSS inválido que jogava a barra para a esquerda.{% endcomment %}
   {% localize off %}
   <div class="cal-scroll"><div class="cal-track">
-  <div style="display:flex;border-bottom:1px solid var(--fio);background:var(--superficie-2)">
-    <span style="flex:none;width:200px;border-right:1px solid var(--fio)"></span>
-    <span style="flex:1;min-width:0;display:flex">
+  <div class="mk-cal-eixo">
+    <span class="mk-cal-rotulos"></span>
+    <span class="mk-cal-cols">
       {% for c in tl.cols %}
-      <span style="flex:1;min-width:0;text-align:center;font-size:11px;padding:7px 0;{% if c.hoje %}color:var(--madeira);font-weight:700{% else %}color:var(--tinta-suave){% endif %}">{{ c.label }}</span>
+      <span class="mk-cal-col{% if c.hoje %} hoje{% endif %}">{{ c.label }}</span>
       {% endfor %}
     </span>
   </div>
 
   {% if tl.vazio %}
-  <div style="padding:40px 20px;text-align:center;font-size:13px;color:var(--tinta-suave)">Nenhuma campanha neste período.</div>
+  <div class="mk-cal-vazio">Nenhuma campanha neste período.</div>
   {% endif %}
 
   {% for l in tl.linhas %}
-  <div style="display:flex;border-bottom:1px solid var(--fio)">
+  <div class="mk-cal-linha">
     <a href="{% url 'marketing:ficha' l.id %}" hx-get="{% url 'marketing:ficha' l.id %}" hx-target="#ficha-slot" hx-swap="innerHTML"
-       style="flex:none;width:200px;padding:9px 14px;border-right:1px solid var(--fio);min-width:0;text-decoration:none">
-      <span style="display:block;font-size:12.5px;font-weight:700;color:var(--tinta);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ l.nome }}</span>
-      <span style="display:block;margin-top:2px;font-size:11px;color:var(--tinta-suave);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ l.sub }}</span>
+       class="mk-cal-nome">
+      <span class="mk-item-nome">{{ l.nome }}</span>
+      <span class="mk-item-sub">{{ l.sub }}</span>
     </a>
-    <span style="flex:1;min-width:0;position:relative;height:66px">
+    <span class="mk-cal-faixa">
       {% for m in tl.marcos %}
-      <span data-dica="{{ m.dica }}" style="position:absolute;top:0;bottom:0;left:{{ m.left }}%;width:9px;margin-left:-4px;border-left:1px dashed var(--fio-forte);box-sizing:border-box;cursor:help"></span>
+      <span data-dica="{{ m.dica }}" class="mk-cal-marco" style="left:{{ m.left }}%"></span>
       {% endfor %}
       <a href="{% url 'marketing:ficha' l.id %}" hx-get="{% url 'marketing:ficha' l.id %}" hx-target="#ficha-slot" hx-swap="innerHTML" data-dica="{{ l.dica }}"
          class="cal-barra" data-nome="{{ l.nome }}" title="{{ l.nome }}"
-         style="position:absolute;top:11px;height:34px;left:{{ l.left }}%;width:{{ l.width }}%;border-radius:9px;display:flex;align-items:center;padding:0 11px;font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none;cursor:grab;color:{{ l.fg }};{% if l.hachurado %}background:repeating-linear-gradient(135deg,{{ l.bg }} 0 7px,var(--superficie) 7px 14px);box-shadow:inset 0 0 0 1.5px {{ l.fg }}{% else %}background:{{ l.bg }};box-shadow:inset 0 0 0 1.5px {{ l.fg }}{% endif %}">{{ l.rotulo }}</a>
+         style="left:{{ l.left }}%;width:{{ l.width }}%;color:{{ l.fg }};box-shadow:inset 0 0 0 1.5px {{ l.fg }};{% if l.hachurado %}background:repeating-linear-gradient(135deg,{{ l.bg }} 0 7px,var(--superficie) 7px 14px){% else %}background:{{ l.bg }}{% endif %}">{{ l.rotulo }}</a>
       {% if l.corte is not None %}
-      <span style="position:absolute;top:5px;bottom:16px;left:{{ l.corte }}%;width:2px;background:var(--perigo);border-radius:2px"></span>
+      <span class="mk-cal-hoje" style="left:{{ l.corte }}%"></span>
       {% endif %}
       {% for p in l.pecas %}
-      <span data-dica="{{ p.dica }}" style="position:absolute;top:50px;left:{{ p.left }}%;transform:translateX(-50%);width:10px;height:10px;border-radius:50%;border:2px solid var(--superficie);cursor:help;background:{{ p.cor }}"></span>
+      <span data-dica="{{ p.dica }}" class="mk-cal-peca" style="left:{{ p.left }}%;background:{{ p.cor }}"></span>
       {% endfor %}
     </span>
   </div>
   {% endfor %}
 
   {% if tl.marcos %}
-  <div style="position:relative;height:34px;border-top:1px solid var(--fio);background:var(--superficie-2)">
-    <span style="position:absolute;left:0;width:200px;height:100%;border-right:1px solid var(--fio)"></span>
-    <span style="position:absolute;left:200px;right:0;height:100%">
+  <div class="mk-cal-pe">
+    <span class="mk-cal-pe-vao"></span>
+    <span class="mk-cal-pe-faixa">
       {% for m in tl.marcos %}{% if m.nome %}
-      <span data-dica="{{ m.dica }}" style="position:absolute;top:{{ m.top }}px;{{ m.ancora }};font-size:11px;font-weight:700;color:var(--tinta-suave);white-space:nowrap;padding:0 4px;background:var(--superficie-2)">{{ m.nome }}</span>
+      <span data-dica="{{ m.dica }}" class="mk-cal-pe-marco" style="top:{{ m.top }}px;{{ m.ancora }}">{{ m.nome }}</span>
       {% endif %}{% endfor %}
     </span>
   </div>
@@ -85,8 +80,8 @@
   </div></div>
   {% endlocalize %}
 
-  <div style="padding:13px 20px;background:var(--canvas);border-top:1px solid var(--fio)">
-    <p style="margin:0;font-size:11.5px;line-height:1.45;color:var(--tinta-suave)">Barra hachurada = planejado; cheia = realizado. A linha vermelha é hoje; os pontos são as peças.</p>
+  <div class="mk-cal-legenda">
+    <p>Barra hachurada = planejado; cheia = realizado. A linha vermelha é hoje; os pontos são as peças.</p>
   </div>
 </section>
 
