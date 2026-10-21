@@ -9,6 +9,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
+from apps.nucleo.formatos import pct_br
 from apps.nucleo.models import UH, FormaPagamento, Pessoa, Temporada, TipoUH
 from apps.nucleo.modulos import Modulo
 from apps.nucleo.paginacao import paginar
@@ -664,10 +665,10 @@ def _nota_politica(resumo) -> str:
     devolver = resumo["devolver"]
     if resumo["cenario"] == "em_hospedagem":
         return (f"Saída antecipada: cobrar {resumo['dias_consumidos']} diária(s) usada(s) "
-                f"+ {resumo['retencao_pct'].normalize()}% de retenção. Devolver R$ {devolver}.")
+                f"+ {pct_br(resumo['retencao_pct'])}% de retenção. Devolver R$ {devolver}.")
     if resumo["dentro_arrependimento"]:
         return f"Dentro do prazo de arrependimento — devolver 100% (R$ {devolver})."
-    return (f"Fora do prazo: reter {resumo['retencao_pct'].normalize()}% "
+    return (f"Fora do prazo: reter {pct_br(resumo['retencao_pct'])}% "
             f"(R$ {resumo['retencao_valor']}). Devolver R$ {devolver}.")
 
 

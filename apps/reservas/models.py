@@ -23,6 +23,7 @@ from django.db import models, transaction
 from django.db.models import F, Func, Q, Sum
 from django.utils import timezone
 
+from apps.nucleo.formatos import pct_br
 from apps.nucleo.models import NaturezaFiscal, Temporada, TipoUH, registrar_auditoria
 
 
@@ -998,7 +999,7 @@ class ContaHospedagem(models.Model):
             LancamentoConta.objects.create(
                 conta=self, tipo=LancamentoConta.Tipo.TAXA,
                 natureza=NaturezaFiscal.SERVICO,
-                descricao=f"ISS {t['iss_aliquota'].normalize()}% — {reserva.uh.numero}",
+                descricao=f"ISS {pct_br(t['iss_aliquota'])}% — {reserva.uh.numero}",
                 valor=t["iss"], criado_por=usuario,
             )
         if t["taxa_turismo"] > 0:

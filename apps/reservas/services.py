@@ -17,6 +17,7 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
+from apps.nucleo.formatos import pct_br
 from apps.nucleo.models import (
     UH,
     FormaPagamento,
@@ -1585,7 +1586,7 @@ def estender_estadia(reserva, nova_saida, usuario) -> Decimal:
         noites = len(cot["diarias"])
         if cot["iss"] > 0:
             lancar_na_conta(acomodacao, LancamentoConta.Tipo.TAXA, NaturezaFiscal.SERVICO,
-                            f"ISS {cot['iss_aliquota'].normalize()}% — {numero} (estendida)",
+                            f"ISS {pct_br(cot['iss_aliquota'])}% — {numero} (estendida)",
                             cot["iss"], usuario)
             total += cot["iss"]
         if cot["taxa_turismo"] > 0:

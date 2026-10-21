@@ -1774,3 +1774,20 @@ class ReaisInputTests(TestCase):
         self.assertEqual(w.format_value("12,3x"), "12,3x")  # o que a pessoa digitou
         self.assertIsNone(w.format_value(""))
         self.assertIn('value="650,00"', w.render("valor", Decimal("650")))
+
+
+
+class PctBrTests(TestCase):
+    """`Decimal.normalize()` escreve 10 como "1E+1": o site mostrava "retemos 1E+1%"."""
+
+    def test_percentual_sai_como_gente_escreve(self):
+        from decimal import Decimal
+
+        from .formatos import pct_br
+
+        self.assertEqual(pct_br(Decimal("10.00")), "10")
+        self.assertEqual(pct_br(Decimal("100")), "100")
+        self.assertEqual(pct_br(Decimal("12.50")), "12,5")
+        self.assertEqual(pct_br(Decimal("4.00")), "4")
+        self.assertEqual(pct_br(Decimal("0.00")), "0")
+        self.assertEqual(pct_br("20"), "20")

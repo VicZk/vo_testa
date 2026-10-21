@@ -2382,3 +2382,29 @@ class PainelFinanceiroReservaTests(ReservasTestsBase):
         self.assertEqual(resp.context["fin_saldo"], r.total_previsto() - Decimal("180.00"))
         self.assertEqual(resp.context["fin_cobr_pendente"], Decimal("0.00"))
         self.assertContains(resp, "R$ 180,00")  # dinheiro pelo filtro único, não "180.00"
+
+
+
+class PercentualNoTextoDaPoliticaTests(TestCase):
+    """Com a retenção padrão (10%), o resumo do site dizia "retemos 1E+1% do valor
+    total" e o motivo gravado no cancelamento, "reter 1E+1%"."""
+
+    def test_resumo_da_politica_escreve_dez_por_cento(self):
+        from django.test import override_settings
+
+        from .cancelamento import descricao_politica
+
+        with override_settings(CANCELAMENTO_RETENCAO_PCT="10"):
+            resumo = descricao_politica()["resumo"]
+        self.assertIn("retemos 10% do valor total", resumo)
+        self.assertNotIn("E+", resumo)
+
+    def test_nota_do_cancelamento_escreve_dez_por_cento(self):
+        from .views import _nota_politica
+
+        fora = {"cenario": "nao_iniciada", "dentro_arrependimento": False,
+                "retencao_pct": Decimal("10.00"), "retencao_valor": Decimal("100.00"),
+                "devolver": Decimal("900.00")}
+        self.assertIn("reter 10% ", _nota_politica(fora))
+        hospedado = {**fora, "cenario": "em_hospedagem", "dias_consumidos": 1}
+        self.assertIn("+ 10% de retenção", _nota_politica(hospedado))

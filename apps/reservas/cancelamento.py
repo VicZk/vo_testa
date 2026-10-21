@@ -22,6 +22,8 @@ from decimal import ROUND_HALF_UP, Decimal
 from django.conf import settings
 from django.utils import timezone
 
+from apps.nucleo.formatos import pct_br
+
 CENTAVO = Decimal("0.01")
 
 
@@ -126,7 +128,7 @@ def descricao_politica() -> dict:
         "resumo": (
             f"Cancelamento grátis até {settings.CANCELAMENTO_ARREPENDIMENTO_DIAS} dias "
             f"após a confirmação da reserva. Depois desse prazo, retemos "
-            f"{(_retencao_pct() * 100).normalize()}% do valor total (devolvemos o restante). "
+            f"{pct_br(_retencao_pct() * 100)}% do valor total (devolvemos o restante). "
             "Se a estadia já começou, cobramos as diárias usadas mais a retenção. "
             "Você também pode transferir sua reserva para outra data."
         ),
