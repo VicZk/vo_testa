@@ -6,7 +6,7 @@ hoje escaparia: a noite solta do 31/12, a saída no meio do feriado, a regra de 
 pegando outro. A semântica está no docstring de `RestricaoVenda`.
 """
 
-from datetime import timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
@@ -48,7 +48,6 @@ class RestricaoBase(TestCase):
         self.uh_outro = UH.objects.create(numero="R3", tipo=self.outro_tipo)
         self.hospede = Pessoa.objects.create(nome="Hóspede Restrição")
         # Datas fixas e longe de hoje: a regra é de calendário, não de "hoje + n".
-        from datetime import date
         ano = date.today().year + 1
         self.n29 = date(ano - 1, 12, 29)   # primeira noite do intervalo
         self.n01 = date(ano, 1, 1)         # última noite do intervalo
@@ -75,7 +74,6 @@ class EstadiaMinimaTests(RestricaoBase):
     def test_noite_solta_no_meio_do_intervalo_e_barrada(self):
         self.regra(min_noites=3)
         # Só a noite de 31/12 — o caso que hoje vende e deixa as noites ao redor vazias.
-        from datetime import date
         entrada = date(self.n01.year - 1, 12, 31)
         v = self.violacoes(entrada, self.n01, uh=self.uh)
         self.assertEqual([x["tipo"] for x in v], ["min_noites"])
@@ -83,7 +81,6 @@ class EstadiaMinimaTests(RestricaoBase):
 
     def test_estadia_longa_que_atravessa_o_intervalo_passa(self):
         self.regra(min_noites=3)
-        from datetime import date
         entrada = date(self.n29.year, 12, 27)
         self.assertEqual(self.violacoes(entrada, self.d02, uh=self.uh), [])
 
@@ -91,14 +88,12 @@ class EstadiaMinimaTests(RestricaoBase):
         """Entrar antes e sair no primeiro dia do intervalo usa a noite de 28/12 e a de
         29/12: a de 29 está no intervalo, então o mínimo vale."""
         self.regra(min_noites=3)
-        from datetime import date
         entrada = date(self.n29.year, 12, 28)
         saida = date(self.n29.year, 12, 30)      # noites 28 e 29 → 2 < 3
         self.assertEqual(self.tipos(entrada, saida, uh=self.uh), ["min_noites"])
 
     def test_estadia_inteira_fora_do_intervalo_nao_e_tocada(self):
         self.regra(min_noites=3)
-        from datetime import date
         entrada = date(self.n29.year, 12, 20)
         self.assertEqual(self.violacoes(entrada, entrada + timedelta(days=1),
                                         uh=self.uh), [])
@@ -106,7 +101,6 @@ class EstadiaMinimaTests(RestricaoBase):
     def test_vale_o_maior_minimo_entre_as_regras(self):
         self.regra(descricao="Feriadão", min_noites=2)
         self.regra(descricao="Réveillon", min_noites=4)
-        from datetime import date
         entrada = date(self.n29.year, 12, 30)
         v = self.violacoes(entrada, self.d02, uh=self.uh)   # 3 noites
         self.assertEqual([x["tipo"] for x in v], ["min_noites"])
@@ -117,7 +111,6 @@ class EstadiaMinimaTests(RestricaoBase):
 
     def test_mensagem_sugere_a_data_de_saida_que_resolve(self):
         self.regra(min_noites=3)
-        from datetime import date
         entrada = date(self.n01.year - 1, 12, 31)
         mensagem = self.violacoes(entrada, self.n01, uh=self.uh)[0]["mensagem"]
         self.assertIn("31/12", mensagem)
@@ -127,7 +120,6 @@ class EstadiaMinimaTests(RestricaoBase):
 class ChegadaESaidaFechadasTests(RestricaoBase):
     def test_chegada_fechada_barra_quem_entra_no_intervalo(self):
         self.regra(fechado_chegada=True)
-        from datetime import date
         entrada = date(self.n01.year - 1, 12, 31)
         self.assertEqual(self.tipos(entrada, self.d02, uh=self.uh),
                          ["fechado_chegada"])
@@ -135,7 +127,6 @@ class ChegadaESaidaFechadasTests(RestricaoBase):
     def test_chegada_fechada_deixa_atravessar(self):
         """Quem já entrou antes do intervalo passa por dentro dele sem problema."""
         self.regra(fechado_chegada=True)
-        from datetime import date
         entrada = date(self.n29.year, 12, 27)
         self.assertEqual(self.violacoes(entrada, self.d02, uh=self.uh), [])
 
@@ -147,7 +138,6 @@ class ChegadaESaidaFechadasTests(RestricaoBase):
     def test_saida_fechada_barra_quem_sai_dentro_do_intervalo(self):
         """Sair em 01/01 deixa a noite de 01/01 vaga — é o que a regra evita."""
         self.regra(fechado_saida=True)
-        from datetime import date
         entrada = date(self.n29.year, 12, 27)
         self.assertEqual(self.tipos(entrada, self.n01, uh=self.uh), ["fechado_saida"])
 
@@ -155,13 +145,11 @@ class ChegadaESaidaFechadasTests(RestricaoBase):
         """A fronteira do off-by-one: a saída é o dia SEGUINTE à última noite, então
         sair em 02/01 vendeu a noite de 01/01 e está liberado."""
         self.regra(fechado_saida=True)
-        from datetime import date
         entrada = date(self.n29.year, 12, 27)
         self.assertEqual(self.violacoes(entrada, self.d02, uh=self.uh), [])
 
     def test_saida_no_primeiro_dia_do_intervalo_e_barrada(self):
         self.regra(fechado_saida=True)
-        from datetime import date
         entrada = date(self.n29.year, 12, 26)
         self.assertEqual(self.tipos(entrada, self.n29, uh=self.uh), ["fechado_saida"])
 
@@ -304,7 +292,6 @@ class PreReservaRespeitaRestricaoTests(RestricaoBase):
 
     def test_canal_site_e_recusado_com_o_motivo(self):
         self.regra(min_noites=3)
-        from datetime import date
         entrada = date(self.n01.year - 1, 12, 31)
         with self.assertRaises(ValidationError) as ctx:
             services.criar_reserva_site_unidade(
@@ -316,7 +303,6 @@ class PreReservaRespeitaRestricaoTests(RestricaoBase):
 
     def test_canal_site_por_tipo_tambem_e_recusado(self):
         self.regra(min_noites=3, tipo_uh=self.tipo)
-        from datetime import date
         entrada = date(self.n01.year - 1, 12, 31)
         with self.assertRaises(ValidationError):
             services.criar_reserva_site(
@@ -326,7 +312,6 @@ class PreReservaRespeitaRestricaoTests(RestricaoBase):
 
     def test_canal_balcao_passa(self):
         self.regra(min_noites=3)
-        from datetime import date
         entrada = date(self.n01.year - 1, 12, 31)
         reserva = services.criar_prereserva(
             uh=self.uh, checkin=entrada, checkout=self.n01,
@@ -336,7 +321,6 @@ class PreReservaRespeitaRestricaoTests(RestricaoBase):
 
     def test_flag_explicita_vence_o_canal(self):
         self.regra(min_noites=3)
-        from datetime import date
         entrada = date(self.n01.year - 1, 12, 31)
         with self.assertRaises(ValidationError):
             services.criar_prereserva(
@@ -344,6 +328,14 @@ class PreReservaRespeitaRestricaoTests(RestricaoBase):
                 hospede=self.hospede, usuario=self.usuario,
                 respeitar_restricoes=True,
             )
+        # E ao contrário: o Comercial converte um lead que VEIO do site (canal "site")
+        # e isso é venda negociada — a regra não pode travar a conversão.
+        reserva = services.criar_prereserva(
+            uh=self.uh, checkin=entrada, checkout=self.n01,
+            hospede=self.hospede, usuario=self.usuario,
+            canal=Reserva.Canal.SITE, respeitar_restricoes=False,
+        )
+        self.assertEqual(reserva.canal, Reserva.Canal.SITE)
 
     def test_alocacao_por_tipo_pula_o_quarto_bloqueado(self):
         """Regra apontando um quarto só: o canal direto aloca o vizinho, não recusa."""
@@ -366,7 +358,6 @@ class RecepcaoAvisaMasNaoBarraTests(RestricaoBase):
         return usuario
 
     def _post(self, usuario, **extra):
-        from datetime import date
         self.client.force_login(usuario)
         dados = {
             "hospede": self.hospede.pk, "uh": self.uh.pk,
@@ -417,7 +408,6 @@ class RecepcaoAvisaMasNaoBarraTests(RestricaoBase):
 
     def test_aviso_ao_vivo_no_modal(self):
         """A recepção lê o motivo antes de salvar (tarifa_preview alimenta o hint)."""
-        from datetime import date
         self.regra(min_noites=3)
         self.client.force_login(self.usuario)
         entrada = date(self.n01.year - 1, 12, 31)
@@ -487,7 +477,6 @@ class TelaDeGestaoTests(RestricaoBase):
         self.assertTrue(regra.ativa)
 
     def test_lista_poe_o_que_vale_na_frente(self):
-        from datetime import date
         passada = self.regra(descricao="Réveillon passado", parar_vendas=True,
                              inicio=date(2024, 12, 29), fim=date(2025, 1, 1))
         futura = self.regra(descricao="Réveillon futuro", min_noites=3)

@@ -10,14 +10,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.nucleo.areas import Area
-from apps.nucleo.models import (
-    UH,
-    FormaPagamento,
-    Pessoa,
-    Temporada,
-    TipoUH,
-    registrar_auditoria,
-)
+from apps.nucleo.models import UH, FormaPagamento, Pessoa, Temporada, TipoUH, registrar_auditoria
 from apps.nucleo.modulos import Modulo
 from apps.nucleo.paginacao import paginar
 from apps.nucleo.permissoes import (
@@ -840,7 +833,6 @@ def adiantamento_novo(request, pk):
 
 def _pode_faturar(usuario) -> bool:
     """Faturar fecha a conta sem o hóspede pagar: gerência ou quem tem o Financeiro."""
-    from apps.nucleo.areas import Area
     return eh_gerente(usuario) or usuario.pode_area(Area.FINANCEIRO)
 
 
@@ -1388,10 +1380,8 @@ def restricoes(request):
         .order_by("encerrada", "inicio")
     )
     pagina = paginar(request, lista_qs)
-    return render(request, "reservas/restricoes.html", {
-        "restricoes": pagina, "pagina": pagina,
-        "total_valendo": sum(1 for r in lista_qs if r.situacao[1] == "Valendo"),
-    })
+    return render(request, "reservas/restricoes.html",
+                  {"restricoes": pagina, "pagina": pagina})
 
 
 @requer_area(Area.TEMPORADAS)

@@ -33,7 +33,7 @@ paradas): quando não sobra nada, o hóspede lê o MOTIVO e o caminho — não u
     <p class="text-madeira/70 text-sm leading-snug">{{ aviso }}</p>
     {% endfor %}
     <a href="{% url 'core:reservar' %}{% if busca.modalidade %}?modalidade={{ busca.modalidade }}{% endif %}"
-       class="text-madeira text-sm font-semibold mt-2 inline-block">Escolher outras datas</a>
+       class="text-madeira text-sm font-semibold mt-2 inline-flex">Escolher outras datas</a>
 </div>
 {% endif %}
 
