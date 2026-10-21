@@ -946,3 +946,145 @@ class VitrineFiltrosTests(TestCase):
         self.assertIn('data-qualidades="vista-para-o-lago"', corpo)
         self.assertRegex(corpo, r'data-preco="\d+"')
 
+
+class RestricaoDeVendaNoSiteTests(TestCase):
+    """O site é canal direto: não oferece o que a regra do período barra, mostra o
+    MOTIVO em vez de um "indisponível" mudo, e recusa o POST forjado.
+    A regra mora no CRM (`reservas.RestricaoVenda`); aqui se testa o que o hóspede vê.
+    """
+
+    def setUp(self):
+        from django.core.cache import cache
+
+        from apps.nucleo.models import UH, ConfiguracaoReservas, TipoUH
+        from apps.site.models import VitrineQuarto
+
+        cache.clear()
+        ConfiguracaoReservas.objects.update_or_create(
+            pk=1, defaults={'feriados_automaticos': False})
+        self.tipo = TipoUH.objects.create(
+            nome='Suíte Restr', tarifa_base=Decimal('400.00'), capacidade=4)
+        self.uh = UH.objects.create(numero='S9', tipo=self.tipo,
+                                    nome_tematico='Cabine do Réveillon')
+        VitrineQuarto.objects.create(uh=self.uh, publicar=True)
+        self.quarto = criar_quarto(nome='Suíte Restr', capacidade=4)
+        self.quarto.tipo_uh = self.tipo
+        self.quarto.save(update_fields=['tipo_uh'])
+        # Réveillon do próximo ano: noites 29/12 a 01/01.
+        ano = date.today().year + 1
+        self.n29 = date(ano - 1, 12, 29)
+        self.n31 = date(ano - 1, 12, 31)
+        self.n01 = date(ano, 1, 1)
+        self.d02 = date(ano, 1, 2)
+
+    def regra(self, **campos):
+        from apps.reservas.models import RestricaoVenda
+        padrao = {'descricao': 'Réveillon', 'inicio': self.n29, 'fim': self.n01}
+        padrao.update(campos)
+        return RestricaoVenda.objects.create(**padrao)
+
+    def _buscar(self, checkin, checkout):
+        return self.client.get(reverse('core:reservar'), {
+            'checkin': checkin.strftime('%Y-%m-%d'),
+            'checkout': checkout.strftime('%Y-%m-%d'), 'hospedes': 2,
+        })
+
+    def test_busca_esconde_e_explica_o_motivo(self):
+        self.regra(min_noites=3)
+        resp = self._buscar(self.n31, self.n01)        # uma noite só
+        self.assertEqual(resp.context['num_disponiveis'], 0)
+        self.assertContains(resp, 'Estas datas têm regra de reserva')
+        self.assertContains(resp, 'estadia mínima é de 3 noites')
+        # O caminho vem junto: a data de saída que resolve.
+        self.assertContains(resp, '03/01')
+
+    def test_busca_oferece_quando_a_estadia_cumpre_o_minimo(self):
+        self.regra(min_noites=3)
+        resp = self._buscar(self.n29, self.d02)        # 4 noites
+        self.assertEqual(resp.context['num_disponiveis'], 1)
+        self.assertNotContains(resp, 'Estas datas têm regra de reserva')
+
+    def test_parada_de_vendas_tira_o_quarto_da_busca(self):
+        self.regra(parar_vendas=True)
+        resp = self._buscar(self.n29, self.d02)
+        self.assertEqual(resp.context['num_disponiveis'], 0)
+        self.assertContains(resp, 'não estão abertas para venda')
+
+    def test_deeplink_do_quarto_nao_pula_a_regra(self):
+        self.regra(parar_vendas=True)
+        resp = self.client.get(reverse('core:reservar'), {
+            'uh': self.uh.id, 'checkin': self.n29.strftime('%Y-%m-%d'),
+            'checkout': self.d02.strftime('%Y-%m-%d'), 'hospedes': 2,
+        })
+        self.assertEqual(resp.status_code, 200)        # não vai ao passo 3
+        self.assertEqual(resp.context['num_disponiveis'], 0)
+
+    def test_passo3_por_unidade_recusa_e_volta_a_busca(self):
+        self.regra(min_noites=3)
+        resp = self.client.get(reverse('core:selecionar_unidade', args=[self.uh.id]), {
+            'checkin': self.n31.strftime('%Y-%m-%d'),
+            'checkout': self.n01.strftime('%Y-%m-%d'), 'hospedes': 2,
+        })
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn(reverse('core:reservar'), resp['Location'])
+
+    def test_post_forjado_por_unidade_e_recusado(self):
+        """A busca esconder não basta: o POST direto no passo 4 também bate na regra."""
+        from apps.reservas.models import Reserva as CrmReserva
+        self.regra(min_noites=3)
+        resp = self.client.post(reverse('core:finalizar_reserva'), {
+            'uh_id': self.uh.id, 'checkin': self.n31.strftime('%Y-%m-%d'),
+            'checkout': self.n01.strftime('%Y-%m-%d'), 'hospedes': 2,
+            'metodo_pagamento': 'pix', 'nome': 'Forja Teste',
+            'email': 'forja@ex.com', 'telefone': '49999990000', 'cpf': CPF_VALIDO,
+            'observacoes': '',
+        })
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(CrmReserva.objects.count(), 0)
+        self.assertEqual(Reserva.objects.count(), 0)
+
+    def test_post_forjado_por_tipo_e_recusado(self):
+        from apps.reservas.models import Reserva as CrmReserva
+        self.regra(parar_vendas=True)
+        resp = self.client.post(reverse('core:finalizar_reserva'), {
+            'quarto_id': self.quarto.id, 'checkin': self.n29.strftime('%Y-%m-%d'),
+            'checkout': self.d02.strftime('%Y-%m-%d'), 'hospedes': 2,
+            'metodo_pagamento': 'pix', 'nome': 'Forja Tipo',
+            'email': 'forjatipo@ex.com', 'telefone': '49999990000', 'cpf': CPF_VALIDO,
+            'observacoes': '',
+        })
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(CrmReserva.objects.count(), 0)
+
+    def test_reserva_passa_quando_a_regra_esta_desativada(self):
+        from apps.reservas.models import Reserva as CrmReserva
+        self.regra(min_noites=3, ativa=False)
+        self.client.post(reverse('core:finalizar_reserva'), {
+            'uh_id': self.uh.id, 'checkin': self.n31.strftime('%Y-%m-%d'),
+            'checkout': self.n01.strftime('%Y-%m-%d'), 'hospedes': 2,
+            'metodo_pagamento': 'pix', 'nome': 'Passa Teste',
+            'email': 'passa@ex.com', 'telefone': '49999990000', 'cpf': CPF_VALIDO,
+            'observacoes': '',
+        })
+        self.assertEqual(CrmReserva.objects.count(), 1)
+
+    def test_busca_nao_consulta_restricao_por_quarto(self):
+        """A regra é do calendário: uma consulta para a busca inteira, não uma por
+        quarto (a página pública tem 24 cartões)."""
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        from apps.nucleo.models import UH
+        from apps.site.models import VitrineQuarto
+        from apps.site.views import _buscar_unidades
+
+        self.regra(min_noites=3)
+        for i in range(5):
+            uh = UH.objects.create(numero=f'S9{i}', tipo=self.tipo)
+            VitrineQuarto.objects.create(uh=uh, publicar=True)
+        _buscar_unidades(self.n29, self.d02, 2)      # aquece
+        with CaptureQueriesContext(connection) as ctx:
+            _buscar_unidades(self.n29, self.d02, 2)
+        consultas = [q['sql'] for q in ctx.captured_queries
+                     if 'reservas_restricaovenda' in q['sql']]
+        self.assertEqual(len(consultas), 1)
