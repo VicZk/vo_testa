@@ -1,5 +1,10 @@
 # Auditoria de Segurança — CRM Pousada Vô Testa
 
+> **Registro histórico de segurança.** Achados e validações abaixo têm o escopo e a
+> data originais. Não atestam ausência atual de vulnerabilidades nem configurações
+> externas. A arquitetura corrente está em [ARQUITETURA](ARQUITETURA.md), e a base
+> desta revisão documental está em [Estado atual](ESTADO_ATUAL.md).
+
 > Relatório vivo. Auditoria de **segurança** (OWASP Top 10 + lógica de negócio), 05/10/2026.
 > Método: multiagente (7 dimensões) + verificação adversarial. Lente: pagamentos (Safrapay),
 > PII de hóspedes, dados de governo (FNRH), tokens Meta/WhatsApp.

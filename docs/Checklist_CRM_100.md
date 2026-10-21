@@ -1,110 +1,100 @@
-# Checklist — CRM Vô Testa 100% (vivo)
+# Checklist de ativação e operação — CRM Vô Testa
 
-> Atualizado em 11/09/2026. Marque `[x]` conforme concluir. 🔴 = **bloqueia a inauguração**.
-> **Responsável:** 💻 código (Claude) · 🧑‍💼 operação (Gefferson/equipe) · 🌐 terceiro (Meta/Safrapay/contador/Serpro).
+**Revisão documental: 21/10/2026.** Consulte o [Estado atual](ESTADO_ATUAL.md) para a
+base de código revisada. Este checklist separa implementação de comprovação no
+ambiente da pousada. Itens desmarcados significam **a confirmar**, não necessariamente
+que nunca tenham sido executados.
 
----
+## 1. O que já existe no código
 
-## 1. 🔌 Integrações externas (dependem de terceiros)
+| Frente | Implementado | Verificação operacional necessária |
+|---|---|---|
+| Hospedagem | Reserva, grupos, capacidade, FNRH local/BOH, conta e saída | Jornadas com os cadastros, tarifas e regras reais |
+| Financeiro | Caixa, recebimentos, estornos, devolução, faturamento e conciliação | Conferência das origens de crédito e fechamento |
+| Governança | Tarefas, arrumação, inspeção opcional, ronda e discrepâncias | Fluxo da equipe, liberação de quartos e retrabalho |
+| Gestão | Relatórios, pendências, trilha e fechamento diário | Datas, indicadores, exportação e acesso de gerência |
+| Comercial/marketing | Funil, cotações, atividades, LPs, e-mail e campanhas | Políticas comerciais, consentimentos e canais ativos |
+| Site/portal | Motor de reservas, pré-check-in, extrato e solicitações | Jornada completa em desktop e celular |
+| Continuidade | Kit, envio diário opcional e backup | Agendamento, destinatários, recebimento e restauração |
 
-### WhatsApp Cloud API — 🔴 crítico p/ captação
-- [ ] 🌐 Registrar o número novo na **WABA do portfólio "Pousada Vô Testa"** (não instalar no app comum)
-- [ ] 🌐 Aprovar o template **`boas_vindas_fundador`** (Marketing, pt-BR)
-- [ ] 🌐 Gerar **token permanente** + **Phone Number ID** + **App Secret**
-- [ ] 💻 Preencher `.env` de produção + apontar webhook (`/whatsapp/webhook/`)
-- [ ] 🧑‍💼 Disparo de teste (1 número) → depois lista de fundadores
-- *(código pronto e testado — ver `docs/Marketing/CRM_WhatsApp.md` Anexo C)*
-- [ ] 💻 **Análise de links recebidos (segurança do atendente)** — extrair URLs das
-      mensagens que chegam, checar reputação (**Google Safe Browsing** grátis + heurísticas:
-      encurtador, domínio parecido, punycode, IP, domínio novo) e mostrar no chat com selo
-      🟢/🟡/🔴, **links não-clicáveis por padrão** + aviso antes de abrir. Reforço: VirusTotal,
-      expansão de encurtador e filtro por IA (Claude) p/ phishing. ⚠️ **Cuidar de SSRF** ao
-      expandir URL (bloquear IPs internos/privados, timeout, não seguir p/ rede interna).
-      *(o número fica na API/CRM → temos controle total pra bloquear o clique antes do atendente)*
+A validação do caixa em 04/07/2026 e as demais auditorias são registros históricos.
+Não são marcações automáticas de aprovação para o commit ou ambiente atual.
 
-### Pagamentos — 🔴 crítico p/ cobrança
-- [ ] 🌐 **Maquininha Safrapay** — credenciamento comum ativo (Caminho B, ver `docs/SafraPay/DECISAO.md`)
-- [ ] 🧑‍💼 Testar cobrança + baixa no CRM com **NSU** (conciliação)
-- [ ] 💻 *(opcional)* Ligar **gateway online Pix/link** (SafraPay REST — já iniciado) p/ cobrança à distância
+## 2. Integrações externas
 
-### Fiscal (nota) — 🔴 bloqueadores burocráticos (começar cedo)
-- [ ] 🧑‍💼 Obter **Inscrição Estadual** (necessária p/ NFC-e)
-- [ ] 🧑‍💼 Adquirir **certificado digital A1**
-- [ ] 🧑‍💼 Escolher **provider**: Focus NFe (R$89,90/mês) ou rota grátis governo
-- [ ] 💻 Ligar o provider real + cadastrar produtos (NCM) — *(esqueleto pronto, `docs/Implementar_fiscal.md`)*
-- [ ] 🧑‍💼 Confirmar com contador os parâmetros da NFS-e da diária (código, ISS, regime)
+### Pagamentos
 
-### FNRH Digital (Embratur) — não bloqueia (funciona local)
-- [ ] 🧑‍💼 Obter **credenciais SNRHos** (via Cadastur)
-- [ ] 🧑‍💼 País ISO alpha-2 + cidade código IBGE no cadastro; teste em homologação
+- [ ] Confirmar credenciamento, ambiente e token Safrapay; conferir o diagnóstico do CRM.
+- [ ] Validar criação, recusa, confirmação, webhook e reflexo na reserva/conta.
+- [ ] Conferir estorno/devolução e conciliação conforme origem do recebimento.
+- [ ] Se usar Pix direto, confirmar chave/destinatário e treinar a baixa **manual**;
+      o botão do hóspede avisando que pagou não comprova recebimento.
+- [ ] Para maquininha, conferir lançamento de NSU/autorização e conciliação.
 
-### Campanhas Meta (Instagram/Facebook) — captação + demografia
-- [ ] 💻 Rodar **uma vez** em produção `manage.py popular_campanha_fundador_2` (cria LP + campanha no CRM)
-- [ ] 💻 Confirmar **`META_CAPI_TOKEN`** no `.env` de produção (Pixel já roda; token liga o CAPI server-side)
-- [ ] 🧑‍💼 Anunciar com **UTMs** p/ a LP (`/lp/fundador-2/?utm_source=instagram&utm_medium=paid&utm_campaign=fundador-2`)
-- [ ] 🧑‍💼 **Demografia do público** (idade/gênero/cidade) → **Gerenciador de Anúncios → Detalhar (Breakdown)** — agregado, grátis
-- [ ] 💻 *(opcional)* Puxar os **breakdowns para o CRM** via Marketing API (Insights) — *(Fase C, `Gestor_Impulsionamento_CRM.md` §C.4)*
-- *(dado por lead — sexo/UF/dispositivo — já aparece no "Perfil estimado" do lead; ver `apps/comercial/enriquecimento.py`)*
+O adapter Safrapay está escrito. As [evidências HML](Implementar_Safrapay.md)
+não comprovam habilitação ou liquidação no ambiente de produção.
 
----
+### WhatsApp e e-mail
 
-## 2. ✅ Validar módulos já construídos (homologação com o usuário)
-- [x] Núcleo (caixa testado em 04/07/2026)
-- [ ] 🧑‍💼 Reservas (ciclo, mapa, troca de quarto, folio)
-- [ ] 🧑‍💼 Estoque · [ ] Loja (PDV) · [ ] Restaurante · [ ] Lavanderia
-- [ ] 🧑‍💼 Governança · [ ] Manutenção · [ ] Escala
-- [ ] 🧑‍💼 Comercial (funil, LP, campanhas) · [ ] Pagamentos · [ ] Portal do hóspede
-- [ ] 🧑‍💼 Relatórios · [ ] Auditoria
+- [ ] Conferir WABA, número, token, Phone Number ID, App Secret e templates necessários.
+- [ ] Validar webhook, recebimento, envio e mídia com destinatário de teste autorizado.
+- [ ] Conferir consentimento/descadastro e responsável pelo atendimento.
+- [ ] Validar SMTP, remetente autenticado, Reply-To e reenvio de pendências.
+- [ ] Conferir a configuração antes de qualquer teste de campanha:
+      `EMAIL_GATEWAY=simulado` pode enviar por SMTP real.
 
----
+Cloud API e áudio têm implementação. O painel completo de campanhas WhatsApp é
+backlog; há comando manual. `delivered`/`read` como estados próprios da mensagem
+continuam evolução. SES e BSP são stubs.
 
-## 3. 📸 Dados e conteúdo real (operação, não código)
-- [ ] 🧑‍💼 Subir **fotos** + **tour 360°** de cada quarto
-- [ ] 🧑‍💼 Marcar **qualidades** (vista lago, varanda, pet, ar, tipo de cama)
-- [ ] 🧑‍💼 Escolher os **9 destaques** da home
-- [ ] 🧑‍💼 Confirmar **preços por temporada** (cadastrar as datas — faixas já existem)
-- [ ] 🧑‍💼 Criar **usuários da equipe** + acessos (Equipe & Acessos)
+### FNRH e fiscal
 
----
+- [ ] Conferir fichas, códigos de país/cidade e a trava de check-in.
+- [ ] Validar credenciais Serpro, homologação, envio e reprocessamento de pendências.
+- [ ] Reconfirmar parâmetros fiscais com o contador e requisitos do provider escolhido.
+- [ ] Implementar o provider fiscal real: `focus` e `governo` ainda são stubs.
+- [ ] Homologar emissão, retorno, falha e cancelamento antes da ativação fiscal real.
 
-## 4. 🧩 Funcionalidades da Fase 2 (evolução pós-abertura — não bloqueiam)
-- [ ] 💻 **CRM do Hóspede** — NPS real + relacionamento pós-estadia (hoje esqueleto)
-- [ ] 💻 **Canais/OTAs** — sincronizar Booking/Airbnb (sem integração de canal hoje)
+Campos tributários e simulador não equivalem a nota autorizada.
+Guias: [FNRH](Implementar_FNRH_API.md), [Fiscal](Implementar_fiscal.md) e
+[Checklist do contador](Checklist_contador.md).
 
-### Telefonia/voz no CRM — arquitetura (definida)
-> **Duas telefonias:** 🏨 **Pousada (Itá)** = central **Intelbras UNNITI 1000 IP** (recepção,
-> hóspedes, ramais). 💼 **Vendas (Concórdia, equipe remota)** = **nuvem**: **Vupt** (operadora,
-> R$ 59,90/mês já paga) + **Asterisk** (PBX open-source numa VM, **custo zero de licença**) +
-> **SIP.js** (softphone no navegador). Vendas **não** usa a UnniTI (equipe em Concórdia, não
-> em Itá) e **não** usa Twilio (celular BR caro, deixaria a Vupt sem uso). Plano executável:
-> **`docs/Implementar_Telefonia_Vendas.md`**.
->
-> *Achados UnniTI (manual, 14/09/2026): **WebRTC** não nativo (só SIP 2.0/RTP → precisaria SBC);
-> **CTI** via **CSTA sobre ICTI** (TCP :7000, auth AARQ/AARE); **gravação** por **ICR (FTP)** ou
-> **UCR (Micro-SD)**, não em SMB/NFS.*
+### Mídia, decisão e serviços auxiliares
 
-- [ ] 🧑‍💼 **Pousada — Central UNNITI:** configurar trunk Vupt, ramais (TIP 125 + V5502+), URA,
-      gravação (ICR/FTP ou UCR), anti-fraude
-- [ ] 🧑‍💼 **Vendas — Vupt (Fase 0):** confirmar **canais simultâneos** (≥ 3) + franquia de
-      minutos + dados do **tronco SIP (BYOC)** p/ registrar o 3CX
-- [ ] 🧑‍💼💻 **Vendas — Asterisk na nuvem:** VM (Ubuntu) + TLS/WSS + coturn + tronco Vupt +
-      ramais WebRTC + gravação (MixMonitor) *(⚠️ tronco próprio Vupt; VM na nuvem, não no NAS de Itá)*
-- [ ] 💻 **CRM (`apps/telefonia`)** — gateway plugável (`simulado`/`asterisk`); **SIP.js** no
-      navegador (softphone) + **ARI/AMI** (eventos) → botão "Ligar" no lead → gravação →
-      transcrição (Whisper) → IA (Claude) → BI
+- [ ] Conferir tokens/permissões Meta e validar conversões quando utilizados.
+- [ ] Validar URL, contrato e disponibilidade JEV se o adapter real for ativado.
+- [ ] Conferir R2, URLs de mídia e persistência dos uploads.
+- [ ] Confirmar destinatários e recebimento do kit de contingência.
 
----
+## 3. Dados, acessos e jornadas
 
-## 5. 🔧 Fast-follows pequenos (não bloqueiam)
-- [ ] 💻 Painel de campanha do WhatsApp na UI (hoje por comando/serviço)
-- [ ] 💻 Rastrear `delivered`/`read` do WhatsApp como estados próprios
-- [ ] 💻 Conciliação do dinheiro online sem caixa (quando o gateway Pix/link for ativado)
+- [ ] Conferir as 24 UHs, day use ativo, capacidade, camas, colchões e berços.
+- [ ] Validar tarifas, temporadas, restrições de venda, cancelamento e no-show.
+- [ ] Revisar fotos, nomes, qualidades e destaques da vitrine.
+- [ ] Cadastrar a equipe com módulos/áreas necessários e validar MFA.
+- [ ] Percorrer reserva → sinal → FNRH → check-in → consumo → pagamento/faturamento → saída.
+- [ ] Percorrer governança → execução → inspeção/retrabalho → quarto disponível.
+- [ ] Validar venda avulsa e consumo na conta em loja, restaurante e lavanderia.
+- [ ] Conferir manutenção/bloqueio, escala, conciliação e relatórios.
+- [ ] Validar desktop, celular, teclado, toque e impressão dos documentos utilizados.
 
----
+## 4. Rotinas e publicação
 
-## 🎯 Caminho crítico para inaugurar (o mínimo)
-1. **WhatsApp** ligado (seção 1) + **maquininha Safrapay** (seção 1) → captar e cobrar.
-2. **Fiscal**: IE + A1 + provider (o mais burocrático — iniciar já).
-3. **Validar** módulos (seção 2) + **subir dados reais** (seção 3).
+- [ ] Conferir branch, remoto, diff e escopo autorizado antes de commit/push.
+- [ ] Para código, conferir lint, migrações, suíte Django e fluxos de navegador afetados.
+- [ ] Confirmar serviço/branch de deploy, versão ativa e healthcheck.
+- [ ] Confirmar serviços cron dos grupos `frequentes` e `diarias`.
+- [ ] Validar monitor de começo/fim/falha e alerta por execução ausente.
+- [ ] Verificar fechamento diário, arrumações, expirações e reenvios.
+- [ ] Confirmar destino de backup e testar restauração em banco separado.
+- [ ] Registrar data, commit, ambiente, responsável e resultado de cada homologação.
 
-> O resto (Canais/OTAs, telefonia, CRM do Hóspede) entra **depois da abertura**.
+Comandos de rotina e seeds alteram dados e podem enviar comunicações quando
+configurados. Não os execute como simples teste de leitura de ambiente.
+
+## 5. Evolução separada da ativação
+
+Continuam no backlog: coleta NPS/CRM do Hóspede, Canais/OTAs, telefonia integrada,
+painel completo de campanhas WhatsApp e os providers/stubs listados no
+[Estado atual](ESTADO_ATUAL.md). Os nove commits locais de interface identificados
+naquela revisão precisam de publicação de código separada desta entrega documental.

@@ -1,5 +1,7 @@
 # Pousada Vô Testa — PMS, CRM e site
 
+**Mapa de leitura:** [estado atual](docs/ESTADO_ATUAL.md) · [documentação completa](docs/README.md) · [changelog](CHANGELOG.md).
+
 Sistema próprio de gestão da **Pousada Vô Testa** (Itá/SC): reservas, recepção, conta do
 hóspede, caixa, pontos de venda, governança, lavanderia, manutenção, escala, FNRH,
 financeiro, fiscal, comercial e o site público com motor de reservas. Um único projeto
@@ -10,15 +12,19 @@ como desenvolver em cima dele. Dois documentos aprofundam o que aqui está resum
 
 - [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md): núcleo, modularidade, padrões,
   todas as variáveis de ambiente, rotas, deploy, design system e o passo a passo de
-  um módulo novo, com referência a arquivo e linha.
+  um módulo novo, com referências aos arquivos de implementação.
 - [`docs/MODULOS_E_FLUXOS.md`](docs/MODULOS_E_FLUXOS.md): cada módulo por dentro
   (models, estados, services, sinais, telas, regras) e os fluxos ponta a ponta com
   diagramas.
 
-> A fonte de verdade do **produto** continua sendo [`docs/ESPECIFICACAO.md`](docs/ESPECIFICACAO.md).
-> O [`CLAUDE.md`](CLAUDE.md) é a memória de trabalho usada pelo Claude Code
-> (convenções e "estado atual"); parte dele está desatualizada (ex.: o módulo Frigobar,
-> que já foi removido).
+> **Revisão documental: 21/10/2026.** O [Estado atual](docs/ESTADO_ATUAL.md)
+> identifica a base de código publicada, as integrações e nove commits locais ainda
+> não publicados. O [índice da documentação](docs/README.md) separa manuais atuais,
+> planos e registros históricos.
+>
+> A [especificação](docs/ESPECIFICACAO.md) descreve o produto implementado.
+> O [CLAUDE.md](CLAUDE.md) reúne convenções de desenvolvimento. Uma funcionalidade
+> escrita ou uma evidência antiga de teste não comprova ativação em produção.
 
 > **Sobre este repositório.** Este é o fork [`VicZk/vo_testa`](https://github.com/VicZk/vo_testa)
 > do projeto original [`Geffersonvivan/vo_testa`](https://github.com/Geffersonvivan/vo_testa).
@@ -68,28 +74,38 @@ piscina, loja, lavanderia e equipe com escala.
 futuro possa ser oferecido a outras pousadas. Cada módulo é um app Django, ativado por
 cliente na tabela `ModuloContratado`.
 
-**Produção:** `www.pousadavotesta.com.br`, no Railway, com deploy automático a cada push
-na `main` do repositório original (`Geffersonvivan/vo_testa`). Este repositório
-(`VicZk/vo_testa`) é um **fork de desenvolvimento**: nada daqui vai para produção sem Pull
-Request aprovado no original (ver [§12.1](#121-fluxo-de-trabalho-com-o-fork)).
+**Ambientes:** os registros operacionais associam `www.pousadavotesta.com.br` ao
+Railway e à `main` do original. Essa conexão e a versão em produção não foram
+consultadas nesta revisão. Esta é uma **fork de desenvolvimento**: publicar na
+`dev` daqui não comprova deploy no original (ver [§12.1](#121-fluxo-de-trabalho-com-o-fork)).
 
 ### Estado dos módulos
 
 | Módulo | Situação |
 |---|---|
-| Núcleo (pessoas, quartos, temporadas, caixa, financeiro, estoque, recados, dashboard) | Implementado; caixa homologado em 04/07/2026 |
+| Núcleo (pessoas, quartos, temporadas, caixa, financeiro, estoque, recados, dashboard) | Implementado; homologação do caixa de 04/07/2026 é registro histórico |
 | Reservas (mapa, ciclo, conta do hóspede, grupos, FNRH local, BOH, colchões extras) | Implementado |
 | Loja, Restaurante, Lavanderia, Governança, Manutenção, Escala, Estoque | Implementados |
 | Site + motor de reservas, Portal do hóspede | Implementados |
 | Comercial (funil, WhatsApp, e-mail, landing pages) e Marketing (campanhas) | Implementados |
-| Relatórios, Auditoria (pendências + trilha), Conciliação (OFX e cartão) | Implementados |
-| Pagamentos online | Safrapay implementado, aguardando liberação de produção; Pix direto com baixa manual |
-| FNRH Digital (envio ao governo) | Integração escrita; em modo `simulado` até haver credenciais |
+| Relatórios, Auditoria (pendências, trilha e fechamentos), Conciliação (OFX e cartão) | Implementados |
+| Pagamentos online | Safrapay implementado; ativação em produção a confirmar. Pix direto tem baixa manual |
+| FNRH Digital (envio ao governo) | Integração Serpro escrita; credenciais e homologação precisam ser verificadas no ambiente |
 | Fiscal (NFS-e/NFC-e) | Esqueleto com gateway `simulado`; provedores reais são stubs |
 | NPS, CRM do Hóspede, Canais/OTAs | Proposta / não iniciados |
 
-Todo integrador externo começa em modo **`simulado`** (sem rede), então o sistema roda de
-ponta a ponta em desenvolvimento sem nenhuma credencial.
+Os gateways usam **`simulado`** por padrão, com uma exceção importante de comportamento:
+`EMAIL_GATEWAY=simulado` envia pelo backend do Django e pode usar **SMTP real** se
+`EMAIL_HOST` estiver preenchido. Para desenvolvimento sem envio real, deixe as
+credenciais externas vazias. Detalhes e limites: [Estado atual](docs/ESTADO_ATUAL.md).
+
+O código publicado inclui relatórios de **carteira (OTB), pickup, ritmo de vendas e
+custo de distribuição**, três relatórios de governança, restrições de venda,
+fechamento diário e kit de contingência. A nova visão gráfica da governança e os
+refinos mais recentes de navegação ainda estavam locais na data desta revisão.
+
+A arquitetura modular permite ativação por instalação; não implementa isolamento
+SaaS de vários hotéis no mesmo banco.
 
 ---
 
@@ -98,7 +114,7 @@ ponta a ponta em desenvolvimento sem nenhuma credencial.
 ### 2.1 Pré-requisitos
 
 - **Python 3.14** (o projeto usa `target-version = py314`)
-- **PostgreSQL 14+**. SQLite não serve: a trava contra overbooking usa
+- **PostgreSQL**; o ambiente de referência e o CI usam **PostgreSQL 16**. SQLite não serve: a trava contra overbooking usa
   `ExclusionConstraint` com a extensão `btree_gist`.
 - **Docker** (o jeito mais simples de ter o Postgres) e **Git**
 
@@ -110,6 +126,7 @@ ponta a ponta em desenvolvimento sem nenhuma credencial.
 git clone https://github.com/VicZk/vo_testa.git && cd vo_testa
 python3.14 -m venv .venv
 .venv/bin/pip install -r requirements-dev.txt        # inclui requirements.txt
+source .venv/bin/activate                           # comandos python abaixo usam esta venv
 
 docker run -d --name vo_testa_pg -p 127.0.0.1:55432:5432 \
   -e POSTGRES_USER=vo -e POSTGRES_PASSWORD=vo_local_dev -e POSTGRES_DB=crm_vo_testa \
@@ -122,6 +139,9 @@ docker run -d --name vo_testa_pg -p 127.0.0.1:55432:5432 \
 uv python install 3.14
 uv venv --python 3.14 $HOME\.venvs\vo_testa          # venv fora do OneDrive
 uv pip install --python $HOME\.venvs\vo_testa\Scripts\python.exe -r requirements-dev.txt
+# Nos passos seguintes, use este executável no lugar de python:
+$PousadaPython = Join-Path $HOME '.venvs\vo_testa\Scripts\python.exe'
+# Exemplo: & $PousadaPython manage.py migrate
 
 docker run -d --name vo_testa_pg -p 127.0.0.1:55432:5432 `
   -e POSTGRES_USER=vo -e POSTGRES_PASSWORD=vo_local_dev -e POSTGRES_DB=crm_vo_testa `
@@ -156,7 +176,8 @@ O comando cria os 4 tipos de quarto de pernoite e os 24 quartos (`Quarto 01` a
 em seguida `configurar_camas` (posições de cama, sofás e pool de colchões extras),
 `carregar_tarifas` (tabela de preços aprovada) e `sincronizar_vitrine` (um card por
 quarto no site, com 9 destaques). Os seeds de preço e camas dependem exatamente
-desses nomes de tipos e quartos.
+desses nomes de tipos e quartos. Use o fluxo completo em banco novo; os comandos
+chamados por `--completo` possuem efeitos próprios sobre camas, tarifas e vitrine.
 
 **Dados de demonstração (opcional).** Os seeds não acompanharam todas as regras novas:
 
@@ -189,7 +210,7 @@ e-mail é impresso no terminal (sem `EMAIL_HOST`, o backend é o de console).
 ### 2.5 Testes
 
 ```bash
-python manage.py test                    # suíte inteira (~1.320 testes, ~10 min)
+python manage.py test --noinput          # suíte inteira; quantidade e tempo variam
 python manage.py test apps.reservas      # um app
 ```
 
@@ -380,10 +401,10 @@ Cada integração externa é escolhida por uma variável e sempre começa em `si
 |---|---|---|
 | `PAGAMENTOS_GATEWAY` | `simulado`, `safrapay` | Safrapay pronto para Pix, cartão e boleto (homologação) |
 | `PIX_DIRETO` (flag) | BR Code gerado localmente | Sem PSP: confirmação manual pela recepção |
-| `FNRH_GATEWAY` | `simulado`, `serpro` | Fluxo da API v2 escrito; falta credencial |
+| `FNRH_GATEWAY` | `simulado`, `serpro` | Fluxo da API v2 escrito; conferir credenciais e homologação no ambiente |
 | `FISCAL_GATEWAY` | `simulado`, `focus`, `governo` | `focus` e `governo` são stubs |
 | `WHATSAPP_GATEWAY` | `simulado`, `cloud`, `bsp` | Cloud API (Meta) pronta; `bsp` stub |
-| `EMAIL_GATEWAY` | `simulado`, `ses` | `ses` stub |
+| `EMAIL_GATEWAY` | `simulado`, `ses` | `simulado` usa o backend Django (SMTP real se configurado); `ses` é stub |
 | `MIDIA_GATEWAY` | `simulado`, `meta`, `google` | Meta CAPI pronta; Google stub |
 | `DECISAO_GATEWAY` | `simulado`, `jev` | Piloto de score de lead |
 
@@ -628,8 +649,8 @@ desliga a trava da FNRH, as taxas automáticas, o MFA e o limite de login.
 
 - **Onde:** dentro de cada app (`apps/<app>/tests.py` e `tests_*.py`), com `TestCase` do
   Django. Regras de dinheiro e de disponibilidade são sempre testadas.
-- **Quantos:** cerca de 1.450 testes. Os mais densos:
-  `comercial`, `nucleo`, `reservas`, `marketing`, `pagamentos`.
+- **Resultados:** contagens e tempos em auditorias/changelogs pertencem à execução
+  registrada. Consulte o resultado da suíte e do CI no commit que será publicado.
 - **Navegador:** `apps/site/tests_e2e.py` usa Playwright (reserva no site, calendário,
   funil, a LP da Inauguração e o menu lateral do CRM). Localmente é pulado se ele não
   estiver instalado (`pip install playwright==1.64.0 && playwright install chromium`); no
@@ -637,9 +658,11 @@ desliga a trava da FNRH, as taxas automáticas, o MFA e o limite de login.
 - **Rodar:**
 
 ```bash
-python manage.py test                                   # tudo
+python manage.py makemigrations --check --dry-run
+python manage.py test --noinput                         # tudo
 python manage.py test apps.reservas.tests_precos        # um arquivo
-coverage run --source=apps manage.py test && coverage report   # cobertura
+python -m playwright install chromium
+E2E_OBRIGATORIO=1 python manage.py test apps.site.tests_e2e --noinput
 ```
 
 - **Lint e segurança:** `ruff check apps config`, `bandit -r apps config -ll`,
@@ -647,14 +670,16 @@ coverage run --source=apps manage.py test && coverage report   # cobertura
 - **CI de testes** (`.github/workflows/testes.yml`): a cada push em `main` e `dev` e em
   todo PR, roda o ruff, sobe um PostgreSQL 16, confere se as migrations estão em dia
   (`makemigrations --check`) e roda a suíte inteira; em paralelo, o job "Fluxos no
-  navegador" roda os testes do Playwright com Chromium. Ele existe neste fork; no original o
-  push na `main` ainda publica sem esperar teste nenhum. Para fechar essa porta lá, basta
-  levar o arquivo e fazer o Railway aguardar os checks do GitHub antes de publicar.
+  navegador" roda os testes do Playwright com Chromium. Proteção de branch e espera
+  dos checks pelo serviço de deploy são configurações externas; precisam ser
+  conferidas antes de uma publicação de código.
 - **CI de segurança** (`.github/workflows/security.yml`): pip-audit, bandit, regras de
   segurança do ruff, semgrep (só relatório), `check --deploy` e gitleaks.
-- **Máquina do CI:** os workflows rodam em `ubuntu-24.04`, fixo, e não em
-  `ubuntu-latest`, que o GitHub troca para o Ubuntu 26 a partir de 19/10/2026. Depois da
-  abertura dá para voltar ao `latest` com calma.
+- **Máquina do CI:** os workflows fixam `ubuntu-24.04` e Python 3.14.
+- **PowerShell:** use `$env:E2E_OBRIGATORIO = '1'` antes do comando de navegador;
+  `playwright` está em `requirements-dev.txt`, mas o Chromium precisa ser instalado.
+- **Documentação:** links, comandos, configuração e diff são conferidos; uma revisão
+  somente de texto não representa nova homologação dos módulos.
 
 ---
 
@@ -663,8 +688,9 @@ coverage run --source=apps manage.py test && coverage report   # cobertura
 **Railway** (`railway.json`): build pelo Railpack; a cada deploy roda
 `migrate`, `collectstatic` e sobe `gunicorn config.wsgi:application --workers 2`;
 healthcheck em `/healthz/`, que confere o banco e responde 503 se ele não atender (um
-container sem banco não substitui o que está no ar). O serviço está ligado ao GitHub e
-publica a cada push na `main` do repositório original. Estáticos saem pelo WhiteNoise.
+container sem banco não deve substituir o que está no ar). A configuração de
+auto-deploy do ambiente deve ser confirmada antes de publicar código.
+Estáticos saem pelo WhiteNoise; em produção, o storage usa manifesto com hashes.
 
 **Logs:** tudo vai para a saída padrão, que o Railway mostra nos logs do deploy: erros
 500 com traceback (`django.request`) e falhas de receivers de sinais
@@ -710,8 +736,10 @@ aviso não chegar no prazo. Sem isso, um cron parado só aparece em vermelho no 
 Railway. Configuração dos checks: frequentes com período de 10 min e tolerância de 10 min;
 diárias com o cron `15 6 * * *` (UTC) e tolerância de 1 h.
 
-**Backup:** além dos backups do Railway (ligue o PITR do Postgres lá), `backup_banco`
-guarda uma cópia fora dele todo dia: `pg_dump` quando disponível, senão JSON compactado
+**Backup:** com R2 ou `BACKUP_DIR` configurado e a rotina agendada,
+`backup_banco` guarda uma cópia diariamente; sem destino configurado, não faz backup.
+A disponibilidade/configuração de backups e PITR no provedor precisa ser conferida.
+O comando usa: `pg_dump` quando disponível, senão JSON compactado
 de todos os dados. Restaurar: `pg_restore --clean --if-exists --no-owner -d
 "$DATABASE_URL" arquivo.dump` ou `python manage.py migrate && python manage.py loaddata
 arquivo.json.gz`. Teste a restauração num banco separado antes de precisar dela.
@@ -753,7 +781,7 @@ Toda tela do CRM nasce no design system; nada de estilo paralelo nem cor fixa no
   cor, giro e posição — o contrato está nos testes de design. Abaixo de 820 px o menu é
   gaveta e abre sempre inteiro, como diálogo: foco preso, Esc e o véu fecham, a página
   não rola por baixo e o foco volta ao botão.
-- **Responsivo:** nenhuma tela rola de lado entre 320 e 1440 px, com o menu aberto,
+- **Contrato responsivo:** conferir ausência de rolagem lateral entre 320 e 1440 px, com o menu aberto,
   recolhido ou em gaveta. A largura que sobra depende do menu, e o `@media` só enxerga a
   janela; por isso o que divide espaço decide pelo espaço: painel lateral em
   `flex-wrap` (`.colunas-2-1`), grades em `minmax(min(Npx, 100%), 1fr)`, e o corredor de
@@ -761,7 +789,7 @@ Toda tela do CRM nasce no design system; nada de estilo paralelo nem cor fixa no
   (`.tabela-rol`, criado pelo `static/js/tabela-rol.js`). Alvo de toque ≥ 44 px no
   ponteiro grosso, inclusive no portal, no pagamento e no login.
 - **Portal do hóspede e página de pagamento:** carregam o `static/css/base.css`, um
-  recorte do `app.css` com só o que elas usam (6 KB comprimidos em vez de 52 KB).
+  recorte do `app.css` com os componentes necessários às telas públicas.
   O recorte é GERADO: edite só o `app.css` e rode `python manage.py gerar_base_css`;
   a lista do que entra está em `apps/nucleo/css_publico.txt`, e o teste
   `CssDasTelasPublicasTests` avisa quando o recorte ficou para trás ou quando uma
@@ -894,8 +922,8 @@ O passo a passo completo, com os arquivos exatos, está em
 
 O projeto foi construído com o Claude Code. O `CLAUDE.md` é lido automaticamente por ele
 e descreve convenções e o estado de cada módulo: mantenha-o atualizado quando algo mudar
-(hoje ele ainda descreve o Frigobar, que foi removido). Este README e os dois documentos
-em `docs/` servem para humanos e para a IA como mapa do código.
+junto do [Estado atual](docs/ESTADO_ATUAL.md). O [índice](docs/README.md) identifica
+quais documentos são manuais atuais e quais preservam planos/evidências históricos.
 
 ---
 
@@ -911,9 +939,9 @@ O projeto nasceu no macOS e funciona no Windows com alguns cuidados:
    padrão. Antes de rodar: `$env:PYTHONUTF8 = "1"`.
 4. **Nomes de arquivo:** o Windows proíbe `? : * " < > |`. Dois documentos com `?` no
    nome impediam o clone e foram renomeados neste fork; não adicione arquivos assim.
-5. **Teste que falha só no Windows:**
-   `comercial…test_webhook_audio_baixa_e_salva_arquivo` lê um arquivo sem fechá-lo antes
-   de apagar a pasta temporária. No Linux passa.
+5. **Arquivos abertos em testes:** feche os handles antes de apagar temporários;
+   o Windows pode impedir a remoção que o Linux permite. Um relato antigo de falha
+   deve ser reproduzido no commit atual antes de ser tratado como problema aberto.
 
 ---
 
@@ -952,11 +980,13 @@ O glossário completo está em [`docs/ARQUITETURA.md` §13](docs/ARQUITETURA.md)
 
 | Documento | Conteúdo |
 |---|---|
+| [Índice completo](docs/README.md) | Todos os manuais, planos e registros históricos |
+| [Estado atual](docs/ESTADO_ATUAL.md) | Base publicada, código local e limites de integrações |
 | [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md) | Referência técnica completa da arquitetura |
 | [`docs/MODULOS_E_FLUXOS.md`](docs/MODULOS_E_FLUXOS.md) | Cada módulo por dentro e os fluxos ponta a ponta |
 | [`docs/ESPECIFICACAO.md`](docs/ESPECIFICACAO.md) | Especificação do produto (módulos, regras, fases) |
 | [`docs/REFERENCIA_DESBRAVADOR.md`](docs/REFERENCIA_DESBRAVADOR.md) | Levantamento do Desbravador usado como referência de mercado |
-| [`docs/Checklist_CRM_100.md`](docs/Checklist_CRM_100.md) | Checklist de integrações e homologação para a inauguração |
+| [`docs/Checklist_CRM_100.md`](docs/Checklist_CRM_100.md) | Checklist de ativação e operação, separado da implementação |
 | `docs/Implementar_*.md` | Planos de FNRH, Safrapay, fiscal, WhatsApp e telefonia |
 | `docs/Reservas/`, `docs/Descritivo_Quartos/`, `docs/Precificação/` | Configuração física dos quartos, descritivos e estudo de preços |
 | `docs/Marketing/`, `docs/Comercial/`, `docs/WhatsAppAPI/` | Material comercial e de marketing |

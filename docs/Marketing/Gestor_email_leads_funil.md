@@ -1,5 +1,9 @@
 # Gestor de E-mail dos Leads do Funil — Comercial
 
+> **Estado do código em 21/10/2026:** e-mail 1:1, templates, histórico e reenvio de
+> pendências têm implementação. `EMAIL_GATEWAY=simulado` pode enviar por SMTP real;
+> SES é stub. O plano histórico abaixo deve ser lido com [Estado atual](../ESTADO_ATUAL.md).
+
 > Roteiro de implementação, fase a fase. Este doc é o **plano construível** do e-mail
 > atrelado ao lead/funil (envio 1:1 pedido pelo cliente + campanha por segmento), com
 > o motor de template/variáveis compartilhado. Estratégia e infra de entregabilidade
@@ -16,7 +20,7 @@ Um **motor de template + variáveis** alimenta **dois caminhos**:
   do funil (via SES / subdomínio `news.`).
 
 Regras herdadas do projeto: gateway plugável (`EMAIL_GATEWAY = simulado | ses`),
-`simulado` default (sem rede), envios **imutáveis** (`EnvioEmail` append-only), **sem
+`simulado` default (backend Django; pode usar SMTP real), envios **imutáveis** (`EnvioEmail` append-only), **sem
 Celery** (management command + cron), só **opt-in** (LGPD), design **Lampião**,
 `@requer_modulo(Modulo.COMERCIAL)`.
 
@@ -30,7 +34,8 @@ simulado. Não depende da AWS.
 ### 1.1 Gateway plugável
 - `apps/comercial/email_gateways.py`: `get_email_gateway()` lê `settings.EMAIL_GATEWAY`.
 - Interface `enviar(*, para, assunto, html, texto, headers) -> {message_id, status}`.
-- `simulado`: sem rede, `message_id` fake, loga; hook para forçar bounce em teste.
+- `simulado`: usa o backend Django e gera identificador local. Com SMTP configurado,
+  realiza envio real; desenvolvimento sem envio deve usar console/locmem.
 
 ### 1.2 Motor de template + variáveis
 - Reusar o preenchedor de variáveis das Respostas Rápidas do WhatsApp

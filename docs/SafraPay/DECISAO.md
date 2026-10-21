@@ -1,5 +1,9 @@
 # SafraPay — Decisão de integração (maquininha na recepção)
 
+> **Decisão histórica de contratação.** O projeto passou a ter adapter Safrapay
+> online e Pix direto manual; consulte o [guia atual](../Implementar_Safrapay.md).
+> Condições comerciais, equipamento e conta contratada não foram reconferidos.
+
 **Data:** 10/09/2026 · **Decisão:** Caminho **B — maquininha avulsa + baixa no CRM**.
 
 ## Contexto

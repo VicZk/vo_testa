@@ -1,0 +1,88 @@
+# Estado atual do projeto
+
+**Revisão documental: 21/10/2026.** Voltar ao [README](../README.md) ou ao
+[índice da documentação](README.md). Este registro diferencia código publicado,
+trabalho local e ativação de serviços externos.
+
+## Base da revisão
+
+| Referência | Estado conferido |
+|---|---|
+| Repositório | Fork pública `VicZk/vo_testa`, branch `dev` |
+| Base de código publicada revisada | [`3e30a11fa18ffbefb08136fa2b83ca4560dd8b1e`](https://github.com/VicZk/vo_testa/tree/3e30a11fa18ffbefb08136fa2b83ca4560dd8b1e) |
+| Checkout local adicional | `1f1aab660239a56f370778aa3b05efb95ce7ee34`, nove commits além da base |
+| Natureza desta entrega | Documentação; não publica os nove commits de código nem faz deploy |
+| Produção e contas externas | Não consultadas nesta revisão |
+
+As contagens e durações de testes nas auditorias e no changelog são evidências
+datadas. Não foram reexecutadas como parte desta revisão de texto.
+
+## Funcionalidades na base publicada
+
+| Área | O que existe |
+|---|---|
+| Hospedagem | Reservas, grupos, disponibilidade, mapa, preços por temporada, camas extras, day use, FNRH/BOH, conta, check-in e check-out |
+| Regras de venda | Restrições por período/tipo, sinal/cancelamento, tolerância de arredondamento e no-show configurável |
+| Financeiro | Caixa por operador e módulo, conferência, estorno, adiantamento, crédito online, faturamento e devolução |
+| Operação | Estoque e inventário, loja, restaurante, lavanderia, manutenção e escala |
+| Governança | Tarefas, arrumações, inspeção opcional, ronda, discrepâncias e três relatórios |
+| Gestão | Pendências, trilha de auditoria, fechamento diário e conciliação OFX/cartão |
+| Receita | Carteira de reservas (OTB), pickup, ritmo de vendas e custo de distribuição |
+| Continuidade | Kit imprimível de hospedados/chegadas/saídas/quartos, envio diário opcional e backup por rotina |
+| Atendimento | Comercial, oportunidades, cotações, atividades, WhatsApp, e-mail, LPs e campanhas |
+| Público | Site, motor de reservas, portal por token, pré-check-in, extrato e solicitações |
+
+Detalhes: [Especificação](ESPECIFICACAO.md) e [Módulos e fluxos](MODULOS_E_FLUXOS.md).
+A estrutura inicial é de 24 quartos, quatro tipos técnicos de pernoite e quatro
+unidades de day use ativas. Os cadastros efetivos da instalação determinam a operação.
+
+## Integrações e limites
+
+| Integração | Implementação | Limite de interpretação |
+|---|---|---|
+| Safrapay | Pix/cartão/boleto, diagnóstico de credenciais, timeout e tratamento de falhas | Evidências HML não comprovam liberação ou liquidação em produção |
+| Pix direto | Código Pix gerado localmente e baixa manual | Não há webhook de confirmação desse Pix |
+| FNRH Digital / Serpro | Adapter real e reenvio de pendências | Credenciais, códigos de cadastro e homologação precisam de validação |
+| Fiscal | Documento/itens, telas, campos tributários e simulador | `focus` e `governo` lançam `NotImplementedError`; credenciais não implementam o provider |
+| WhatsApp | Cloud API, mídia, webhook e estados; BSP é stub | WABA, número, token, templates e entrega real dependem da conta |
+| E-mail | Backend Django, comunicação 1:1 e campanhas | `EMAIL_GATEWAY=simulado` pode enviar por SMTP real; SES é stub |
+| Mídia paga | Meta CAPI e recursos de campanhas; Google é stub | Permissões, credenciais e resultados externos não foram conferidos |
+| Decisão comercial | Simulador determinístico e adapter JEV | Contrato e disponibilidade do serviço externo precisam ser validados |
+| R2, backup e monitor | Implementações opcionais por configuração | O código não comprova ativação nem restauração bem-sucedida de backup |
+
+NPS é uma proposta com endpoints stub, sem coleta persistida de respostas.
+CRM do Hóspede e Canais/OTAs são evolução de catálogo. Telefonia/WebRTC continua
+planejada. Frigobar foi removido do catálogo e não possui app ativo.
+
+## Melhorias locais ainda não publicadas na data da revisão
+
+Os nove commits abaixo já existiam no checkout local em 21/10/2026, mas não na
+base remota revisada. Esta entrega documental registra as diferenças sem publicar
+os arquivos de código:
+
+| Commit local | Mudança |
+|---|---|
+| `6f66d4f` | Transição de navegação concentrada no conteúdo |
+| `f649111` | Padronização dos tooltips |
+| `fa79ddb` | Ajustes de textos da interface |
+| `45f9417` | Melhor aproveitamento de monitores largos |
+| `6eab595` | Ciclo de governança, próxima ação e fila da equipe |
+| `e275059` | Nova visão geral gráfica de governança |
+| `d2d858d` | Integração das melhorias de governança |
+| `c218532` | Correção de acionamento duplicado por toque |
+| `1f1aab6` | Refinos de governança no celular, textos e hover |
+
+Este é um **snapshot datado**. Após uma publicação posterior de código, atualize
+a tabela com a versão remota efetivamente confirmada.
+
+## Como interpretar os documentos
+
+- **README, especificação, arquitetura e módulos:** referência do código publicado.
+- **Guias de integração:** código e passos de ativação; a matriz acima prevalece
+  sobre planos ou resultados históricos mantidos nesses guias.
+- **Checklists:** uma revisão textual não comprova homologação; itens sem evidência
+  atual continuam pendentes de confirmação.
+- **Auditorias, roteiros, estudos e evidências:** registros datados preservados para
+  rastreabilidade, não atestados atuais de produção.
+- **PDFs, DOCX, imagens e materiais de fornecedores:** referências da data de origem;
+  não foram regenerados nesta revisão.

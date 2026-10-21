@@ -1,5 +1,9 @@
 # Evidência — WABA bloqueada para envio (erro 141008)
 
+> **Evidência histórica.** Este arquivo preserva um incidente externo específico.
+> Não representa o status atual da conta Meta. Consulte os limites e passos de
+> ativação no [Estado atual](ESTADO_ATUAL.md) e no [checklist](Checklist_CRM_100.md).
+
 **Empresa:** POUSADA VO TESTA LTDA — CNPJ 26.003.246/0001-00
 **WABA ID:** 1055856203962312  ·  **Portfólio/Business ID:** 1320673763168182
 **Número:** +55 49 2055-0000  ·  **Phone Number ID:** 1340621489131251

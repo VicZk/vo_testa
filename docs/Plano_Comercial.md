@@ -1,5 +1,9 @@
 # Plano Comercial — Pousada Vô Testa
 
+> **Plano comercial e registro de decisões.** Metas, prazos e condições da época
+> foram preservados. A revisão documental não verifica execução da operação;
+> funcionalidades implementadas estão no [Estado atual](ESTADO_ATUAL.md).
+
 **Status:** implementado (17/07/2026) — ondas P0–P3  
 **Código:** `apps/comercial/` · captura no site `core:pedir_proposta`  
 **Fora deste plano:** coleta real de NPS (`docs/Proposta_NPS.md`); Comercial só faz hand-off.

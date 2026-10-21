@@ -1,5 +1,9 @@
 # Checklist para o contador — dados fiscais (Pousada Vô Testa)
 
+> **Checklist para validação atual.** Respostas registradas em outros documentos
+> pertencem à sua data original. O código tem simulador fiscal; o provider real
+> ainda precisa ser implementado e homologado. Veja [Implementar Fiscal](Implementar_fiscal.md).
+
 Documento para **encaminhar ao contador**. Objetivo: reunir os parâmetros fiscais para
 configurar a emissão de nota eletrônica no sistema (NFS-e de serviço + NFC-e de consumo).
 Complementa o plano técnico em `docs/Implementar_fiscal.md`. Município: **Itá/SC**.

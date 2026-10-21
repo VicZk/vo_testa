@@ -1,5 +1,9 @@
 # Implementar — Telefonia de Vendas (nuvem, custo zero de licença) + BI por IA
 
+> **Plano futuro — contexto em 21/10/2026.** Não há app operacional de telefonia no
+> código publicado. Equipamentos, provedores, preços e contratos abaixo pertencem
+> ao planejamento; precisam ser conferidos antes de implementação ou contratação.
+
 > Plano executável da **voz de vendas** no CRM. Refina o Anexo B de
 > `docs/Marketing/CRM_WhatsApp.md` para a realidade confirmada: **equipe de vendas
 > remota** (escritório em **Concórdia**), central da pousada em **Itá**.

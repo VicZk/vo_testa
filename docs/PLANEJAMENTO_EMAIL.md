@@ -1,5 +1,9 @@
 # Planejamento de E-mail — Pousada Vô Testa
 
+> **Plano e decisões históricas.** Envio Django/SMTP, comunicação 1:1, campanhas e
+> reenvio de pendências existem no código. SES ainda é stub; domínios e contas não
+> foram conferidos. `EMAIL_GATEWAY=simulado` não impede envio SMTP real.
+
 **Data:** 16 de junho de 2026
 **Domínio:** `pousadavotesta.com.br` (registrado)
 **Objetivo:** criar os e-mails profissionais dos setores e habilitar o envio automático de

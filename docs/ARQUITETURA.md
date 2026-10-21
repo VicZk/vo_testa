@@ -1,9 +1,9 @@
 # CRM/PMS Pousada Vô Testa — Arquitetura
 
-> Referência técnica que complementa o [README](../README.md). Conferida contra o
-> código da branch `dev` em 20/10/2026 (base: `main` do original, commit `4782eb9`).
-> Caminhos são relativos à raiz do repositório; números de linha podem mudar com o
-> tempo, então trate-os como ponto de partida.
+> Referência técnica revisada em 21/10/2026, complementar ao [README](../README.md).
+> A base publicada, as diferenças locais e os limites de homologação estão no
+> [Estado atual](ESTADO_ATUAL.md). Caminhos são relativos à raiz do repositório;
+> prefira nomes de funções/classes a números de linha. Índice: [docs](README.md).
 
 ---
 
@@ -29,40 +29,37 @@ ativas** (`apps/nucleo/migrations/0028_reduzir_day_use_para_4.py` inativou DAY-0
 **núcleo + módulos contratáveis**, para poder ser vendido depois a outras pousadas. A
 Vô Testa é o cliente nº 1.
 
-**Produção:** app unificado no Railway (projeto `Site_CRM_Pousada_Vo_Testa`, env
-`production`, serviço `web`), servindo `www.pousadavotesta.com.br`. O serviço é ligado
-ao GitHub e **auto-deploya no push da `main`** — autorizar push na `main` equivale a
-publicar. O fork de desenvolvimento é `VicZk/vo_testa` (branch `dev`), com `upstream`
-apontando para `Geffersonvivan/vo_testa` (push desabilitado).
-
-**Status:** núcleo validado; módulos da fase 1 implementados; fase 2 em andamento
-(CRM do Hóspede, Canais/OTAs, Fiscal com provider real, Safrapay em homologação).
-O detalhe por módulo vive em `CLAUDE.md` → “Estado atual”.
+**Ambientes:** os registros do projeto associam a produção ao Railway e à `main`
+do original. A configuração e a versão ativa não foram consultadas nesta revisão.
+A fork de desenvolvimento é `VicZk/vo_testa`, branch `dev`; publicação de documentos
+nela não comprova deploy. Consulte o [Estado atual](ESTADO_ATUAL.md) para separar
+implementação, trabalho local e serviços externos.
 
 ### Stack
 
 | Camada | Escolha | Onde está |
 |---|---|---|
 | Linguagem | Python **3.14** | `.python-version`, `ruff.toml` (`target-version = "py314"`) |
-| Framework | **Django 6.0.8** | `requirements.txt` |
+| Framework | **Django 6** (pin em requirements) | `requirements.txt` |
 | Banco | **PostgreSQL** (obrigatório) | `django.contrib.postgres` em `INSTALLED_APPS`; `ExclusionConstraint` + extensão `btree_gist` (`apps/reservas/migrations/0001_initial.py`) |
-| Driver | `psycopg` **3.3.4** (+ `psycopg-binary`) | `requirements.txt` |
-| Config de banco | `dj-database-url` **3.1.2** (`DATABASE_URL`) | `config/settings.py:143` |
-| `.env` | `python-dotenv` **1.2.2** | `config/settings.py:20` |
-| Servidor | `gunicorn` **26.0.0** | `railway.json` |
-| Estáticos | `whitenoise` **6.12.0** (`CompressedStaticFilesStorage`) | `config/settings.py:176` |
-| Mídia | `django-storages` **1.14.6** + `boto3` **1.43.78** (Cloudflare R2, S3 API) | `config/settings.py:181-211` |
-| Front do CRM | Templates Django + **HTMX 2.0.4** + **Alpine.js 3.14.8** (servidos de `static/vendor/`) — sem SPA | `templates/base.html:16,106` |
+| Driver | `psycopg` (pin em requirements) (+ `psycopg-binary`) | `requirements.txt` |
+| Config de banco | `dj-database-url` **3.1.2** (`DATABASE_URL`) | `config/settings.py` |
+| `.env` | `python-dotenv` (pin em requirements) | `config/settings.py` |
+| Servidor | `gunicorn` (pin em requirements) | `railway.json` |
+| Estáticos | `whitenoise` (manifesto com hashes em produção; storage comprimido em desenvolvimento) | `config/settings.py` |
+| Mídia | `django-storages` **1.14.6** + `boto3` (pin em requirements) (Cloudflare R2, S3 API) | `config/settings.py` |
+| Front do CRM | Templates Django + **HTMX 2.0.4** + **Alpine.js 3.14.8** (servidos de `static/vendor/`) — sem SPA | `templates/base.html` |
 | Front do site | Templates Django + **Tailwind** (build estático) | `tailwind.config.js`, `apps/site/static/site/css/tailwind.css` |
 | Gráficos | Chart.js via CDN, tematizado | dashboard / painéis |
-| QR / imagem | `qrcode`, `Pillow` (sem pin) | portal, FNRH, MFA, Pix |
+| QR / imagem | `qrcode`, `Pillow` (pins em requirements) | portal, FNRH, MFA, Pix |
 | MFA | `pyotp>=2.9.0` (TOTP) | `apps/nucleo/mfa.py` |
 | Pins de segurança | `sqlparse>=0.6.0`, `urllib3>=2.8.0` | `requirements.txt` |
 
-**Não instalado** (apesar de citado na especificação): Django REST Framework, Celery e
-Redis. A “API pública” existe apenas como *stub* (`/api/nps/v1/`) escrito em views
-Django puras; tarefas assíncronas são *management commands* (ver §10) e, no caso do
-e-mail 1:1, uma thread de fundo (`EMAIL_ENVIO_ASSINCRONO`).
+**Não instalados:** Django REST Framework e Celery. O cliente Redis está em
+`requirements.txt`; o uso é opcional por `REDIS_URL`. A API NPS é um *stub*
+(`/api/nps/v1/`) em views Django; há outras views públicas e webhooks próprios.
+Rotinas agendadas são *management commands* (§10); e-mail 1:1 também pode usar thread
+de fundo (`EMAIL_ENVIO_ASSINCRONO`). Os pins efetivos são os do requirements.
 
 Ferramentas de desenvolvimento (`requirements-dev.txt`): `ruff==0.15.20`,
 `pip-audit==2.10.1`, `pytest==9.1.1`, `bandit==1.9.4`, `detect-secrets==1.5.0`,
@@ -212,7 +209,7 @@ estoque, estrutura física, pessoas) e a infraestrutura transversal.
 ### 3.1 O pacote de models
 
 `apps/nucleo/models/` é um **pacote**, um arquivo por domínio, com `__init__.py`
-reexportando tudo (`__all__`, `apps/nucleo/models/__init__.py:56`) — o resto do sistema
+reexportando tudo (`__all__`, `apps/nucleo/models/__init__.py`) — o resto do sistema
 importa sempre de `apps.nucleo.models`.
 
 | Arquivo | Models | Funções públicas exportadas |
@@ -237,7 +234,7 @@ Os papéis são especializações `OneToOne`:
 - `Agencia` (categoria agência|empresa, comissão padrão)
 
 “Cliente avulso” = `Pessoa` sem especialização. `Pessoa.papeis`
-(`apps/nucleo/models/cadastros.py:67`) devolve os papéis ativos para exibição.
+(`apps/nucleo/models/cadastros.py`) devolve os papéis ativos para exibição.
 
 ### 3.3 Estrutura física: TipoUH / UH / temporadas / feriados
 
@@ -268,7 +265,7 @@ Os papéis são especializações `OneToOne`:
 
 ### 3.4 Financeiro e motor de caixa
 
-Regras que não se quebram (`apps/nucleo/models/financeiro.py:1-12`):
+Regras que não se quebram (`apps/nucleo/models/financeiro.py`):
 
 1. **Dinheiro é `DecimalField`**, nunca float.
 2. **`MovimentoCaixa` é imutável** — `save()` levanta `ValidationError` se não for
@@ -357,7 +354,7 @@ o autor), `resolver` (audita `resolver_ocorrencia`), `reabrir`.
 
 ### 3.7 Dashboard, busca global e demais utilitários do núcleo
 
-- **Dashboard** (`apps/nucleo/views.py:56`) — monta **tudo conforme o acesso**:
+- **Dashboard** (`apps/nucleo/views.py`) — monta **tudo conforme o acesso**:
   cards de módulos (só os ativos que o usuário tem), KPIs e bloco “Precisa de atenção”
   por área (`tem_financeiro`, `tem_reservas`, `tem_estoque`, `tem_logbook`) e
   **gráficos de decisão só para gerência** (`tem_graficos = eh_gerente(user)`).
@@ -382,7 +379,7 @@ o autor), `resolver` (audita `resolver_ocorrencia`), `reabrir`.
   por padrão, aceita fixo com `aceitar_fixo=True`, e normaliza a formatação.
 - **`alas.py`**, **`estrutura.py`**, **`feriados.py`** — descritos acima.
 
-**Context processors** (registrados em `config/settings.py:131-135`):
+**Context processors** (registrados em `config/settings.py`):
 
 | Context processor | Entrega |
 |---|---|
@@ -549,7 +546,7 @@ Exemplos reais:
 | `manutencao.services` | `reservas.uh_ocupada` | não bloquear quarto ocupado |
 | `governanca.services` / `lavanderia.services` | `nucleo.models.modulo_ativo` | degradação graciosa dentro dos receivers |
 
-`apps/reservas/services.py` (≈1.930 linhas) é a interface pública do módulo mais
+`apps/reservas/services.py` é a interface pública do módulo mais
 central: disponibilidade (`uhs_disponiveis`, `uh_disponivel`, `tipo_disponivel`,
 `reservas_ativas_qs`, `expirar_vencidas`), preço (`tarifa_do_dia`,
 `tarifa_da_unidade`, `diaria_media`, `diaria_media_unidade`, `tarifa_base_unidade`,
@@ -569,10 +566,10 @@ função, para não criar ciclo):
   `comercial.FichaComercial`, `site.VitrineQuarto`, `governanca.TarefaGovernanca`,
   `loja.Venda`, `restaurante.Comanda`). O núcleo lendo os módulos é a inversão
   consciente das telas agregadoras (dashboard, busca, form de quarto, histórico).
-- `apps/fiscal/services.py:87` importa `reservas.ContaHospedagem`.
-- `apps/relatorios/services.py:174` importa `reservas.Reserva`.
-- `apps/reservas/views.py:1099` e `apps/site/views.py` importam `pagamentos.Cobranca`.
-- `apps/pagamentos/services.py:120` e `views.py:388` importam `site.Reserva` (sincroniza
+- `apps/fiscal/services.py` importa `reservas.ContaHospedagem`.
+- `apps/relatorios/services.py` importa `reservas.Reserva`.
+- `apps/reservas/views.py` e `apps/site/views.py` importam `pagamentos.Cobranca`.
+- `apps/pagamentos/services.py` e `views.py:388` importam `site.Reserva` (sincroniza
   o recibo do canal).
 - `apps/comercial/*` importa `pagamentos.Cobranca` e `site.ConfiguracaoSite`.
 - `apps/marketing/*` importa `comercial.Oportunidade`/`Campanha`/`GastoDiario` — aqui é
@@ -612,13 +609,15 @@ testes estão em `apps/reservas/tests.py` (`SinaisIsoladosTests`).
 
 Todo integrador externo é um objeto escolhido por uma variável de settings, com um
 `_GATEWAYS = {nome: Classe}` e um `get_*_gateway()` que levanta `ValidationError` para
-nome desconhecido. O default é **sempre** `simulado` — sandbox local, sem rede — o que
-deixa dev/testes funcionando fim-a-fim sem credencial.
+nome desconhecido, com exceções legadas indicadas na tabela. O default é
+`simulado`, mas isso **não garante ausência de rede**: o gateway de e-mail usa o
+backend Django e pode enviar por SMTP real quando configurado. Para desenvolvimento,
+deixe credenciais externas vazias e confira o backend efetivo.
 
 | Setting | Arquivo | Implementações | Status |
 |---|---|---|---|
-| `PAGAMENTOS_GATEWAY` | `apps/pagamentos/gateways.py` | `simulado`, `safrapay` | `safrapay` **implementado** (Pix/cartão/boleto na API HML; exige `SAFRAPAY_TOKEN`, sem ele erra claro em vez de cair no simulado). `status_credenciais()` monta o diagnóstico na tela. Falta o Token de produção. |
-| `FNRH_GATEWAY` | `apps/reservas/fnrh_gateway.py` | `simulado`, `serpro` | `serpro` implementado (fluxo criar_reserva → criar_pessoa → adicionar_hospede → checkin, Basic Auth); exige `FNRH_API_URL/USER/SENHA`. Pendente: credenciais SNRHos + homologação. |
+| `PAGAMENTOS_GATEWAY` | `apps/pagamentos/gateways.py` | `simulado`, `safrapay` | `safrapay` **implementado** (Pix/cartão/boleto na API HML; exige `SAFRAPAY_TOKEN`, sem ele erra claro em vez de cair no simulado). `status_credenciais()` monta o diagnóstico na tela. Credenciamento, token e teste de produção precisam ser conferidos no ambiente. |
+| `FNRH_GATEWAY` | `apps/reservas/fnrh_gateway.py` | `simulado`, `serpro` | `serpro` implementado (fluxo criar_reserva → criar_pessoa → adicionar_hospede → checkin, Basic Auth); exige `FNRH_API_URL/USER/SENHA`. Ativação: conferir credenciais SNRHos, dados e homologação no ambiente. |
 | `FISCAL_GATEWAY` | `apps/fiscal/gateways.py` | `simulado`, `focus`, `governo` | `focus` e `governo` são **stubs** (`raise NotImplementedError`). `get_gateway()` aqui faz *fallback* silencioso para `simulado` em nome desconhecido. |
 | `WHATSAPP_GATEWAY` | `apps/comercial/whatsapp_gateways.py` | `simulado`, `cloud`, `bsp` | `cloud` (Meta Graph API: texto, template, upload/download de mídia, áudio, imagem) implementado; `bsp` é **stub**. |
 | `EMAIL_GATEWAY` | `apps/comercial/email_gateways.py` | `simulado`, `ses` | `simulado` usa o `EMAIL_BACKEND` do Django (console em dev); `ses` é **stub** (Fase 4). |
@@ -735,9 +734,9 @@ não pagam esse custo).
 | Esqueci minha senha | `RecuperarSenha` em `auth_views.py` | `/crm/senha/esqueci/` → e-mail com link de uso único válido por 1 h (`PASSWORD_RESET_TIMEOUT`); mesma resposta exista ou não o e-mail; 5 pedidos / 15 min por IP. |
 | Anti-robô | `apps/nucleo/antirrobo.py` + `{% campos_antirrobo %}` | Campo armadilha invisível + carimbo assinado de tempo mínimo (2 s) nos formulários públicos ("Pedir proposta", páginas de captação); robô recebe sucesso falso e nada é criado. |
 | MFA (TOTP) | `apps/nucleo/mfa.py`, `mfa_views.py` | `pyotp` com `valid_window=1`; segredo e **códigos de backup com hash do Django** em `Usuario`; QR gerado inline como SVG (`SvgPathImage`); `consumir_backup` é de uso único. |
-| Settings de produção | `config/settings.py:234-243` | Com `DEBUG=0`: `SECURE_PROXY_SSL_HEADER`, `SECURE_SSL_REDIRECT` (isentando `^healthz/?$`), cookies `Secure`, HSTS 30 dias com subdomínios e preload. |
-| Sempre ligados | `config/settings.py:217-231` | Cookies com nome próprio (`vo_testa_sessionid`/`vo_testa_csrftoken`), `SECURE_REFERRER_POLICY="same-origin"` (protege tokens em URL do portal/pagamento), `SECURE_CONTENT_TYPE_NOSNIFF`, sessão de 10 h renovada por atividade, `SameSite=Lax`. |
-| `SECRET_KEY` | `config/settings.py:31-38` | Em produção (`DEBUG=0` e não `TESTING`), chave ausente ou com o prefixo de dev → `ImproperlyConfigured` na subida. |
+| Settings de produção | `config/settings.py` | Com `DEBUG=0`: `SECURE_PROXY_SSL_HEADER`, `SECURE_SSL_REDIRECT` (isentando `^healthz/?$`), cookies `Secure`, HSTS 30 dias com subdomínios e preload. |
+| Sempre ligados | `config/settings.py` | Cookies com nome próprio (`vo_testa_sessionid`/`vo_testa_csrftoken`), `SECURE_REFERRER_POLICY="same-origin"` (protege tokens em URL do portal/pagamento), `SECURE_CONTENT_TYPE_NOSNIFF`, sessão de 10 h renovada por atividade, `SameSite=Lax`. |
+| `SECRET_KEY` | `config/settings.py` | Em produção (`DEBUG=0` e não `TESTING`), chave ausente ou com o prefixo de dev → `ImproperlyConfigured` na subida. |
 | `rate limit` em rotas públicas | `apps/nucleo/ratelimit.py` | `limite_excedido(request, escopo, limite, janela, sufixo)` sobre o cache; usado em login, webhook, link de pagamento e portal. O docstring avisa que com múltiplos workers o `LocMemCache` torna o limite por processo. |
 | CSV | `apps/nucleo/export.py` | `sanitizar_celula` neutraliza fórmulas em todo export. |
 
@@ -833,7 +832,7 @@ Tudo que varia por ambiente é lido em `config/settings.py` (`.env` em dev via
 | `CSP_REPORT_ONLY` | `1` | `1` = header `…-Report-Only` (observa); `0`/outro = CSP que **bloqueia**. |
 | `MFA_OBRIGATORIO` | `0` se `DEBUG`, senão `1` | Liga o `MFAObrigatorioMiddleware`. |
 | `MFA_OBRIGATORIO_PARA` | `superusuario` | A quem o MFA é obrigatório: `superusuario`, `gerencia` (+ staff) ou `financeiro` (+ áreas Financeiro/Caixa). |
-| `TRILHA_RETENCAO_DIAS` | `0` | Retenção da trilha de auditoria (`purgar_trilha`); 0 = guardar sempre. Registros financeiros pedem 5 anos (≥ 1830). |
+| `TRILHA_RETENCAO_DIAS` | `0` | Retenção da trilha de auditoria (`purgar_trilha`); 0 = guardar sempre. A política de retenção deve ser validada para a operação; o default técnico não define prazo legal. |
 
 ### Mídia (Cloudflare R2)
 
@@ -1030,26 +1029,17 @@ O `migrate` já deixa pronto: os módulos contratados ativos, as 6 formas de pag
 o “Almoxarifado central”, as áreas-core dos gerentes, o tipo “Dia na Pousada” com as
 unidades `DAY-01..08` (`DAY-05..08` já inativas) e a verba de Marketing.
 
-### 8.4 A ordem real de *bootstrap* (e o buraco que existe)
+### 8.4 A ordem de bootstrap
 
-> **Atenção — lacuna conhecida:** **nenhuma migração e nenhum comando cria os 24 quartos
-> nem os tipos de quarto de pernoite.** Isso foi conferido: só
-> `nucleo/0015_tipouh_modalidade_day_use` cria `TipoUH`/`UH` (e só os de day use).
-> Todos os seeds assumem que já existem `TipoUH` com os nomes exatos **“Padrão”,
-> “Intermediário”, “Cabana Intermediária”, “Cabana Hobbit”** (+ “Dia na Pousada”) e
-> `UH` numeradas **“Quarto 01”…“Quarto 24”**:
-> - `reservas/management/commands/carregar_tarifas.py` aborta com
->   `"Tipos não encontrados: …"` se faltar qualquer tipo;
-> - `configurar_camas` e `popular_camas` iteram `UH` já existentes (`CONFIG`/`DOIS_COMODOS`
->   indexados pelo número do quarto);
-> - `popular_demo` faz `UH.objects.get(numero=f"Quarto {num:02d}")` → `DoesNotExist`;
-> - `popular_lotacao` simplesmente não encontra quartos para ocupar.
->
-> **Resolvido pelo comando `estrutura_inicial`** (`apps/nucleo/management/commands/`):
-> cria os 4 tipos e os 24 quartos (só o que faltar, sem alterar o que existe) e, com
-> `--completo`, roda `configurar_camas`, `carregar_tarifas` e `sincronizar_vitrine`.
-> Em produção eles já existem (vieram do histórico/dump migrado); o comando é seguro lá
-> porque não sobrescreve nada.
+O comando `estrutura_inicial` cria os quatro tipos técnicos de pernoite e os 24
+quartos ausentes, sem alterar os tipos/UHs que já existem. Com `--completo`, também
+executa `configurar_camas`, `carregar_tarifas` e `sincronizar_vitrine`, que possuem
+efeitos próprios sobre os cadastros. Use esse fluxo em banco novo; não presuma que
+reexecutar todos os seeds numa operação existente seja uma ação sem mudanças.
+
+Os seeds dependem dos nomes Padrão, Intermediário, Cabana Intermediária, Cabana Hobbit
+e Quarto 01 a Quarto 24. Categorias comerciais de materiais históricos não substituem
+esses nomes sem revisão dos comandos e migração adequada.
 
 Ordem recomendada para chegar a um dataset utilizável:
 
@@ -1146,18 +1136,18 @@ Para envio determinístico em testes, desligue `EMAIL_ENVIO_ASSINCRONO`.
 
 Os testes ficam **dentro de cada app** e são descobertos pelo runner do Django:
 
-| Arquivo | Linhas | Conteúdo |
-|---|---|---|
-| `apps/nucleo/tests.py` | 1.267 | caixa (abertura, conferência cega, estorno, reabertura, sangria), contas, estoque, permissões/áreas, logbook, dinheiro |
-| `apps/nucleo/tests_mfa.py` | 68 | TOTP, códigos de backup, middleware |
-| `apps/reservas/tests.py` | 1.169 | ciclo de estados, antioverbooking, folio, FNRH/BOH, troca de quarto, grupos |
-| `apps/reservas/tests_precos.py` / `tests_cancelamento.py` / `tests_colchoes.py` | 76 / 174 / 431 | precedência de tarifa, política de cancelamento, pool de colchões e berços |
-| `apps/reservas/tests_e2e.py` | 137 | **E2E de services** (não é browser): Reservas + Caixa + Estoque + Loja + Governança com os services reais, sem mock |
-| `apps/comercial/tests.py` | 2.692 | funil, cotação, WhatsApp, e-mail, LPs, impulsionamento |
-| `apps/marketing/tests.py` | 929 | fases, verba, peças, checklists |
-| `apps/site/tests.py` | 587 | fluxo público de reserva, vitrine, e-mails |
-| `apps/site/tests_e2e.py` | 107 | **Playwright** sobre `StaticLiveServerTestCase` |
-| demais apps | 46–676 cada | `auditoria`, `conciliacao`, `escala`, `estoque`, `fiscal`, `governanca`, `lavanderia`, `loja`, `manutencao`, `nps`, `pagamentos`, `portal`, `relatorios`, `restaurante` |
+| Arquivo ou família | Conteúdo |
+|---|---|
+| `apps/nucleo/tests*.py` | Caixa, estoque, acessos, auditoria, MFA, design e componentes |
+| `apps/reservas/tests*.py` | Estados, disponibilidade, conta, preços, FNRH, capacidade, relatórios e políticas |
+| `apps/reservas/tests_e2e.py` | Integração de services; não é teste de navegador |
+| `apps/comercial/tests*.py` | Funil, cotações, canais, LPs e campanhas |
+| `apps/site/tests.py` | Motor público, vitrine e comunicações |
+| `apps/site/tests_e2e.py` | Interação real com Playwright e Chromium |
+| Demais apps | Regras e jornadas de cada módulo |
+
+Não mantenha contagens ou tamanho de arquivos como garantia de cobertura. O resultado
+válido é o da execução identificada pelo commit e pelo ambiente.
 
 O único arquivo de testes de navegador é `apps/site/tests_e2e.py` (reserva no site de
 ponta a ponta, calendário, home, funil — busca e arrasto —, a LP da Inauguração e o menu
@@ -1178,7 +1168,7 @@ pip install playwright && playwright install chromium
 python manage.py test                       # tudo (obrigatório antes de commit)
 python manage.py test apps.reservas         # um app
 python manage.py test apps.nucleo.tests     # um módulo de teste
-python manage.py test apps.reservas.tests.ReservaTests.test_overbooking   # um teste
+python manage.py test apps.reservas.tests_precos  # arquivo específico
 ```
 
 `pytest==9.1.1` está disponível como execução alternativa, mas **a forma padrão é
@@ -1186,7 +1176,7 @@ python manage.py test apps.reservas.tests.ReservaTests.test_overbooking   # um t
 
 ### 9.3 O que muda sob teste
 
-`config/settings.py:15` define `TESTING = "test" in sys.argv`. A partir disso:
+`config/settings.py` define `TESTING = "test" in sys.argv`. A partir disso:
 
 | Setting | Sob teste |
 |---|---|
@@ -1216,12 +1206,13 @@ python manage.py test apps.reservas.tests.ReservaTests.test_overbooking   # um t
 
 ### 9.5 CI — `.github/workflows/`
 
-**`testes.yml`** (só neste fork): dispara em **push na `main` e na `dev`** e em **todo
+**`testes.yml`**: dispara em **push na `main` e na `dev`** e em **todo
 pull request**. Sobe um serviço **PostgreSQL 16** (a trava de overbooking usa
 `ExclusionConstraint`/`btree_gist`, que o SQLite não tem), instala o `requirements.txt`
 com Python 3.14, confere `makemigrations --check --dry-run` e roda
-`manage.py test --noinput`. É o gate que falta antes do deploy automático do original:
-lá, o push na `main` publica sem esperar teste nenhum.
+`manage.py test --noinput`, além do lint. Um segundo job instala Playwright e Chromium
+e roda `apps.site.tests_e2e` com `E2E_OBRIGATORIO=1`. Proteção de branch e espera de
+checks pelo deploy dependem da configuração externa e precisam ser confirmadas.
 
 **`security.yml`**: dispara em **push na `main`**, em **todo pull request** e por **cron
 semanal** (segunda, 09:00 UTC). Dois jobs:
@@ -1232,9 +1223,9 @@ semanal** (segunda, 09:00 UTC). Dois jobs:
    (`DEBUG=0`, SECRET_KEY dummy, `DATABASE_URL=sqlite:///ci.db`).
 2. **`gitleaks`**: segredos no histórico completo (`fetch-depth: 0`).
 
-**O que o CI não faz:** não faz build de estáticos, não calcula cobertura, não roda os
-testes Playwright e **não deploya**: o deploy é a integração GitHub↔Railway, independente
-dos workflows.
+**Limites do CI:** não calcula cobertura nem executa deploy. O job de navegador
+roda Playwright; a publicação da aplicação depende da integração/configuração do
+ambiente de hospedagem, não de uma etapa de deploy nestes workflows.
 
 `.github/dependabot.yml` abre PRs semanais para `pip` (limite 5, labels
 `dependencies`/`security`) e para `github-actions`.
@@ -1268,19 +1259,20 @@ dos workflows.
 - **Cache compartilhado** (`CACHES`): Redis com `REDIS_URL`; sem ele, `DatabaseCache` na
   tabela `nucleo_cache` (criada pela migration `nucleo.0046`). Vale para os limites de
   tentativa e o token da Safrapay entre workers e deploys.
-- **Healthcheck** em `/healthz/` (`config/urls.py:29`: roda `SELECT 1` e responde 503 se
+- **Healthcheck** em `/healthz/` (`config/urls.py`: roda `SELECT 1` e responde 503 se
   o banco não atender, para um container sem banco não substituir o saudável), isento do
   `SECURE_SSL_REDIRECT` por `SECURE_REDIRECT_EXEMPT = [r"^healthz/?$"]`, e
   `healthcheck.railway.app` está em `ALLOWED_HOSTS`.
 - **Estáticos** servidos por WhiteNoise (`WhiteNoiseMiddleware` logo abaixo do
-  `SecurityMiddleware`) com `CompressedStaticFilesStorage`; `STATIC_ROOT=staticfiles/`.
+  `SecurityMiddleware`) com `CompressedManifestStaticFilesStorage` em produção e
+  `CompressedStaticFilesStorage` em desenvolvimento; `STATIC_ROOT=staticfiles/`.
 - **Logs** (`LOGGING` em `config/settings.py`): tudo vai para o stdout, que o Railway
   mostra nos logs do deploy. `django.request` em ERROR (500 com traceback),
   `django.security` em WARNING e o resto no nível de `LOG_LEVEL` (padrão `INFO`;
   `WARNING` nos testes). Falhas de receivers de sinais saem pelo logger
   `apps.nucleo.sinais`.
-- **Auto-deploy no push da `main`.** Não rodar `railway up` manual (criaria um deploy
-  paralelo à integração do GitHub).
+- **Publicação:** confirme repositório, branch e integração do ambiente antes do push
+  autorizado. Não acione `railway up` como parte de uma atualização de documentação.
 
 ### 10.2 Mídia em Cloudflare R2
 
@@ -1297,8 +1289,8 @@ deploy**.
 
 ### 10.3 E-mail
 
-Produção usa SMTP (Zoho: `smtp.zoho.com:587`, TLS, usuário `naoresponda@`, senha de
-app). O trilho 1:1 do Comercial pode ter SMTP próprio
+A configuração documentada de SMTP usa Zoho (`smtp.zoho.com:587`, TLS e senha de
+app); a conta ativa não foi verificada nesta revisão. O trilho 1:1 pode ter SMTP próprio
 (`EMAIL_COMERCIAL_HOST_USER`/`_PASSWORD`); vazio, sai pela conta global com
 `Reply-To: comercial@` — isso evita o `553 Sender is not allowed to relay` do Zoho ao
 usar um `From` diferente do login.
@@ -1332,6 +1324,7 @@ do web e o arquivo de config-as-code `deploy/railway.rotinas.json` (`*/10 * * * 
 | `sincronizar_gastos_midia` | `comercial` | diarias | Puxa o gasto das plataformas para as campanhas com `id_externo` (`--dias N`). No-op com `MIDIA_GATEWAY=simulado`. |
 | `purgar_trilha` | `nucleo` | diarias | Apaga da trilha o que passou de `TRILHA_RETENCAO_DIAS` (0 = guarda sempre) e registra a própria purga. |
 | `gerar_arrumacoes` | `governanca` | diarias | Uma arrumação para cada quarto em que o hóspede continua (quem sai já tem a faxina do check-out). Idempotente. |
+| `enviar_kit_contingencia` | `reservas` | diarias | Envia a folha operacional do dia para `KIT_CONTINGENCIA_EMAILS`; vazio = não envia. |
 
 `enviar_campanha_whatsapp` (`comercial`) fica fora: é disparo manual de um template para
 uma lista de leads, com pausa e limite, respeitando opt-in.
@@ -1395,7 +1388,7 @@ Ensaie a restauração num banco separado (ex.: um Postgres local) antes de prec
 **Premissa fixa** (`CLAUDE.md`): toda tela nova do CRM **nasce** no design system. Nunca
 criar estilo paralelo nem hard-codear cor, raio ou sombra.
 
-### 11.1 Tokens — `static/css/app.css` (`:root`, linhas 19-64)
+### 11.1 Tokens — `static/css/app.css` (`:root`)
 
 | Grupo | Tokens |
 |---|---|
@@ -1436,7 +1429,7 @@ por peso **e** tamanho.
 nos inputs, e `prefers-reduced-motion` respeitado (cross-fade em vez de slide/spring; a
 curva da casa é `cubic-bezier(.2,.8,.2,1)`).
 
-### 11.3 App shell — `templates/base.html` (~1.000 linhas)
+### 11.3 App shell — `templates/base.html`
 
 ```
 .app
@@ -1520,7 +1513,7 @@ imprime preto: o cupom usa só `--tinta` e fios tracejados.
 
 ### 11.5 O kit “eleg” — `templates/comercial/_estilo_elegante.html`
 
-Kit de 102 linhas (bloco `<style>`) que estende os tokens para telas de
+Kit compartilhado (bloco `<style>`) que estende os tokens para telas de
 painel/lista/detalhe. **Padrão para dashboard/lista/detalhe:** envolver a tela em
 `<div class="eleg">` e incluir o kit:
 
@@ -1585,7 +1578,7 @@ definir `default_auto_field`, `name = "apps.meumodulo"`, `label = "meumodulo"` e
 
 ### Passo 2 — `INSTALLED_APPS`
 
-`config/settings.py:63` — acrescentar `"apps.meumodulo"` ao bloco “Módulos do sistema”.
+`config/settings.py` — acrescentar `"apps.meumodulo"` ao bloco “Módulos do sistema”.
 A entrada curta basta (o Django acha o único `AppConfig` do módulo, inclusive com
 `ready()`, como em `governanca`/`lavanderia`/`marketing`); use o caminho completo do
 `AppConfig` se houver mais de um, como `apps.comercial.apps.ComercialConfig`.
@@ -1608,7 +1601,7 @@ python manage.py makemigrations meumodulo
 
 A `0001_initial` normalmente depende de `("nucleo", "0010_seed_almoxarifado")` e de
 `migrations.swappable_dependency(settings.AUTH_USER_MODEL)` — veja
-`apps/manutencao/migrations/0001_initial.py:12-16`.
+`apps/manutencao/migrations/0001_initial.py`.
 
 **Alterar o enum `Modulo` muda as `choices` de `ModuloContratado.codigo`** → gera também
 uma `AlterField` em `nucleo` (ex.: `nucleo/0035_alter_modulocontratado_codigo.py`).
@@ -1691,7 +1684,7 @@ def pendencias_auditoria():
 ```
 
 E registrar o par `(Modulo.MEUMODULO, "apps.meumodulo.services")` na lista `donos` de
-`apps/auditoria/services.py:75`. `varrer()` só chama módulos ativos e envolve cada
+`apps/auditoria/services.py`. `varrer()` só chama módulos ativos e envolve cada
 chamada em `try/except` com log — uma falha não derruba a varredura.
 Hoje expõem o hook: `reservas`, `manutencao`, `restaurante`, `lavanderia`, `fiscal`,
 `comercial`.

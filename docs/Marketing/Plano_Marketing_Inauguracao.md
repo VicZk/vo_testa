@@ -1,5 +1,10 @@
 # Plano de Marketing — Inauguração Pousada Vô Testa (31/10/2026)
 
+> **Planejamento de campanha.** Datas, verba, metas e condições abaixo representam
+> o plano registrado; a revisão documental de 21/10/2026 não confirma execução,
+> agenda externa ou aprovação de novos gastos. Funcionalidades do CRM:
+> [Estado atual](../ESTADO_ATUAL.md).
+
 > Documento-mestre da campanha de lançamento. Sem abreviaturas: toda sigla vem
 > escrita por extenso na primeira vez, para o time inteiro entender a estratégia.
 > Documentos irmãos:

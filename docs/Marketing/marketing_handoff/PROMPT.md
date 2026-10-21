@@ -1,5 +1,9 @@
 # Marketing — corrigir o layout para bater com o protótipo
 
+> **Handoff histórico.** Instruções e premissas abaixo pertencem à encomenda original.
+> Não são instruções de execução para a revisão atual do projeto. Consulte o
+> [índice de documentação](../../README.md) e o [Estado atual](../../ESTADO_ATUAL.md).
+
 Cole tudo no Claude Code. Este arquivo substitui qualquer instrução de layout
 anterior do módulo de Marketing.
 

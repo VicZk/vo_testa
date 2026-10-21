@@ -1,5 +1,9 @@
 # Referência: Produtos Desbravador (pesquisa de mercado)
 
+> **Pesquisa histórica de fornecedor.** Funcionalidades, produtos e links abaixo
+> refletem o levantamento original. Antes de uma decisão nova, confirme a oferta
+> vigente. O que existe no nosso sistema está na [Especificação](ESPECIFICACAO.md).
+
 Levantamento feito em 03/07/2026 a partir de https://www.desbravador.com.br/produtos/hoteis-e-pousadas
 e das 9 páginas de produto, complementando o PDF `BASE_Projeto/apresentacao_easy_web.pdf`.
 Serve de base para a especificação do CRM da Pousada Vô Testa (24 quartos).

@@ -1,5 +1,10 @@
 # Implementar — WhatsApp Cloud API oficial (Meta) no CRM
 
+> **Guia de ativação.** O adapter Cloud API e as jornadas de mensagens/mídia existem.
+> A conta Meta, número, credenciais, permissões e aprovação de templates não foram
+> consultados nesta revisão. Confira o [Estado atual](ESTADO_ATUAL.md); procedimentos
+> e referências externas devem ser validados na versão vigente da plataforma.
+
 Plano por fases para colocar o **WhatsApp Business Platform (Cloud API)** da Meta
 operando no funil do CRM. Responsável: `[EU]` = código no CRM/site · `[DANI/VOCÊ]` =
 administrativo no Gerenciador de Negócios/Meta.

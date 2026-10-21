@@ -2,7 +2,9 @@
 
 > Plano de implementação a partir de `docs/Marketing/marketing_handoff/LEIA-ME.md`
 > (a pasta está em `docs/Marketing/`, não na raiz — o prompt supôs a raiz).
-> **Nada implementado ainda.** Este arquivo é para aprovação antes de qualquer código.
+> **Roteiro histórico:** a frase de status original foi superada. O app Marketing
+> está implementado; este arquivo preserva o desenho e seus critérios de aceite.
+> Para o que existe hoje, consulte [Estado atual](docs/ESTADO_ATUAL.md).
 > Método: um commit por passo, cada passo testado pelo seu critério de aceite.
 > Comportamento derivado do LEIA-ME + leitura de `preview/dados.js` (lógica), não do clique.
 

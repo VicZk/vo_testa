@@ -1,5 +1,9 @@
 # Descritivo dos quartos dentro da conversa do lead
 
+> **Notas históricas de levantamento.** Descrições e decisões abaixo acompanham o
+> material original; não são um snapshot do banco atual. Consulte a
+> [configuração de quartos](../Reservas/CONFIGURACAO_QUARTOS.md) e os cadastros do CRM.
+
 Para o Claude Code, no repositório do CRM Vô Testa (Django).
 
 Base: `uploads/descritivo-quartos-vo-testa.md` (29/09/2026, Gefferson Vivan),

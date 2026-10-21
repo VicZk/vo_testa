@@ -1,18 +1,23 @@
 # Módulos e Fluxos
 
+> **Versão do manual:** descreve o painel de governança publicado na base revisada.
+> O redesenho gráfico e os ajustes mais recentes de interação estão separados no
+> [quadro de mudanças locais](ESTADO_ATUAL.md#melhorias-locais-ainda-não-publicadas-na-data-da-revisão).
+
 Referência de desenvolvedor que complementa o [README](../README.md): cada módulo do
 CRM/PMS + site da **Pousada Vô Testa** (24 quartos de hospedagem + unidades de day use
 `DAY-0N`, Itá/SC) e os fluxos ponta a ponta. Conferido contra o código da branch `dev`
-em 20/10/2026; cada afirmação cita `arquivo:linha` quando ajuda (as linhas podem mudar
-com o tempo).
+em 21/10/2026. O [Estado atual](ESTADO_ATUAL.md) identifica a base publicada, as
+melhorias locais ainda não publicadas e limites das integrações. Prefira localizar
+funções/classes pelos nomes; os números de linha de referências antigas variam.
 
 **Convenções que valem para todo o capítulo A**
 
 - Cada módulo contratável é um app Django em `apps/`. O catálogo (código, grupo de menu,
   ordem, descrição, rota principal) está em `apps/nucleo/modulos.py`; a ativação por
   cliente está na tabela `nucleo.ModuloContratado`, consultada por
-  `modulo_ativo(codigo)` (`apps/nucleo/models/usuarios.py:103`).
-- **Dependências declaradas** = `DEPENDENCIAS` em `apps/nucleo/modulos.py:33`. Módulo sem
+  `modulo_ativo(codigo)` (`apps/nucleo/models/usuarios.py`).
+- **Dependências declaradas** = `DEPENDENCIAS` em `apps/nucleo/modulos.py`. Módulo sem
   entrada ali não exige nenhum outro.
 - Controle de acesso (`apps/nucleo/permissoes.py`):
   - `@requer_modulo(Modulo.X)` → módulo inativo = **404**; usuário sem o módulo em
@@ -242,7 +247,7 @@ Módulos auxiliares: `precos.py` (motor de preço), `colchoes.py` (arranjos de c
 
 ### Regras de negócio
 
-**Antioverbooking no banco** (`apps/reservas/models.py:262`) — impossível por construção,
+**Antioverbooking no banco** (`apps/reservas/models.py`) — impossível por construção,
 não por validação de aplicação:
 
 ```python
@@ -1556,7 +1561,9 @@ as de ação, `@require_POST`; todas `@never_cache`.
 `(inicio, fim) → {kpis, colunas, linhas}`; uma view genérica renderiza e exporta CSV.
 
 - **Código:** `Modulo.RELATORIOS` · **Dependências declaradas:** nenhuma.
-- Consome **services** dos módulos e models do núcleo; nunca models internos de outro app.
+- Consome principalmente **services** dos módulos e models do núcleo. Há referências
+  pontuais a models de domínio (por exemplo, choices de discrepâncias da governança);
+  a fronteira desejada continua sendo a interface pública do módulo.
 
 ### Models
 
@@ -1588,7 +1595,9 @@ Nenhum (o app tem `migrations/` só para o seed de ativação do módulo).
 `relatorios:index` e `relatorios:relatorio` `<slug:chave>/` (+ `?export=csv`) —
 `@requer_modulo(RELATORIOS)` **+ `@requer_gerencia`** + `@never_cache`.
 O período vem de `apps/nucleo/periodos.py` (`periodo`/`selecao_periodo`): **seletor
-mês/ano** (padrão = mês corrente) compartilhado com a Trilha de auditoria.
+mês/ano** compartilhado com a Trilha de auditoria. O padrão é mês corrente, exceto
+carteira, pickup e ritmo, que abrem o **próximo mês**. Pickup possui janela de
+**7, 14 ou 30 dias**, validada pelo registro de controles.
 O CSV usa `;`, passa por `sanitizar_celula` (anti-CSV-injection) e carrega os KPIs antes
 da tabela.
 
@@ -1611,8 +1620,8 @@ da tabela.
 
 ## A.17 Auditoria — `apps/auditoria` (label `auditoria`)
 
-**Responsabilidade.** Duas frentes **read-only**: varredura de pendências operacionais e
-leitura/filtro da trilha de auditoria. **Não altera dados** — a correção é no módulo dono.
+**Responsabilidade.** Três frentes **read-only**: pendências operacionais, trilha de
+auditoria e fechamentos diários. **Não altera dados** — a correção é no módulo dono.
 
 - **Código:** `Modulo.AUDITORIA` · **Dependências declaradas:** nenhuma.
 - Ativado por migração própria (`apps/auditoria/migrations/0001_ativar_modulo.py`).
@@ -1625,8 +1634,8 @@ Nenhum próprio. Lê `nucleo.TrilhaAuditoria` (append-only, com `ip` e 3 índice
 
 - `varrer()` — agrega `_checagens_nucleo()` (caixa aberto de dia anterior, contas a
   pagar/receber vencidas, produtos abaixo do mínimo) + `pendencias_auditoria()` de cada
-  módulo dono, **só se ativo**: Reservas, Manutenção, Restaurante, Lavanderia, Fiscal,
-  Comercial. Uma falha num módulo é logada e **não derruba a varredura**. Ordena por
+  módulo dono, **só se ativo**: Reservas, Governança, Manutenção, Restaurante,
+  Lavanderia, Fiscal e Comercial. Uma falha num módulo é logada e **não derruba a varredura**. Ordena por
   gravidade (`alta → media → baixa`).
 - `resumo(achados)` — KPIs por área e por gravidade.
 - `apps/auditoria/formatacao.py`: `frase(trilha)` + filter `frase_auditoria` traduzem o
@@ -1648,7 +1657,7 @@ publica quem/IP num threadlocal para services sem `request`.
 
 - `auditoria:painel` — KPIs + lista de achados com gravidade e link Resolver.
 - `auditoria:trilha` — filtro por ação, usuário e período (mês/ano), 100 registros por
-  página, export CSV (até 5.000 linhas) com a coluna descrição.
+  página, export CSV **somente para gerência** (até 5.000 linhas) com a coluna descrição.
 - `auditoria:fechamentos` — os fechamentos do dia do período (mês/ano): ocupação,
   chegadas, saídas, no-shows, diárias, ADR, serviço, consumo e saldo em aberto, com os
   totais do período no topo; CSV só para a gerência. Lê `reservas.fechamentos()` e
@@ -1660,9 +1669,10 @@ publica quem/IP num threadlocal para services sem `request`.
 - **Salário é redigido** na trilha para quem não tem `Area.REMUNERACAO`
   (`redigir_sensiveis`) — a mudança continua registrada, só o número é mascarado.
 - Limites conhecidos (documentados no código): cobre **escritas**, não leituras;
-  `bulk_create`, `QuerySet.update()` e SQL cru não passam por signals; só registra com
-  usuário real no contexto (seed/migration/shell/cron não poluem); `password` nunca entra
-  no diff.
+  `bulk_create`, `QuerySet.update()` e SQL cru não passam por signals. O registro
+  automático exige ator no contexto; operações públicas/rotinas podem registrar
+  explicitamente com `usuario_de_sistema()`. Não presumir cobertura automática de
+  qualquer escrita sem request. `password` nunca entra no diff.
 
 ---
 
@@ -1707,7 +1717,7 @@ Hóspede**.
 ## B.1 Reserva pelo site
 
 1. **Busca (passo 1).** `GET core:reservar` → `BuscaDisponibilidadeForm`
-   (`apps/site/views.py:452`). Sem `?checkin`, renderiza `site/reservas/datas.html`;
+   (`apps/site/views.py`). Sem `?checkin`, renderiza `site/reservas/datas.html`;
    `core:info_datas` devolve o fragmento HTMX com noites + temporada.
 2. **Disponibilidade e preço (passo 2).** Com datas válidas e `modalidade != day_use`,
    `_buscar_unidades(checkin, checkout, hospedes)` lista cada quarto publicado: ids
@@ -2132,7 +2142,7 @@ service público; "→ M" = importa models de outro app (exceção à regra); "�
 | **relatorios** | reservas → S (`relatorio_producao`, `relatorio_ocupacao`, `relatorio_reservas`, `diarias_periodo`) · loja/restaurante/lavanderia → S (`faturamento_periodo`) · comercial → S (`relatorio_funil`) · núcleo (`MovimentoCaixa`, `MovimentoEstoque`, `modulo_ativo`, `periodos`) |
 | **auditoria** | reservas, manutencao, restaurante, lavanderia, fiscal, comercial → S (`pendencias_auditoria`, por `importlib`) · núcleo (`SessaoCaixa`, `ContaPagarReceber`, `produtos_abaixo_minimo`, `TrilhaAuditoria`, `audit.redigir_sensiveis`, `periodos`) |
 | **nps** | nada (stub) |
-| **núcleo** (exceção documentada) | `uh_form` edita, por **lazy import**, `site.VitrineQuarto` + `site.forms.VitrineQuartoForm` e `comercial.FichaComercial` + `comercial.forms.FichaComercialForm` (`apps/nucleo/views.py:714` e `:729`) — para não inverter a dependência em tempo de import |
+| **núcleo** (exceção documentada) | `uh_form` edita, por **lazy import**, `site.VitrineQuarto` + `site.forms.VitrineQuartoForm` e `comercial.FichaComercial` + `comercial.forms.FichaComercialForm` (`apps/nucleo/views.py` e `:729`) — para não inverter a dependência em tempo de import |
 
 **Leitura da tabela.** O padrão dominante é o contrato declarado em `CLAUDE.md`: módulo
 chama módulo só por `services`, e a integração reversa (quem está "abaixo" avisando quem
