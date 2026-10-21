@@ -146,9 +146,10 @@ class ConferenciaOcupacao(models.Model):
                    Divergencia.SLEEPER, Divergencia.SEM_BAGAGEM)
 
     # Rótulo curto do botão da ronda (o de `choices` explica no `title`): três alvos
-    # lado a lado no celular da camareira não cabem com a frase inteira.
-    CURTO = {Visto.VAGO: "Vago", Visto.OCUPADO: "Com bagagem",
-             Visto.SEM_BAGAGEM: "Sem bagagem"}
+    # lado a lado no celular da camareira não cabem com a frase inteira — e "mala" é
+    # a palavra que a camareira usa, "bagagem" é a do hotel.
+    CURTO = {Visto.VAGO: "Vago", Visto.OCUPADO: "Com mala",
+             Visto.SEM_BAGAGEM: "Sem mala"}
 
     @classmethod
     def botoes_da_ronda(cls):

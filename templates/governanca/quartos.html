@@ -1,22 +1,27 @@
 {% extends "base.html" %}
 
-{% block titulo %}Limpeza dos quartos — Governança{% endblock %}
+{% block titulo %}Quartos — Governança{% endblock %}
 
 {% block conteudo %}
-<p class="pagina-eyebrow letreiro">Hospedagem</p>
+<p class="pagina-eyebrow letreiro">Hospedagem · Governança</p>
 <div class="pagina-cabecalho">
-  <h1>Limpeza dos quartos</h1>
+  <h1>Quartos</h1>
 </div>
-<p class="subtitulo">Do check-out à liberação: o quarto vira <em>a limpar</em>, a camareira limpa e a recepção libera para o próximo hóspede.
-  Na ronda, registre o que você <strong>viu</strong> em cada quarto — é esse toque que pega hóspede que foi embora sem baixa e quarto com gente que o sistema diz vazio.</p>
+<p class="subtitulo">Cada quarto anda por quatro estados até ficar pronto para o
+  próximo hóspede. A tela mostra em que estado ele está, por quê, e qual é o
+  <strong>próximo passo</strong> — um botão por quarto.</p>
 
 {% include "governanca/partials/abas.html" %}
+{% include "governanca/partials/como_funciona.html" %}
 
 {% comment %}O x-data fica FORA de #gov-quadro: as ações trocam só o quadro (HTMX) e
-o filtro escolhido continua valendo — e volta igual na próxima vez (localStorage).{% endcomment %}
+o filtro escolhido continua valendo — e volta igual na próxima vez (localStorage).
+`soMeus` é a fila da camareira (o celular dela abre do jeito que ela deixou).{% endcomment %}
 <div class="governanca-painel" x-data="{
-       f: (function () { try { return localStorage.getItem('gov-filtro') || 'todas'; } catch (e) { return 'todas'; } })(),
-       filtrar(v) { this.f = v; try { localStorage.setItem('gov-filtro', v); } catch (e) {} }
+       f: '{{ filtro_inicial }}' || (function () { try { return localStorage.getItem('gov-filtro') || 'todas'; } catch (e) { return 'todas'; } })(),
+       soMeus: (function () { try { return localStorage.getItem('gov-meus') === '1'; } catch (e) { return false; } })(),
+       filtrar(v) { this.f = v; try { localStorage.setItem('gov-filtro', v); } catch (e) {} },
+       alternarMeus() { this.soMeus = !this.soMeus; try { localStorage.setItem('gov-meus', this.soMeus ? '1' : '0'); } catch (e) {} }
      }">
   <div id="gov-quadro">
     {% include "governanca/partials/quadro.html" %}

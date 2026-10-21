@@ -130,6 +130,11 @@ def reprovar_inspecao(uh, usuario=None, motivo=""):
         tarefa.motivo_reprovacao = (motivo or "")[:200]
         tarefa.save(update_fields=["reprovada_em", "motivo_reprovacao"])
     nova = abrir_faxina(uh, usuario=usuario, origem="reprovada")
+    # O motivo viaja com a faxina nova: quem for limpar lê na própria linha por que
+    # o quarto voltou, em vez de descobrir no corredor.
+    if motivo and not nova.observacoes:
+        nova.observacoes = motivo[:200]
+        nova.save(update_fields=["observacoes"])
     registrar_auditoria(usuario, "inspecao_reprovada", nova,
                         {"quarto": uh.numero, "motivo": motivo or ""})
     return nova
@@ -149,6 +154,90 @@ _ORDEM_LIMPEZA = {
     StatusLimpeza.Situacao.LIMPA: 2,
     StatusLimpeza.Situacao.INSPECIONADA: 3,
 }
+
+# ───────── O ciclo do quarto, em palavras de quem nunca trabalhou em hotel ─────────
+#
+# O model fala a língua da hotelaria ("Inspecionado"); a TELA fala a língua de quem
+# está começando. Uma fonte de verdade só para o texto da Governança — a etiqueta do
+# admin e dos outros módulos continua a do model.
+
+CICLO = [
+    {
+        "cod": StatusLimpeza.Situacao.SUJA,
+        "rotulo": "A limpar",
+        "resumo": "O quarto precisa de limpeza.",
+        "quem": "Camareira",
+        "ajuda": "Entra aqui sozinho quando o hóspede faz check-out, quando a "
+                 "supervisora devolve o quarto ou quando alguém pede limpeza.",
+    },
+    {
+        "cod": StatusLimpeza.Situacao.EM_LIMPEZA,
+        "rotulo": "Em limpeza",
+        "resumo": "Alguém está limpando agora.",
+        "quem": "Camareira",
+        "ajuda": "A camareira tocou em «Começar limpeza». O relógio da faxina "
+                 "começa a contar aqui.",
+    },
+    {
+        "cod": StatusLimpeza.Situacao.LIMPA,
+        "rotulo": "Limpo",
+        "resumo": "A limpeza acabou e falta a supervisora conferir.",
+        "quem": "Supervisora",
+        "ajuda": "Quarto limpo ainda NÃO está liberado: a supervisora passa, "
+                 "aprova ou devolve para limpar de novo.",
+    },
+    {
+        "cod": StatusLimpeza.Situacao.INSPECIONADA,
+        "rotulo": "Pronto",
+        "resumo": "Conferido pela supervisora — pode receber hóspede.",
+        "quem": "—",
+        "ajuda": "Na hotelaria chama-se «inspecionado». É o único estado em que o "
+                 "quarto está liberado para a recepção entregar a chave.",
+    },
+]
+SITUACAO_SIMPLES = {e["cod"]: e["rotulo"] for e in CICLO}
+
+# Por que o quarto está sujo — a origem da faxina vira frase de gente.
+_MOTIVO_DA_FAXINA = {
+    "checkout": "O hóspede fez check-out.",
+    "troca": "O hóspede trocou de quarto.",
+    "manutencao": "O quarto saiu da manutenção.",
+    "arrumacao_diaria": "O hóspede continua no quarto — é a arrumação do dia.",
+    "reprovada": "A supervisora devolveu o quarto para limpar de novo.",
+    "portal": "O próprio hóspede pediu limpeza pelo celular.",
+    "manual": "Alguém marcou o quarto como sujo.",
+}
+
+
+def _quem(usuario) -> str:
+    return (usuario.get_full_name() or usuario.username) if usuario else ""
+
+
+def explicar_estado(situacao, tarefa, status) -> str:
+    """Uma frase curta dizendo POR QUE o quarto está neste estado e o que falta.
+
+    É o que ensina o fluxo a quem pega o sistema pela primeira vez: a tela não diz
+    só «Limpo», diz «Limpo às 11:05 por Maria — falta a supervisora conferir».
+    """
+    quando = f" às {timezone.localtime(status.atualizado_em):%H:%M}" if status.atualizado_em else ""
+    quem = _quem(getattr(status, "atualizado_por", None))
+    if situacao == StatusLimpeza.Situacao.SUJA:
+        motivo = _MOTIVO_DA_FAXINA.get(tarefa.origem if tarefa else "", "")
+        if tarefa and tarefa.origem == "reprovada" and tarefa.observacoes:
+            motivo = f"Devolvido para limpar: {tarefa.observacoes.rstrip('.')}."
+        fila = (f" Na fila de {_quem(tarefa.camareira)}." if tarefa and tarefa.camareira
+                else " Ninguém começou ainda.")
+        return (motivo + fila).strip()
+    if situacao == StatusLimpeza.Situacao.EM_LIMPEZA:
+        if tarefa and tarefa.iniciada_em:
+            inicio = f"{timezone.localtime(tarefa.iniciada_em):%H:%M}"
+            return (f"{_quem(tarefa.camareira)} começou às {inicio}."
+                    if tarefa.camareira else f"Limpeza começou às {inicio}.")
+        return "Limpeza em andamento."
+    if situacao == StatusLimpeza.Situacao.LIMPA:
+        por = f" por {quem}" if quem else ""
+        return f"Limpo{quando}{por}. Falta a supervisora conferir."
+    return f"Conferido e aprovado{quando}. Pode receber hóspede."
 
 
 def _estado_dos_quartos(dia=None) -> dict:
@@ -171,9 +260,13 @@ def _estado_dos_quartos(dia=None) -> dict:
         .exclude(status=UH.Status.INATIVA)
         .exclude(tipo__modalidade=TipoUH.Modalidade.DAY_USE)
     )
-    # Todos os status numa consulta só. Quarto ainda sem registro aparece com a
-    # situação padrão (limpo) sem gravar nada: abrir a tela não escreve no banco.
-    existentes = {s.uh_id: s for s in StatusLimpeza.objects.filter(uh__in=quartos)}
+    # Todos os status numa consulta só (com quem mexeu por último — a frase da linha
+    # diz "limpo por Maria"). Quarto ainda sem registro aparece com a situação padrão
+    # (limpo) sem gravar nada: abrir a tela não escreve no banco.
+    existentes = {
+        s.uh_id: s for s in
+        StatusLimpeza.objects.filter(uh__in=quartos).select_related("atualizado_por")
+    }
     conferencias = conferencias_do_dia(dia)
     pms = ocupacao_pms(dia)
     bloqueados = bloqueios_do_dia(dia)
@@ -188,11 +281,16 @@ def _estado_dos_quartos(dia=None) -> dict:
             classificar(conf.visto, info, bloqueado=bloqueado, sem_base=pms is None)
             if conf else ""
         )
+        tarefa = tarefas.get(uh.pk)
         linhas.append({
             "uh": uh,
             "situacao": status.situacao,
-            "situacao_label": status.get_situacao_display(),
-            "tarefa": tarefas.get(uh.pk),
+            # Rótulo da TELA (plain) + a frase que explica por que o quarto está
+            # assim e o que falta — é o que ensina o fluxo a quem está começando.
+            "situacao_label": SITUACAO_SIMPLES.get(status.situacao,
+                                                   status.get_situacao_display()),
+            "explicacao": explicar_estado(status.situacao, tarefa, status),
+            "tarefa": tarefa,
             "atualizado_em": status.atualizado_em,
             "conferencia": conf,
             "pms": info,
@@ -204,7 +302,9 @@ def _estado_dos_quartos(dia=None) -> dict:
             "divergencia_rotulo": _ROTULO_DIVERGENCIA.get(divergencia, ""),
             "divergente": divergencia in ConferenciaOcupacao.DIVERGENTES,
         })
-    return {"dia": dia, "sem_base": pms is None, "linhas": linhas}
+    # `pms` vai junto: quem já pagou a consulta não deve pagar de novo (a visão
+    # geral precisa das chegadas de hoje, que vêm deste mesmo dicionário).
+    return {"dia": dia, "sem_base": pms is None, "linhas": linhas, "pms": pms}
 
 
 def painel_limpeza(dia=None):
@@ -231,6 +331,212 @@ def painel_limpeza(dia=None):
         "conferidos": sum(1 for ln in linhas if ln["conferencia"]),
         "a_conferir": sum(1 for ln in linhas
                           if not ln["conferencia"] and not ln["bloqueado"]),
+    }
+
+
+# ───────────────────── Visão geral da Governança (a tela de entrada) ─────────────────────
+#
+# A lista é a ferramenta de quem está trabalhando; a visão geral é a resposta para
+# "como está a casa agora?". Mesma leitura do corredor do Mapa de quartos: a casa
+# fala primeiro, em blocos coloridos, e cada bloco leva para a ação certa.
+
+# Estado de limpeza → classe da porta no corredor. Classes próprias (e não as
+# `sit-*` do mapa de reservas): lá a cor fala de ocupação, aqui de limpeza, e o
+# verde/azul tem de bater com o `.selo` do mesmo estado na lista ao lado.
+_COR_DA_PORTA = {
+    StatusLimpeza.Situacao.SUJA: "limp-suja",
+    StatusLimpeza.Situacao.EM_LIMPEZA: "limp-em_limpeza",
+    StatusLimpeza.Situacao.LIMPA: "limp-limpa",
+    StatusLimpeza.Situacao.INSPECIONADA: "limp-inspecionada",
+}
+
+
+def _hora_do_checkin():
+    """Horário em que o primeiro hóspede pode entrar (configuração de Reservas), ou
+    None se o módulo não estiver ativo. É o prazo real da governança no dia."""
+    from apps.nucleo.models import modulo_ativo
+    from apps.nucleo.modulos import Modulo
+
+    if not modulo_ativo(Modulo.RESERVAS):
+        return None
+    from apps.reservas.services import configuracao_reservas
+
+    return configuracao_reservas().hora_checkin
+
+
+def carga_das_camareiras(dia=None) -> list:
+    """Quanto cada camareira tem na mão hoje: na fila, limpando agora e já entregue.
+    Duas consultas, não uma por pessoa."""
+    from django.db.models import Count, Q
+
+    dia = dia or timezone.localdate()
+    ativas = (
+        TarefaGovernanca.objects
+        .exclude(status=TarefaGovernanca.Status.CONCLUIDA)
+        .values("camareira", "camareira__first_name", "camareira__username")
+        .annotate(
+            pendentes=Count("pk", filter=Q(status=TarefaGovernanca.Status.PENDENTE)),
+            fazendo=Count("pk", filter=Q(status=TarefaGovernanca.Status.EM_ANDAMENTO)),
+        ).order_by()
+    )
+    feitas = (
+        TarefaGovernanca.objects
+        .filter(status=TarefaGovernanca.Status.CONCLUIDA, concluida_em__date=dia)
+        .values("camareira").annotate(n=Count("pk")).order_by()
+    )
+    por_pessoa = {}
+    for linha in ativas:
+        por_pessoa[linha["camareira"]] = {
+            "nome": (linha["camareira__first_name"] or linha["camareira__username"]
+                     or "Sem camareira"),
+            "pendentes": linha["pendentes"], "fazendo": linha["fazendo"], "feitas": 0,
+        }
+    for linha in feitas:
+        reg = por_pessoa.setdefault(
+            linha["camareira"], {"nome": "", "pendentes": 0, "fazendo": 0, "feitas": 0})
+        reg["feitas"] = linha["n"]
+    # O nome de quem só tem faxina concluída hoje não vem na primeira consulta.
+    faltam = [pk for pk, reg in por_pessoa.items() if pk and not reg["nome"]]
+    if faltam:
+        from django.contrib.auth import get_user_model
+        for u in get_user_model().objects.filter(pk__in=faltam):
+            por_pessoa[u.pk]["nome"] = u.get_full_name() or u.username
+    for pk, reg in por_pessoa.items():
+        if not reg["nome"]:
+            reg["nome"] = "Sem camareira"
+        reg["na_mao"] = reg["pendentes"] + reg["fazendo"]
+        reg["total"] = reg["na_mao"] + reg["feitas"]
+        reg["camareira_id"] = pk
+    linhas = sorted(por_pessoa.values(), key=lambda r: (-r["na_mao"], -r["feitas"]))
+    teto = max([r["total"] for r in linhas] or [1]) or 1
+    for reg in linhas:          # largura da barra em % — a comparação é visual
+        reg["barra_feitas"] = round(100 * reg["feitas"] / teto)
+        reg["barra_fazendo"] = round(100 * reg["fazendo"] / teto)
+        reg["barra_pendentes"] = round(100 * reg["pendentes"] / teto)
+    return linhas
+
+
+def visao_geral(dia=None) -> dict:
+    """A tela de entrada da Governança: a casa inteira em blocos, o progresso do dia,
+    as chegadas que dependem de quarto pronto e o que pede ação agora.
+
+    Consome o mesmo `_estado_dos_quartos` da lista — um retrato só, sem dois números
+    diferentes para a mesma coisa na mesma tela.
+    """
+    from django.urls import reverse
+
+    dados = _estado_dos_quartos(dia)
+    linhas = dados["linhas"]
+    dia = dados["dia"]
+    contagem = {c: 0 for c, _ in StatusLimpeza.Situacao.choices}
+    for ln in linhas:
+        contagem[ln["situacao"]] += 1
+
+    total = len(linhas)
+    prontos = contagem[StatusLimpeza.Situacao.INSPECIONADA]
+    pms = dados["pms"] or {}
+
+    portas, chegadas, divergentes = [], [], []
+    for ln in sorted(linhas, key=lambda x: x["uh"].numero):
+        info = pms.get(ln["uh"].pk)
+        chegada = bool(info and info.get("chegada"))
+        pronto = ln["situacao"] == StatusLimpeza.Situacao.INSPECIONADA
+        portas.append({
+            "uh": ln["uh"],
+            "cor": "limp-bloqueada" if ln["bloqueado"] else _COR_DA_PORTA.get(ln["situacao"], ""),
+            "situacao": ln["situacao"],
+            "rotulo": ln["situacao_label"],
+            "explicacao": ln["explicacao"],
+            "camareira": (_quem(ln["tarefa"].camareira) if ln["tarefa"] else ""),
+            "chegada": chegada,
+            "bloqueado": ln["bloqueado"],
+            "divergente": ln["divergente"],
+            "divergencia_rotulo": ln["divergencia_rotulo"],
+        })
+        if chegada:
+            chegadas.append({
+                "uh": ln["uh"], "hospede": info["hospede"],
+                "situacao": ln["situacao"], "rotulo": ln["situacao_label"],
+                "pronto": pronto, "reserva_id": info["reserva_id"],
+            })
+        if ln["divergente"]:
+            divergentes.append(ln)
+
+    chegadas.sort(key=lambda c: (c["pronto"], c["uh"].numero))
+    chegadas_atrasadas = [c for c in chegadas if not c["pronto"]]
+
+    # ── O que pede ação agora (mesma linguagem do bloco da Visão geral do CRM) ──
+    url_quartos = reverse("governanca:quartos")
+    # Níveis no vocabulário da casa (os mesmos da Visão geral do CRM):
+    # `alerta` = vermelho (dinheiro/hóspede na porta), `aviso` = âmbar (precisa de
+    # alguém hoje), `info` = azul (bom saber).
+    atencao = []
+    if chegadas_atrasadas:
+        quartos = ", ".join(c["uh"].numero.replace("Quarto ", "") for c in chegadas_atrasadas[:6])
+        rotulo_quartos = "Quarto" if len(chegadas_atrasadas) == 1 else "Quartos"
+        atencao.append({
+            "nivel": "alerta",
+            "rotulo": f"{len(chegadas_atrasadas)} chegada(s) sem quarto pronto",
+            "detalhe": f"{rotulo_quartos} {quartos} — hóspede chega hoje.",
+            "url": f"{url_quartos}?estado={StatusLimpeza.Situacao.SUJA}",
+        })
+    esperando = contagem[StatusLimpeza.Situacao.LIMPA]
+    if esperando:
+        atencao.append({
+            "nivel": "aviso",
+            "rotulo": f"{esperando} quarto(s) esperando inspeção",
+            "detalhe": "Limpos, mas ainda não liberados para a recepção.",
+            "url": f"{url_quartos}?estado={StatusLimpeza.Situacao.LIMPA}",
+        })
+    if divergentes:
+        atencao.append({
+            "nivel": "alerta",
+            "rotulo": f"{len(divergentes)} divergência(s) na ronda",
+            "detalhe": "O que a camareira viu não bate com o sistema.",
+            "url": reverse("governanca:discrepancias"),
+        })
+    sem_camareira = sum(
+        1 for ln in linhas
+        if ln["situacao"] == StatusLimpeza.Situacao.SUJA
+        and (not ln["tarefa"] or not ln["tarefa"].camareira_id)
+    )
+    if sem_camareira:
+        atencao.append({
+            "nivel": "aviso",
+            "rotulo": f"{sem_camareira} quarto(s) a limpar sem camareira",
+            "detalhe": "Ninguém na fila: escolha quem limpa.",
+            "url": f"{url_quartos}?estado={StatusLimpeza.Situacao.SUJA}",
+        })
+    a_conferir = sum(1 for ln in linhas if not ln["conferencia"] and not ln["bloqueado"])
+    if a_conferir and not dados["sem_base"]:
+        atencao.append({
+            "nivel": "info",
+            "rotulo": f"{a_conferir} quarto(s) sem ronda hoje",
+            "detalhe": "Ninguém registrou o que viu dentro.",
+            "url": url_quartos,
+        })
+
+    ciclo = [
+        {**etapa, "n": contagem.get(etapa["cod"], 0),
+         "pct": round(100 * contagem.get(etapa["cod"], 0) / total) if total else 0}
+        for etapa in CICLO
+    ]
+    return {
+        "dia": dia,
+        "ciclo": ciclo,
+        "contagem": contagem,
+        "portas": portas,
+        "total": total,
+        "prontos": prontos,
+        "pct_prontos": round(100 * prontos / total) if total else 0,
+        "falta_para_pronto": total - prontos,
+        "hora_checkin": _hora_do_checkin(),
+        "chegadas": chegadas,
+        "chegadas_atrasadas": len(chegadas_atrasadas),
+        "carga": carga_das_camareiras(dia),
+        "atencao": atencao,
+        "sem_base": dados["sem_base"],
+        "divergencias": len(divergentes),
     }
 
 

@@ -6,7 +6,8 @@ então um número aqui envelheceria a cada toque na ronda. Quem conta é o aviso
 do quadro.{% endcomment %}
 {% with atual=request.resolver_match.url_name %}
 <div class="filtros subnav">
-  <a href="{% url 'governanca:painel' %}" class="filtro-chip"{% if atual == 'painel' %} aria-current="page"{% endif %}>Limpeza</a>
+  <a href="{% url 'governanca:painel' %}" class="filtro-chip"{% if atual == 'painel' %} aria-current="page"{% endif %}>Visão geral</a>
+  <a href="{% url 'governanca:quartos' %}" class="filtro-chip"{% if atual == 'quartos' %} aria-current="page"{% endif %}>Quartos</a>
   <a href="{% url 'governanca:discrepancias' %}" class="filtro-chip"{% if atual == 'discrepancias' %} aria-current="page"{% endif %}>Discrepâncias</a>
 </div>
 {% endwith %}
