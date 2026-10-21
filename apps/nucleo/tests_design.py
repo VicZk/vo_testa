@@ -675,6 +675,19 @@ class DentroDoContainerTests(TestCase):
         celular = self.css.index("@media (max-width: 560px) {\n  .filtro-periodo {")
         self.assertLess(sep, celular, "o @media do período ficou antes da regra que ele ajusta")
 
+    def test_colunas_do_corredor_olham_a_largura_do_corredor(self):
+        """A 821px com o menu aberto o corredor mede ~486px: em seis colunas as
+        portas ficavam com 70px, as 24 cortavam data e saldo ("R$ 2.6…") e o
+        selo PCD subia em cima da situação. O número de colunas tem de olhar o
+        corredor (container query), não só a janela — e a regra vem ANTES dos
+        @media do celular, que seguem mandando abaixo de 720px."""
+        heroi = re.search(r"\n\.corredor-hero \{([^}]*)\}", self.css)
+        self.assertIsNotNone(heroi)
+        self.assertIn("container-type: inline-size", heroi.group(1))
+        cont = self.css.index("@container (max-width: 540px) {\n  .corredor { grid-template-columns: repeat(4,")
+        cel = self.css.index("@media (max-width: 720px) {", self.css.index("\n.corredor {"))
+        self.assertLess(cont, cel)
+
     def test_quadro_com_tabela_simples_rola_em_qualquer_largura(self):
         """A 821px com o menu aberto, a lista de Páginas (tabela simples num
         `.quadro`) pedia 516px numa coluna de 486 e o `overflow:hidden` do

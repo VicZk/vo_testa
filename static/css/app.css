@@ -2612,6 +2612,9 @@ a.modulo-ativo:hover {
      reservado sempre, deixava ~110px de vazio entre o corredor e o mural. */
   padding-bottom: .6rem;
   transition: padding-bottom var(--mov-rapido) var(--curva);
+  /* Contêiner de consulta: quantas portas cabem por fileira depende da largura
+     que o corredor TEM (menu aberto ou recolhido), não só da janela. */
+  container-type: inline-size;
 }
 .corredor-hero:has(.porta:hover) { padding-bottom: 4.5rem; }
 /* Oito portas por fileira — o que o manual da casa descreve e o que deixa o
@@ -2633,6 +2636,14 @@ a.modulo-ativo:hover {
   overflow: visible;
 }
 @media (max-width: 1100px) { .corredor { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+/* Seis colunas só cabem com corredor de 540px ou mais. A 821px com o menu
+   aberto ele mede ~486px: as portas ficavam com 70px, as 24 cortavam a data e o
+   saldo ("R$ 2.6…") e o selo PCD subia em cima da situação. Abaixo disso, quatro
+   colunas — portas de ~110px, como no tablet. Mora ANTES dos @media de 720 e
+   480px, que seguem mandando no celular. */
+@container (max-width: 540px) {
+  .corredor { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
 @media (max-width: 720px) {
   /* Celular/tablet pequeno: todas as portas cabem na largura (nenhum quarto fica
      escondido fora da tela). Antes a grade de 6 × 76px estourava a página no
