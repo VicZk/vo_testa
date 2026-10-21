@@ -701,6 +701,27 @@ class ChaveDeEnvioTests(TelasBase):
             MovimentoEstoque.objects.count(),
         )
 
+    def test_erro_de_formulario_devolve_a_mesma_chave(self):
+        """O re-render depois de um erro mantém a chave: nada foi gravado, e a
+        segunda tentativa é o MESMO envio — não pode virar dois movimentos se a
+        pessoa corrigir e mandar duas vezes."""
+        import re
+        import uuid
+
+        chave = str(uuid.uuid4())
+        resposta = self.client.post(reverse("estoque:entrada"), {
+            "produto": self.produto.pk, "local": self.almox.pk,
+            "quantidade": "", "custo_unitario": "5",      # falta a quantidade
+            "fornecedor": "", "documento": "", "observacao": "", "chave": chave,
+        })
+        self.assertEqual(resposta.status_code, 200)
+        devolvida = re.search(
+            r'name="chave"[^>]*value="([0-9a-f-]{36})"', resposta.content.decode()
+        )
+        self.assertIsNotNone(devolvida)
+        self.assertEqual(devolvida.group(1), chave)
+        self.assertEqual(MovimentoEstoque.objects.filter(chave=chave).count(), 0)
+
     def test_tela_abre_com_chave_nova(self):
         import re
 
