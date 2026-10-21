@@ -212,11 +212,10 @@ def saldo(produto: Produto, local: LocalEstoque | None = None) -> Decimal:
     return total or ZERO
 
 
-def posicao_estoque(local: LocalEstoque | None = None, produtos=None):
+def posicao_estoque(local: LocalEstoque | None = None):
     """Saldo por produto (opcionalmente de um local) + flag de estoque mínimo.
 
-    `produtos` aceita um queryset já filtrado (busca, categoria) — a consulta
-    continua sendo DUAS, qualquer que seja o tamanho da lista: uma soma os
+    DUAS consultas, qualquer que seja o tamanho do catálogo: uma soma os
     movimentos agrupados por produto, a outra traz os produtos.
 
     Situação (`situacao`) separa o que a tela precisa distinguir: `zerado`
@@ -227,15 +226,12 @@ def posicao_estoque(local: LocalEstoque | None = None, produtos=None):
     qs = MovimentoEstoque.objects.all()
     if local is not None:
         qs = qs.filter(local=local)
-    if produtos is not None:
-        qs = qs.filter(produto__in=produtos)
     saldos = {
         linha["produto"]: linha["s"]
         for linha in qs.values("produto").annotate(s=Sum("quantidade"))
     }
-    base = produtos if produtos is not None else Produto.objects.filter(ativo=True)
     linhas = []
-    for produto in base.select_related("categoria"):
+    for produto in Produto.objects.filter(ativo=True).select_related("categoria"):
         atual = saldos.get(produto.pk, ZERO)
         minimo = produto.estoque_minimo
         zerado = atual <= ZERO
