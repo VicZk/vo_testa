@@ -3,6 +3,7 @@ from decimal import Decimal
 from django import forms
 from django.db.models import Case, IntegerField, Value, When
 
+from apps.nucleo.forms import ReaisInput
 from apps.nucleo.models import UH, FormaPagamento, Pessoa, TipoUH
 
 from .models import Acompanhante, FichaFNRH, GrupoReserva, LancamentoConta, Reserva
@@ -120,9 +121,7 @@ class LancamentoContaForm(forms.ModelForm):
             c for c in LancamentoConta.Tipo.choices
             if c[0] not in (LancamentoConta.Tipo.DIARIA, LancamentoConta.Tipo.TAXA)
         ]
-        self.fields["valor"].widget = forms.TextInput(attrs={
-            "class": "mascara-reais", "inputmode": "numeric", "placeholder": "0,00",
-        })
+        self.fields["valor"].widget = ReaisInput()
 
 
 class RecebimentoForm(forms.Form):
@@ -132,9 +131,7 @@ class RecebimentoForm(forms.Form):
     )
     valor = forms.DecimalField(
         label="Valor (R$)", min_value=Decimal("0.01"), decimal_places=2,
-        widget=forms.TextInput(attrs={
-            "class": "mascara-reais", "inputmode": "numeric", "placeholder": "0,00",
-        }),
+        widget=ReaisInput(),
     )
     parcelas = forms.IntegerField(label="Parcelas", min_value=1, initial=1)
     autorizacao = forms.CharField(
@@ -152,9 +149,7 @@ class RecebimentoForm(forms.Form):
 class FaturarForm(forms.Form):
     valor = forms.DecimalField(
         label="Valor faturado (R$)", min_value=Decimal("0.01"), decimal_places=2,
-        widget=forms.TextInput(attrs={
-            "class": "mascara-reais", "inputmode": "numeric", "placeholder": "0,00",
-        }),
+        widget=ReaisInput(),
     )
     vencimento = forms.DateField(
         label="Vencimento", widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
@@ -164,9 +159,7 @@ class FaturarForm(forms.Form):
 class DevolucaoForm(forms.Form):
     valor = forms.DecimalField(
         label="Valor a devolver (R$)", min_value=Decimal("0.01"), decimal_places=2,
-        widget=forms.TextInput(attrs={
-            "class": "mascara-reais", "inputmode": "numeric", "placeholder": "0,00",
-        }),
+        widget=ReaisInput(),
     )
     motivo = forms.CharField(
         label="Motivo", max_length=200,

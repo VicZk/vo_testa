@@ -127,8 +127,14 @@
             this.itens = await r.json();
             if (this.sel && !this.itens.find((it) => String(it.id) === String(this.sel))) {
               this.sel = ""; this.q = "";  // quarto escolhido não está mais livre
+              this.$dispatch("quarto-mudou", { id: "" });
             }
           } catch (e) { /* mantém a lista atual */ }
+        },
+        // Avisa o form (ex.: a diária praticada do «Ganhar» se recalcula com o quarto).
+        escolher(it) {
+          this.sel = it.id; this.q = it.nome; this.fechar();
+          this.$dispatch("quarto-mudou", { id: it.id });
         },
       }));
       Alpine.data("blocoQuartos", () => ({

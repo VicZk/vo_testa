@@ -216,17 +216,23 @@
       <a href="{% url 'comercial:enviar_email_lead' op.pk %}" class="botao-neutro botao-largo" style="display:block; text-align:center; margin-top:.5rem">Enviar por e-mail</a>
       <details class="op-det op-det-ganhar">
         <summary>Ganhar → criar reserva</summary>
-        <form method="post" action="{% url 'comercial:converter' op.pk %}">
+        <form method="post" action="{% url 'comercial:converter' op.pk %}" id="formGanhar">
           {% csrf_token %}
           <div class="campo">{{ conversao_form.checkin|rotulo }}{{ conversao_form.checkin }}</div>
           <div class="campo">{{ conversao_form.checkout|rotulo }}{{ conversao_form.checkout }}</div>
           {% if conversao_form.uh %}
-          <div class="campo"><label>Quarto:</label>
-            {% include "componentes/combo_quarto.html" with dados=quartos_combo dados_id="quartos-conv" campo="uh" valor_id=conversao_form.uh.value %}
+          <div class="campo"><label for="conv_uh">Quarto</label>
+            {% include "componentes/combo_quarto.html" with dados=quartos_combo dados_id="quartos-conv" campo="uh" campo_id="conv_uh" valor_id=conversao_form.uh.value %}
           </div>
           {% else %}
           <div class="campo">{{ conversao_form.tipo_uh|rotulo }}{{ conversao_form.tipo_uh }}</div>
           {% endif %}
+          <div class="campo">
+            <label for="praticadaGanhar">Diária praticada (tabela)</label>
+            <input type="text" id="praticadaGanhar" class="campo-calculado" readonly tabindex="-1"
+                   data-url="{% url 'comercial:diaria_praticada' %}"
+                   placeholder="escolha quarto + datas">
+          </div>
           <div class="campo">{{ conversao_form.valor_diaria|rotulo }}{{ conversao_form.valor_diaria }}</div>
           {% if pagamentos_ativo %}
             <label class="check-inline">{{ conversao_form.criar_sinal }} {{ conversao_form.criar_sinal.label }}</label>
@@ -235,6 +241,47 @@
           <button type="submit" class="botao-primario botao-largo">Criar reserva</button>
         </form>
       </details>
+      <script>
+      (function () {
+        const form = document.getElementById('formGanhar');
+        if (!form) return;
+        const prat = document.getElementById('praticadaGanhar');
+        const vend = form.querySelector('[name=valor_diaria]');
+        const ci = form.querySelector('[name=checkin]');
+        const co = form.querySelector('[name=checkout]');
+        // "420.00" → "420,00" (pt-BR, com milhar) para a máscara/submit entenderem.
+        const brMoeda = (s) => { const n = parseFloat(s); return isNaN(n) ? '' :
+          n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+        // Cotação pré-preenchida já conta como "vendida mexida" (não sobrescreve).
+        let vendidaTocada = !!(vend && vend.value);
+        if (vend) vend.addEventListener('input', () => { vendidaTocada = true; });
+        async function atualizar(ev) {
+          if (!prat || !ci || !co) return;
+          const uh = form.querySelector('[name=uh]');
+          const tipo = form.querySelector('[name=tipo_uh]');
+          // No evento 'quarto-mudou' o Alpine ainda não propagou o value do input;
+          // usa o id do detail (fresco). Nos demais eventos, lê o input já estável.
+          const uhVal = (ev && ev.detail && ev.detail.id !== undefined)
+                      ? ev.detail.id : (uh ? uh.value : '');
+          const sel = uhVal ? ('uh=' + uhVal)
+                    : (tipo && tipo.value ? ('tipo_uh=' + tipo.value) : '');
+          if (!sel || !ci.value || !co.value) { prat.value = ''; return; }
+          try {
+            const url = prat.dataset.url + '?' + sel + '&checkin=' + ci.value + '&checkout=' + co.value;
+            const d = await (await fetch(url, { headers: { 'X-Requested-With': 'fetch' } })).json();
+            if (d.diaria == null) { prat.value = ''; return; }
+            prat.value = brMoeda(d.diaria);
+            if (vend && !vendidaTocada) vend.value = brMoeda(d.diaria);  // sugere a vendida
+          } catch (e) { /* mantém o que está */ }
+        }
+        form.addEventListener('quarto-mudou', atualizar);
+        if (ci) ci.addEventListener('change', atualizar);
+        if (co) co.addEventListener('change', atualizar);
+        const tipo = form.querySelector('[name=tipo_uh]');
+        if (tipo) tipo.addEventListener('change', atualizar);
+        atualizar();  // caso já venha pré-preenchido (cotação)
+      })();
+      </script>
     </div>
     {% endif %}
 
@@ -258,8 +305,8 @@
           <div class="campo">{{ cotacao_form.checkin|rotulo }}{{ cotacao_form.checkin }}</div>
           <div class="campo">{{ cotacao_form.checkout|rotulo }}{{ cotacao_form.checkout }}</div>
           {% if cotacao_form.uh %}
-          <div class="campo"><label>Quarto:</label>
-            {% include "componentes/combo_quarto.html" with dados=quartos_combo dados_id="quartos-cot" campo="uh" valor_id=cotacao_form.uh.value %}
+          <div class="campo"><label for="cot_uh">Quarto</label>
+            {% include "componentes/combo_quarto.html" with dados=quartos_combo dados_id="quartos-cot" campo="uh" campo_id="cot_uh" valor_id=cotacao_form.uh.value %}
           </div>
           {% else %}
           <div class="campo">{{ cotacao_form.tipo_uh|rotulo }}{{ cotacao_form.tipo_uh }}</div>
@@ -288,16 +335,45 @@
     </div>
     {% endif %}
 
-    {% if op.perdida %}
-    <div class="cartao op-acoes">
-      <p class="rot-secao">Lead perdido</p>
-      <p style="font-size:.74em;color:var(--tinta-suave);margin:-.15rem 0 .6rem">
-        {% if op.motivo_perda %}Motivo: {{ op.motivo_perda.nome }}{% if op.motivo_perda_detalhe %} — “{{ op.motivo_perda_detalhe }}”{% endif %}{% else %}Sem motivo registrado.{% endif %}
-        {% if op.fechado_em %}<br>Perdido em {{ op.fechado_em|date:"d/m/Y" }}.{% endif %}
+    {% if pode_gerir_fechados and not op.aberta %}
+    <div class="cartao op-acoes" x-data="{ tipo: '' }">
+      <p class="rot-secao">Gestão — reabrir / mover lead fechado</p>
+      <p class="op-nota">
+        Estado atual: <b>{% if op.perdida %}Perdido{% else %}Ganho{% endif %}</b>{% if op.fechado_em %} em {{ op.fechado_em|date:"d/m/Y" }}{% endif %}.
+        {% if op.perdida and op.motivo_perda %} Motivo: {{ op.motivo_perda.nome }}{% if op.motivo_perda_detalhe %} — “{{ op.motivo_perda_detalhe }}”{% endif %}.{% endif %}
       </p>
-      <form method="post" action="{% url 'comercial:reabrir' op.pk %}" onsubmit="return confirm('Reabrir este lead em «Novo lead»? A perda fica registrada na linha do tempo.')" style="margin:0">
+      {% if reserva_vinculada %}
+      {# Um só <span> ao lado do ícone: o aviso é flex, e cada pedaço solto de texto viraria uma coluna. #}
+      <p class="aviso-inline op-aviso">
+        <svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+        <span>Há a reserva <a href="{% url 'reservas:detalhe' reserva_vinculada.pk %}">#{{ reserva_vinculada.pk }}</a> ({{ reserva_vinculada.status }}).
+        {% if op.status == 'ganha' %} Tirar do Ganho vai <b>cancelar</b> esta reserva.{% endif %}
+        {% if reserva_vinculada.no_caixa %}<br>O hóspede pagou <b>{{ reserva_vinculada.no_caixa|intcomma_brl }}</b> no caixa — será <b>estornado</b> ao mover (exige o seu caixa de Reservas aberto).{% endif %}
+        {% if reserva_vinculada.online %}<br><b>{{ reserva_vinculada.online|intcomma_brl }}</b> foram pagos online — estorne a cobrança em Pagamentos antes de mover.{% endif %}
+        {% if op.status == 'ganha' and not reserva_vinculada.cancelavel %}<br>A reserva não é mais cancelável ({{ reserva_vinculada.status }}) — resolva em Reservas primeiro.{% endif %}</span>
+      </p>
+      {% endif %}
+      <form method="post" action="{% url 'comercial:mover_fechado' op.pk %}"
+            onsubmit="return confirm('{% if op.status == 'ganha' and reserva_vinculada %}Isto vai CANCELAR a reserva #{{ reserva_vinculada.pk }}{% if reserva_vinculada.no_caixa %} e ESTORNAR {{ reserva_vinculada.no_caixa|intcomma_brl }} no caixa{% endif %}. {% endif %}Mover este lead?')">
         {% csrf_token %}
-        <button type="submit" class="botao-primario botao-largo">♻️ Reabrir lead</button>
+        <div class="campo">
+          <label for="moverEtapa">Mover para</label>
+          <select name="etapa" id="moverEtapa" required
+                  @change="tipo = $event.target.selectedOptions[0].dataset.tipo || ''">
+            <option value="">—</option>
+            {% for e in etapas_todas %}<option value="{{ e.id }}" data-tipo="{{ e.tipo }}" {% if e.id == op.etapa_id %}disabled{% endif %}>{{ e.nome }}</option>{% endfor %}
+          </select>
+        </div>
+        {# x-if, e não x-show: escondido, o select obrigatório travaria o envio para as outras etapas. #}
+        <template x-if="tipo === 'perdido'">
+          <div class="campo">{{ perda_form.motivo|rotulo }}{{ perda_form.motivo }}</div>
+        </template>
+        <div class="campo">
+          <label for="moverJustificativa">Motivo do movimento (obrigatório)</label>
+          <input type="text" name="justificativa" id="moverJustificativa" maxlength="255" required
+                 placeholder="Por que está movendo este lead?">
+        </div>
+        <button type="submit" class="botao-primario botao-largo">Mover lead</button>
       </form>
     </div>
     {% endif %}

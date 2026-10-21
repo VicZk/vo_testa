@@ -3397,6 +3397,8 @@ form.filtros:not(.subnav) select:focus {
   background-repeat: no-repeat; background-position: right .65rem center;
 }
 .op-acoes .campo label { display: block; font-size: .78rem; color: var(--tinta-suave); margin-bottom: .25rem; }
+/* Valor que o sistema calcula e a pessoa só lê (ex.: a diária praticada da tabela). */
+.op-acoes input.campo-calculado[readonly] { background: var(--canvas); color: var(--tinta-suave); }
 
 /* ============================================================
    RESERVAS — camada Apple "Fluid Interfaces" (escopo .tela-reservas)

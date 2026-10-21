@@ -833,45 +833,132 @@ def marcar_perdida(oportunidade, motivo, usuario, detalhe=""):
     return oportunidade
 
 
-@transaction.atomic
-def reabrir_oportunidade(oportunidade, usuario):
-    """Reabre MANUALMENTE um lead perdido: volta à etapa inicial do funil ('Novo
-    lead'), limpa o motivo da perda e carimba `reativada_em` (card ganha o selo
-    ♻️ Reativado). Guarda na linha do tempo o motivo e a DATA da perda anterior e,
-    pelo próprio carimbo da nota, a data da reabertura e quem reabriu. Auditado.
+def _contexto_fechamento(op):
+    """Frase que resume como o lead foi fechado (para o log do movimento)."""
+    quando = op.fechado_em.strftime("%d/%m/%Y") if op.fechado_em else "data não registrada"
+    if op.status == Oportunidade.Status.PERDIDA:
+        motivo = op.motivo_perda.nome if op.motivo_perda_id else "não informado"
+        detalhe = (op.motivo_perda_detalhe or "").strip()
+        return f"perdido em {quando} — {motivo}" + (f": {detalhe}" if detalhe else "")
+    return f"ganho em {quando}" + (f", reserva #{op.reserva_id}" if op.reserva_id else "")
 
-    Espelha a reativação automática (`_reativar_oportunidade`), mas acionada por um
-    vendedor no detalhe do lead — e não dispara evento de mídia (como a automática)."""
+
+@transaction.atomic
+def mover_lead_fechado(oportunidade, etapa_destino, usuario, justificativa="",
+                       motivo_perda=None):
+    """Reabre/move MANUALMENTE um lead já fechado (ganho ou perdido) para a etapa
+    escolhida — ação privilegiada (área `comercial_fechados`).
+
+    Destino aberto = reabre (status Aberta, selo ♻️ Reativado); Perdido = exige
+    `motivo_perda`; Ganho = exige reserva vinculada e viva (ganho sem conversão não
+    existe). Ao TIRAR um lead do ganho, a venda é desfeita em Reservas
+    (`desfazer_venda`): a reserva é cancelada sem retenção e o que o hóspede pagou pela
+    gaveta é estornado no caixa de Reservas de quem move. Reserva que não pode mais ser
+    cancelada (hóspede em casa), pago online (volta pelo gateway) ou caixa fechado
+    bloqueiam o movimento antes de mexer no lead. Tudo vai para a linha do tempo +
+    trilha de auditoria, com a data/motivo do fechamento anterior e a justificativa."""
+    from apps.nucleo.sistema import travar
+    from apps.nucleo.templatetags.moeda import intcomma_brl
+
+    oportunidade = travar(oportunidade)  # duplo clique: o segundo já vê o lead movido
+    if oportunidade.status not in (Oportunidade.Status.GANHA, Oportunidade.Status.PERDIDA):
+        raise ValidationError("Esta ação é só para leads fechados (ganho ou perdido).")
+    if etapa_destino is None:
+        raise ValidationError("Escolha a etapa de destino.")
+    justificativa = (justificativa or "").strip()
+    if not justificativa:
+        raise ValidationError("Informe o motivo do movimento.")
+    if etapa_destino.tipo == EtapaFunil.Tipo.PERDIDO and motivo_perda is None:
+        raise ValidationError("Informe o motivo da perda.")
+
+    reservas_ativo = modulo_ativo(Modulo.RESERVAS)
+    if etapa_destino.tipo == EtapaFunil.Tipo.GANHO:
+        situacao = None
+        if oportunidade.reserva_id and reservas_ativo:
+            from apps.reservas.services import situacao_da_venda
+            situacao = situacao_da_venda(oportunidade.reserva_id)
+        if not oportunidade.reserva_id or (reservas_ativo and not (situacao and situacao["ativa"])):
+            raise ValidationError("Para marcar como ganho, use «Converter em reserva» — "
+                                  "ganho exige uma reserva ativa.")
+
+    era_ganha = oportunidade.status == Oportunidade.Status.GANHA
+    vai_sair_do_ganho = era_ganha and etapa_destino.tipo != EtapaFunil.Tipo.GANHO
+    contexto = _contexto_fechamento(oportunidade)
+
+    # Tirar do ganho desfaz a venda: valida ANTES de mexer no lead, para o erro sair
+    # limpo (o desfazer_venda confere de novo, sob a trava da reserva).
+    desfazer = vai_sair_do_ganho and oportunidade.reserva_id and reservas_ativo
+    if desfazer:
+        from apps.reservas.services import exigir_venda_desfazivel, situacao_da_venda
+        situacao = situacao_da_venda(oportunidade.reserva_id)
+        if situacao is None:
+            desfazer = False
+        else:
+            exigir_venda_desfazivel(situacao, usuario)
+
+    agora = timezone.now()
+    _fechar_permanencia(oportunidade)
+    oportunidade.etapa = etapa_destino
+    if etapa_destino.tipo == EtapaFunil.Tipo.PERDIDO:
+        oportunidade.status = Oportunidade.Status.PERDIDA
+        oportunidade.motivo_perda = motivo_perda
+        oportunidade.motivo_perda_detalhe = justificativa
+        oportunidade.fechado_em = agora
+        verbo = "Movido para perdido"
+    elif etapa_destino.tipo == EtapaFunil.Tipo.GANHO:
+        oportunidade.status = Oportunidade.Status.GANHA
+        oportunidade.fechado_em = oportunidade.fechado_em or agora
+        verbo = "Movido para ganho"
+    else:  # etapa aberta → reabre
+        oportunidade.status = Oportunidade.Status.ABERTA
+        oportunidade.fechado_em = None
+        oportunidade.reativada_em = agora
+        oportunidade.motivo_perda = None
+        oportunidade.motivo_perda_detalhe = ""
+        verbo = "Reaberto"
+    oportunidade.save(update_fields=["etapa", "status", "fechado_em", "reativada_em",
+                                     "motivo_perda", "motivo_perda_detalhe", "atualizado_em"])
+    _abrir_permanencia(oportunidade, etapa_destino)
+    if etapa_destino.tipo in (EtapaFunil.Tipo.GANHO, EtapaFunil.Tipo.PERDIDO):
+        _fechar_permanencia(oportunidade)  # terminais não acumulam permanência
+    atualizar_score(oportunidade)
+
+    # Desfaz a venda DEPOIS de mudar o status — assim o receiver de `reserva_encerrada`
+    # não cria a tarefa de "reabordar", só anota o cancelamento na timeline.
+    reserva_cancelada = None
+    total_estornado = Decimal("0.00")
+    if desfazer:
+        from apps.reservas.services import desfazer_venda
+        situacao = desfazer_venda(oportunidade.reserva_id, usuario,
+                                  f"Lead movido no funil ({justificativa})")
+        if situacao is not None:
+            reserva_cancelada = situacao["pk"]
+            total_estornado = situacao["no_caixa"]
+
+    nota = (f"♻️ {verbo} → {etapa_destino.nome} · fechamento anterior: {contexto} · "
+            f"motivo: {justificativa}")
+    if reserva_cancelada:
+        nota += f" · reserva #{reserva_cancelada} cancelada"
+    if total_estornado > 0:
+        nota += f" · {intcomma_brl(total_estornado)} estornado no Caixa"
+    _log_evento(oportunidade, usuario, nota[:255])
+    registrar_auditoria(usuario, "lead_fechado_movido", oportunidade, {
+        "destino": etapa_destino.nome, "fechamento_anterior": contexto,
+        "justificativa": justificativa,
+        "reserva_cancelada": reserva_cancelada,
+        "adiantamento_estornado": str(total_estornado) if total_estornado > 0 else None})
+    return oportunidade
+
+
+def reabrir_oportunidade(oportunidade, usuario, justificativa="Reaberto manualmente"):
+    """Atalho: reabre um lead perdido na etapa inicial do funil ('Novo lead').
+    Delega para `mover_lead_fechado` (mesma trilha/auditoria)."""
     if oportunidade.status != Oportunidade.Status.PERDIDA:
         raise ValidationError("Só é possível reabrir um lead que está perdido.")
     primeira = etapas().first()  # ordering por 'ordem' → "Novo lead"
     if primeira is None:
         raise ValidationError("Não há etapa de funil configurada para reabrir o lead.")
-    motivo_anterior = oportunidade.motivo_perda.nome if oportunidade.motivo_perda_id \
-        else "não informado"
-    detalhe_anterior = (oportunidade.motivo_perda_detalhe or "").strip()
-    perdido_em = oportunidade.fechado_em
-    quando_perda = perdido_em.strftime("%d/%m/%Y") if perdido_em else "data não registrada"
-    agora = timezone.now()
-    _fechar_permanencia(oportunidade)
-    oportunidade.status = Oportunidade.Status.ABERTA
-    oportunidade.etapa = primeira
-    oportunidade.fechado_em = None
-    oportunidade.reativada_em = agora
-    oportunidade.motivo_perda = None
-    oportunidade.motivo_perda_detalhe = ""
-    oportunidade.save(update_fields=["status", "etapa", "fechado_em", "reativada_em",
-                                     "motivo_perda", "motivo_perda_detalhe", "atualizado_em"])
-    _abrir_permanencia(oportunidade, primeira)
-    atualizar_score(oportunidade)
-    _log_evento(
-        oportunidade, usuario,
-        f"♻️ Reaberto manualmente (perdido em {quando_perda} — {motivo_anterior}"
-        + (f": {detalhe_anterior}" if detalhe_anterior else "") + ")")
-    registrar_auditoria(usuario, "oportunidade_reaberta", oportunidade,
-                        {"motivo_perda_anterior": motivo_anterior,
-                         "detalhe": detalhe_anterior, "perdido_em": quando_perda})
-    return oportunidade
+    return mover_lead_fechado(oportunidade, primeira, usuario, justificativa=justificativa)
 
 
 def _limpar_prospecto(pessoa):
@@ -993,6 +1080,34 @@ def registrar_cotacao(*, oportunidade, usuario, tipo_uh=None, uh=None, checkin, 
     return cotacao
 
 
+def _registrar_diaria_vendida(oportunidade, *, vendida, tipo_uh, uh, checkin, checkout,
+                              usuario):
+    """Se a diária fechada (vendida) diverge da Tabela de Preços (praticada), registra
+    o delta na linha do tempo e na auditoria. Só roda quando o vendedor informou um
+    valor (blank = usa a tabela, sem divergência)."""
+    from apps.reservas.services import diaria_media, diaria_media_unidade
+    try:
+        praticada = (diaria_media_unidade(uh, checkin, checkout) if uh is not None
+                     else diaria_media(tipo_uh, checkin, checkout))
+    except Exception:
+        return
+    if praticada is None:
+        return
+    praticada = Decimal(praticada).quantize(Decimal("0.01"))
+    vendida = Decimal(str(vendida)).quantize(Decimal("0.01"))
+    if vendida == praticada:
+        return
+    delta = vendida - praticada
+    tipo_delta = "desconto" if delta < 0 else "acréscimo"
+    _log_evento(
+        oportunidade, usuario,
+        f"diária vendida R$ {vendida} · tabela R$ {praticada} "
+        f"({tipo_delta} R$ {abs(delta)})")
+    registrar_auditoria(usuario, "diaria_vendida_divergente", oportunidade,
+                        {"vendida": str(vendida), "praticada": str(praticada),
+                         "delta": str(delta)})
+
+
 @transaction.atomic
 def converter_em_reserva(oportunidade, *, tipo_uh=None, uh=None, checkin, checkout, usuario,
                          valor_diaria=None, criar_sinal=False, valor_sinal=None):
@@ -1077,6 +1192,9 @@ def converter_em_reserva(oportunidade, *, tipo_uh=None, uh=None, checkin, checko
                 descricao=f"Cobrança de sinal #{cobranca.pk} — R$ {valor}",
             )
     _log_evento(oportunidade, usuario, f"converteu em reserva #{reserva.pk}")
+    if valor_diaria is not None:
+        _registrar_diaria_vendida(oportunidade, vendida=valor_diaria, tipo_uh=tipo_uh,
+                                  uh=uh, checkin=checkin, checkout=checkout, usuario=usuario)
     atualizar_score(oportunidade)
     return reserva
 

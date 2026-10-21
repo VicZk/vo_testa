@@ -1,6 +1,7 @@
 from django import forms
 from django.conf import settings
 
+from apps.nucleo.forms import ReaisInput
 from apps.nucleo.models import UH, Pessoa, TipoUH
 
 from .models import (
@@ -80,16 +81,6 @@ class DataInput(forms.DateInput):
 
 class DataHoraInput(forms.DateTimeInput):
     input_type = "datetime-local"
-
-
-class ReaisInput(forms.TextInput):
-    """Campo de moeda BR: máscara 'mascara-reais' (formata ao digitar, converte no submit)."""
-
-    def __init__(self, attrs=None):
-        base = {"class": "mascara-reais", "inputmode": "numeric", "placeholder": "0,00"}
-        if attrs:
-            base.update(attrs)
-        super().__init__(attrs=base)
 
 
 class CampanhaForm(forms.ModelForm):
@@ -207,8 +198,9 @@ class ConversaoForm(_SelecaoQuartoMixin, forms.Form):
     checkin = forms.DateField(label="Check-in", widget=DataInput())
     checkout = forms.DateField(label="Check-out", widget=DataInput())
     valor_diaria = forms.DecimalField(
-        label="Diária (R$)", required=False, max_digits=10, decimal_places=2,
-        help_text="Vazio = usa a tarifa do período.", widget=ReaisInput(),
+        label="Diária vendida (R$)", required=False, max_digits=10, decimal_places=2,
+        help_text="O que foi fechado de fato. Vazio = usa a praticada (tabela).",
+        widget=ReaisInput(),
     )
     criar_sinal = forms.BooleanField(
         label="Gerar cobrança de sinal (Pix)", required=False, initial=False,

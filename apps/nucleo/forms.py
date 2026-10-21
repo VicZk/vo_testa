@@ -38,6 +38,29 @@ class HoraInput(forms.TimeInput):
         super().__init__(*a, **k)
 
 
+class ReaisInput(forms.TextInput):
+    """Campo de R$ com a máscara `mascara-reais` (base.html): formata ao digitar e, no
+    submit, tira os pontos de milhar e troca a vírgula ("1.784,00" → "1784.00").
+
+    Por isso o valor que vem do servidor (inicial ou o form que voltou com erro) também
+    sai no formato da máscara: um "650.00" cru perdia o ponto no submit e chegava ao
+    backend como 65000 — cem vezes o valor."""
+
+    def __init__(self, attrs=None):
+        base = {"class": "mascara-reais", "inputmode": "numeric", "placeholder": "0,00"}
+        if attrs:
+            base.update(attrs)
+        super().__init__(attrs=base)
+
+    def format_value(self, value):
+        if value is None or value == "":
+            return None
+        try:
+            return _brl(value)
+        except (InvalidOperation, ValueError):
+            return super().format_value(value)  # o que a pessoa digitou, como veio
+
+
 # ---------- Cadastros ----------
 
 

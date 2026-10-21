@@ -7,6 +7,7 @@ app_name = "comercial"
 urlpatterns = [
     path("", views.funil, name="funil"),
     path("quartos-disponiveis/", views.quartos_disponiveis, name="quartos_disponiveis"),
+    path("diaria-praticada/", views.diaria_praticada, name="diaria_praticada"),
     path("painel/", views.painel, name="painel"),
     path("painel/meta/", views.meta, name="meta"),
     path("tarefas/", views.tarefas, name="tarefas"),
@@ -52,6 +53,6 @@ urlpatterns = [
     path("<int:pk>/cotar/", views.cotar, name="cotar"),
     path("<int:pk>/converter/", views.converter, name="converter"),
     path("<int:pk>/perder/", views.perder, name="perder"),
-    path("<int:pk>/reabrir/", views.reabrir, name="reabrir"),
+    path("<int:pk>/mover-fechado/", views.mover_fechado, name="mover_fechado"),
     path("tarefa/<int:pk>/concluir/", views.concluir_tarefa, name="concluir_tarefa"),
 ]

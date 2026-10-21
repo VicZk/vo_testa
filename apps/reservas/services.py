@@ -2043,6 +2043,82 @@ def devolver_ao_hospede(reserva, valor, usuario, motivo: str) -> Decimal:
     return valor
 
 
+# ---------- Venda desfeita no Comercial (lead tirado do Ganho) ----------
+
+
+def _situacao_da_venda(reserva) -> dict:
+    from .cancelamento import total_pago
+
+    zero = Decimal("0.00")
+    pago = max(zero, total_pago(reserva))
+    no_caixa = min(pago, sum((livre for _c, livre in _creditos_do_caixa(reserva)), zero))
+    return {
+        "pk": reserva.pk,
+        "status": reserva.get_status_display(),
+        "ativa": reserva.status not in (Reserva.Status.CANCELADA, Reserva.Status.NO_SHOW),
+        "cancelavel": reserva.status in (
+            Reserva.Status.ORCAMENTO, Reserva.Status.PRE_RESERVA, Reserva.Status.CONFIRMADA),
+        "pago": pago,
+        "no_caixa": no_caixa,
+        "online": pago - no_caixa,
+    }
+
+
+def situacao_da_venda(reserva_id):
+    """Para o Comercial: a reserva de um lead ganho, se ainda dá para cancelar, e o que
+    o hóspede já pagou — quanto pela gaveta (volta por estorno no caixa) e quanto online
+    (só volta pelo gateway). None se a reserva não existe."""
+    reserva = Reserva.objects.filter(pk=reserva_id).first()
+    return None if reserva is None else _situacao_da_venda(reserva)
+
+
+def exigir_venda_desfazivel(situacao, usuario) -> None:
+    """ValidationError se a venda não pode ser desfeita agora — chamada antes de mexer
+    no lead, para o erro sair limpo, e de novo dentro de `desfazer_venda`."""
+    from apps.nucleo.models import SessaoCaixa
+    from apps.nucleo.modulos import Modulo
+    from apps.nucleo.templatetags.moeda import intcomma_brl
+
+    pk = situacao["pk"]
+    if not situacao["cancelavel"]:
+        raise ValidationError(
+            f"A reserva #{pk} está «{situacao['status']}» e não pode mais ser cancelada. "
+            "Resolva em Reservas primeiro.")
+    if situacao["online"] > 0:
+        raise ValidationError(
+            f"{intcomma_brl(situacao['online'])} da reserva #{pk} foi pago online: "
+            "estorne a cobrança em Pagamentos antes (o dinheiro volta pelo gateway).")
+    if situacao["no_caixa"] > 0 and not SessaoCaixa.objects.filter(
+            operador=usuario, modulo=Modulo.RESERVAS,
+            status=SessaoCaixa.Status.ABERTA).exists():
+        raise ValidationError(
+            f"A reserva #{pk} tem {intcomma_brl(situacao['no_caixa'])} pago a devolver: "
+            "abra o seu caixa de Reservas (Operação → Caixa) antes — o estorno sai dele.")
+
+
+@transaction.atomic
+def desfazer_venda(reserva_id, usuario, motivo: str):
+    """Cancela a reserva de uma venda desfeita no Comercial e devolve ao hóspede tudo o
+    que ele pagou pela gaveta (estorno no caixa de Reservas do operador). A política de
+    cancelamento não retém nada (`valor_retido` = 0): a venda não aconteceu. Pago online
+    bloqueia — volta pela cobrança, em Pagamentos. Tudo ou nada; o cancelamento e a
+    devolução ficam na trilha pelos próprios services. Devolve a situação de antes
+    (None se a reserva não existe)."""
+    from apps.nucleo.sistema import travar
+
+    reserva = Reserva.objects.filter(pk=reserva_id).first()
+    if reserva is None:
+        return None
+    reserva = travar(reserva)
+    situacao = _situacao_da_venda(reserva)  # relida sob a trava
+    exigir_venda_desfazivel(situacao, usuario)
+    reserva.valor_retido = Decimal("0.00")
+    reserva.cancelar(usuario, motivo)
+    if situacao["no_caixa"] > 0:
+        devolver_ao_hospede(reserva, situacao["no_caixa"], usuario, motivo)
+    return situacao
+
+
 def contas_abertas():
     """Contas de hospedagem abertas de QUARTO (para PDVs lançarem consumo na conta).
     Exclui os folios-mãe de grupo (que não têm reserva/quarto — só diárias)."""

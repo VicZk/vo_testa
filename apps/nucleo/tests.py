@@ -1757,3 +1757,20 @@ class PaginacaoTests(TestCase):
         self.assertEqual(milhar(950), "950")
         self.assertEqual(milhar("x"), "x")
 
+
+
+class ReaisInputTests(TestCase):
+    """O campo de R$ sai do servidor no formato da máscara: o submit tira os pontos de
+    milhar, e um "10000.00" cru chegava ao backend como 1000000."""
+
+    def test_valor_inicial_e_valor_devolvido_saem_como_a_mascara(self):
+        from decimal import Decimal
+
+        from .forms import ReaisInput
+
+        w = ReaisInput()
+        self.assertEqual(w.format_value(Decimal("10000.00")), "10.000,00")
+        self.assertEqual(w.format_value("1784.00"), "1.784,00")  # form que voltou com erro
+        self.assertEqual(w.format_value("12,3x"), "12,3x")  # o que a pessoa digitou
+        self.assertIsNone(w.format_value(""))
+        self.assertIn('value="650,00"', w.render("valor", Decimal("650")))

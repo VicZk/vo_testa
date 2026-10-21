@@ -15,10 +15,11 @@ from django.utils.text import slugify
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 
+from apps.nucleo.areas import Area
 from apps.nucleo.models import Pessoa, Prospecto, modulo_ativo
 from apps.nucleo.modulos import Modulo
 from apps.nucleo.periodos import periodo, selecao_periodo
-from apps.nucleo.permissoes import requer_gerencia, requer_modulo
+from apps.nucleo.permissoes import requer_area, requer_gerencia, requer_modulo
 from apps.nucleo.seletores import pessoas_agrupadas
 
 from . import quartos, services
@@ -258,6 +259,13 @@ def oportunidade(request, pk):
         h = historico_hospede(op.pessoa)
         if h["estadias"] or h["futuras"]:
             historico_cliente = h
+    # Gestão de lead fechado (reabrir/mover) — só para quem tem a área; avisa sobre a
+    # reserva que seria cancelada e o dinheiro que voltaria ao hóspede.
+    pode_gerir_fechados = request.user.pode_area(Area.COMERCIAL_FECHADOS)
+    reserva_vinculada = None
+    if pode_gerir_fechados and op.reserva_id and modulo_ativo(Modulo.RESERVAS):
+        from apps.reservas.services import situacao_da_venda
+        reserva_vinculada = situacao_da_venda(op.reserva_id)
     return render(request, "comercial/oportunidade.html", {
         "op": op,
         "sinal_pct": settings.COMERCIAL_SINAL_PCT,
@@ -267,6 +275,9 @@ def oportunidade(request, pk):
         "cotacoes": op.cotacoes.select_related("tipo_uh"),
         "tipos_atividade": AtividadeComercial.Tipo.choices,
         "etapas": [e for e in services.etapas() if e.tipo == EtapaFunil.Tipo.ABERTA],
+        "etapas_todas": services.etapas(),  # inclui Ganho/Perdido (mover fechados)
+        "pode_gerir_fechados": pode_gerir_fechados,
+        "reserva_vinculada": reserva_vinculada,
         "conversao_form": _conversao_inicial(op),
         "cotacao_form": _cotacao_inicial(op),
         # Dados iniciais do combo de quarto (quebrado por ala) — já filtrado pelas
@@ -407,6 +418,30 @@ def quartos_disponiveis(request):
 
 
 @requer_modulo(Modulo.COMERCIAL)
+def diaria_praticada(request):
+    """Diária da Tabela de Preços (quarto×temporada) para o período — p/ autofill no
+    form 'Ganhar'. Retorna {"diaria": "420.00"} ou {"diaria": null}."""
+    checkin = _data(request.GET.get("checkin"))
+    checkout = _data(request.GET.get("checkout"))
+    if not (checkin and checkout and checkout > checkin and modulo_ativo(Modulo.RESERVAS)):
+        return JsonResponse({"diaria": None})
+    from apps.nucleo.models import UH, TipoUH
+    from apps.reservas.services import diaria_media, diaria_media_unidade
+    try:
+        if request.GET.get("uh"):
+            uh = UH.objects.select_related("tipo").get(pk=request.GET["uh"])
+            diaria = diaria_media_unidade(uh, checkin, checkout)
+        elif request.GET.get("tipo_uh"):
+            diaria = diaria_media(TipoUH.objects.get(pk=request.GET["tipo_uh"]),
+                                  checkin, checkout)
+        else:
+            return JsonResponse({"diaria": None})
+    except (UH.DoesNotExist, TipoUH.DoesNotExist, ValueError):
+        return JsonResponse({"diaria": None})
+    return JsonResponse({"diaria": str(diaria)})
+
+
+@requer_modulo(Modulo.COMERCIAL)
 def cotar(request, pk):
     op = get_object_or_404(Oportunidade, pk=pk)
     if request.method == "POST":
@@ -477,12 +512,19 @@ def perder(request, pk):
 
 
 @requer_modulo(Modulo.COMERCIAL)
-def reabrir(request, pk):
+@requer_area(Area.COMERCIAL_FECHADOS)
+def mover_fechado(request, pk):
+    """Reabrir/mover um lead já fechado (ganho/perdido) — só gestão comercial."""
     op = get_object_or_404(Oportunidade, pk=pk)
     if request.method == "POST":
+        etapa = get_object_or_404(EtapaFunil, pk=request.POST.get("etapa"))
+        motivo = MotivoPerda.objects.filter(pk=request.POST.get("motivo") or None).first()
         try:
-            services.reabrir_oportunidade(op, request.user)
-            messages.success(request, "Lead reaberto em 'Novo lead'.")
+            services.mover_lead_fechado(
+                op, etapa, request.user,
+                justificativa=request.POST.get("justificativa", ""),
+                motivo_perda=motivo)
+            messages.success(request, f"Lead movido para '{etapa.nome}'.")
         except ValidationError as erro:
             messages.error(request, " ".join(erro.messages))
     return redirect("comercial:oportunidade", pk=pk)

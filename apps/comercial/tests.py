@@ -503,6 +503,257 @@ class ConversaoTests(TestCase):
             oport.atividades.filter(concluida=False, descricao__icontains="Reabordar").exists()
         )
 
+    def test_endpoint_diaria_praticada_devolve_tabela(self):
+        from apps.reservas.services import diaria_media_unidade
+        hoje = timezone.localdate()
+        ci, co = hoje + timedelta(days=5), hoje + timedelta(days=7)
+        esperado = diaria_media_unidade(self.uh, ci, co)
+        self.client.login(username="com", password="senha-forte-123")
+        r = self.client.get(reverse("comercial:diaria_praticada"), {
+            "uh": self.uh.pk, "checkin": ci.isoformat(), "checkout": co.isoformat()})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["diaria"], str(esperado))
+
+    def test_converter_com_diaria_vendida_divergente_loga_delta(self):
+        from apps.nucleo.models import TrilhaAuditoria
+        from apps.reservas.services import diaria_media_unidade
+        oport = services.criar_oportunidade(usuario=self.op, pessoa=self.pessoa, titulo="D")
+        hoje = timezone.localdate()
+        ci, co = hoje + timedelta(days=5), hoje + timedelta(days=7)
+        praticada = diaria_media_unidade(self.uh, ci, co)
+        vendida = praticada - Decimal("50.00")  # desconto
+        services.converter_em_reserva(oport, usuario=self.op, uh=self.uh,
+                                      checkin=ci, checkout=co, valor_diaria=vendida)
+        self.assertTrue(oport.atividades.filter(
+            descricao__icontains="diária vendida").exists())
+        self.assertTrue(TrilhaAuditoria.objects.filter(
+            acao="diaria_vendida_divergente").exists())
+
+    def test_converter_sem_informar_diaria_nao_loga_delta(self):
+        oport = services.criar_oportunidade(usuario=self.op, pessoa=self.pessoa, titulo="S")
+        hoje = timezone.localdate()
+        services.converter_em_reserva(
+            oport, usuario=self.op, uh=self.uh,
+            checkin=hoje + timedelta(days=5), checkout=hoje + timedelta(days=7))
+        self.assertFalse(oport.atividades.filter(
+            descricao__icontains="diária vendida").exists())
+
+
+class GestaoLeadFechadoTests(TestCase):
+    """Reabrir/mover leads já fechados (área `comercial_fechados`): cancela a reserva
+    do ganho, exige motivo, e loga data+motivo do fechamento anterior."""
+
+    def setUp(self):
+        self.op = Usuario.objects.create_superuser(username="com", password="senha-forte-123")
+        self.pessoa = Pessoa.objects.create(nome="Lead Fechado")
+        self.tipo = TipoUH.objects.create(nome="Std", tarifa_base=Decimal("200"))
+        self.uh = UH.objects.create(numero="Quarto 01", tipo=self.tipo)
+
+    def _ganho_com_reserva(self):
+        oport = services.criar_oportunidade(usuario=self.op, pessoa=self.pessoa, titulo="G")
+        hoje = timezone.localdate()
+        reserva = services.converter_em_reserva(
+            oport, usuario=self.op, tipo_uh=self.tipo,
+            checkin=hoje + timedelta(days=5), checkout=hoje + timedelta(days=7))
+        oport.refresh_from_db()
+        return oport, reserva
+
+    def test_mover_ganho_para_perdido_cancela_reserva_e_loga(self):
+        from apps.reservas.models import Reserva
+        op, reserva = self._ganho_com_reserva()
+        perdido = EtapaFunil.objects.get(tipo="perdido")
+        motivo = MotivoPerda.objects.first()
+        services.mover_lead_fechado(op, perdido, self.op,
+                                    justificativa="cliente desistiu", motivo_perda=motivo)
+        op.refresh_from_db()
+        reserva.refresh_from_db()
+        self.assertEqual(op.status, Oportunidade.Status.PERDIDA)
+        self.assertEqual(op.motivo_perda, motivo)
+        self.assertEqual(reserva.status, Reserva.Status.CANCELADA)
+        self.assertTrue(op.atividades.filter(
+            descricao__icontains="Movido para perdido").exists())
+        self.assertTrue(op.atividades.filter(descricao__icontains="cancelada").exists())
+
+    def test_mover_ganho_para_aberto_reabre_e_cancela_reserva(self):
+        from apps.reservas.models import Reserva
+        op, reserva = self._ganho_com_reserva()
+        novo = EtapaFunil.objects.get(nome="Novo lead")
+        services.mover_lead_fechado(op, novo, self.op, justificativa="voltou a negociar")
+        op.refresh_from_db()
+        reserva.refresh_from_db()
+        self.assertEqual(op.status, Oportunidade.Status.ABERTA)
+        self.assertEqual(op.etapa, novo)
+        self.assertIsNotNone(op.reativada_em)
+        self.assertEqual(reserva.status, Reserva.Status.CANCELADA)
+
+    def _ganho_com_adiantamento(self, valor="100.00"):
+        from apps.nucleo.models import FormaPagamento, SessaoCaixa
+        from apps.nucleo.modulos import Modulo
+        from apps.reservas.services import receber_adiantamento
+        op, reserva = self._ganho_com_reserva()
+        SessaoCaixa.objects.create(operador=self.op, modulo=Modulo.RESERVAS,
+                                   fundo_troco=Decimal("0.00"))
+        forma = FormaPagamento.objects.get(tipo="dinheiro")
+        receber_adiantamento(reserva, self.op, forma, Decimal(valor))
+        return op, reserva
+
+    def test_mover_ganho_com_adiantamento_estorna_no_caixa(self):
+        from apps.nucleo.models import MovimentoCaixa
+        from apps.reservas.models import Reserva
+        op, reserva = self._ganho_com_adiantamento("150.00")
+        novo = EtapaFunil.objects.get(nome="Novo lead")
+        services.mover_lead_fechado(op, novo, self.op, justificativa="reabrir c/ estorno")
+        op.refresh_from_db()
+        reserva.refresh_from_db()
+        self.assertEqual(op.status, Oportunidade.Status.ABERTA)
+        self.assertEqual(reserva.status, Reserva.Status.CANCELADA)
+        # Movimento inverso (estorno) criado no caixa, mesmo valor do adiantamento.
+        self.assertTrue(MovimentoCaixa.objects.filter(
+            tipo=MovimentoCaixa.Tipo.ESTORNO, valor=Decimal("150.00")).exists())
+        self.assertTrue(op.atividades.filter(
+            descricao__icontains="estornado no Caixa").exists())
+
+    def test_adiantamento_sem_caixa_aberto_bloqueia(self):
+        from apps.nucleo.models import SessaoCaixa
+        op, reserva = self._ganho_com_adiantamento("100.00")
+        # fecha a sessão de Reservas → não dá para estornar
+        SessaoCaixa.objects.filter(
+            operador=self.op, status=SessaoCaixa.Status.ABERTA).update(
+            status=SessaoCaixa.Status.FECHADA)
+        novo = EtapaFunil.objects.get(nome="Novo lead")
+        with self.assertRaises(ValidationError):
+            services.mover_lead_fechado(op, novo, self.op, justificativa="x")
+        op.refresh_from_db()
+        self.assertEqual(op.status, Oportunidade.Status.GANHA)  # intacto
+
+    def test_mover_perdido_para_ganho_sem_reserva_bloqueia(self):
+        op = services.criar_oportunidade(usuario=self.op, pessoa=self.pessoa, titulo="P")
+        services.marcar_perdida(op, MotivoPerda.objects.first(), self.op)
+        ganho = EtapaFunil.objects.get(tipo="ganho")
+        with self.assertRaises(ValidationError):
+            services.mover_lead_fechado(op, ganho, self.op, justificativa="x")
+
+    def test_justificativa_obrigatoria(self):
+        op = services.criar_oportunidade(usuario=self.op, pessoa=self.pessoa, titulo="J")
+        services.marcar_perdida(op, MotivoPerda.objects.first(), self.op)
+        novo = EtapaFunil.objects.get(nome="Novo lead")
+        with self.assertRaises(ValidationError):
+            services.mover_lead_fechado(op, novo, self.op, justificativa="   ")
+
+    def test_mover_para_perdido_exige_motivo_de_perda(self):
+        op = services.criar_oportunidade(usuario=self.op, pessoa=self.pessoa, titulo="M")
+        services.marcar_perdida(op, MotivoPerda.objects.first(), self.op)
+        perdido = EtapaFunil.objects.get(tipo="perdido")
+        with self.assertRaises(ValidationError):
+            services.mover_lead_fechado(op, perdido, self.op, justificativa="x",
+                                        motivo_perda=None)
+
+    def test_reserva_nao_cancelavel_bloqueia_e_nao_mexe_no_lead(self):
+        from apps.reservas.models import Reserva
+        op, reserva = self._ganho_com_reserva()
+        Reserva.objects.filter(pk=reserva.pk).update(status=Reserva.Status.HOSPEDADA)
+        novo = EtapaFunil.objects.get(nome="Novo lead")
+        with self.assertRaises(ValidationError):
+            services.mover_lead_fechado(op, novo, self.op, justificativa="x")
+        op.refresh_from_db()
+        self.assertEqual(op.status, Oportunidade.Status.GANHA)  # intacto
+
+    def test_detalhe_mostra_card_gestao_para_lead_fechado(self):
+        op = services.criar_oportunidade(usuario=self.op, pessoa=self.pessoa, titulo="D")
+        services.marcar_perdida(op, MotivoPerda.objects.first(), self.op)
+        self.client.login(username="com", password="senha-forte-123")
+        r = self.client.get(reverse("comercial:oportunidade", args=[op.pk]))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "reabrir / mover lead fechado")
+
+    def test_detalhe_ganho_com_reserva_renderiza_avisos(self):
+        op, reserva = self._ganho_com_adiantamento("120.00")
+        self.client.login(username="com", password="senha-forte-123")
+        r = self.client.get(reverse("comercial:oportunidade", args=[op.pk]))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "reabrir / mover lead fechado")
+        self.assertContains(r, "estornado")   # aviso do adiantamento
+        self.assertContains(r, "cancelar")    # aviso de cancelamento da reserva
+
+    def test_view_mover_fechado_exige_area(self):
+        from apps.nucleo.models import ModuloContratado
+        from apps.nucleo.modulos import Modulo
+        vera = Usuario.objects.create_user(username="vera", password="senha-forte-123")
+        vera.modulos.add(ModuloContratado.objects.get(codigo=Modulo.COMERCIAL))
+        op = services.criar_oportunidade(usuario=self.op, pessoa=self.pessoa, titulo="V")
+        services.marcar_perdida(op, MotivoPerda.objects.first(), self.op)
+        novo = EtapaFunil.objects.get(nome="Novo lead")
+        self.client.login(username="vera", password="senha-forte-123")
+        # sem a flag → 403
+        r = self.client.post(reverse("comercial:mover_fechado", args=[op.pk]),
+                             {"etapa": novo.pk, "justificativa": "reabrir"})
+        self.assertEqual(r.status_code, 403)
+        # com a flag → move
+        vera.areas = ["comercial_fechados"]
+        vera.save(update_fields=["areas"])
+        r = self.client.post(reverse("comercial:mover_fechado", args=[op.pk]),
+                             {"etapa": novo.pk, "justificativa": "reabrir"})
+        self.assertRedirects(r, reverse("comercial:oportunidade", args=[op.pk]))
+        op.refresh_from_db()
+        self.assertEqual(op.status, Oportunidade.Status.ABERTA)
+
+    # ── No fork, o desfazer da venda passa pelos services de Reservas ──────────────
+
+    def test_estorno_desfaz_o_credito_e_nao_retem_nada(self):
+        """O estorno do caixa lança o crédito negativo na reserva (gancho ao_estornar):
+        a reserva cancelada fica com R$ 0 pago e nada retido pela política."""
+        from apps.reservas.cancelamento import total_pago
+        op, reserva = self._ganho_com_adiantamento("150.00")
+        novo = EtapaFunil.objects.get(nome="Novo lead")
+        services.mover_lead_fechado(op, novo, self.op, justificativa="venda desfeita")
+        reserva.refresh_from_db()
+        self.assertEqual(total_pago(reserva), Decimal("0.00"))
+        self.assertEqual(reserva.valor_retido, Decimal("0.00"))
+        self.assertTrue(reserva.adiantamentos.filter(valor=Decimal("-150.00")).exists())
+
+    def test_pago_online_bloqueia_e_nao_mexe_no_lead(self):
+        """Sinal pago pelo gateway não tem movimento de caixa: só volta pela cobrança.
+        Antes, o laço dos adiantamentos quebrava em `movimento_caixa` vazio."""
+        from apps.reservas.models import Reserva
+        from apps.reservas.services import registrar_pagamento_online
+        op, reserva = self._ganho_com_reserva()
+        registrar_pagamento_online(cobranca_id=9901, valor=Decimal("80.00"),
+                                   descricao="Sinal Pix", reserva_id=reserva.pk)
+        novo = EtapaFunil.objects.get(nome="Novo lead")
+        with self.assertRaisesMessage(ValidationError, "pago online"):
+            services.mover_lead_fechado(op, novo, self.op, justificativa="x")
+        op.refresh_from_db()
+        reserva.refresh_from_db()
+        self.assertEqual(op.status, Oportunidade.Status.GANHA)
+        self.assertNotEqual(reserva.status, Reserva.Status.CANCELADA)
+
+    def test_voltar_para_ganho_com_reserva_cancelada_bloqueia(self):
+        """Ganho com a reserva já cancelada contaria venda que não existe."""
+        op, _reserva = self._ganho_com_reserva()
+        perdido = EtapaFunil.objects.get(tipo="perdido")
+        services.mover_lead_fechado(op, perdido, self.op, justificativa="desistiu",
+                                    motivo_perda=MotivoPerda.objects.first())
+        ganho = EtapaFunil.objects.get(tipo="ganho")
+        with self.assertRaisesMessage(ValidationError, "reserva ativa"):
+            services.mover_lead_fechado(op, ganho, self.op, justificativa="voltou")
+
+    def test_segundo_clique_nao_move_de_novo(self):
+        op, _reserva = self._ganho_com_reserva()
+        novo = EtapaFunil.objects.get(nome="Novo lead")
+        services.mover_lead_fechado(op, novo, self.op, justificativa="1º clique")
+        with self.assertRaises(ValidationError):  # o lead já está aberto
+            services.mover_lead_fechado(op, novo, self.op, justificativa="2º clique")
+        self.assertEqual(op.atividades.filter(descricao__icontains="Reaberto").count(), 1)
+
+    def test_motivo_da_perda_so_entra_no_form_quando_o_destino_e_perdido(self):
+        """Escondido com x-show, o select obrigatório travava o envio para as outras
+        etapas (o navegador não envia form com campo obrigatório vazio)."""
+        op = services.criar_oportunidade(usuario=self.op, pessoa=self.pessoa, titulo="F")
+        services.marcar_perdida(op, MotivoPerda.objects.first(), self.op)
+        self.client.login(username="com", password="senha-forte-123")
+        r = self.client.get(reverse("comercial:oportunidade", args=[op.pk]))
+        self.assertContains(r, """<template x-if="tipo === 'perdido'">""")
+
 
 class CotacaoConversaoPorQuartoTests(TestCase):
     """Dropdown por quarto real (24 UHs 'Quarto NN — tipo') + pré-atribuição na
