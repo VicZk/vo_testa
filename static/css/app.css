@@ -1455,7 +1455,70 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
   .filtro-chip:active { transform: none; }
 }
 
-/* Governança — tela única de limpeza: chips-contadores (filtro) + tabela compacta */
+/* Governança — o CICLO do quarto é a própria barra de filtros: lida da esquerda
+   para a direita, ela ensina a ordem (A limpar › Em limpeza › Limpo › Pronto) e, de
+   quebra, filtra. Quem nunca trabalhou em hotel aprende o fluxo só de olhar. */
+.gov-ciclo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: .2rem 0 1.1rem; }
+.gov-ciclo-seta { color: var(--fio-forte); font-weight: 700; line-height: 1; }
+.chip-meus { margin-left: auto; }
+.chip-meus.ativo { border-color: var(--musgo); box-shadow: 0 0 0 2px color-mix(in srgb, var(--musgo) 18%, transparent); }
+@media (max-width: 640px) {
+  /* No celular a seta some (os chips já quebram em linhas) e "Só os meus" vai para
+     a frente: é o primeiro gesto de quem está no corredor. */
+  .gov-ciclo-seta { display: none; }
+  .chip-meus { order: -1; margin-left: 0; }
+}
+
+/* "Como funciona": o manual curto da tela, recolhido. */
+.gov-ajuda {
+  margin: 0 0 1.1rem; border: 1px solid var(--fio); border-radius: var(--raio);
+  background: var(--superficie);
+}
+.gov-ajuda > summary {
+  padding: .7rem .95rem; cursor: pointer; font-weight: 600; font-size: .9rem;
+  color: var(--madeira); list-style: none;
+}
+.gov-ajuda > summary::-webkit-details-marker { display: none; }
+.gov-ajuda > summary::before { content: "›"; display: inline-block; margin-right: .5rem; font-weight: 700; transition: transform var(--mov-rapido) var(--curva); }
+.gov-ajuda[open] > summary::before { transform: rotate(90deg); }
+.gov-ajuda > summary small { font-weight: 400; color: var(--tinta-suave); }
+.gov-ajuda > summary:hover { background: var(--superficie-2); }
+.gov-ajuda-corpo { padding: 0 .95rem 1rem; }
+.gov-ciclo-lista { list-style: none; margin: 0 0 1.1rem; padding: 0; display: grid; gap: .55rem; }
+.gov-ciclo-lista li {
+  display: grid; gap: .15rem;
+  padding: .6rem .75rem; border-left: 3px solid var(--fio);
+  background: var(--superficie-2); border-radius: var(--raio-p);
+}
+.gov-ciclo-lista .selo { justify-self: start; }
+/* A legenda mostra o estado do MESMO jeito que a tabela (bolinha + texto): dois
+   desenhos para a mesma coisa é o que confunde quem está aprendendo. */
+.gov-ciclo-lista .selo {
+  padding: 0; border-radius: 0; background: none; box-shadow: none;
+  font-size: .82rem; font-weight: 600; letter-spacing: 0; text-transform: none;
+  color: var(--tinta);
+}
+.gov-ciclo-lista small { color: var(--tinta-suave); font-size: .8rem; line-height: 1.5; }
+.gov-quem { font-weight: 600; }
+.gov-ajuda-corpo h3 { margin-top: 1.2rem; }
+.gov-glossario { margin: 0; }
+.gov-glossario dt { font-weight: 700; font-size: .85rem; margin-top: .6rem; }
+.gov-glossario dd { margin: .1rem 0 0; color: var(--tinta-suave); font-size: .85rem; line-height: 1.55; }
+@media (prefers-reduced-motion: reduce) {
+  .gov-ajuda > summary::before { transition: none; }
+}
+
+/* O estado nunca anda sozinho: vem com a frase que diz por que ele está assim. */
+.col-estado .ajuda { max-width: 34ch; }
+/* Aqui o estado aparece em TODAS as linhas e o ciclo no topo já o repete: a cápsula
+   preenchida fica reservada para o que é raro e caro (a divergência da ronda), para
+   não ter duas pedindo atenção na mesma linha. */
+.tabela-limpeza .col-estado .selo {
+  padding: 0; border-radius: 0; background: none; box-shadow: none;
+  font-size: .82rem; font-weight: 600; letter-spacing: 0; text-transform: none;
+  color: var(--tinta);
+}
+
 .filtro-limpeza { display: flex; flex-wrap: wrap; gap: 8px; margin: .2rem 0 1.1rem; }
 .chip-limpeza {
   display: inline-flex; align-items: center; gap: 7px;
@@ -1514,13 +1577,24 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
     flex: none; font-size: .66rem; font-weight: 700; letter-spacing: .08em;
     text-transform: uppercase; color: var(--tinta-suave);
   }
-  /* A ação é o compromisso da linha: largura toda, abaixo dos dados. */
-  .tabela.tabela-cartoes td.acoes-limpeza {
+  /* O próximo passo é o compromisso da linha: largura toda, abaixo dos dados —
+     a ação principal em cima, as secundárias embaixo, nessa ordem de leitura. */
+  .tabela.tabela-cartoes td.col-acao {
     flex-wrap: wrap; margin-top: .4rem; padding-top: .6rem; border-top: 1px solid var(--fio);
   }
-  .tabela.tabela-cartoes td.acoes-limpeza form { flex: 1 1 auto; }
-  .tabela.tabela-cartoes td.acoes-limpeza .botao-primario,
-  .tabela.tabela-cartoes td.acoes-limpeza .botao-neutro { width: 100%; justify-content: center; text-align: center; }
+  /* No celular os passos empilham: a ação principal em cima, as secundárias
+     embaixo, cada uma na largura do cartão (alvo grande para o dedo). */
+  .tabela.tabela-cartoes .acoes-quarto {
+    flex: 1 1 100%; flex-direction: column; align-items: stretch;
+  }
+  .tabela.tabela-cartoes .acoes-quarto form { width: 100%; }
+  .tabela.tabela-cartoes .acoes-quarto .botao-primario,
+  .tabela.tabela-cartoes .acoes-quarto .botao-mini,
+  .tabela.tabela-cartoes .acoes-quarto .botao-neutro { width: 100%; justify-content: center; text-align: center; }
+  .tabela.tabela-cartoes .acoes-quarto .acao-pronta { text-align: center; }
+  /* O estado e a frase que o explica ocupam a linha inteira do cartão. */
+  .tabela.tabela-cartoes td.col-estado { flex-wrap: wrap; }
+  .tabela.tabela-cartoes td.col-estado .ajuda { flex: 1 1 100%; }
   .tabela.tabela-cartoes .form-inline { margin: 0; flex: 1; justify-content: flex-end; }
   .tabela.tabela-cartoes .form-inline select { min-width: 0; flex: 1; }
   /* A ronda é o toque que a camareira dá no corredor, de celular: os três alvos
@@ -1531,16 +1605,6 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
      senão a cápsula do achado virava uma faixa de ponta a ponta do cartão. */
   .tabela.tabela-cartoes td.col-ronda .selo,
   .tabela.tabela-cartoes td.col-ronda .ajuda { flex: 1 1 100%; max-width: fit-content; }
-  /* Reprovar entra na mesma fila dos botões da linha (é um <details>, não um
-     <form>): sem isto ele flutuava na borda e o campo do motivo saía do cartão. */
-  .tabela.tabela-cartoes td.acoes-limpeza .reprovar { flex: 1 1 100%; }
-  /* `text-align` junto com o `justify-content`: a célula de ação é `col-acao`, que
-     alinha à direita, e o rótulo do botão herdava esse alinhamento. */
-  .tabela.tabela-cartoes .reprovar > summary {
-    width: 100%; justify-content: center; text-align: center;
-  }
-  .tabela.tabela-cartoes .reprovar .form-inline { width: 100%; max-width: none; }
-  .tabela.tabela-cartoes .reprovar .botao-mini { width: 100%; }
   /* Discrepâncias: a frase do que fazer e o botão ocupam a linha inteira, abaixo
      do rótulo — antes a frase era cortada na borda e o "Resolver" sumia. */
   .tabela.tabela-cartoes td.col-fazer { flex-wrap: wrap; }
@@ -1548,27 +1612,24 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
   /* Sem invólucro rolante: o cartão já cabe na tela. */
   .tabela-rol:has(> .tabela-cartoes) { overflow: visible; background: none; }
 }
-/* NÃO usar flex/block no <td> (sai do fluxo da tabela e escalona a borda) —
-   os botões ficam inline-block com um respiro entre eles. */
-.acoes-limpeza { white-space: nowrap; }
-.acoes-limpeza form { display: inline-block; margin: 0 .5rem 0 0; }
-.acoes-limpeza form:last-child { margin-right: 0; }
-.acoes-limpeza .botao-primario, .acoes-limpeza .botao-neutro { padding: .4rem .85rem; font-size: .84rem; }
-/* Reprovar a faxina: o motivo é opcional e só aparece quando alguém abre. Aberto,
-   o <details> cresce para baixo; sem `vertical-align: top` ele empurrava os botões
-   vizinhos para o fim da caixa (alinhamento pela última linha de base). */
-.reprovar { display: inline-block; vertical-align: top; }
-.reprovar > summary { display: inline-flex; align-items: center; min-height: 30px; list-style: none; }
-.reprovar > summary::-webkit-details-marker { display: none; }
-/* `.acoes-limpeza form` deixa os formulários da linha inline-block (botões lado a
-   lado); o do motivo é uma caixa, e precisa voltar a ser flex para o campo encolher
-   junto com a coluna em vez de empurrar o cartão. */
-.acoes-limpeza .reprovar > .form-inline {
-  display: flex; flex-wrap: wrap; width: 100%; max-width: 220px;
+/* Próximo passo do quarto: UMA ação principal + as secundárias, todas na mesma
+   linha-base e com a mesma altura. Antes conviviam ali um `.botao-neutro` de 40px,
+   um `<summary>` sem altura e um `.botao-mini` — três alinhamentos diferentes, que
+   era exatamente o desalinho relatado. O `<td>` vira flex (as células desta tabela
+   já são cartões no celular, então não há fluxo de tabela a preservar aqui). */
+.acoes-quarto {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end;
+  gap: .4rem .5rem;
 }
-.reprovar .form-inline { margin: .45rem 0 0; }
-/* Campo e botão empilhados: aberto, o motivo não pode alargar a coluna da tabela. */
-.reprovar input[type="text"] { min-width: 0; flex: 1 1 100%; }
+/* O invólucro é uma DIV, não o <td>: `display:flex` na célula tira ela do fluxo da
+   tabela e desalinha as colunas (foi assim que a coluna de ação nasceu torta). */
+.acoes-quarto form { display: flex; margin: 0; }
+.acoes-quarto .botao-primario, .acoes-quarto .botao-neutro {
+  padding: .4rem .85rem; font-size: .84rem; min-height: 36px;
+}
+.acoes-quarto .botao-mini { min-height: 36px; }
+/* "Nada a fazer": o estado final merece uma frase, não um botão. */
+.acao-pronta { color: var(--tinta-suave); font-size: .82rem; }
 
 /* Governança — conferência de ocupação (a ronda).
    A camareira é a única que entra em todos os quartos todo dia: num toque ela diz o
@@ -1617,7 +1678,9 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 /* Largura só na TABELA (os três botões lado a lado); no cartão do celular a
    largura é a do cartão, e um mínimo fixo aqui vazaria para fora dele. */
 @media (min-width: 1025px) {
-  .tabela-limpeza .col-ronda { min-width: 208px; }
+  /* Os três alvos da ronda numa linha só: quebrados em duas, cada quarto virava
+     uma linha de tabela com altura de cartão. */
+  .tabela-limpeza .col-ronda { min-width: 272px; }
 }
 .col-ronda .selo, .col-ronda .ajuda { display: inline-block; margin-top: .35rem; }
 
@@ -5346,7 +5409,7 @@ body.escala-dragging .escala-drop { cursor: copy; }
   .filtro-chip, .chip-limpeza, .lb-tab, .func-aba, .seg-filtro a, .segmentado .chip,
   .menu-mobile, .busca-global,
   /* A ronda da governança é feita no corredor, de celular, com a mão ocupada. */
-  .botao-ronda, .reprovar > summary {
+  .botao-ronda, .acoes-quarto .botao-mini {
     min-height: 44px;
   }
   /* O menu é o controle mais tocado do sistema no celular, e era o que tinha

@@ -130,6 +130,11 @@ def reprovar_inspecao(uh, usuario=None, motivo=""):
         tarefa.motivo_reprovacao = (motivo or "")[:200]
         tarefa.save(update_fields=["reprovada_em", "motivo_reprovacao"])
     nova = abrir_faxina(uh, usuario=usuario, origem="reprovada")
+    # O motivo viaja com a faxina nova: quem for limpar lê na própria linha por que
+    # o quarto voltou, em vez de descobrir no corredor.
+    if motivo and not nova.observacoes:
+        nova.observacoes = motivo[:200]
+        nova.save(update_fields=["observacoes"])
     registrar_auditoria(usuario, "inspecao_reprovada", nova,
                         {"quarto": uh.numero, "motivo": motivo or ""})
     return nova
@@ -149,6 +154,90 @@ _ORDEM_LIMPEZA = {
     StatusLimpeza.Situacao.LIMPA: 2,
     StatusLimpeza.Situacao.INSPECIONADA: 3,
 }
+
+# ───────── O ciclo do quarto, em palavras de quem nunca trabalhou em hotel ─────────
+#
+# O model fala a língua da hotelaria ("Inspecionado"); a TELA fala a língua de quem
+# está começando. Uma fonte de verdade só para o texto da Governança — a etiqueta do
+# admin e dos outros módulos continua a do model.
+
+CICLO = [
+    {
+        "cod": StatusLimpeza.Situacao.SUJA,
+        "rotulo": "A limpar",
+        "resumo": "O quarto precisa de limpeza.",
+        "quem": "Camareira",
+        "ajuda": "Entra aqui sozinho quando o hóspede faz check-out, quando a "
+                 "supervisora devolve o quarto ou quando alguém pede limpeza.",
+    },
+    {
+        "cod": StatusLimpeza.Situacao.EM_LIMPEZA,
+        "rotulo": "Em limpeza",
+        "resumo": "Alguém está limpando agora.",
+        "quem": "Camareira",
+        "ajuda": "A camareira tocou em «Começar limpeza». O relógio da faxina "
+                 "começa a contar aqui.",
+    },
+    {
+        "cod": StatusLimpeza.Situacao.LIMPA,
+        "rotulo": "Limpo",
+        "resumo": "A limpeza acabou e falta a supervisora conferir.",
+        "quem": "Supervisora",
+        "ajuda": "Quarto limpo ainda NÃO está liberado: a supervisora passa, "
+                 "aprova ou devolve para limpar de novo.",
+    },
+    {
+        "cod": StatusLimpeza.Situacao.INSPECIONADA,
+        "rotulo": "Pronto",
+        "resumo": "Conferido pela supervisora — pode receber hóspede.",
+        "quem": "—",
+        "ajuda": "Na hotelaria chama-se «inspecionado». É o único estado em que o "
+                 "quarto está liberado para a recepção entregar a chave.",
+    },
+]
+SITUACAO_SIMPLES = {e["cod"]: e["rotulo"] for e in CICLO}
+
+# Por que o quarto está sujo — a origem da faxina vira frase de gente.
+_MOTIVO_DA_FAXINA = {
+    "checkout": "O hóspede fez check-out.",
+    "troca": "O hóspede trocou de quarto.",
+    "manutencao": "O quarto saiu da manutenção.",
+    "arrumacao_diaria": "O hóspede continua no quarto — é a arrumação do dia.",
+    "reprovada": "A supervisora devolveu o quarto para limpar de novo.",
+    "portal": "O próprio hóspede pediu limpeza pelo celular.",
+    "manual": "Alguém marcou o quarto como sujo.",
+}
+
+
+def _quem(usuario) -> str:
+    return (usuario.get_full_name() or usuario.username) if usuario else ""
+
+
+def explicar_estado(situacao, tarefa, status) -> str:
+    """Uma frase curta dizendo POR QUE o quarto está neste estado e o que falta.
+
+    É o que ensina o fluxo a quem pega o sistema pela primeira vez: a tela não diz
+    só «Limpo», diz «Limpo às 11:05 por Maria — falta a supervisora conferir».
+    """
+    quando = f" às {timezone.localtime(status.atualizado_em):%H:%M}" if status.atualizado_em else ""
+    quem = _quem(getattr(status, "atualizado_por", None))
+    if situacao == StatusLimpeza.Situacao.SUJA:
+        motivo = _MOTIVO_DA_FAXINA.get(tarefa.origem if tarefa else "", "")
+        if tarefa and tarefa.origem == "reprovada" and tarefa.observacoes:
+            motivo = f"Devolvido para limpar: {tarefa.observacoes.rstrip('.')}."
+        fila = (f" Na fila de {_quem(tarefa.camareira)}." if tarefa and tarefa.camareira
+                else " Ninguém começou ainda.")
+        return (motivo + fila).strip()
+    if situacao == StatusLimpeza.Situacao.EM_LIMPEZA:
+        if tarefa and tarefa.iniciada_em:
+            inicio = f"{timezone.localtime(tarefa.iniciada_em):%H:%M}"
+            return (f"{_quem(tarefa.camareira)} começou às {inicio}."
+                    if tarefa.camareira else f"Limpeza começou às {inicio}.")
+        return "Limpeza em andamento."
+    if situacao == StatusLimpeza.Situacao.LIMPA:
+        por = f" por {quem}" if quem else ""
+        return f"Limpo{quando}{por}. Falta a supervisora conferir."
+    return f"Conferido e aprovado{quando}. Pode receber hóspede."
 
 
 def _estado_dos_quartos(dia=None) -> dict:
@@ -171,9 +260,13 @@ def _estado_dos_quartos(dia=None) -> dict:
         .exclude(status=UH.Status.INATIVA)
         .exclude(tipo__modalidade=TipoUH.Modalidade.DAY_USE)
     )
-    # Todos os status numa consulta só. Quarto ainda sem registro aparece com a
-    # situação padrão (limpo) sem gravar nada: abrir a tela não escreve no banco.
-    existentes = {s.uh_id: s for s in StatusLimpeza.objects.filter(uh__in=quartos)}
+    # Todos os status numa consulta só (com quem mexeu por último — a frase da linha
+    # diz "limpo por Maria"). Quarto ainda sem registro aparece com a situação padrão
+    # (limpo) sem gravar nada: abrir a tela não escreve no banco.
+    existentes = {
+        s.uh_id: s for s in
+        StatusLimpeza.objects.filter(uh__in=quartos).select_related("atualizado_por")
+    }
     conferencias = conferencias_do_dia(dia)
     pms = ocupacao_pms(dia)
     bloqueados = bloqueios_do_dia(dia)
@@ -188,11 +281,16 @@ def _estado_dos_quartos(dia=None) -> dict:
             classificar(conf.visto, info, bloqueado=bloqueado, sem_base=pms is None)
             if conf else ""
         )
+        tarefa = tarefas.get(uh.pk)
         linhas.append({
             "uh": uh,
             "situacao": status.situacao,
-            "situacao_label": status.get_situacao_display(),
-            "tarefa": tarefas.get(uh.pk),
+            # Rótulo da TELA (plain) + a frase que explica por que o quarto está
+            # assim e o que falta — é o que ensina o fluxo a quem está começando.
+            "situacao_label": SITUACAO_SIMPLES.get(status.situacao,
+                                                   status.get_situacao_display()),
+            "explicacao": explicar_estado(status.situacao, tarefa, status),
+            "tarefa": tarefa,
             "atualizado_em": status.atualizado_em,
             "conferencia": conf,
             "pms": info,

@@ -1,0 +1,12 @@
+{% comment %}Miolo de «Devolver para limpar» — o mesmo no modal e na página sem JS.
+Grava pelo POST de sempre (`status_marcar` com `situacao=reprovada`).{% endcomment %}
+{% csrf_token %}
+<input type="hidden" name="situacao" value="reprovada">
+<p class="bloco-texto">O quarto volta para <strong>A limpar</strong> e entra de novo na
+  fila da camareira. O motivo aparece na linha dela, para saber o que refazer.</p>
+<div class="campo">
+  <label for="motivo-{{ uh.pk }}">O que precisa refazer?</label>
+  <input type="text" id="motivo-{{ uh.pk }}" name="motivo" maxlength="200"
+         placeholder="Ex.: banheiro, pó no armário" autocomplete="off">
+  <small class="ajuda">Opcional, mas ajuda muito quem vai limpar de novo.</small>
+</div>

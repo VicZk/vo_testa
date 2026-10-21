@@ -14,13 +14,31 @@ from .models import ConferenciaOcupacao, StatusLimpeza, TarefaGovernanca
 Usuario = get_user_model()
 
 
-def _contexto_quadro():
+def _contexto_quadro(usuario=None):
     """Chips + lista de quartos — o trecho que o HTMX troca a cada ação."""
     dados = services.painel_limpeza()
     contagem = dados["contagem"]
+    # "Só os meus": a camareira no corredor quer a fila DELA, não o andar inteiro.
+    meus = 0
+    minhas_por_situacao = dict.fromkeys(contagem, 0)
+    for linha in dados["linhas"]:
+        linha["minha"] = bool(
+            usuario and linha["tarefa"] and linha["tarefa"].camareira_id == usuario.pk)
+        if linha["minha"]:
+            meus += 1
+            minhas_por_situacao[linha["situacao"]] += 1
+    # O ciclo já vem do services com rótulo e explicação; aqui entram só os números
+    # (um por estado), que a tela usa no chip e no estado vazio.
+    ciclo = [
+        {**etapa, "n": contagem.get(etapa["cod"], 0),
+         "minhas": minhas_por_situacao.get(etapa["cod"], 0)}
+        for etapa in services.CICLO
+    ]
     return {
         "linhas": dados["linhas"],
         "contagem": contagem,
+        "ciclo": ciclo,
+        "meus": meus,
         "divergencias": dados["divergencias"],
         "divergencias_graves": dados["divergencias_graves"],
         "a_conferir": dados["a_conferir"],
@@ -28,13 +46,6 @@ def _contexto_quadro():
         "sem_base": dados["sem_base"],
         "vistos": ConferenciaOcupacao.botoes_da_ronda(),
         "camareiras": Usuario.objects.filter(is_active=True).order_by("first_name", "username"),
-        # Situações sem nenhum quarto: o filtro mostra um recado em vez de uma
-        # tabela só com cabeçalho.
-        "situacoes_vazias": [
-            {"cod": cod, "label": label}
-            for cod, label in StatusLimpeza.Situacao.choices
-            if not contagem.get(cod)
-        ],
     }
 
 
@@ -51,7 +62,8 @@ def _resposta_acao(request, aviso="", tipo="success"):
             {"error": messages.error, "warning": messages.warning}.get(
                 tipo, messages.success)(request, aviso)
         return redirect("governanca:painel")
-    resposta = render(request, "governanca/partials/quadro.html", _contexto_quadro())
+    resposta = render(request, "governanca/partials/quadro.html",
+                      _contexto_quadro(request.user))
     if aviso:
         resposta["HX-Trigger"] = json.dumps({"aviso": {"texto": aviso, "tipo": tipo}})
     return resposta
@@ -69,7 +81,7 @@ def painel(request):
         from apps.reservas.services import montagem_do_dia
         montagem = montagem_do_dia(timezone.localdate())
 
-    contexto = _contexto_quadro()
+    contexto = _contexto_quadro(request.user)
     contexto.update({"tipos": TarefaGovernanca.Tipo.choices, "montagem": montagem})
     return render(request, "governanca/painel.html", contexto)
 
@@ -82,8 +94,15 @@ def nova_tarefa(request):
     tipo = request.POST.get("tipo") or TarefaGovernanca.Tipo.FAXINA
     if tipo not in TarefaGovernanca.Tipo.values:   # não confia no POST
         tipo = TarefaGovernanca.Tipo.FAXINA
-    services.abrir_faxina(uh, tipo=tipo, usuario=request.user, origem="manual")
-    return _resposta_acao(request, f"Faxina aberta para o {uh.numero}.")
+    tarefa = services.abrir_faxina(uh, tipo=tipo, usuario=request.user,
+                                   origem="manual")
+    # "Começar limpeza" num quarto sem faxina na fila: abrir e já começar é UM gesto
+    # só para quem está com o pano na mão — dois botões seguidos ("abrir" e depois
+    # "iniciar") era o que mais confundia quem pegava o sistema pela primeira vez.
+    if request.POST.get("iniciar"):
+        services.iniciar_tarefa(tarefa, request.user)
+        return _resposta_acao(request, f"Limpeza do {uh.numero} começou.")
+    return _resposta_acao(request, f"{uh.numero} entrou na fila de limpeza.")
 
 
 @requer_modulo(Modulo.GOVERNANCA)
@@ -150,6 +169,21 @@ def ronda(request, pk):
             request, f"{uh.numero}: {rotulo.lower()}. {o_que_fazer}",
             tipo="error" if gravidade == "alta" else "warning")
     return _resposta_acao(request, f"{uh.numero}: {ConferenciaOcupacao.CURTO[visto].lower()}.")
+
+
+@requer_modulo(Modulo.GOVERNANCA)
+def devolver(request, pk):
+    """Formulário de «Devolver para limpar» (o motivo da reprovação).
+
+    Só GET: quem grava é o `status_marcar` de sempre, com `situacao=reprovada` — a
+    regra e o POST continuam os mesmos. Com HTMX abre no modal da casa (o antigo
+    `<details>` aberto no meio da linha desalinhava os botões vizinhos); sem
+    JavaScript, o mesmo formulário abre como página.
+    """
+    uh = get_object_or_404(UH, pk=pk)
+    gabarito = ("governanca/partials/devolver_modal.html"
+                if request.headers.get("HX-Request") else "governanca/devolver.html")
+    return render(request, gabarito, {"uh": uh})
 
 
 @requer_modulo(Modulo.GOVERNANCA)

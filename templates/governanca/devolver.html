@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% comment %}Mesmo formulário do modal, como página: é o caminho de quem está sem
+JavaScript (o botão da linha é um link de verdade).{% endcomment %}
+
+{% block titulo %}Devolver o {{ uh.numero }} para limpar — Governança{% endblock %}
+
+{% block conteudo %}
+<p class="pagina-eyebrow letreiro">Hospedagem · Governança</p>
+<div class="pagina-cabecalho">
+  <h1>Devolver o {{ uh.numero }} para limpar</h1>
+</div>
+
+<form class="form-cartao" method="post"
+      action="{% url 'governanca:status_marcar' uh.pk %}">
+  {% include "governanca/partials/devolver_campos.html" %}
+  <div class="acoes">
+    <button type="submit" class="botao-primario">Devolver para limpar</button>
+    <a href="{% url 'governanca:painel' %}" class="botao-neutro">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

@@ -1,23 +1,34 @@
 {% comment %}
-Quadro da governança: chips de filtro + a lista dos quartos. É este trecho que
-as ações trocam via HTMX (hx-target="#gov-quadro"), então os contadores dos chips
-chegam certos sem recarregar a página. O `x-data` do filtro fica FORA daqui
-(painel.html), para a escolha da camareira sobreviver à troca.
+Quadro da governança: o ciclo do quarto (que também filtra) + a lista dos quartos.
+É este trecho que as ações trocam via HTMX (hx-target="#gov-quadro"), então os
+contadores chegam certos sem recarregar a página. O `x-data` do filtro fica FORA
+daqui (painel.html), para a escolha sobreviver à troca.
+
+Regra desta tela: CADA QUARTO TEM UMA AÇÃO PRINCIPAL, com o nome do que vai
+acontecer ("Começar limpeza", "Terminei a limpeza", "Aprovar limpeza"). O resto é
+secundário e discreto. Quem nunca trabalhou em hotel não precisa escolher entre
+três botões parecidos.
 
 Sem JavaScript tudo continua funcionando: os formulários têm `action` e `method`,
 e as views redirecionam quando o pedido não vem do HTMX.
 {% endcomment %}
-<div class="filtro-limpeza" role="group" aria-label="Filtrar por situação">
+<div class="gov-ciclo">
   <button type="button" class="chip-limpeza" :class="f==='todas' && 'ativo'"
-          :aria-pressed="f==='todas'" @click="filtrar('todas')">Todas <b>{{ linhas|length }}</b></button>
-  <button type="button" class="chip-limpeza chip-suja" :class="f==='suja' && 'ativo'"
-          :aria-pressed="f==='suja'" @click="filtrar('suja')"><span class="ponto"></span>A limpar <b>{{ contagem.suja }}</b></button>
-  <button type="button" class="chip-limpeza chip-em_limpeza" :class="f==='em_limpeza' && 'ativo'"
-          :aria-pressed="f==='em_limpeza'" @click="filtrar('em_limpeza')"><span class="ponto"></span>Em limpeza <b>{{ contagem.em_limpeza }}</b></button>
-  <button type="button" class="chip-limpeza chip-limpa" :class="f==='limpa' && 'ativo'"
-          :aria-pressed="f==='limpa'" @click="filtrar('limpa')"><span class="ponto"></span>Limpas <b>{{ contagem.limpa }}</b></button>
-  <button type="button" class="chip-limpeza chip-inspecionada" :class="f==='inspecionada' && 'ativo'"
-          :aria-pressed="f==='inspecionada'" @click="filtrar('inspecionada')"><span class="ponto"></span>Inspecionadas <b>{{ contagem.inspecionada }}</b></button>
+          :aria-pressed="f==='todas'" @click="filtrar('todas')"
+          title="Todos os quartos, em qualquer estado">Todos <b>{{ linhas|length }}</b></button>
+  <span class="gov-ciclo-seta" aria-hidden="true">›</span>
+  {% for e in ciclo %}
+    <button type="button" class="chip-limpeza chip-{{ e.cod }}" :class="f==='{{ e.cod }}' && 'ativo'"
+            :aria-pressed="f==='{{ e.cod }}'" @click="filtrar('{{ e.cod }}')"
+            title="{{ e.resumo }} {{ e.ajuda }}"><span class="ponto"></span>{{ e.rotulo }} <b>{{ e.n }}</b></button>
+    {% if not forloop.last %}<span class="gov-ciclo-seta" aria-hidden="true">›</span>{% endif %}
+  {% endfor %}
+  {% if meus %}
+    {# A camareira no corredor quer a fila dela, não o andar inteiro. #}
+    <button type="button" class="chip-limpeza chip-meus" :class="soMeus && 'ativo'"
+            :aria-pressed="soMeus" @click="alternarMeus()"
+            title="Mostrar só os quartos que estão com você">Só os meus <b>{{ meus }}</b></button>
+  {% endif %}
 </div>
 
 {% comment %}Divergência da ronda: o recado mais caro da tela (diária perdida, conta
@@ -32,18 +43,32 @@ aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% e
 <table class="tabela tabela-limpeza tabela-cartoes"
        hx-target="#gov-quadro" hx-swap="innerHTML" hx-indicator="#gov-quadro">
   <thead>
-    <tr><th>Quarto</th><th>Situação</th><th class="col-ronda">Ronda</th><th class="col-camareira">Camareira</th><th class="col-acao">Ação</th></tr>
+    <tr>
+      <th>Quarto</th>
+      <th>Como está</th>
+      <th class="col-ronda">O que você viu</th>
+      <th class="col-camareira">Camareira</th>
+      <th class="col-acao">Próximo passo</th>
+    </tr>
   </thead>
   <tbody>
     {% for ln in linhas %}
-    <tr x-show="f==='todas' || f==='{{ ln.situacao }}'" x-transition.opacity>
+    <tr x-show="(f==='todas' || f==='{{ ln.situacao }}') && (!soMeus || {{ ln.minha|yesno:'true,false' }})"
+        x-transition.opacity>
       <td data-rotulo="Quarto"><strong>{{ ln.uh.numero }}</strong><small class="ajuda">{{ ln.uh.tipo.nome }}</small></td>
-      <td data-rotulo="Situação"><span class="selo selo-{{ ln.situacao }}">{{ ln.situacao_label }}</span></td>
+
+      {% comment %}O estado nunca vem sozinho: vem com a frase que diz por que ele
+      está assim e o que falta. É o que ensina o fluxo linha a linha.{% endcomment %}
+      <td class="col-estado" data-rotulo="Como está">
+        <span class="selo selo-{{ ln.situacao }}">{{ ln.situacao_label }}</span>
+        <small class="ajuda">{{ ln.explicacao }}</small>
+      </td>
+
       {% comment %}Conferência de ocupação: um toque com o que a camareira VIU. Três
       formulários (um por botão) em vez de um com três submits — assim o valor chega
       igual pelo HTMX e pelo formulário puro, sem depender do botão que enviou.
       {% endcomment %}
-      <td class="col-ronda" data-rotulo="Ronda">
+      <td class="col-ronda" data-rotulo="O que você viu">
         <div class="ronda-grupo" role="group" aria-label="O que foi visto no {{ ln.uh.numero }}">
           {% for cod, curto, longo in vistos %}
             <form method="post" action="{% url 'governanca:ronda' ln.uh.pk %}"
@@ -60,18 +85,19 @@ aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% e
         {% elif ln.conferencia %}
           <small class="ajuda">{{ ln.conferencia.registrado_em|date:"H:i" }}{% if ln.conferencia.registrado_por %} · {{ ln.conferencia.registrado_por.get_full_name|default:ln.conferencia.registrado_por.username }}{% endif %}</small>
         {% elif ln.bloqueado %}
-          <small class="ajuda">Bloqueado — fora da ronda</small>
+          <small class="ajuda">Em manutenção — fora da ronda</small>
         {% endif %}
       </td>
+
       <td class="col-camareira" data-rotulo="Camareira">
-        {% if ln.tarefa and ln.situacao == 'suja' or ln.situacao == 'em_limpeza' and ln.tarefa %}
+        {% if ln.tarefa %}
           {# Trocar no <select> não envia nada: aparece o "Salvar" e quem decide é a pessoa. #}
           <form method="post" action="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}" class="form-inline"
                 hx-post="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}"
                 x-data="{ original: '{{ ln.tarefa.camareira_id|default_if_none:'' }}', escolha: '{{ ln.tarefa.camareira_id|default_if_none:'' }}' }">
             {% csrf_token %}<input type="hidden" name="acao" value="atribuir">
-            <select name="camareira" x-model="escolha" aria-label="Camareira do quarto {{ ln.uh.numero }}">
-              <option value="">— camareira —</option>
+            <select name="camareira" x-model="escolha" aria-label="Quem limpa o quarto {{ ln.uh.numero }}">
+              <option value="">— a definir —</option>
               {% for u in camareiras %}<option value="{{ u.pk }}" {% if ln.tarefa.camareira_id == u.pk %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>{% endfor %}
             </select>
             <button type="submit" class="botao-mini" x-show="escolha !== original" x-cloak>Salvar</button>
@@ -80,36 +106,59 @@ aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% e
           <span class="celula-vazia">—</span>
         {% endif %}
       </td>
-      <td class="acoes-limpeza col-acao" data-rotulo="Ação">
+
+      {% comment %}UMA ação principal por quarto, nomeada pelo que acontece. As
+      secundárias são `.botao-mini` na mesma linha-base — nada de alturas
+      diferentes brigando (era a queixa do dono).{% endcomment %}
+      <td class="col-acao" data-rotulo="Próximo passo">
+        <div class="acoes-quarto">
         {% if ln.situacao == 'suja' %}
           {% if ln.tarefa %}
-            <form method="post" action="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}" hx-post="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}">{% csrf_token %}<input type="hidden" name="acao" value="iniciar"><button type="submit" class="botao-primario">Iniciar limpeza</button></form>
+            <form method="post" action="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}" hx-post="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}">
+              {% csrf_token %}<input type="hidden" name="acao" value="iniciar">
+              <button type="submit" class="botao-primario">Começar limpeza</button>
+            </form>
           {% else %}
-            <form method="post" action="{% url 'governanca:nova_tarefa' %}" hx-post="{% url 'governanca:nova_tarefa' %}">{% csrf_token %}<input type="hidden" name="uh" value="{{ ln.uh.pk }}"><input type="hidden" name="tipo" value="faxina_completa"><button type="submit" class="botao-primario">Abrir faxina</button></form>
+            {# Sem faxina na fila: abrir e começar é um gesto só. #}
+            <form method="post" action="{% url 'governanca:nova_tarefa' %}" hx-post="{% url 'governanca:nova_tarefa' %}">
+              {% csrf_token %}<input type="hidden" name="uh" value="{{ ln.uh.pk }}">
+              <input type="hidden" name="tipo" value="faxina_completa">
+              <input type="hidden" name="iniciar" value="1">
+              <button type="submit" class="botao-primario">Começar limpeza</button>
+            </form>
           {% endif %}
+
         {% elif ln.situacao == 'em_limpeza' %}
           {% if ln.tarefa %}
-            <form method="post" action="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}" hx-post="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}">{% csrf_token %}<input type="hidden" name="acao" value="concluir"><button type="submit" class="botao-primario">Marcar limpo</button></form>
-          {% else %}
-            <form method="post" action="{% url 'governanca:status_marcar' ln.uh.pk %}" hx-post="{% url 'governanca:status_marcar' ln.uh.pk %}">{% csrf_token %}<input type="hidden" name="situacao" value="limpa"><button type="submit" class="botao-primario">Marcar limpo</button></form>
-          {% endif %}
-        {% elif ln.situacao == 'limpa' %}
-          <form method="post" action="{% url 'governanca:status_marcar' ln.uh.pk %}" hx-post="{% url 'governanca:status_marcar' ln.uh.pk %}">{% csrf_token %}<input type="hidden" name="situacao" value="inspecionada"><button type="submit" class="botao-neutro">Inspecionar</button></form>
-          {% comment %}Reprovar = a supervisora devolveu o quarto. O motivo é opcional e
-          fica escondido até alguém abrir: sem JavaScript, o <details> abre igual.{% endcomment %}
-          <details class="reprovar">
-            <summary class="botao-mini">Reprovar</summary>
-            <form method="post" action="{% url 'governanca:status_marcar' ln.uh.pk %}" hx-post="{% url 'governanca:status_marcar' ln.uh.pk %}" class="form-inline">
-              {% csrf_token %}<input type="hidden" name="situacao" value="reprovada">
-              <input type="text" name="motivo" maxlength="200" placeholder="Motivo (opcional)"
-                     aria-label="Motivo da reprovação do {{ ln.uh.numero }}">
-              <button type="submit" class="botao-mini">Confirmar</button>
+            <form method="post" action="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}" hx-post="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}">
+              {% csrf_token %}<input type="hidden" name="acao" value="concluir">
+              <button type="submit" class="botao-primario">Terminei a limpeza</button>
             </form>
-          </details>
-          <form method="post" action="{% url 'governanca:nova_tarefa' %}" hx-post="{% url 'governanca:nova_tarefa' %}">{% csrf_token %}<input type="hidden" name="uh" value="{{ ln.uh.pk }}"><input type="hidden" name="tipo" value="faxina_completa"><button type="submit" class="botao-mini">Nova faxina</button></form>
+          {% else %}
+            <form method="post" action="{% url 'governanca:status_marcar' ln.uh.pk %}" hx-post="{% url 'governanca:status_marcar' ln.uh.pk %}">
+              {% csrf_token %}<input type="hidden" name="situacao" value="limpa">
+              <button type="submit" class="botao-primario">Terminei a limpeza</button>
+            </form>
+          {% endif %}
+
+        {% elif ln.situacao == 'limpa' %}
+          <form method="post" action="{% url 'governanca:status_marcar' ln.uh.pk %}" hx-post="{% url 'governanca:status_marcar' ln.uh.pk %}">
+            {% csrf_token %}<input type="hidden" name="situacao" value="inspecionada">
+            <button type="submit" class="botao-primario">Aprovar limpeza</button>
+          </form>
+          {# Link de verdade: com JS abre o modal da casa; sem JS, abre a página. #}
+          <a href="{% url 'governanca:devolver' ln.uh.pk %}" class="botao-mini"
+             hx-get="{% url 'governanca:devolver' ln.uh.pk %}" hx-target="#modal-conteudo">Devolver para limpar</a>
+
         {% elif ln.situacao == 'inspecionada' %}
-          <form method="post" action="{% url 'governanca:nova_tarefa' %}" hx-post="{% url 'governanca:nova_tarefa' %}">{% csrf_token %}<input type="hidden" name="uh" value="{{ ln.uh.pk }}"><input type="hidden" name="tipo" value="faxina_completa"><button type="submit" class="botao-neutro">Nova faxina</button></form>
+          <span class="acao-pronta">Nada a fazer — pronto para o hóspede</span>
+          <form method="post" action="{% url 'governanca:nova_tarefa' %}" hx-post="{% url 'governanca:nova_tarefa' %}">
+            {% csrf_token %}<input type="hidden" name="uh" value="{{ ln.uh.pk }}">
+            <input type="hidden" name="tipo" value="faxina_completa">
+            <button type="submit" class="botao-mini">Pedir nova limpeza</button>
+          </form>
         {% endif %}
+        </div>
       </td>
     </tr>
     {% empty %}
@@ -118,9 +167,13 @@ aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% e
     {% endfor %}
   </tbody>
 </table>
-{# Filtro sem nenhum quarto: a tabela ficava só com o cabeçalho, sem explicação. #}
-{% for s in situacoes_vazias %}
-<div class="estado-vazio" x-show="f === '{{ s.cod }}'" x-cloak>
-  <p>Nenhum quarto <strong>{{ s.label|lower }}</strong> neste momento.</p>
+
+{# Filtro sem nenhum quarto: a tabela ficava só com o cabeçalho, sem explicação —
+   e o estado vazio é uma boa hora para ensinar de onde vem cada estado. #}
+{% for e in ciclo %}
+<div class="estado-vazio" x-cloak
+     x-show="f === '{{ e.cod }}' && (soMeus ? {{ e.minhas }} === 0 : {{ e.n }} === 0)">
+  <p>Nenhum quarto<span x-show="soMeus"> seu</span> em <strong>{{ e.rotulo|lower }}</strong> agora.</p>
+  <p class="ajuda" x-show="!soMeus">{{ e.ajuda }}</p>
 </div>
 {% endfor %}
