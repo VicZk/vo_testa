@@ -1,0 +1,28 @@
+{% load moeda %}POUSADA VÔ TESTA — KIT DE CONTINGÊNCIA
+Situação de {{ kit.hoje|date:"d/m/Y" }} (gerado em {{ kit.gerado_em|date:"d/m/Y H:i" }})
+
+Se a internet cair, esta é a folha do dia. Vale até a próxima.
+
+{{ kit.totais.quartos_ocupados }} quarto(s) ocupado(s) | {{ kit.totais.hospedes }} hóspede(s) na casa | saldo em aberto {{ kit.totais.saldo_total|intcomma_brl }}
+
+HOSPEDADOS AGORA ({{ kit.hospedados|length }})
+{% for h in kit.hospedados %}- {{ h.quarto }} | {{ h.titular }}{% if h.acompanhantes %} + {{ h.acompanhantes|join:", " }}{% endif %} | {{ h.checkin|date:"d/m" }} -> {{ h.checkout|date:"d/m" }} | {{ h.adultos }}A{% if h.criancas %}+{{ h.criancas }}C{% endif %} | saldo {% if h.saldo is None %}—{% else %}{{ h.saldo|intcomma_brl }}{% endif %}{% if h.saida_atrasada %} | SAÍDA ATRASADA{% elif h.saida_hoje %} | sai hoje{% endif %}{% if h.menores %} | MENOR SEM AUTORIZAÇÃO: {{ h.menores|join:", " }}{% endif %}{% if h.observacoes %} | obs: {{ h.observacoes }}{% endif %}
+{% empty %}(nenhum hóspede em casa)
+{% endfor %}
+CHEGADAS DE HOJE ({{ kit.chegadas|length }})
+{% for c in kit.chegadas %}- #{{ c.codigo }} | {{ c.titular }} | tel {{ c.telefone|default:"—" }} | {{ c.quarto }} | {{ c.noites }} noite(s), {{ c.hospedes }} pax | total {{ c.total|intcomma_brl }}, pago {{ c.pago|intcomma_brl }}{% if c.observacoes %} | obs: {{ c.observacoes }}{% endif %}
+{% empty %}(nenhuma chegada prevista)
+{% endfor %}
+SAÍDAS DE HOJE ({{ kit.saidas|length }})
+{% for s in kit.saidas %}- {{ s.quarto }} | {{ s.titular }} | a receber {% if s.saldo is None %}—{% else %}{{ s.saldo|intcomma_brl }}{% endif %}{% if s.atrasada %} | ERA {{ s.checkout|date:"d/m" }}{% endif %}
+{% empty %}(nenhuma saída prevista)
+{% endfor %}
+SITUAÇÃO DOS QUARTOS
+{% for q in kit.quartos %}- {{ q.numero }}: {{ q.label }}{% if kit.mostrar_limpeza and q.limpeza %} / {{ q.limpeza }}{% endif %}{% if q.hospede %} — {{ q.hospede }}{% endif %}{{ q.motivo }}
+{% endfor %}
+CHEGADAS DE AMANHÃ ({{ kit.chegadas_amanha|length }}) — {{ kit.amanha|date:"d/m/Y" }}
+{% for c in kit.chegadas_amanha %}- #{{ c.codigo }} | {{ c.titular }} | tel {{ c.telefone|default:"—" }} | {{ c.quarto }}
+{% empty %}(nenhuma chegada prevista)
+{% endfor %}
+{% if url_kit %}Abrir e imprimir no sistema: {{ url_kit }}
+{% endif %}Mensagem automática do CRM. Contém dados de hóspedes — não repasse.

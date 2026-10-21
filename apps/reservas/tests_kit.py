@@ -3,13 +3,15 @@
 O que estes testes seguram: o hóspede aparece no quarto certo com o saldo certo;
 chegada e saída de hoje caem nas suas seções; reserva cancelada/no-show não entra;
 day use só aparece ocupado; sem Governança a coluna de limpeza desaparece sem
-quebrar a página; o número de consultas não cresce com o número de reservas; e a
-página aguenta a lista vazia.
+quebrar a página; o número de consultas não cresce com o número de reservas; e o
+e-mail só sai para quem foi configurado.
 """
 from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.core import mail
+from django.core.management import call_command
 from django.db import connection
 from django.test import TestCase, override_settings
 from django.test.utils import CaptureQueriesContext
@@ -277,3 +279,56 @@ class KitPaginaTests(KitBase):
         destino = reverse("reservas:kit")
         for tela in ("reservas:lista", "reservas:mapa_quartos"):
             self.assertIn(destino, self.client.get(reverse(tela)).content.decode(), tela)
+
+
+class KitEmailTests(KitBase):
+    @override_settings(KIT_CONTINGENCIA_EMAILS=[])
+    def test_sem_variavel_nao_envia_nada(self):
+        self.hospedar()
+        call_command("enviar_kit_contingencia")
+        self.assertEqual(mail.outbox, [])
+
+    @override_settings(KIT_CONTINGENCIA_EMAILS=["gerencia@exemplo.com.br",
+                                                "recepcao@exemplo.com.br"])
+    def test_envia_para_os_enderecos_configurados(self):
+        r = self.hospedar(dias=2)
+        services.lancar_na_conta(
+            r.conta, LancamentoConta.Tipo.CONSUMO, NaturezaFiscal.CONSUMO,
+            "Água", Decimal("6.00"), self.usuario,
+        )
+        call_command("enviar_kit_contingencia")
+        self.assertEqual(len(mail.outbox), 1)
+        msg = mail.outbox[0]
+        self.assertEqual(msg.to, ["gerencia@exemplo.com.br", "recepcao@exemplo.com.br"])
+        self.assertIn("Kit de contingência", msg.subject)
+        self.assertIn("Maria Kit", msg.body)             # texto puro
+        self.assertIn("R$ 606,00", msg.body)
+        html = msg.alternatives[0][0]
+        self.assertIn("Hospedados agora", html)
+        self.assertIn("Maria Kit", html)
+
+    @override_settings(KIT_CONTINGENCIA_EMAILS=[])
+    def test_para_na_linha_de_comando_vence_o_settings(self):
+        call_command("enviar_kit_contingencia", "--para", "eu@exemplo.com.br")
+        self.assertEqual(mail.outbox[0].to, ["eu@exemplo.com.br"])
+
+    @override_settings(KIT_CONTINGENCIA_EMAILS=["gerencia@exemplo.com.br"])
+    def test_modulo_reservas_inativo_nao_envia(self):
+        ModuloContratado.objects.filter(codigo=Modulo.RESERVAS).update(ativo=False)
+        call_command("enviar_kit_contingencia")
+        self.assertEqual(mail.outbox, [])
+
+    @override_settings(KIT_CONTINGENCIA_EMAILS=["gerencia@exemplo.com.br"])
+    def test_html_do_email_nao_depende_de_css_externo(self):
+        """Cliente de e-mail ignora folha externa: o estilo vai inline."""
+        self.hospedar()
+        call_command("enviar_kit_contingencia")
+        html = mail.outbox[0].alternatives[0][0]
+        self.assertNotIn("<link", html)
+        self.assertNotIn(".css", html)
+        self.assertIn('style="', html)
+
+    def test_a_rotina_diaria_chama_o_comando(self):
+        from apps.nucleo.management.commands.rotinas import GRUPOS
+
+        self.assertIn("enviar_kit_contingencia", GRUPOS["diarias"])

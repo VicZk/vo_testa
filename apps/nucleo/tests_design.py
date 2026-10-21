@@ -905,7 +905,8 @@ class EstiloForaDoAtributoTests(TestCase):
     """
 
     # Corpo de e-mail precisa de estilo inline: cliente de e-mail ignora CSS externo.
-    EMAILS = {"comercial/email/proposta.html", "comercial/email/campanha.html"}
+    EMAILS = {"comercial/email/proposta.html", "comercial/email/campanha.html",
+              "reservas/email/kit_contingencia.html"}
 
     def setUp(self):
         self.raiz = Path(settings.BASE_DIR) / "templates"

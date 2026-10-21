@@ -1,0 +1,197 @@
+{% load moeda %}<!DOCTYPE html>
+{% comment %}Corpo de e-mail: o estilo é inline de propósito — cliente de e-mail
+ignora CSS externo e boa parte do <style>. Mesma folha da página imprimível
+(reservas/kit.html), em tabelas simples que o celular do gerente abre no 4G.{% endcomment %}
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kit de contingência — Pousada Vô Testa</title>
+</head>
+<body style="margin:0; padding:0; background:#f4f1ea; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#2a251c;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f1ea; padding:16px 8px;">
+  <tr>
+    <td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:680px; background:#ffffff; border:1px solid #e3ddd0;">
+
+        <tr>
+          <td style="background:#23201a; padding:16px 20px;">
+            <span style="color:#e9dcc0; font-size:12px; letter-spacing:.14em; text-transform:uppercase;">Pousada Vô Testa</span>
+            <div style="color:#ffffff; font-size:19px; font-weight:700; margin-top:4px;">Kit de contingência</div>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:16px 20px 0;">
+            <p style="margin:0; font-size:13px; color:#6b6355;">
+              Situação de {{ kit.hoje|date:"d/m/Y" }} · gerado em {{ kit.gerado_em|date:"d/m/Y" }} às {{ kit.gerado_em|date:"H:i" }}{% if gerado_por %} por {{ gerado_por }}{% endif %}
+            </p>
+            <p style="margin:10px 0 0; padding:8px 10px; background:#faf2dd; border-left:3px solid #7a5a1e; font-size:13px; font-weight:600; color:#7a5a1e;">
+              Se a internet cair, esta é a folha do dia: imprima ou guarde esta mensagem. Vale até a próxima.
+            </p>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:14px 0 0; border-top:1px solid #e3ddd0; border-bottom:1px solid #e3ddd0;">
+              <tr>
+                <td style="padding:10px 0; font-size:13px; color:#2a251c;">
+                  <strong style="font-size:17px;">{{ kit.totais.quartos_ocupados }}</strong> quarto(s) ocupado(s) ·
+                  <strong style="font-size:17px;">{{ kit.totais.hospedes }}</strong> hóspede(s) na casa ·
+                  saldo em aberto <strong style="font-size:17px;">{{ kit.totais.saldo_total|intcomma_brl }}</strong>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:18px 20px 0;">
+            <h2 style="margin:0 0 6px; font-size:15px; color:#2a251c;">Hospedados agora ({{ kit.hospedados|length }})</h2>
+            <table role="presentation" width="100%" cellpadding="6" cellspacing="0" border="0" style="border-collapse:collapse; font-size:12px;">
+              <tr style="background:#f4f1ea;">
+                <th align="left" style="border-bottom:1px solid #c9c1b0; font-size:11px; text-transform:uppercase; color:#6b6355;">Quarto</th>
+                <th align="left" style="border-bottom:1px solid #c9c1b0; font-size:11px; text-transform:uppercase; color:#6b6355;">Hóspedes</th>
+                <th align="left" style="border-bottom:1px solid #c9c1b0; font-size:11px; text-transform:uppercase; color:#6b6355;">Entrada → Saída</th>
+                <th align="right" style="border-bottom:1px solid #c9c1b0; font-size:11px; text-transform:uppercase; color:#6b6355;">Pax</th>
+                <th align="right" style="border-bottom:1px solid #c9c1b0; font-size:11px; text-transform:uppercase; color:#6b6355;">Saldo</th>
+              </tr>
+              {% for h in kit.hospedados %}
+                <tr>
+                  <td style="border-bottom:1px solid #eee8db; white-space:nowrap;"><strong>{{ h.quarto }}</strong>{% if h.nome_quarto %}<br><span style="color:#6b6355;">{{ h.nome_quarto }}</span>{% endif %}</td>
+                  <td style="border-bottom:1px solid #eee8db;">
+                    {{ h.titular }}
+                    {% if h.acompanhantes %}<br><span style="color:#6b6355;">{{ h.acompanhantes|join:" · " }}</span>{% endif %}
+                    {% if h.grupo %}<br><span style="color:#6b6355;">Folio do grupo {{ h.grupo }}</span>{% endif %}
+                    {% if h.menores %}<br><span style="color:#9a3b1e; font-weight:700;">Menor sem autorização: {{ h.menores|join:", " }}</span>{% endif %}
+                    {% if h.observacoes %}<br><span style="color:#6b6355;">{{ h.observacoes }}</span>{% endif %}
+                  </td>
+                  <td style="border-bottom:1px solid #eee8db; white-space:nowrap;">
+                    {{ h.checkin|date:"d/m" }} → {{ h.checkout|date:"d/m" }}
+                    {% if h.saida_atrasada %}<br><span style="color:#9a3b1e; font-weight:700;">Saída atrasada</span>
+                    {% elif h.saida_hoje %}<br><span style="color:#6b6355;">Sai hoje</span>{% endif %}
+                  </td>
+                  <td align="right" style="border-bottom:1px solid #eee8db; white-space:nowrap;">{{ h.adultos }}A{% if h.criancas %}+{{ h.criancas }}C{% endif %}</td>
+                  <td align="right" style="border-bottom:1px solid #eee8db; white-space:nowrap;">{% if h.saldo is None %}—{% else %}{{ h.saldo|intcomma_brl }}{% endif %}</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="5" style="color:#6b6355;">Nenhum hóspede em casa.</td></tr>
+              {% endfor %}
+            </table>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:18px 20px 0;">
+            <h2 style="margin:0 0 6px; font-size:15px; color:#2a251c;">Chegadas de hoje ({{ kit.chegadas|length }})</h2>
+            <table role="presentation" width="100%" cellpadding="6" cellspacing="0" border="0" style="border-collapse:collapse; font-size:12px;">
+              <tr style="background:#f4f1ea;">
+                <th align="left" style="border-bottom:1px solid #c9c1b0; font-size:11px; text-transform:uppercase; color:#6b6355;">Reserva</th>
+                <th align="left" style="border-bottom:1px solid #c9c1b0; font-size:11px; text-transform:uppercase; color:#6b6355;">Hóspede</th>
+                <th align="left" style="border-bottom:1px solid #c9c1b0; font-size:11px; text-transform:uppercase; color:#6b6355;">Quarto</th>
+                <th align="right" style="border-bottom:1px solid #c9c1b0; font-size:11px; text-transform:uppercase; color:#6b6355;">Noites · Pax</th>
+                <th align="right" style="border-bottom:1px solid #c9c1b0; font-size:11px; text-transform:uppercase; color:#6b6355;">Total / pago</th>
+              </tr>
+              {% for c in kit.chegadas %}
+                <tr>
+                  <td style="border-bottom:1px solid #eee8db; white-space:nowrap;">#{{ c.codigo }}<br><span style="color:#6b6355;">{{ c.status }}</span></td>
+                  <td style="border-bottom:1px solid #eee8db;">
+                    {{ c.titular }}<br><span style="color:#6b6355;">{{ c.telefone|default:"sem telefone" }}</span>
+                    {% if c.pagador %}<br><span style="color:#6b6355;">Paga: {{ c.pagador }}</span>{% endif %}
+                    {% if c.observacoes %}<br><span style="color:#6b6355;">{{ c.observacoes }}</span>{% endif %}
+                  </td>
+                  <td style="border-bottom:1px solid #eee8db; white-space:nowrap;">{{ c.quarto }}</td>
+                  <td align="right" style="border-bottom:1px solid #eee8db; white-space:nowrap;">{{ c.noites }} · {{ c.adultos }}A{% if c.criancas %}+{{ c.criancas }}C{% endif %}</td>
+                  <td align="right" style="border-bottom:1px solid #eee8db; white-space:nowrap;">{{ c.total|intcomma_brl }}<br><span style="color:#6b6355;">pago {{ c.pago|intcomma_brl }}</span></td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="5" style="color:#6b6355;">Nenhuma chegada prevista para hoje.</td></tr>
+              {% endfor %}
+            </table>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:18px 20px 0;">
+            <h2 style="margin:0 0 6px; font-size:15px; color:#2a251c;">Saídas de hoje ({{ kit.saidas|length }})</h2>
+            <table role="presentation" width="100%" cellpadding="6" cellspacing="0" border="0" style="border-collapse:collapse; font-size:12px;">
+              <tr style="background:#f4f1ea;">
+                <th align="left" style="border-bottom:1px solid #c9c1b0; font-size:11px; text-transform:uppercase; color:#6b6355;">Quarto</th>
+                <th align="left" style="border-bottom:1px solid #c9c1b0; font-size:11px; text-transform:uppercase; color:#6b6355;">Hóspede</th>
+                <th align="right" style="border-bottom:1px solid #c9c1b0; font-size:11px; text-transform:uppercase; color:#6b6355;">Saldo a receber</th>
+              </tr>
+              {% for s in kit.saidas %}
+                <tr>
+                  <td style="border-bottom:1px solid #eee8db; white-space:nowrap;">{{ s.quarto }}</td>
+                  <td style="border-bottom:1px solid #eee8db;">{{ s.titular }}{% if s.atrasada %}<br><span style="color:#9a3b1e; font-weight:700;">Saída era {{ s.checkout|date:"d/m" }}</span>{% endif %}</td>
+                  <td align="right" style="border-bottom:1px solid #eee8db; white-space:nowrap;">{% if s.saldo is None %}—{% else %}{{ s.saldo|intcomma_brl }}{% endif %}</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="3" style="color:#6b6355;">Nenhuma saída prevista para hoje.</td></tr>
+              {% endfor %}
+            </table>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:18px 20px 0;">
+            <h2 style="margin:0 0 6px; font-size:15px; color:#2a251c;">Situação dos quartos</h2>
+            <table role="presentation" width="100%" cellpadding="6" cellspacing="0" border="0" style="border-collapse:collapse; font-size:12px;">
+              <tr style="background:#f4f1ea;">
+                <th align="left" style="border-bottom:1px solid #c9c1b0; font-size:11px; text-transform:uppercase; color:#6b6355;">Quarto</th>
+                <th align="left" style="border-bottom:1px solid #c9c1b0; font-size:11px; text-transform:uppercase; color:#6b6355;">Situação</th>
+                {% if kit.mostrar_limpeza %}<th align="left" style="border-bottom:1px solid #c9c1b0; font-size:11px; text-transform:uppercase; color:#6b6355;">Limpeza</th>{% endif %}
+                <th align="left" style="border-bottom:1px solid #c9c1b0; font-size:11px; text-transform:uppercase; color:#6b6355;">Quem está / por quê</th>
+              </tr>
+              {% for q in kit.quartos %}
+                <tr>
+                  <td style="border-bottom:1px solid #eee8db; white-space:nowrap;">{{ q.numero }}{% if q.day_use %} <span style="color:#6b6355;">(day use)</span>{% endif %}</td>
+                  <td style="border-bottom:1px solid #eee8db;">{{ q.label }}</td>
+                  {% if kit.mostrar_limpeza %}<td style="border-bottom:1px solid #eee8db;">{{ q.limpeza|default:"—" }}</td>{% endif %}
+                  <td style="border-bottom:1px solid #eee8db; color:#6b6355;">{{ q.hospede }}{{ q.motivo }}</td>
+                </tr>
+              {% endfor %}
+            </table>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:18px 20px 0;">
+            <h2 style="margin:0 0 6px; font-size:15px; color:#2a251c;">Chegadas de amanhã ({{ kit.chegadas_amanha|length }})</h2>
+            <table role="presentation" width="100%" cellpadding="6" cellspacing="0" border="0" style="border-collapse:collapse; font-size:12px;">
+              <tr style="background:#f4f1ea;">
+                <th align="left" style="border-bottom:1px solid #c9c1b0; font-size:11px; text-transform:uppercase; color:#6b6355;">Reserva</th>
+                <th align="left" style="border-bottom:1px solid #c9c1b0; font-size:11px; text-transform:uppercase; color:#6b6355;">Hóspede</th>
+                <th align="left" style="border-bottom:1px solid #c9c1b0; font-size:11px; text-transform:uppercase; color:#6b6355;">Telefone</th>
+                <th align="left" style="border-bottom:1px solid #c9c1b0; font-size:11px; text-transform:uppercase; color:#6b6355;">Quarto</th>
+              </tr>
+              {% for c in kit.chegadas_amanha %}
+                <tr>
+                  <td style="border-bottom:1px solid #eee8db; white-space:nowrap;">#{{ c.codigo }}</td>
+                  <td style="border-bottom:1px solid #eee8db;">{{ c.titular }}</td>
+                  <td style="border-bottom:1px solid #eee8db; white-space:nowrap;">{{ c.telefone|default:"—" }}</td>
+                  <td style="border-bottom:1px solid #eee8db; white-space:nowrap;">{{ c.quarto }}</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="4" style="color:#6b6355;">Nenhuma chegada prevista para amanhã.</td></tr>
+              {% endfor %}
+            </table>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:18px 20px 22px;">
+            {% if url_kit %}
+              <p style="margin:0 0 6px; font-size:13px;">
+                <a href="{{ url_kit }}" style="color:#8a6d2f; font-weight:700;">Abrir e imprimir no sistema</a>
+                (precisa de internet)
+              </p>
+            {% endif %}
+            <p style="margin:0; font-size:11px; color:#8c8575;">
+              Mensagem automática do CRM da Pousada Vô Testa. Contém dados de hóspedes — não repasse.
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>
