@@ -1,5 +1,6 @@
 """Rotas públicas da LP Fundador (fora do /crm)."""
 from django.urls import path
+from django.views.generic import RedirectView
 
 from . import views_lp
 
@@ -15,4 +16,10 @@ urlpatterns = [
     path("inauguracao_31_10_2026/", views_lp.servir_lp_inauguracao, name="inauguracao"),
     path("inauguracao_31_10_2026/lead/", views_lp.lp_inauguracao_lead,
          name="inauguracao_lead"),
+    # O endereço curto que a própria LP anunciava no canônico (e quem digitou de um
+    # post): leva para a LP, com os parâmetros de campanha (utm_*) junto.
+    path("inauguracao/", RedirectView.as_view(pattern_name="lp:inauguracao",
+                                              permanent=False, query_string=True)),
+    # Fotos e fontes que vinham embutidas no HTML das LPs (nome = hash do conteúdo).
+    path("arquivo/<str:nome>", views_lp.arquivo_lp, name="arquivo"),
 ]

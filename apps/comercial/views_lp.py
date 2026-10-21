@@ -3,14 +3,19 @@
 A raiz `/` serve a LP quando HOME_MODO='lp_fundador' (senão, o site normal). O formulário
 posta JSON no endpoint do CRM e cai no funil (capturar_lead_site).
 """
+import base64
+import hashlib
 import json
+import re
 from pathlib import Path
 
 from django.conf import settings
 from django.core.cache import cache
-from django.http import HttpResponse, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.template.loader import render_to_string
+from django.urls import reverse
+from django.utils.cache import patch_cache_control
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -41,10 +46,38 @@ def _com_aviso_de_cookies(html: str) -> str:
     return antes + render_to_string("componentes/consentimento.html") + fecho + depois
 
 
+# Fotos e fontes embutidas. O HTML chega do design autocontido, com as imagens e as
+# fontes em base64 dentro do próprio arquivo: a Inauguração tem 2,1 MB, e as fontes e a
+# foto do hero moram no <style> do <head> — o celular baixava 800 KB antes de pintar a
+# primeira letra. Ao servir, cada `data:` de imagem ou fonte vira um endereço próprio,
+# nomeado pelo hash do conteúdo (`/lp/arquivo/<hash>.<ext>`): o navegador baixa em
+# paralelo, só o que a tela usa, uma vez só o que se repete, e guarda para a próxima
+# visita. O arquivo em LPs/ continua autocontido (abre direto do disco).
+_ARQUIVOS_LP: dict[str, tuple[str, bytes]] = {}
+_EMBUTIDO = re.compile(r"data:(?P<mime>image/(?:png|jpeg|webp|gif|avif)|font/woff2?)"
+                       r";base64,(?P<b64>[A-Za-z0-9+/=]+)")
+_EXTENSAO = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp",
+             "image/gif": "gif", "image/avif": "avif", "font/woff2": "woff2",
+             "font/woff": "woff"}
+_EMBUTIDO_MINIMO = 4096   # caracteres de base64 (3 KB): abaixo disso não vale um pedido
+
+
+def _desembutir(html: str) -> str:
+    def trocar(m):
+        if len(m.group("b64")) < _EMBUTIDO_MINIMO:
+            return m.group(0)
+        dados = base64.b64decode(m.group("b64"))
+        nome = f"{hashlib.sha256(dados).hexdigest()[:20]}.{_EXTENSAO[m.group('mime')]}"
+        _ARQUIVOS_LP[nome] = (m.group("mime"), dados)
+        return reverse("lp:arquivo", args=[nome])
+    return _EMBUTIDO.sub(trocar, html)
+
+
 def _lp_html() -> str:
     # Em produção lê uma vez (cache em memória); em DEBUG relê p/ editar ao vivo.
     if _LP_CACHE["html"] is None or settings.DEBUG:
-        _LP_CACHE["html"] = _com_aviso_de_cookies(_LP_PATH.read_text(encoding="utf-8"))
+        _LP_CACHE["html"] = _com_aviso_de_cookies(
+            _desembutir(_LP_PATH.read_text(encoding="utf-8")))
     return _LP_CACHE["html"]
 
 
@@ -200,7 +233,8 @@ _VISITA2_COOKIE = "lpv_fundador_2"       # conta 1 visita por navegador (dedupe 
 
 def _lp2_html() -> str:
     if _LP2_CACHE["html"] is None or settings.DEBUG:
-        _LP2_CACHE["html"] = _com_aviso_de_cookies(_LP2_PATH.read_text(encoding="utf-8"))
+        _LP2_CACHE["html"] = _com_aviso_de_cookies(
+            _desembutir(_LP2_PATH.read_text(encoding="utf-8")))
     return _LP2_CACHE["html"]
 
 
@@ -279,7 +313,14 @@ def _lpinaug_html() -> str:
         html = _LPINAUG_PATH.read_text(encoding="utf-8")
         # O HTML vem reusando o endpoint da Fundador II; aponta para a rota própria.
         html = html.replace("/lp/fundador-2/lead/", f"/lp/{_LPINAUG_SLUG}/lead/")
-        _LPINAUG_CACHE["html"] = _com_aviso_de_cookies(html)
+        # Canônico, og:url e a imagem de compartilhamento apontavam para
+        # /lp/inauguracao/assets/…, que nunca existiu: o link no WhatsApp/Instagram saía
+        # sem imagem e o Google recebia um canônico que dá 404. A imagem é a
+        # `static/lp/og-inauguracao.jpg` (montada do próprio hero da LP).
+        html = html.replace("/lp/inauguracao/assets/img/og-inauguracao-v2.jpg",
+                            "/static/lp/og-inauguracao.jpg")
+        html = html.replace("/lp/inauguracao/", f"/lp/{_LPINAUG_SLUG}/")
+        _LPINAUG_CACHE["html"] = _com_aviso_de_cookies(_desembutir(html))
     return _LPINAUG_CACHE["html"]
 
 
@@ -305,3 +346,17 @@ def lp_inauguracao_lead(request):
     return _receber_lead_lp(
         request, slug=_LPINAUG_SLUG, origem_padrao="lp-inauguracao-31-10",
         mensagem="Inauguração 31/10 — confirmação de presença")
+
+
+def arquivo_lp(request, nome):
+    """Foto ou fonte que veio embutida numa LP (ver `_desembutir`). O nome é o hash do
+    conteúdo — mudou a foto, muda o endereço —, então o navegador guarda para sempre."""
+    if nome not in _ARQUIVOS_LP:      # outro worker serviu a LP: monta o mapa aqui também
+        for carregar in (_lp_html, _lp2_html, _lpinaug_html):
+            carregar()
+    if nome not in _ARQUIVOS_LP:
+        raise Http404
+    mime, dados = _ARQUIVOS_LP[nome]
+    resp = HttpResponse(dados, content_type=mime)
+    patch_cache_control(resp, public=True, max_age=365 * 24 * 3600, immutable=True)
+    return resp

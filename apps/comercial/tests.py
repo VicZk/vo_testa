@@ -3355,6 +3355,76 @@ class LpsAutocontidasPedemConsentimentoTests(TestCase):
                 self.assertEqual(do_aviso & da_lp, set())
 
 
+class LpLeveECompartilhavelTests(TestCase):
+    """A LP da Inauguração chegava com 2,1 MB: sete fontes e quinze imagens em base64 dentro
+    do HTML, as fontes e a foto do hero no <style> do <head> — num 4G fraco, 4,2 s de
+    tela vazia. E o canônico, o og:url e a imagem de compartilhamento apontavam para
+    /lp/inauguracao/…, endereço que não existe: no WhatsApp o link saía sem imagem."""
+
+    URL = "/lp/inauguracao_31_10_2026/"
+
+    def _html(self):
+        r = self.client.get(self.URL)
+        self.assertEqual(r.status_code, 200)
+        return r.content.decode("utf-8")
+
+    def test_html_sem_fotos_nem_fontes_embutidas(self):
+        import re
+        html = self._html()
+        self.assertLess(len(html.encode("utf-8")), 200_000)
+        grandes = [m for m in re.findall(r"data:(?:image|font)/[\w.+-]+;base64,([A-Za-z0-9+/=]+)", html)
+                   if len(m) >= 4096]
+        self.assertEqual(grandes, [])
+        self.assertIn("/lp/arquivo/", html)
+
+    def test_cada_arquivo_e_servido_com_o_conteudo_do_nome_e_cache_longo(self):
+        import hashlib
+        import re
+        nomes = set(re.findall(r"/lp/arquivo/([0-9a-f]{20}\.(?:webp|png|woff2))", self._html()))
+        self.assertGreaterEqual(len(nomes), 10)
+        tipos = {"webp": "image/webp", "png": "image/png", "woff2": "font/woff2"}
+        for nome in sorted(nomes):
+            with self.subTest(nome=nome):
+                r = self.client.get(f"/lp/arquivo/{nome}")
+                self.assertEqual(r.status_code, 200)
+                self.assertEqual(r["Content-Type"], tipos[nome.rsplit(".", 1)[1]])
+                self.assertIn("immutable", r["Cache-Control"])
+                self.assertEqual(hashlib.sha256(r.content).hexdigest()[:20], nome.split(".")[0])
+
+    def test_arquivo_pedido_a_um_worker_que_ainda_nao_serviu_a_lp(self):
+        import re
+
+        from . import views_lp
+        nome = re.search(r"/lp/arquivo/([0-9a-f]{20}\.webp)", self._html()).group(1)
+        views_lp._ARQUIVOS_LP.clear()
+        views_lp._LPINAUG_CACHE["html"] = None
+        self.assertEqual(self.client.get(f"/lp/arquivo/{nome}").status_code, 200)
+        self.assertEqual(self.client.get("/lp/arquivo/0123456789abcdef0123.webp").status_code, 404)
+
+    def test_compartilhamento_aponta_para_enderecos_que_existem(self):
+        import re
+        from urllib.parse import urlparse
+
+        from django.contrib.staticfiles import finders
+        html = self._html()
+        self.assertNotIn("/lp/inauguracao/", html)
+        canonico = re.search(r'<link rel="canonical" href="([^"]+)"', html).group(1)
+        og_url = re.search(r'<meta property="og:url" content="([^"]+)"', html).group(1)
+        og_img = re.search(r'<meta property="og:image" content="([^"]+)"', html).group(1)
+        self.assertEqual(urlparse(canonico).path, self.URL)
+        self.assertEqual(urlparse(og_url).path, self.URL)
+        caminho = urlparse(og_img).path
+        self.assertTrue(caminho.startswith("/static/"))
+        self.assertIsNotNone(finders.find(caminho.removeprefix("/static/")))
+
+    def test_endereco_curto_leva_a_lp_com_a_campanha(self):
+        r = self.client.get("/lp/inauguracao/?utm_source=instagram&utm_campaign=inauguracao_31_10_2026")
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(
+            r["Location"],
+            "/lp/inauguracao_31_10_2026/?utm_source=instagram&utm_campaign=inauguracao_31_10_2026")
+
+
 class DesempenhoDoFunilEDoLeadTests(TestCase):
     """O lead abria com 444 consultas (o painel de quartos relia temporada, tarifas e
     configuração por quarto × noite) e o funil fazia duas por card (próxima tarefa e
