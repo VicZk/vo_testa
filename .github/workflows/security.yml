@@ -14,7 +14,7 @@ permissions:
 jobs:
   sast-deps-secrets:
     name: SAST + dependências + segredos
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # fixo: o ubuntu-latest vira Ubuntu 26 a partir de 19/10/2026
     steps:
       - uses: actions/checkout@v7
         with:
@@ -59,7 +59,7 @@ jobs:
 
   gitleaks:
     name: Segredos no histórico (gitleaks)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # fixo: o ubuntu-latest vira Ubuntu 26 a partir de 19/10/2026
     steps:
       - uses: actions/checkout@v7
         with:

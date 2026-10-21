@@ -29,7 +29,7 @@ jobs:
   juntar:
     name: Buscar e juntar com o dev
     if: github.repository == 'VicZk/vo_testa'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # fixo: o ubuntu-latest vira Ubuntu 26 a partir de 19/10/2026
     outputs:
       novos: ${{ steps.juntar.outputs.novos }}
       conflito: ${{ steps.juntar.outputs.conflito }}
@@ -82,7 +82,7 @@ jobs:
     name: Abrir ou atualizar o PR
     needs: [juntar, testes]
     if: always() && needs.juntar.result == 'success' && needs.juntar.outputs.novos != '0'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # fixo: o ubuntu-latest vira Ubuntu 26 a partir de 19/10/2026
     steps:
       - uses: actions/checkout@v7
         with:
