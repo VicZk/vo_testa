@@ -5773,7 +5773,7 @@ body.escala-dragging .escala-drop { cursor: copy; }
   transition: background var(--mov-rapido) var(--curva), color var(--mov-rapido) var(--curva);
 }
 .est-seg a:hover { color: var(--tinta); }
-.est-seg a.ativo {
+.est-seg a[aria-current="page"] {
   background: var(--superficie); color: var(--noturno); box-shadow: var(--sombra-1);
 }
 
@@ -5790,6 +5790,9 @@ body.escala-dragging .escala-drop { cursor: copy; }
   gap: 0 1rem;
 }
 .est-mov-grade > * { min-width: 0; }
+/* Quantidade sozinha na linha (saída, ajuste, transferência) não precisa de
+   meio metro de campo: a caixa fica do tamanho do que se digita nela. */
+.est-mov-grade > .campo:only-child { max-width: 16rem; }
 
 /* Campo com unidade colada (quantidade, custo): a sigla vira parte do campo. */
 .est-campo-unidade { display: flex; align-items: center; gap: .5rem; }

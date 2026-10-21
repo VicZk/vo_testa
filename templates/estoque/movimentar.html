@@ -15,13 +15,14 @@
 uma com o mesmo formulário genérico. Agora são um segmentado só: a pessoa vê
 que são quatro jeitos de mexer no mesmo saldo, e troca sem sair da tela.
 {% endcomment %}
-<div class="est-seg" role="tablist" aria-label="Tipo de movimentação">
+{% comment %}`nav` + `aria-current`, e não `role=tablist`: cada operação é uma
+PÁGINA, não um painel que troca aqui dentro — anunciar "aba" faria o leitor de
+tela prometer um conteúdo que não existe.{% endcomment %}
+<nav class="est-seg" aria-label="Tipo de movimentação">
   {% for chave, op in operacoes.items %}
-    <a href="{% url 'estoque:'|add:chave %}" role="tab"
-       aria-selected="{% if chave == operacao %}true{% else %}false{% endif %}"
-       class="{% if chave == operacao %}ativo{% endif %}">{{ op.rotulo }}</a>
+    <a href="{% url 'estoque:'|add:chave %}"{% if chave == operacao %} aria-current="page"{% endif %}>{{ op.rotulo }}</a>
   {% endfor %}
-</div>
+</nav>
 
 <form method="post" class="est-mov" x-data="movEstoque()"
       @combo-mudou="if ($event.detail.campo === 'produto') produto = $event.detail.id">
@@ -250,7 +251,7 @@ que são quatro jeitos de mexer no mesmo saldo, e troca sem sair da tela.
         return this.p.saldos[String(localId)] || 0;
       },
       saldoTexto(localId) {
-        if (!this.p) return '';
+        if (!this.p) return '—';   // traço: o cartão não muda de altura depois
         return this.fmt(this.saldoEm(localId)) + ' ' + this.p.unidade;
       },
       nomeLocal(id) {
