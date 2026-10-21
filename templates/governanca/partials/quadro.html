@@ -20,16 +20,49 @@ e as views redirecionam quando o pedido não vem do HTMX.
           :aria-pressed="f==='inspecionada'" @click="filtrar('inspecionada')"><span class="ponto"></span>Inspecionadas <b>{{ contagem.inspecionada }}</b></button>
 </div>
 
+{% comment %}Divergência da ronda: o recado mais caro da tela (diária perdida, conta
+aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% endcomment %}
+{% if divergencias %}
+<div class="aviso-divergencia{% if not divergencias_graves %} leve{% endif %}" role="status">
+  <p><strong>{{ divergencias }}</strong> quarto(s) em que a ronda e o sistema não batem.</p>
+  <a href="{% url 'governanca:discrepancias' %}" class="botao-mini">Ver discrepâncias</a>
+</div>
+{% endif %}
+
 <table class="tabela tabela-limpeza tabela-cartoes"
        hx-target="#gov-quadro" hx-swap="innerHTML" hx-indicator="#gov-quadro">
   <thead>
-    <tr><th>Quarto</th><th>Situação</th><th class="col-camareira">Camareira</th><th class="col-acao">Ação</th></tr>
+    <tr><th>Quarto</th><th>Situação</th><th class="col-ronda">Ronda</th><th class="col-camareira">Camareira</th><th class="col-acao">Ação</th></tr>
   </thead>
   <tbody>
     {% for ln in linhas %}
     <tr x-show="f==='todas' || f==='{{ ln.situacao }}'" x-transition.opacity>
       <td data-rotulo="Quarto"><strong>{{ ln.uh.numero }}</strong><small class="ajuda">{{ ln.uh.tipo.nome }}</small></td>
       <td data-rotulo="Situação"><span class="selo selo-{{ ln.situacao }}">{{ ln.situacao_label }}</span></td>
+      {% comment %}Conferência de ocupação: um toque com o que a camareira VIU. Três
+      formulários (um por botão) em vez de um com três submits — assim o valor chega
+      igual pelo HTMX e pelo formulário puro, sem depender do botão que enviou.
+      {% endcomment %}
+      <td class="col-ronda" data-rotulo="Ronda">
+        <div class="ronda-grupo" role="group" aria-label="O que foi visto no {{ ln.uh.numero }}">
+          {% for cod, curto, longo in vistos %}
+            <form method="post" action="{% url 'governanca:ronda' ln.uh.pk %}"
+                  hx-post="{% url 'governanca:ronda' ln.uh.pk %}">
+              {% csrf_token %}<input type="hidden" name="visto" value="{{ cod }}">
+              <button type="submit" class="botao-ronda{% if ln.conferencia.visto == cod %} marcado{% endif %}"
+                      title="{{ longo }}"
+                      aria-pressed="{% if ln.conferencia.visto == cod %}true{% else %}false{% endif %}">{{ curto }}</button>
+            </form>
+          {% endfor %}
+        </div>
+        {% if ln.divergente %}
+          <span class="selo selo-{{ ln.divergencia }}">{{ ln.divergencia_rotulo }}</span>
+        {% elif ln.conferencia %}
+          <small class="ajuda">{{ ln.conferencia.registrado_em|date:"H:i" }}{% if ln.conferencia.registrado_por %} · {{ ln.conferencia.registrado_por.get_full_name|default:ln.conferencia.registrado_por.username }}{% endif %}</small>
+        {% elif ln.bloqueado %}
+          <small class="ajuda">Bloqueado — fora da ronda</small>
+        {% endif %}
+      </td>
       <td class="col-camareira" data-rotulo="Camareira">
         {% if ln.tarefa and ln.situacao == 'suja' or ln.situacao == 'em_limpeza' and ln.tarefa %}
           {# Trocar no <select> não envia nada: aparece o "Salvar" e quem decide é a pessoa. #}
@@ -62,6 +95,17 @@ e as views redirecionam quando o pedido não vem do HTMX.
           {% endif %}
         {% elif ln.situacao == 'limpa' %}
           <form method="post" action="{% url 'governanca:status_marcar' ln.uh.pk %}" hx-post="{% url 'governanca:status_marcar' ln.uh.pk %}">{% csrf_token %}<input type="hidden" name="situacao" value="inspecionada"><button type="submit" class="botao-neutro">Inspecionar</button></form>
+          {% comment %}Reprovar = a supervisora devolveu o quarto. O motivo é opcional e
+          fica escondido até alguém abrir: sem JavaScript, o <details> abre igual.{% endcomment %}
+          <details class="reprovar">
+            <summary class="botao-mini">Reprovar</summary>
+            <form method="post" action="{% url 'governanca:status_marcar' ln.uh.pk %}" hx-post="{% url 'governanca:status_marcar' ln.uh.pk %}" class="form-inline">
+              {% csrf_token %}<input type="hidden" name="situacao" value="reprovada">
+              <input type="text" name="motivo" maxlength="200" placeholder="Motivo (opcional)"
+                     aria-label="Motivo da reprovação do {{ ln.uh.numero }}">
+              <button type="submit" class="botao-mini">Confirmar</button>
+            </form>
+          </details>
           <form method="post" action="{% url 'governanca:nova_tarefa' %}" hx-post="{% url 'governanca:nova_tarefa' %}">{% csrf_token %}<input type="hidden" name="uh" value="{{ ln.uh.pk }}"><input type="hidden" name="tipo" value="faxina_completa"><button type="submit" class="botao-mini">Nova faxina</button></form>
         {% elif ln.situacao == 'inspecionada' %}
           <form method="post" action="{% url 'governanca:nova_tarefa' %}" hx-post="{% url 'governanca:nova_tarefa' %}">{% csrf_token %}<input type="hidden" name="uh" value="{{ ln.uh.pk }}"><input type="hidden" name="tipo" value="faxina_completa"><button type="submit" class="botao-neutro">Nova faxina</button></form>
@@ -69,7 +113,7 @@ e as views redirecionam quando o pedido não vem do HTMX.
       </td>
     </tr>
     {% empty %}
-    <tr><td colspan="4" class="vazio">Nenhum quarto cadastrado ainda. Cadastre os quartos em
+    <tr><td colspan="5" class="vazio">Nenhum quarto cadastrado ainda. Cadastre os quartos em
       <strong>Cadastros → Quartos &amp; tipos</strong> para a governança começar a acompanhar a limpeza.</td></tr>
     {% endfor %}
   </tbody>

@@ -9,7 +9,7 @@ from apps.nucleo.modulos import Modulo
 from apps.nucleo.permissoes import requer_modulo
 
 from . import services
-from .models import StatusLimpeza, TarefaGovernanca
+from .models import ConferenciaOcupacao, StatusLimpeza, TarefaGovernanca
 
 Usuario = get_user_model()
 
@@ -21,6 +21,12 @@ def _contexto_quadro():
     return {
         "linhas": dados["linhas"],
         "contagem": contagem,
+        "divergencias": dados["divergencias"],
+        "divergencias_graves": dados["divergencias_graves"],
+        "a_conferir": dados["a_conferir"],
+        "conferidos": dados["conferidos"],
+        "sem_base": dados["sem_base"],
+        "vistos": ConferenciaOcupacao.botoes_da_ronda(),
         "camareiras": Usuario.objects.filter(is_active=True).order_by("first_name", "username"),
         # Situações sem nenhum quarto: o filtro mostra um recado em vez de uma
         # tabela só com cabeçalho.
@@ -32,20 +38,22 @@ def _contexto_quadro():
     }
 
 
-def _resposta_acao(request, aviso=""):
+def _resposta_acao(request, aviso="", tipo="success"):
     """Resposta das ações do painel.
 
     Com HTMX devolve só o quadro (a linha E os contadores dos chips mudam juntos,
     sem recarregar a página) e manda o aviso em toast pelo HX-Trigger. Sem HTMX
-    (ou sem JS) segue o caminho antigo: mensagem + redirect.
+    (ou sem JS) segue o caminho antigo: mensagem + redirect. `tipo="error"` fica
+    na tela até alguém fechar — divergência da ronda não pode passar batida.
     """
     if not request.headers.get("HX-Request"):
         if aviso:
-            messages.success(request, aviso)
+            {"error": messages.error, "warning": messages.warning}.get(
+                tipo, messages.success)(request, aviso)
         return redirect("governanca:painel")
     resposta = render(request, "governanca/partials/quadro.html", _contexto_quadro())
     if aviso:
-        resposta["HX-Trigger"] = json.dumps({"aviso": {"texto": aviso, "tipo": "success"}})
+        resposta["HX-Trigger"] = json.dumps({"aviso": {"texto": aviso, "tipo": tipo}})
     return resposta
 
 
@@ -110,7 +118,41 @@ def status_marcar(request, pk):
     uh = get_object_or_404(UH, pk=pk)
     situacao = request.POST.get("situacao")
     aviso = ""
-    if situacao in StatusLimpeza.Situacao.values:
+    if situacao == "reprovada":
+        # Supervisora devolveu o quarto: volta para a fila com motivo registrado.
+        services.reprovar_inspecao(uh, request.user, request.POST.get("motivo", ""))
+        aviso = f"{uh.numero} reprovado — voltou para a fila de limpeza."
+    elif situacao == StatusLimpeza.Situacao.INSPECIONADA:
+        services.inspecionar(uh, request.user)
+        aviso = f"{uh.numero} inspecionado."
+    elif situacao in StatusLimpeza.Situacao.values:
         services.definir_status(uh, situacao, request.user)
         aviso = f"{uh.numero}: {dict(StatusLimpeza.Situacao.choices)[situacao].lower()}."
     return _resposta_acao(request, aviso)
+
+
+@requer_modulo(Modulo.GOVERNANCA)
+def ronda(request, pk):
+    """Conferência de ocupação: a camareira registra o que VIU no quarto. Um toque,
+    sem recarregar a tela (HTMX) — e cada toque é uma linha nova no histórico."""
+    if request.method != "POST":
+        return redirect("governanca:painel")
+    uh = get_object_or_404(UH, pk=pk)
+    visto = request.POST.get("visto")
+    if visto not in ConferenciaOcupacao.Visto.values:   # não confia no POST
+        return _resposta_acao(request)
+    conferencia = services.registrar_conferencia(
+        uh, visto, usuario=request.user, observacao=request.POST.get("observacao", ""))
+    if conferencia.divergente:
+        rotulo, gravidade, o_que_fazer = services.explicar_divergencia(
+            conferencia.divergencia)
+        return _resposta_acao(
+            request, f"{uh.numero}: {rotulo.lower()}. {o_que_fazer}",
+            tipo="error" if gravidade == "alta" else "warning")
+    return _resposta_acao(request, f"{uh.numero}: {ConferenciaOcupacao.CURTO[visto].lower()}.")
+
+
+@requer_modulo(Modulo.GOVERNANCA)
+def discrepancias(request):
+    """Relatório de discrepância da governança: onde a ronda e o PMS não batem."""
+    return render(request, "governanca/discrepancias.html", services.discrepancias())

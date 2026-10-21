@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block titulo %}Discrepâncias da ronda — Governança{% endblock %}
+
+{% block conteudo %}
+<p class="pagina-eyebrow letreiro">Hospedagem</p>
+<div class="pagina-cabecalho">
+  <h1>Discrepâncias da ronda</h1>
+</div>
+<p class="subtitulo">O que a camareira viu em cada quarto hoje, confrontado com o que o
+  sistema diz. É aqui que aparece o hóspede que foi embora sem passar na recepção
+  (<em>skip</em> — conta em aberto, quarto invendável) e o quarto que o sistema dá como
+  livre com gente dentro (<em>sleeper</em> — check-in não lançado).
+  A lista é de agora: o que a recepção resolver sai sozinho daqui.</p>
+
+{% include "governanca/partials/abas.html" %}
+
+{% if sem_base %}
+  <div class="estado-vazio">
+    <p>Sem o módulo <strong>Reservas</strong> ativo não há com o que comparar a ronda —
+      a conferência de ocupação continua sendo registrada e guardada, e a comparação
+      volta assim que o módulo for ativado.</p>
+  </div>
+{% else %}
+<div class="cartoes-indicadores colunas">
+  <div class="cartao">
+    <span class="indicador-rotulo letreiro">Divergências</span>
+    <span class="indicador-valor">{{ divergencias }}</span>
+  </div>
+  <div class="cartao">
+    <span class="indicador-rotulo letreiro">Conferidos hoje</span>
+    <span class="indicador-valor">{{ conferidos }}<small class="ajuda"> de {{ quartos }}</small></span>
+  </div>
+  <div class="cartao">
+    <span class="indicador-rotulo letreiro">Conferem</span>
+    <span class="indicador-valor">{{ conferem }}</span>
+  </div>
+  <div class="cartao">
+    <span class="indicador-rotulo letreiro">Sem ronda</span>
+    <span class="indicador-valor">{{ resumo.nao_conferido }}</span>
+  </div>
+</div>
+
+<table class="tabela tabela-cartoes tabela-discrepancia bloco-respiro-largo">
+  <thead>
+    <tr>
+      <th>Quarto</th><th>Achado</th><th>O sistema diz</th>
+      <th>A ronda viu</th><th class="col-fazer">O que fazer</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for a in linhas %}
+      <tr>
+        <td data-rotulo="Quarto"><strong>{{ a.uh.numero }}</strong><small class="ajuda">{{ a.uh.tipo.nome }}</small></td>
+        <td data-rotulo="Achado"><span class="selo selo-{{ a.tipo }}">{{ a.rotulo }}</span></td>
+        <td data-rotulo="O sistema diz">{{ a.pms_diz }}</td>
+        <td data-rotulo="A ronda viu">{{ a.visto }}</td>
+        {% comment %}Classe própria, não `col-acao`: aquela é coluna de BOTÃO (alinha
+        à direita e não quebra linha) e cortava a frase na borda da tabela.{% endcomment %}
+        <td class="col-fazer" data-rotulo="O que fazer">
+          <span class="acao-texto">{{ a.o_que_fazer }}</span>
+          {% if a.url %}<a href="{{ a.url }}" class="botao-mini">Resolver</a>{% endif %}
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="5" class="vazio">
+        {% if conferidos %}A ronda de hoje bate com o sistema em todos os quartos conferidos.
+        {% else %}Nenhum quarto conferido hoje ainda. Registre a ronda na aba
+          <strong>Limpeza</strong> — sem ela não há como comparar.{% endif %}
+      </td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

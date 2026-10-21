@@ -7,7 +7,10 @@
 <div class="pagina-cabecalho">
   <h1>Limpeza dos quartos</h1>
 </div>
-<p class="subtitulo">Do check-out à liberação: o quarto vira <em>a limpar</em>, a camareira limpa e a recepção libera para o próximo hóspede.</p>
+<p class="subtitulo">Do check-out à liberação: o quarto vira <em>a limpar</em>, a camareira limpa e a recepção libera para o próximo hóspede.
+  Na ronda, registre o que você <strong>viu</strong> em cada quarto — é esse toque que pega hóspede que foi embora sem baixa e quarto com gente que o sistema diz vazio.</p>
+
+{% include "governanca/partials/abas.html" %}
 
 {% comment %}O x-data fica FORA de #gov-quadro: as ações trocam só o quadro (HTMX) e
 o filtro escolhido continua valendo — e volta igual na próxima vez (localStorage).{% endcomment %}

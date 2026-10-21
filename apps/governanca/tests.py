@@ -18,7 +18,7 @@ from apps.nucleo.models import (
 from apps.nucleo.modulos import Modulo
 
 from . import services
-from .models import StatusLimpeza, TarefaGovernanca
+from .models import ConferenciaOcupacao, StatusLimpeza, TarefaGovernanca
 
 Usuario = get_user_model()
 
@@ -244,3 +244,480 @@ class ArrumacaoDiariaTests(GovernancaBase):
         saida = StringIO()
         call_command("gerar_arrumacoes", stdout=saida)
         self.assertIn("1 arrumação", saida.getvalue())
+
+
+class RondaBase(GovernancaBase):
+    """Cenário da ronda: quartos físicos + um jeito curto de hospedar alguém."""
+
+    def setUp(self):
+        super().setUp()
+        self.uh2 = UH.objects.create(numero="Quarto 02", tipo=self.tipo)
+        self.hoje = timezone.localdate()
+
+    def _hospedar(self, uh, *, sai_em_dias=2, nome="Hóspede"):
+        from apps.reservas.models import Reserva
+        return Reserva.objects.create(
+            uh=uh, hospede=Pessoa.objects.create(nome=f"{nome} {uh.numero}"),
+            checkin=self.hoje - timedelta(days=1),
+            checkout=self.hoje + timedelta(days=sai_em_dias),
+            status=Reserva.Status.HOSPEDADA, valor_diaria=Decimal("200"),
+            criado_por=self.user)
+
+    def _achados(self, dia=None):
+        return {a["uh"].pk: a for a in services.discrepancias(dia)["linhas"]}
+
+
+class ConferenciaOcupacaoTests(RondaBase):
+    """O registro da ronda: quem, quando, e histórico que não se sobrescreve."""
+
+    def test_grava_quem_quando_e_o_que_viu(self):
+        conf = services.registrar_conferencia(
+            self.uh, ConferenciaOcupacao.Visto.VAGO, usuario=self.user)
+        self.assertEqual((conf.uh, conf.visto, conf.registrado_por, conf.dia),
+                         (self.uh, "vago", self.user, self.hoje))
+        self.assertIsNotNone(conf.registrado_em)
+
+    def test_segunda_conferencia_nao_sobrescreve_a_primeira(self):
+        """A ronda da tarde não apaga a da manhã — e a tela mostra a mais recente."""
+        primeira = services.registrar_conferencia(
+            self.uh, ConferenciaOcupacao.Visto.OCUPADO, usuario=self.user)
+        segunda = services.registrar_conferencia(
+            self.uh, ConferenciaOcupacao.Visto.VAGO, usuario=self.user)
+        self.assertEqual(ConferenciaOcupacao.objects.filter(uh=self.uh).count(), 2)
+        primeira.refresh_from_db()
+        self.assertEqual(primeira.visto, "ocupado")       # intacta
+        self.assertEqual(services.conferencias_do_dia(self.hoje)[self.uh.pk].pk,
+                         segunda.pk)
+
+    def test_guarda_o_retrato_do_pms(self):
+        """O veredito gravado é o do momento: amanhã a reserva não está mais
+        hospedada e o relatório do mês continuaria certo."""
+        r = self._hospedar(self.uh)
+        conf = services.registrar_conferencia(
+            self.uh, ConferenciaOcupacao.Visto.VAGO, usuario=self.user)
+        self.assertTrue(conf.pms_ocupado)
+        self.assertEqual(conf.reserva_id, r.pk)
+        self.assertEqual(conf.divergencia, ConferenciaOcupacao.Divergencia.SKIP)
+
+    def test_visto_invalido_recusado(self):
+        from django.core.exceptions import ValidationError
+        with self.assertRaises(ValidationError):
+            services.registrar_conferencia(self.uh, "sei_la", usuario=self.user)
+
+    def test_fica_na_trilha_de_auditoria_pelos_signals(self):
+        """Nenhuma chamada explícita: o signal do núcleo audita qualquer escrita
+        feita por um usuário real (aqui, pela view)."""
+        self.client.login(username="governanta", password="senha-forte-123")
+        self.client.post(reverse("governanca:ronda", args=[self.uh.pk]),
+                         {"visto": "vago"})
+        trilha = TrilhaAuditoria.objects.filter(
+            alvo="ConferenciaOcupacao", acao="criar").first()
+        self.assertIsNotNone(trilha)
+        self.assertEqual(trilha.usuario, self.user)
+
+
+class DiscrepanciaTests(RondaBase):
+    """Skip, sleeper e companhia — o cruzamento que ninguém fazia."""
+
+    def test_skip_pms_ocupado_quarto_vago(self):
+        self._hospedar(self.uh, sai_em_dias=2)
+        services.registrar_conferencia(self.uh, "vago", usuario=self.user)
+        achado = self._achados()[self.uh.pk]
+        self.assertEqual(achado["tipo"], ConferenciaOcupacao.Divergencia.SKIP)
+        self.assertEqual(achado["gravidade"], "alta")
+
+    def test_saida_de_hoje_ainda_nao_lancada_nao_e_skip(self):
+        """Hóspede que sai hoje e já foi embora: a recepção só não deu baixa. Pede
+        ação (fechar a conta, liberar o quarto), mas não é hóspede fugindo."""
+        self._hospedar(self.uh, sai_em_dias=0)
+        services.registrar_conferencia(self.uh, "vago", usuario=self.user)
+        achado = self._achados()[self.uh.pk]
+        self.assertEqual(achado["tipo"],
+                         ConferenciaOcupacao.Divergencia.SAIDA_NAO_LANCADA)
+        self.assertEqual(achado["gravidade"], "media")
+
+    def test_sleeper_pms_livre_quarto_com_gente(self):
+        services.registrar_conferencia(self.uh, "ocupado", usuario=self.user)
+        achado = self._achados()[self.uh.pk]
+        self.assertEqual(achado["tipo"], ConferenciaOcupacao.Divergencia.SLEEPER)
+        self.assertEqual(achado["gravidade"], "alta")
+
+    def test_sleeper_tambem_quando_viu_uso_sem_bagagem(self):
+        services.registrar_conferencia(self.uh, "ocupado_sem_bagagem", usuario=self.user)
+        self.assertEqual(self._achados()[self.uh.pk]["tipo"],
+                         ConferenciaOcupacao.Divergencia.SLEEPER)
+
+    def test_chegada_de_hoje_com_gente_dentro_e_sleeper_com_o_nome_do_hospede(self):
+        """Check-in não lançado: o quarto tem hóspede e o PMS ainda o dá como livre."""
+        from apps.reservas.models import Reserva
+        Reserva.objects.create(
+            uh=self.uh, hospede=Pessoa.objects.create(nome="Quem chegou"),
+            checkin=self.hoje, checkout=self.hoje + timedelta(days=2),
+            status=Reserva.Status.CONFIRMADA, valor_diaria=Decimal("200"),
+            criado_por=self.user)
+        services.registrar_conferencia(self.uh, "ocupado", usuario=self.user)
+        achado = self._achados()[self.uh.pk]
+        self.assertEqual(achado["tipo"], ConferenciaOcupacao.Divergencia.SLEEPER)
+        self.assertIn("Quem chegou", achado["pms_diz"])
+
+    def test_ocupado_confere_e_sai_da_lista(self):
+        self._hospedar(self.uh)
+        services.registrar_conferencia(self.uh, "ocupado", usuario=self.user)
+        d = services.discrepancias()
+        self.assertNotIn(self.uh.pk, {a["uh"].pk for a in d["linhas"]})
+        self.assertEqual(d["conferem"], 1)
+
+    def test_sem_bagagem_no_meio_da_estadia_vira_aviso_leve(self):
+        self._hospedar(self.uh, sai_em_dias=3)
+        services.registrar_conferencia(self.uh, "ocupado_sem_bagagem", usuario=self.user)
+        achado = self._achados()[self.uh.pk]
+        self.assertEqual(achado["tipo"], ConferenciaOcupacao.Divergencia.SEM_BAGAGEM)
+        self.assertEqual(achado["gravidade"], "baixa")
+
+    def test_quarto_bloqueado_em_manutencao_nao_e_discrepancia(self):
+        """Quarto em reparo tem técnico e material dentro — ver gente ali é normal."""
+        self.uh.status = UH.Status.BLOQUEADA
+        self.uh.save(update_fields=["status"])
+        services.registrar_conferencia(self.uh, "ocupado", usuario=self.user)
+        self.assertNotIn(self.uh.pk, self._achados())
+
+    def test_bloqueio_por_datas_da_manutencao_tambem_isenta(self):
+        """A Manutenção também bloqueia por período, sem mexer no status da UH."""
+        from apps.manutencao.models import OrdemServico
+        OrdemServico.objects.create(
+            uh=self.uh, titulo="Troca do chuveiro", bloqueia_uh=True,
+            bloqueio_inicio=self.hoje, bloqueio_fim=self.hoje,
+            status=OrdemServico.Status.EM_ANDAMENTO, criado_por=self.user)
+        services.registrar_conferencia(self.uh, "ocupado", usuario=self.user)
+        self.assertNotIn(self.uh.pk, self._achados())
+
+    def test_nao_conferido_quando_nao_houve_ronda(self):
+        d = services.discrepancias()
+        achados = {a["uh"].pk: a for a in d["linhas"]}
+        self.assertEqual(achados[self.uh.pk]["tipo"], "nao_conferido")
+        self.assertEqual(achados[self.uh2.pk]["tipo"], "nao_conferido")
+        self.assertEqual(d["resumo"]["nao_conferido"], 2)
+        self.assertEqual(d["conferidos"], 0)
+
+    def test_conferido_sai_do_nao_conferido(self):
+        services.registrar_conferencia(self.uh, "vago", usuario=self.user)
+        d = services.discrepancias()
+        self.assertEqual(d["resumo"]["nao_conferido"], 1)   # só o Quarto 02
+        self.assertEqual(d["conferidos"], 1)
+
+    def test_divergencia_resolvida_pela_recepcao_sai_da_tela(self):
+        """A tela é de agora: feito o check-out, o skip de manhã não é mais problema
+        (mas o registro da ronda continua no histórico, para o relatório)."""
+        r = self._hospedar(self.uh, sai_em_dias=0)
+        services.registrar_conferencia(self.uh, "vago", usuario=self.user)
+        self.assertEqual(services.discrepancias()["divergencias"], 1)
+        from apps.reservas.models import Reserva
+        Reserva.objects.filter(pk=r.pk).update(status=Reserva.Status.CHECKOUT)
+        self.assertEqual(services.discrepancias()["divergencias"], 0)
+        self.assertEqual(
+            ConferenciaOcupacao.objects.filter(
+                divergencia=ConferenciaOcupacao.Divergencia.SAIDA_NAO_LANCADA).count(),
+            1)
+
+    def test_day_use_fica_fora_da_ronda(self):
+        from apps.nucleo.models import TipoUH
+        day = TipoUH.objects.create(nome="Dia na pousada", tarifa_base=Decimal("90"),
+                                    modalidade=TipoUH.Modalidade.DAY_USE)
+        UH.objects.create(numero="DAY-99", tipo=day)
+        self.assertEqual(services.discrepancias()["quartos"], 2)   # Quarto 01 e 02
+
+    def test_consultas_constantes(self):
+        """24 quartos não podem virar 24 consultas: a tela faz o mesmo número de
+        consultas com 2 quartos e com 10 (cada um com reserva e conferência)."""
+        self._hospedar(self.uh)
+        services.registrar_conferencia(self.uh, "vago", usuario=self.user)
+        with self.assertNumQueries(8):
+            services.discrepancias()
+        for n in range(3, 11):
+            uh = UH.objects.create(numero=f"Quarto {n:02d}", tipo=self.tipo)
+            self._hospedar(uh)
+            services.registrar_conferencia(uh, "vago", usuario=self.user)
+        with self.assertNumQueries(8):
+            services.discrepancias()
+
+
+class DiscrepanciaSemReservasTests(RondaBase):
+    """Sem o módulo Reservas não há base de comparação — e nada quebra."""
+
+    def setUp(self):
+        super().setUp()
+        ModuloContratado.objects.filter(codigo=Modulo.RESERVAS).update(ativo=False)
+
+    def test_discrepancia_explica_em_vez_de_quebrar(self):
+        conf = services.registrar_conferencia(self.uh, "ocupado", usuario=self.user)
+        self.assertIsNone(conf.pms_ocupado)
+        self.assertEqual(conf.divergencia, ConferenciaOcupacao.Divergencia.SEM_BASE)
+        d = services.discrepancias()
+        self.assertTrue(d["sem_base"])
+        self.assertEqual(d["linhas"], [])
+        self.assertEqual(d["divergencias"], 0)
+
+    def test_painel_e_tela_de_discrepancia_abrem(self):
+        self.client.login(username="governanta", password="senha-forte-123")
+        self.assertEqual(self.client.get(reverse("governanca:painel")).status_code, 200)
+        r = self.client.get(reverse("governanca:discrepancias"))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "não há com o que comparar")
+
+    def test_varredura_da_auditoria_nao_aponta_nada(self):
+        services.registrar_conferencia(self.uh, "ocupado", usuario=self.user)
+        self.assertEqual(services.pendencias_auditoria(), [])
+
+
+class VarreduraAuditoriaTests(RondaBase):
+    """A divergência do dia aparece na varredura de pendências da Auditoria."""
+
+    def test_skip_entra_na_varredura(self):
+        from apps.auditoria.services import varrer
+        self._hospedar(self.uh, sai_em_dias=2)
+        services.registrar_conferencia(self.uh, "vago", usuario=self.user)
+        achados = [a for a in varrer() if a["area"] == "Governança"]
+        skip = next(a for a in achados if a["tipo"] == "skip")
+        self.assertEqual(skip["gravidade"], "alta")
+        self.assertIn(self.uh.numero, skip["descricao"])
+        self.assertTrue(skip["url"])
+
+    def test_ronda_incompleta_agrega_numa_linha_e_so_conta_ocupados(self):
+        """Antes da ronda nenhum quarto foi conferido: 24 linhas todas as manhãs
+        viram ruído. Vai uma linha, e só pelos quartos com hóspede dentro."""
+        self._hospedar(self.uh)
+        achados = services.pendencias_auditoria()
+        linhas = [a for a in achados if a["tipo"] == "ronda_incompleta"]
+        self.assertEqual(len(linhas), 1)
+        self.assertIn(self.uh.numero, linhas[0]["descricao"])
+        self.assertNotIn(self.uh2.numero, linhas[0]["descricao"])  # quarto livre
+
+    def test_quarto_livre_sem_ronda_nao_vira_pendencia(self):
+        self.assertEqual(services.pendencias_auditoria(), [])
+
+
+class RondaViewTests(RondaBase):
+    """O toque da camareira: HTMX troca só o quadro e o aviso vem no cabeçalho."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="governanta", password="senha-forte-123")
+
+    def test_htmx_devolve_so_o_quadro(self):
+        r = self.client.post(reverse("governanca:ronda", args=[self.uh.pk]),
+                             {"visto": "vago"}, headers={"hx-request": "true"})
+        self.assertEqual(r.status_code, 200)
+        corpo = r.content.decode()
+        self.assertIn("tabela-limpeza", corpo)
+        self.assertNotIn("<html", corpo)
+        self.assertIn("HX-Trigger", r.headers)
+
+    def test_sem_htmx_redireciona(self):
+        r = self.client.post(reverse("governanca:ronda", args=[self.uh.pk]),
+                             {"visto": "ocupado"})
+        self.assertRedirects(r, reverse("governanca:painel"))
+        self.assertEqual(ConferenciaOcupacao.objects.count(), 1)
+
+    def test_divergencia_avisa_na_hora_e_nao_desaparece(self):
+        """Skip é dinheiro na mesa: o toast fica até alguém fechar (tipo "error")."""
+        self._hospedar(self.uh, sai_em_dias=2)
+        r = self.client.post(reverse("governanca:ronda", args=[self.uh.pk]),
+                             {"visto": "vago"}, headers={"hx-request": "true"})
+        self.assertIn("error", r.headers["HX-Trigger"])
+        self.assertIn("saiu sem baixa", r.headers["HX-Trigger"].lower())
+        self.assertIn("aviso-divergencia", r.content.decode())
+
+    def test_achado_leve_avisa_sem_alarmar(self):
+        """"Ocupado sem bagagem" é observação, não emergência: o bloco não vai em
+        vermelho (o dono já reclamou de tela que grita por tudo)."""
+        self._hospedar(self.uh, sai_em_dias=3)
+        r = self.client.post(reverse("governanca:ronda", args=[self.uh.pk]),
+                             {"visto": "ocupado_sem_bagagem"},
+                             headers={"hx-request": "true"})
+        self.assertIn("aviso-divergencia leve", r.content.decode())
+        self.assertIn("warning", r.headers["HX-Trigger"])
+
+    def test_achado_grave_pinta_o_aviso_de_vermelho(self):
+        self._hospedar(self.uh, sai_em_dias=3)
+        r = self.client.post(reverse("governanca:ronda", args=[self.uh.pk]),
+                             {"visto": "vago"}, headers={"hx-request": "true"})
+        corpo = r.content.decode()
+        self.assertIn("aviso-divergencia", corpo)
+        self.assertNotIn("aviso-divergencia leve", corpo)
+
+    def test_visto_invalido_nao_grava_nem_quebra(self):
+        r = self.client.post(reverse("governanca:ronda", args=[self.uh.pk]),
+                             {"visto": "qualquer"}, headers={"hx-request": "true"})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(ConferenciaOcupacao.objects.count(), 0)
+
+    def test_get_nao_grava(self):
+        r = self.client.get(reverse("governanca:ronda", args=[self.uh.pk]))
+        self.assertRedirects(r, reverse("governanca:painel"))
+        self.assertEqual(ConferenciaOcupacao.objects.count(), 0)
+
+    def test_painel_mostra_os_tres_botoes_da_ronda(self):
+        corpo = self.client.get(reverse("governanca:painel")).content.decode()
+        for rotulo in ("Vago", "Com bagagem", "Sem bagagem"):
+            self.assertIn(rotulo, corpo)
+
+    def test_tela_de_discrepancias_lista_o_achado_com_o_que_fazer(self):
+        self._hospedar(self.uh, sai_em_dias=2)
+        services.registrar_conferencia(self.uh, "vago", usuario=self.user)
+        r = self.client.get(reverse("governanca:discrepancias"))
+        self.assertContains(r, "Saiu sem baixa")
+        self.assertContains(r, "lançar a saída")
+        self.assertContains(r, self.uh.numero)
+
+    def test_discrepancias_exige_o_modulo(self):
+        Usuario.objects.create_user(username="sem2", password="senha-forte-123")
+        self.client.logout()
+        self.client.login(username="sem2", password="senha-forte-123")
+        self.assertEqual(
+            self.client.get(reverse("governanca:discrepancias")).status_code, 403)
+
+    def test_discrepancias_404_com_modulo_inativo(self):
+        ModuloContratado.objects.filter(codigo=Modulo.GOVERNANCA).update(ativo=False)
+        self.assertEqual(
+            self.client.get(reverse("governanca:discrepancias")).status_code, 404)
+
+
+class InspecaoTests(GovernancaBase):
+    """Inspeção carimba a faxina entregue; reprovar devolve o quarto para a fila."""
+
+    def _faxina_entregue(self, camareira=None):
+        tarefa = services.abrir_faxina(self.uh, usuario=self.user)
+        tarefa.camareira = camareira or self.user
+        tarefa.save(update_fields=["camareira"])
+        services.iniciar_tarefa(tarefa, self.user)
+        services.concluir_tarefa(tarefa, self.user)
+        tarefa.refresh_from_db()
+        return tarefa
+
+    def test_inspecionar_carimba_a_faxina(self):
+        tarefa = self._faxina_entregue()
+        services.inspecionar(self.uh, self.user)
+        tarefa.refresh_from_db()
+        self.assertIsNotNone(tarefa.inspecionada_em)
+        self.assertEqual(tarefa.inspecionada_por, self.user)
+        self.assertEqual(services.situacao_uh(self.uh).situacao, "inspecionada")
+
+    def test_inspecionar_duas_vezes_nao_conta_duas(self):
+        tarefa = self._faxina_entregue()
+        services.inspecionar(self.uh, self.user)
+        primeiro = TarefaGovernanca.objects.get(pk=tarefa.pk).inspecionada_em
+        services.inspecionar(self.uh, self.user)
+        self.assertEqual(TarefaGovernanca.objects.get(pk=tarefa.pk).inspecionada_em,
+                         primeiro)
+
+    def test_reprovar_devolve_para_a_fila_com_motivo(self):
+        tarefa = self._faxina_entregue()
+        nova = services.reprovar_inspecao(self.uh, self.user, "Banheiro")
+        tarefa.refresh_from_db()
+        self.assertIsNotNone(tarefa.reprovada_em)
+        self.assertEqual(tarefa.motivo_reprovacao, "Banheiro")
+        self.assertEqual((nova.status, nova.origem), ("pendente", "reprovada"))
+        self.assertEqual(services.situacao_uh(self.uh).situacao, "suja")
+        self.assertTrue(
+            TrilhaAuditoria.objects.filter(acao="inspecao_reprovada").exists())
+
+    def test_quarto_sem_faxina_ainda_pode_ser_inspecionado(self):
+        services.inspecionar(self.uh, self.user)
+        self.assertEqual(services.situacao_uh(self.uh).situacao, "inspecionada")
+
+    def test_botao_de_reprovar_aparece_no_quarto_limpo(self):
+        self._faxina_entregue()
+        self.client.login(username="governanta", password="senha-forte-123")
+        corpo = self.client.get(reverse("governanca:painel")).content.decode()
+        self.assertIn("Reprovar", corpo)
+        self.assertIn('value="reprovada"', corpo)
+
+    def test_reprovar_pela_view(self):
+        self._faxina_entregue()
+        self.client.login(username="governanta", password="senha-forte-123")
+        r = self.client.post(reverse("governanca:status_marcar", args=[self.uh.pk]),
+                             {"situacao": "reprovada", "motivo": "Pó no armário"},
+                             headers={"hx-request": "true"})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(
+            TarefaGovernanca.objects.filter(origem="reprovada").count(), 1)
+
+
+class RelatoriosGovernancaTests(RondaBase):
+    """Os números que a gerência olha no fim do mês."""
+
+    def setUp(self):
+        super().setUp()
+        self.maria = Usuario.objects.create_user(
+            username="maria", password="senha-forte-123", first_name="Maria")
+        self.periodo = (self.hoje - timedelta(days=7), self.hoje)
+
+    def _faxina(self, uh, camareira, *, minutos=30,
+                tipo=TarefaGovernanca.Tipo.FAXINA):
+        agora = timezone.now()
+        return TarefaGovernanca.objects.create(
+            uh=uh, tipo=tipo, camareira=camareira,
+            status=TarefaGovernanca.Status.CONCLUIDA,
+            iniciada_em=agora - timedelta(minutes=minutos), concluida_em=agora)
+
+    def test_faxinas_por_camareira_com_tipo_e_tempo_medio(self):
+        self._faxina(self.uh, self.maria, minutos=20)
+        self._faxina(self.uh2, self.maria, minutos=40,
+                     tipo=TarefaGovernanca.Tipo.ARRUMACAO)
+        self._faxina(self.uh, self.user, minutos=60)
+        rel = services.relatorio_faxinas(*self.periodo)
+        self.assertEqual(rel["total"], 3)
+        self.assertEqual(rel["minutos_medios"], 40)        # (20+40+60)/3
+        linha = next(ln for ln in rel["linhas"] if ln["camareira"] == "Maria")
+        self.assertEqual(linha["n"], 2)
+        self.assertEqual(linha["minutos"], 30)             # (20+40)/2
+        self.assertEqual(linha["tipos"][TarefaGovernanca.Tipo.ARRUMACAO], 1)
+
+    def test_faxina_sem_horario_conta_mas_fica_fora_da_media(self):
+        TarefaGovernanca.objects.create(
+            uh=self.uh, camareira=self.maria,
+            status=TarefaGovernanca.Status.CONCLUIDA, concluida_em=timezone.now())
+        rel = services.relatorio_faxinas(*self.periodo)
+        self.assertEqual(rel["total"], 1)
+        self.assertEqual(rel["cronometradas"], 0)
+        self.assertIsNone(rel["minutos_medios"])
+
+    def test_faxina_fora_do_periodo_nao_entra(self):
+        antiga = self._faxina(self.uh, self.maria)
+        TarefaGovernanca.objects.filter(pk=antiga.pk).update(
+            concluida_em=timezone.now() - timedelta(days=40))
+        self.assertEqual(services.relatorio_faxinas(*self.periodo)["total"], 0)
+
+    def test_inspecoes_contam_aprovadas_reprovadas_e_retrabalho(self):
+        aprovada = self._faxina(self.uh, self.maria)
+        reprovada = self._faxina(self.uh2, self.maria)
+        TarefaGovernanca.objects.filter(pk=aprovada.pk).update(
+            inspecionada_em=timezone.now(), inspecionada_por=self.user)
+        TarefaGovernanca.objects.filter(pk=reprovada.pk).update(
+            reprovada_em=timezone.now(), motivo_reprovacao="Banheiro")
+        rel = services.relatorio_inspecoes(*self.periodo)
+        self.assertEqual((rel["inspecionadas"], rel["reprovadas"]), (1, 1))
+        self.assertEqual(rel["retrabalho"], 50.0)
+        self.assertEqual(rel["motivos"], [("Banheiro", 1)])
+        self.assertEqual(rel["linhas"][0]["camareira"], "Maria")
+
+    def test_discrepancias_por_dia_usam_o_veredito_gravado(self):
+        self._hospedar(self.uh, sai_em_dias=2)
+        services.registrar_conferencia(self.uh, "vago", usuario=self.user)
+        services.registrar_conferencia(self.uh2, "ocupado", usuario=self.user)
+        rel = services.relatorio_discrepancias(*self.periodo)
+        self.assertEqual(rel["conferencias"], 2)
+        self.assertEqual(rel["divergencias"], 2)
+        self.assertEqual(rel["dias_com_divergencia"], 1)
+        self.assertEqual(rel["por_tipo"][ConferenciaOcupacao.Divergencia.SKIP], 1)
+        self.assertEqual(rel["por_tipo"][ConferenciaOcupacao.Divergencia.SLEEPER], 1)
+        self.assertEqual(rel["linhas"][0]["dia"], self.hoje)
+
+    def test_historico_nao_muda_quando_a_reserva_muda_de_estado(self):
+        """O relatório conta o que foi ENCONTRADO na ronda; a reserva segue a vida."""
+        r = self._hospedar(self.uh, sai_em_dias=2)
+        services.registrar_conferencia(self.uh, "vago", usuario=self.user)
+        from apps.reservas.models import Reserva
+        Reserva.objects.filter(pk=r.pk).update(status=Reserva.Status.CHECKOUT)
+        rel = services.relatorio_discrepancias(*self.periodo)
+        self.assertEqual(rel["por_tipo"][ConferenciaOcupacao.Divergencia.SKIP], 1)
