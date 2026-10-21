@@ -1370,6 +1370,8 @@ class DemonstracaoBancoNovoTests(TestCase):
         self._rodar("popular_demo")
         self._rodar("popular_lavanderia", "--limpar")
         self._rodar("popular_escala", "--limpar")
+        self._rodar("popular_estoque")
+        self._rodar("popular_manutencao", "--limpar")
         self._rodar("popular_lotacao")
 
         self.assertTrue(Reserva.objects.filter(observacoes__icontains="[lotacao]",

@@ -26,10 +26,11 @@ class Command(BaseCommand):
                             help="Apaga as OSs existentes antes de popular.")
 
     def handle(self, *args, **opts):
-        op = Usuario.objects.filter(is_superuser=True).first() or Usuario.objects.first()
-        if not op:
-            self.stderr.write("Nenhum usuário encontrado — crie um superusuário antes.")
-            return
+        from apps.nucleo.sistema import usuario_de_sistema
+
+        # Banco novo sem ninguém: assina com um usuário de sistema (ver popular_demo).
+        op = (Usuario.objects.filter(is_superuser=True).first() or Usuario.objects.first()
+              or usuario_de_sistema("_demo", "Dados de demonstração"))
 
         if opts["limpar"]:
             # Solta bloqueios pendentes antes de apagar, para não deixar quarto preso.

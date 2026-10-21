@@ -82,12 +82,13 @@ class Command(BaseCommand):
     help = "Cria dados de demonstração para o Estoque (produtos, depósitos e kardex)."
 
     def handle(self, *args, **opts):
+        from apps.nucleo.sistema import usuario_de_sistema
+
+        # Banco novo sem ninguém: assina com um usuário de sistema (ver popular_demo).
         operador = (
             Usuario.objects.filter(is_superuser=True).first() or Usuario.objects.first()
+            or usuario_de_sistema("_demo", "Dados de demonstração")
         )
-        if not operador:
-            self.stderr.write("Crie um superusuário antes.")
-            return
         sorteio = Random(2026)   # mesma demonstração toda vez
 
         locais = {}
