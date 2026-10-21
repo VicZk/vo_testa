@@ -189,7 +189,7 @@ e-mail é impresso no terminal (sem `EMAIL_HOST`, o backend é o de console).
 ### 2.5 Testes
 
 ```bash
-python manage.py test                    # suíte inteira (~880 testes, ~6 min)
+python manage.py test                    # suíte inteira (~1.230 testes, ~7 min)
 python manage.py test apps.reservas      # um app
 ```
 
@@ -593,7 +593,7 @@ desliga a trava da FNRH, as taxas automáticas, o MFA e o limite de login.
 
 - **Onde:** dentro de cada app (`apps/<app>/tests.py` e `tests_*.py`), com `TestCase` do
   Django. Regras de dinheiro e de disponibilidade são sempre testadas.
-- **Quantos:** cerca de 1.190 testes. Os mais densos:
+- **Quantos:** cerca de 1.230 testes. Os mais densos:
   `comercial`, `nucleo`, `reservas`, `marketing`, `pagamentos`.
 - **Navegador:** `apps/site/tests_e2e.py` usa Playwright e é pulado se ele não estiver
   instalado (`pip install playwright && playwright install chromium`).
@@ -614,6 +614,9 @@ coverage run --source=apps manage.py test && coverage report   # cobertura
   levar o arquivo e fazer o Railway aguardar os checks do GitHub antes de publicar.
 - **CI de segurança** (`.github/workflows/security.yml`): pip-audit, bandit, regras de
   segurança do ruff, semgrep (só relatório), `check --deploy` e gitleaks.
+- **Máquina do CI:** os workflows rodam em `ubuntu-24.04`, fixo, e não em
+  `ubuntu-latest`, que o GitHub troca para o Ubuntu 26 a partir de 19/10/2026. Depois da
+  abertura dá para voltar ao `latest` com calma.
 
 ---
 
@@ -688,6 +691,18 @@ Toda tela do CRM nasce no design system; nada de estilo paralelo nem cor fixa no
 - **App shell** (`templates/base.html`): sidebar por permissão, navegação com
   `hx-boost`, paleta de comandos (⌘K ou `/`), toasts a partir das mensagens do Django,
   atalho `N` para nova reserva.
+- **Menu lateral:** nasce recolhido em trilho de ícones (⌘\ ou o botão alterna, e a
+  escolha fica no navegador). No trilho cada item tem dica e nome para leitor de tela;
+  tudo o que é do trilho mora num `@media (width > 820px)`. Abaixo de 820 px o menu é
+  gaveta e abre sempre inteiro, como diálogo: foco preso, Esc e o véu fecham, a página
+  não rola por baixo e o foco volta ao botão.
+- **Responsivo:** nenhuma tela rola de lado entre 320 e 1440 px, com o menu aberto,
+  recolhido ou em gaveta. A largura que sobra depende do menu, e o `@media` só enxerga a
+  janela; por isso o que divide espaço decide pelo espaço: painel lateral em
+  `flex-wrap` (`.colunas-2-1`), grades em `minmax(min(Npx, 100%), 1fr)`, e o corredor de
+  quartos e a tabela de Pessoas por container query. Tabela larga rola dentro do próprio invólucro
+  (`.tabela-rol`, criado pelo `static/js/tabela-rol.js`). Alvo de toque ≥ 44 px no
+  ponteiro grosso, inclusive no portal, no pagamento e no login.
 - **Portal do hóspede e página de pagamento:** carregam o `static/css/base.css`, um
   recorte do `app.css` com só o que elas usam (6 KB comprimidos em vez de 52 KB).
   O recorte é GERADO: edite só o `app.css` e rode `python manage.py gerar_base_css`;
@@ -702,8 +717,10 @@ Regras para uma tela nova: estender `base.html`; telas de painel ou lista usam
 `.num` no `<th>` e no `<td>`; dinheiro com `|intcomma_brl`; mensagens por
 `django.contrib.messages`; nada de `style="…"` com medida ou cor fixa (vira classe;
 o atributo só fica quando o valor é dado, como uma largura em %). Campo de R$ usa o
-`ReaisInput` do núcleo. Os testes de `apps/nucleo/tests_design.py` cobram essas
-regras. Detalhes em [`docs/ARQUITETURA.md` §11](docs/ARQUITETURA.md).
+`ReaisInput` do núcleo. Antes de dar a tela por pronta, abrir em 320, 390, 821 (com o
+menu aberto) e 1440 px: nada pode sair do cartão, ser cortado sem reticências ou empurrar
+a página de lado. Os testes de `apps/nucleo/tests_design.py` cobram essas regras.
+Detalhes em [`docs/ARQUITETURA.md` §11](docs/ARQUITETURA.md).
 
 ---
 

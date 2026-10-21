@@ -155,6 +155,12 @@ e rode o comando — o teste `CssDasTelasPublicasTests` avisa quando o recorte f
   tokens de movimento (`--mov-toque/rapido/padrao/lento`, `--curva`, `--curva-entrada`,
   `--curva-pop`), que viram 1 ms sob reduced-motion; alvo de toque ≥ 44 px em ponteiro
   grosso.
+- **Responsivo e menu (pedido do dono: "atenção nos menus colapsados, no que fica dentro
+  e fora, fully responsive"):** conferir toda tela em 320, 390, 821 com o menu ABERTO e
+  1440 px — nada de rolagem lateral, nada saindo do cartão, nada cortado sem reticências.
+  A largura útil muda com o menu aberto/recolhido e o `@media` só enxerga a janela: o que
+  divide espaço decide pelo espaço (`flex-wrap`, `minmax(min(Npx, 100%), 1fr)`, container
+  query). Regra do trilho (`.app.recolhida …`) só dentro do `@media (width > 820px)`.
 - **Referências de princípio:** skill `apple-design` (resposta, tipografia ótica,
   materiais, simplicidade) e a memória [[design-lampiao]]. Ao mudar o "look" global,
   mexer nos **tokens** (propaga a tudo), não em cada template.

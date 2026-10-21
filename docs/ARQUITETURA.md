@@ -1388,7 +1388,7 @@ criar estilo paralelo nem hard-codear cor, raio ou sombra.
 | Elevação | `--sombra-1` (elementos pequenos), `--sombra-2`, `--sombra-3`, `--glow`, `--sombra-cartao` (float suave de cartão) |
 | Raio | `--raio-p` 10px, `--raio` 14px, `--raio-g` 20px |
 | Tipografia | `--fonte-titulo` (Fraunces), `--fonte-ui` (Hanken Grotesk), `--fonte-marca` (Rosaline, `@font-face` local), `--fonte-mono` (IBM Plex Mono) |
-| Layout | `--sidebar-w` 258px |
+| Layout | `--sidebar-w` 258px (72px no trilho), `--sidebar-topo-h` 116px (o topo do menu tem a mesma altura aberto e recolhido, e o menu não salta), `--topbar-h` 60px, `--vao-2-1` (vão do `.colunas-2-1`) |
 
 **Para mudar o “look” global, mexa nos tokens** — propaga para tudo.
 
@@ -1418,7 +1418,7 @@ por peso **e** tamanho.
 nos inputs, e `prefers-reduced-motion` respeitado (cross-fade em vez de slide/spring; a
 curva da casa é `cubic-bezier(.2,.8,.2,1)`).
 
-### 11.3 App shell — `templates/base.html` (714 linhas)
+### 11.3 App shell — `templates/base.html` (~1.000 linhas)
 
 ```
 .app
@@ -1463,6 +1463,18 @@ curva da casa é `cubic-bezier(.2,.8,.2,1)`).
 
 - Ícones são **SVG inline** (sem sprite nem icon font); no rail recolhido o ícone é o
   único identificador, por isso cada módulo tem o seu em `componentes/icone_modulo.html`.
+- **Trilho (menu recolhido)**: é o estado padrão (`localStorage.sidebar` diferente de
+  `aberta`). O rótulo sai da vista, não da leitura (fora do fluxo + `clip-path`, nunca
+  `display:none`), e cada item traz `title`, que o `rotularSidebar()` deixa valer só no
+  trilho. Toda regra `.app.recolhida …` mora num único `@media (width > 820px)` — o teste
+  `test_trilho_so_existe_no_desktop` reprova regra solta fora dele.
+- **Gaveta (≤ 820 px)**: abre sempre inteira, qualquer que seja a preferência do
+  desktop. Fechada, `visibility:hidden` a tira da ordem de tabulação; aberta, é diálogo —
+  `abrirSidebarMobile()` guarda o foco, o Tab circula dentro dela (`caixaAberta()`),
+  `body.sem-rolagem` trava a página e `fecharSidebarMobile()` devolve o foco. Fecha no véu,
+  no Esc e ao navegar (`htmx:pushedIntoHistory`).
+- **Combo de pessoa/quarto**: `posicionar()` abre a lista para cima quando não cabe
+  embaixo (`.combo-acima`); a lista nunca passa de 46% da altura da tela.
 
 ### 11.4 Componentes compartilhados (`templates/componentes/`)
 

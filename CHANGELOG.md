@@ -9,6 +9,126 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 21/10/2026 — Menus, o que vaza e o que corta, e o sistema inteiro no celular (`e650640` a `7ea1ce2`)
+
+Oitavo bloco: um pente-fino na interface pedido com estas palavras — "atenção na
+interface dos menus, dos menus colapsados, das animações, o que fica de dentro e o que
+fica de fora, e tudo fully responsive". Medido no navegador, tela por tela, em oito
+larguras (320 a 1440 px) e nos três estados do menu (aberto, recolhido e gaveta do
+celular). O original não ganhou commit novo desde o último push.
+
+**O que melhorou**
+- **Menu recolhido (o trilho de ícones, que é o padrão do sistema):**
+  - cada ícone tem nome: o leitor de tela anunciava "link" 32 vezes e o mouse não
+    mostrava dica nenhuma. Agora a dica aparece ao passar o mouse — só no trilho; com o
+    menu aberto o nome já está escrito ao lado;
+  - o rodapé do usuário (avatar, nome e "MFA off") vazava 27 px para fora do menu em
+    todas as telas. No trilho fica só o avatar, e o aviso do MFA vira um ponto;
+  - ao recolher ou abrir, o menu inteiro saltava 52 px num quadro só. Agora só a
+    largura anima;
+  - a cartola do topo voltou a ser clicável (leva à Visão geral), e o botão diz o que
+    vai fazer: "Expandir menu" ou "Recolher menu".
+- **Menu no celular e no tablet (a gaveta):**
+  - fechada, continuava "existindo" para o teclado: 39 links invisíveis antes do
+    conteúdo. Agora some de verdade;
+  - aberta, funciona como janela: o Tab não foge para a página de trás, a página não
+    rola por baixo, Esc fecha e o foco volta ao botão;
+  - abre inteira mesmo para quem deixou o menu recolhido no computador — antes o
+    logotipo saía cortado ao meio e o "MFA off" perdia a forma;
+  - botão do menu de 38 para 44 px, véu que entra suave, e o movimento obedece a quem
+    pede menos animação no aparelho.
+- **Menu do site no celular:** as mesmas correções (11 links invisíveis no Tab, foco
+  que escapava, botão que dizia "Abrir menu" com o menu já aberto). Botão de 40 para
+  48 px — é o que o hóspede mais toca.
+- **Nada vaza nem é cortado sem avisar:**
+  - período personalizado dos relatórios e da trilha: no celular a segunda data
+    simplesmente não aparecia. Agora as duas empilham;
+  - mapa de reservas: nome de ala comprido era cortado junto com a tabela. Agora
+    reticências, e o nome inteiro ao passar o mouse;
+  - com o menu aberto num tablet deitado (821 px), o painel lateral de Manutenção e
+    Pagamentos virava uma tira de 154 px, com selects de 10 px, e a página rolava de
+    lado. Agora ele desce para baixo do conteúdo quando não cabe — no desktop, a
+    proporção é a mesma de antes;
+  - na mesma largura, o corredor de quartos da Visão geral cortava a data e o saldo das
+    24 portas ("R$ 2.6…") e o selo PCD subia em cima da situação. Agora são quatro
+    portas por fileira, e tudo aparece;
+  - também a 821 px com o menu aberto, a tabela de Pessoas (e Hóspedes, Agências,
+    Empresas e Fornecedores, que são a mesma tela) espremia seis colunas em 486 px:
+    cabeçalhos encostados, "SITUAÇÃO" cortado, "Ati/va" e o CNPJ em três linhas.
+    Agora, com a tabela estreita, ficam Nome e Papéis, como no celular; a 1024 px com
+    o menu aberto, as seis colunas cabem inteiras;
+  - a lista de Páginas cortava a coluna das ações; agora rola de lado;
+  - tabelas pararam de quebrar palavra no meio ("Revisã/o do/ar-condi/ciona/do");
+  - corredor de quartos, "Precisa de atenção", urgências do Marketing, BOH, Central de
+    Módulos, ficha da OS e semana da Escala deixaram de vazar no celular; o "Enviar" do
+    WhatsApp no lead deixou de ficar 118 px fora da tela;
+  - nenhuma tela rola de lado em nenhuma das oito larguras.
+- **Toque:** 223 alvos abaixo de 44 px no dedo viraram 2 — dois links no meio de uma
+  frase, que a regra de acessibilidade isenta. Inclui portal do hóspede, página de
+  pagamento e login, que ficavam fora da regra, e as respostas rápidas do WhatsApp.
+- **Menus que flutuam:** a lista do combo (hóspede, quarto) abre para cima quando não
+  cabe embaixo, em vez de sair da tela; a gaveta do Marketing entra deslizando; a gaveta
+  do funil no celular usa os tempos da casa.
+- **CI:** a máquina dos testes fica presa no Ubuntu 24.04 até a abertura. O GitHub troca
+  o "ubuntu-latest" para o 26 a partir de 19/10, e trocar o ambiente de teste na semana
+  da abertura é risco à toa.
+
+**O que foi modificado**
+- **`static/css/app.css`:**
+  - o trilho inteiro (`.app.recolhida …`) num único `@media (width > 820px)`; a gaveta
+    não tem mais nada a desfazer. Tokens novos: `--sidebar-topo-h` e `--vao-2-1`;
+  - gaveta com `visibility` + tokens de movimento; `body.sem-rolagem`;
+  - `.colunas-2-1` e `.ficha-cols` de grid com ponto de corte para `flex-wrap` (quem
+    decide é o espaço, não a janela);
+  - grades elásticas em `minmax(min(Npx, 100%), 1fr)`; `.tabela td` com
+    `overflow-wrap: break-word`;
+  - as primeiras container queries da casa: o `.corredor-hero` conta as colunas do
+    corredor pela largura dele, e o invólucro da tabela de Pessoas decide quais colunas
+    mostrar (Situação passou de 10% para 12%); `.quadro:has(> table:not(.tabela))` rola
+    de lado;
+  - alvos de 44 px no ponteiro grosso, inclusive fora da casca do CRM.
+- **`templates/base.html`:** `title` em cada item do menu e `rotularSidebar()` (rótulo
+  do botão e dica só no trilho); a gaveta como diálogo (foco preso, `aria-expanded`,
+  foco devolvido); o combo escolhe o lado antes de abrir (`posicionar()`).
+- **Site:** `main.js`, `partials/header.html` e `animations.css` (menu do celular como
+  diálogo).
+- **Comercial e Reservas:** funil (tokens na gaveta do celular), lead (caixa do
+  WhatsApp), mapa (`title` na coluna do quarto).
+- **`static/css/base.css`** regerado, com 8 seletores novos no manifesto.
+- **Testes de contrato:** 31 novos em `apps/nucleo/tests_design.py`
+  (`MenuLateralTests`, `DentroDoContainerTests`, `FlutuantesTests`, `MenuDoSiteTests`).
+- **`.github/workflows/*.yml`:** `runs-on: ubuntu-24.04`.
+
+**Como foi testado**
+- **Varredura no navegador** (Playwright): 59 telas × 8 larguras × estado do menu,
+  medindo caixa por caixa. Vazamentos 390 → 1 (o valor da barra selecionada no
+  relatório do Marketing, que passa 6 px da própria coluna no celular, sem cobrir
+  nada); cortes calados 51 → 14 na varredura, e os 14 medidos um a um depois e
+  corrigidos (tabela de Pessoas, corredor a 821 px e lista de Páginas); elementos fora
+  da tela 500 → 0; telas com rolagem lateral 8 → 0.
+- **Quadro a quadro, com animação ligada:** o maior salto do topo do menu numa
+  transição foi de 52 px para 0,6 px, nos dois sentidos.
+- **Teclado:** com a gaveta fechada, o Tab entra nela 0 vezes em 12; aberta, o foco não
+  escapa em 20 Tabs.
+- **Pixel:** das 59 telas a 1440 px, 46 mudam só na faixa do menu; as outras 13 são as
+  mudanças de propósito.
+- **Revisão independente** do trabalho, antes do merge: 6 problemas corrigidos, cada um
+  com medida antes e depois — a gaveta herdando o trilho, o "Enviar" esticado para
+  363 px no desktop, um ajuste do celular que nunca valia (achado por um verificador de
+  cascata), a coluna cortada na lista de Páginas, o corredor e a tabela de Pessoas a
+  821 px. Este último a revisão tinha descartado por engano (procurou elemento passando
+  da borda, e o que passava era texto dentro da célula); o próprio agente apontou o
+  erro na resposta final, e a nova medida, célula a célula, deu razão a ele.
+- **Suíte completa no Windows:** 1.226 testes no `f862b31`, só a falha conhecida do
+  ambiente (`test_webhook_audio_baixa_e_salva_arquivo`, que só falha no Windows). O
+  último commit (`7ea1ce2`, só CSS e um contrato) passou nos 93 testes de design. Ruff
+  zero, `makemigrations --check` limpo, `gerar_base_css --conferir` em dia.
+
+**Depois do deploy (no Railway)**
+- Nada.
+
+---
+
 ## 21/10/2026 — Pendências do visual, novidades do original e o R$ que saía cem vezes maior (`158133c` a `f80d989`)
 
 Sétimo bloco: as pendências do visual da auditoria, os sete commits que o original
