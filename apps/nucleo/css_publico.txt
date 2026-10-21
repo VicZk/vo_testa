@@ -1,0 +1,115 @@
+# Seletores do app.css que vão para o base.css — o CSS do portal do hóspede e da página
+# de pagamento (ver apps/nucleo/css_publico.py). Um por linha, escrito como no app.css;
+# dentro de @media/@supports, a condição antes de " ‖ ". Mudou? rode manage.py gerar_base_css.
+#
+# Origem: as regras que casam com algum elemento dessas telas (navegador, com :hover e
+# :focus tirados), mais os estados que elas só mostram às vezes (erro de campo da FNRH,
+# o "pago" da cobrança, botão carregando, "copiado"). O teste
+# CssDasTelasPublicasTests avisa quando uma tela pública ganha classe que falta aqui.
+:root
+*
+html
+body
+a
+a:hover
+:focus-visible
+.pt-topo :focus-visible
+.letreiro
+.botao-primario
+.botao-neutro
+.botao-primario:active
+.botao-neutro:active
+.botao-primario:focus-visible
+.botao-neutro:focus-visible
+.botao-primario:hover
+.mensagem
+.mensagem.error
+.acoes
+.voltar
+.voltar:hover
+h1
+h2
+.subtitulo
+.campo
+textarea
+.campo label
+.fnrh-ficha select
+input[type="checkbox"]
+input[type="radio"]
+.erro
+.campo-erro input
+.campo-erro select
+.campo-erro textarea
+.botao-neutro:hover
+.estado-vazio
+.estado-vazio p
+.selo
+.selo::before
+.selo-alerta
+/* erro
+cancelado
+.selo-pg-pendente
+.selo-pg-estornado
+.selo-pg-cancelado
+.selo-pg-expirado
+.selo-ok
+.selo-pg-pago
+.fnrh-ficha
+.fnrh-ficha-cab
+.fnrh-ficha-cab::-webkit-details-marker
+.fnrh-ficha-cab::after
+.fnrh-ficha[open] > .fnrh-ficha-cab::after
+.fnrh-ficha-cab:hover h3
+.fnrh-ficha-cab:focus-visible
+.fnrh-ficha-cab .selo
+.fnrh-ficha-cab h3
+.fnrh-ficha-ico
+.fnrh-ficha:first-of-type .fnrh-ficha-ico
+.fnrh-grupo
+.fnrh-grupo + .fnrh-grupo
+.fnrh-grupo > legend
+.fnrh-ficha input:not([type="checkbox"])
+.fnrh-ficha textarea
+.fnrh-ficha input:focus
+.fnrh-ficha select:focus
+.fnrh-ficha textarea:focus
+.form-grade
+.form-grade .campo
+.form-grade .col-2
+@media (max-width: 520px) ‖ .form-grade
+::view-transition-old(root)
+::view-transition-new(root)
+@supports selector(::details-content) ‖ :root
+.select-wrap
+.select-wrap::after
+.select-wrap select
+.select-wrap select:focus
+.opcional
+.valor
+.pay code
+.pix-copia
+.pix-copia:hover
+.pix-copia:active
+.pix-copia:focus-visible
+.pix-copia .pix-dica
+.pix-copia.copiado
+.pix-copia.copiado .pix-dica
+.btn-carregando
+.btn-carregando .btn-label::after
+.btn-spin
+.btn-carregando .btn-spin
+.pay-ok-ico
+@media (prefers-reduced-motion: no-preference) ‖ .pay
+@media (prefers-reduced-motion: no-preference) ‖ .btn-carregando .btn-spin
+@media (prefers-reduced-motion: no-preference) ‖ .pay-ok-ico
+.botao-largo
+@media (prefers-reduced-motion: reduce) ‖ :root
+@media (prefers-reduced-motion: reduce) ‖ *
+@media (prefers-reduced-motion: reduce) ‖ *::before
+@media (prefers-reduced-motion: reduce) ‖ *::after
+@media (prefers-reduced-motion: reduce) ‖ html
+@media (prefers-reduced-motion: reduce) ‖ .botao-primario:active
+@media (prefers-reduced-motion: reduce) ‖ .botao-neutro:active
+@media (pointer: coarse), (max-width: 820px) ‖ .botao-primario
+@media (pointer: coarse), (max-width: 820px) ‖ .botao-neutro
+@media (max-width: 680px) ‖ .form-grade

@@ -11,7 +11,8 @@
   <meta name="referrer" content="no-referrer">
   {# Fontes da marca (antes esta tela caía em Georgia/system) #}
   {% include "componentes/fontes.html" %}
-  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  {# O recorte do app.css que esta tela usa (gerado: manage.py gerar_base_css), não o CRM inteiro. #}
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
   <style>
     body { background: var(--canvas); display: grid; place-items: center; min-height: 100vh; margin: 0; padding: 1.5rem; }
     .pay { background: var(--superficie); border-radius: var(--raio-g); box-shadow: var(--sombra-3);

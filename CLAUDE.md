@@ -119,7 +119,10 @@ desenhar o nosso.
 Todo template novo do CRM **nasce** já no design system unificado (visual "Lampião"):
 nunca criar um estilo paralelo nem hard-codear cor/raio/sombra — sempre reusar os
 tokens e as classes-base. Referência viva: `static/css/app.css` (tokens + componentes) e
-o kit `templates/comercial/_estilo_elegante.html` (telas de painel/lista/detalhe).
+o kit `templates/comercial/_estilo_elegante.html` (telas de painel/lista/detalhe). O portal do
+hóspede e a página de pagamento carregam o `static/css/base.css`, recorte GERADO do app.css
+(`manage.py gerar_base_css`, manifesto em `apps/nucleo/css_publico.txt`): edite só o app.css
+e rode o comando — o teste `CssDasTelasPublicasTests` avisa quando o recorte ficou para trás.
 
 - **Tokens, nunca valores fixos:** raio (`--raio-p` 10px / `--raio` 14px / `--raio-g`
   20px), sombra (`--sombra-1` para elementos pequenos, `--sombra-cartao` para o float

@@ -77,7 +77,7 @@ Ferramentas de desenvolvimento (`requirements-dev.txt`): `ruff==0.15.20`,
 ├── apps/                  19 apps Django (ver tabela abaixo)
 ├── config/                projeto Django: settings.py, urls.py, wsgi.py, asgi.py
 ├── templates/             templates do CRM (base.html + 1 pasta por app) + componentes/
-├── static/                estáticos do CRM: css/app.css, js/fluid.js, img/, fonts/, lp/, comercial/
+├── static/                estáticos do CRM: css/app.css (+ base.css gerado), js/fluid.js, img/, fonts/, lp/, comercial/
 ├── docs/                  especificação, planos de implementação, mockups, estudos
 ├── LPs/                   HTML “oficial” das landing pages (fonte da verdade, servido direto)
 ├── Logo/                  fontes e artes da marca (.ai, .woff, .png) — não usados em runtime
@@ -150,8 +150,12 @@ Os templates do **site público** não ficam aqui: vivem em `apps/site/templates
 
 ### `static/`
 
-`static/css/app.css` (≈3.160 linhas) é o **único** CSS do CRM — tokens + componentes +
-telas (§11). Também: `static/js/fluid.js`, `static/img/` (logotipos e símbolo,
+`static/css/app.css` (≈4.800 linhas) é o **único** CSS do CRM — tokens + componentes +
+telas (§11). O portal do hóspede e a página de pagamento carregam `static/css/base.css`:
+o recorte do app.css que elas usam (24 KB; 6 KB comprimido, contra 52 KB do app.css),
+GERADO por `manage.py gerar_base_css` a partir do manifesto `apps/nucleo/css_publico.txt`.
+Não se edita o base.css: muda-se o app.css e roda-se o comando (o teste
+`CssDasTelasPublicasTests` falha enquanto o recorte estiver para trás). Também: `static/js/fluid.js`, `static/img/` (logotipos e símbolo,
 `wpp-doodles.svg`), `static/fonts/Rosaline-Regular.woff2?` (fonte da marca),
 `static/lp/` e `static/comercial/`. Os estáticos do site ficam em
 `apps/site/static/site/` (`css/tailwind.css`, `js/`, `img/`, `fonts/`, `vendor/`,

@@ -11,7 +11,8 @@
   <link rel="icon" href="{% static 'img/simbolo-dourado.png' %}" type="image/png">
   {# Fontes da marca (antes esta tela caía em Georgia/system) #}
   {% include "componentes/fontes.html" %}
-  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  {# O recorte do app.css que o portal usa (gerado: manage.py gerar_base_css), não o CRM inteiro. #}
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
   {% comment %}Validação em pt-BR: o hóspede preenche a FNRH aqui, e o balão do
   navegador sai no idioma do aparelho dele, não no da pousada.{% endcomment %}
   <script src="{% static 'js/form-pt.js' %}" defer></script>

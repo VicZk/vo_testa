@@ -619,3 +619,68 @@ class EstiloForaDoAtributoTests(TestCase):
     def test_fchip_morto_nao_volta(self):
         """Classe sem nenhum template usando — saiu junto com as cápsulas."""
         self.assertNotIn(".fchip", CSS.read_text(encoding="utf-8"))
+
+
+class CssDasTelasPublicasTests(TestCase):
+    """O portal do hóspede e a página de pagamento abrem no celular do hóspede, muitas
+    vezes no 4G, e baixavam o app.css inteiro (52 KB comprimidos, o CRM todo) para usar
+    menos de um quinto dele. Agora carregam o base.css: o recorte que usam, GERADO do
+    app.css (`manage.py gerar_base_css`). O CRM segue só com o app.css."""
+
+    def setUp(self):
+        self.raiz = Path(settings.BASE_DIR) / "templates"
+
+    def test_telas_publicas_carregam_o_recorte_e_nao_o_crm_inteiro(self):
+        for nome in ("portal/base.html", "pagamentos/pagar.html"):
+            html = (self.raiz / nome).read_text(encoding="utf-8")
+            self.assertIn("css/base.css", html, nome)
+            self.assertNotIn("css/app.css", html, nome)
+
+    def test_crm_segue_com_o_app_css(self):
+        html = (self.raiz / "base.html").read_text(encoding="utf-8")
+        self.assertIn("css/app.css", html)
+        self.assertNotIn("css/base.css", html)
+
+    def test_base_css_em_dia_com_o_app_css(self):
+        from apps.nucleo import css_publico
+
+        no_disco = css_publico.caminho_base_css().read_text(encoding="utf-8")
+        self.assertEqual(no_disco.splitlines(), css_publico.gerar_do_app().splitlines(),
+                         "base.css desatualizado: rode manage.py gerar_base_css")
+
+    def test_toda_classe_das_telas_publicas_tem_estilo(self):
+        """Classe nova numa tela pública, com regra no app.css, tem de entrar no manifesto
+        (apps/nucleo/css_publico.txt) — senão aquele estado sai sem estilo para o hóspede."""
+        from apps.nucleo import css_publico
+
+        self.assertEqual(css_publico.seletores_sem_cobertura(), [])
+
+    def test_recorte_leva_fontes_tokens_e_movimento(self):
+        from apps.nucleo import css_publico
+
+        base = css_publico.caminho_base_css().read_text(encoding="utf-8")
+        self.assertIn("@font-face", base)
+        self.assertIn("--lampiao:", base)
+        self.assertIn("prefers-reduced-motion", base)  # os tokens de movimento vão a 1 ms
+        self.assertLess(len(base.encode("utf-8")), 40_000)  # passou disto, o CRM vazou
+
+    def test_gerador_mantem_a_ordem_e_leva_so_o_citado(self):
+        from apps.nucleo import css_publico
+
+        css = (
+            "@font-face { font-family: X; src: url(x.woff2); }"
+            ".a, .b { color: red; }"
+            ".c { animation: piscar 1s; }"
+            "@keyframes piscar { to { opacity: 0; } }"
+            "@keyframes outro { to { opacity: 1; } }"
+            "@media (max-width: 600px) { .a { color: blue; } .z { color: green; } }"
+        )
+        saida = css_publico.gerar(css, {".b", ".c", "@media (max-width: 600px) ‖ .a"})
+        self.assertIn("@font-face", saida)
+        self.assertIn(".b {", saida)
+        self.assertNotIn(".a, .b", saida)
+        self.assertIn("@keyframes piscar", saida)
+        self.assertNotIn("@keyframes outro", saida)
+        self.assertIn("@media (max-width: 600px) {", saida)
+        self.assertNotIn(".z", saida)
+        self.assertLess(saida.index(".b {"), saida.index(".c {"))
