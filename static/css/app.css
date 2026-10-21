@@ -1595,13 +1595,28 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 /* Larguras declaradas pelo <colgroup> valem de verdade (e o texto longo corta
    em vez de esticar a coluna). */
 .tabela-fixa { table-layout: fixed; }
-/* Pessoas: larguras por coluna; no celular ficam Nome e Papéis (o resto está na ficha). */
-.tabela-pessoas col.c-nome { width: 30%; }
+/* Pessoas: larguras por coluna; em tabela estreita ficam Nome e Papéis (o resto
+   está na ficha). Situação com 12% (e Nome com 28%): com 10%, o cabeçalho
+   "SITUAÇÃO" (73px) só cabia em tabela de ~730px — a 1024px com o menu aberto e a
+   821px com ele recolhido, a própria tabela (`overflow: hidden`) o cortava. */
+.tabela-pessoas col.c-nome { width: 28%; }
 .tabela-pessoas col.c-tipo { width: 7%; }
 .tabela-pessoas col.c-papeis { width: 23%; }
 .tabela-pessoas col.c-doc { width: 16%; }
 .tabela-pessoas col.c-tel { width: 14%; }
-.tabela-pessoas col.c-sit { width: 10%; }
+.tabela-pessoas col.c-sit { width: 12%; }
+/* Quem decide se as seis colunas cabem é a largura da TABELA (o invólucro que o
+   tabela-rol.js cria), não a da janela: a 821px com o menu aberto ela tem 486px —
+   menos que no celular — e os cabeçalhos saíam uns por cima dos outros, com
+   "SITUAÇÃO" cortado 23px. Abaixo de 610px de tabela, só Nome e Papéis. O @media
+   de baixo fica para quando o invólucro não existe (sem JS). */
+.tabela-rol:has(> .tabela-pessoas) { container-type: inline-size; }
+@container (max-width: 609px) {
+  .tabela-pessoas .c-tipo, .tabela-pessoas .c-doc,
+  .tabela-pessoas .c-tel, .tabela-pessoas .c-sit { display: none; }
+  .tabela-pessoas col.c-nome { width: 55%; }
+  .tabela-pessoas col.c-papeis { width: 45%; }
+}
 @media (max-width: 600px) {
   .tabela-pessoas .c-tipo, .tabela-pessoas .c-doc,
   .tabela-pessoas .c-tel, .tabela-pessoas .c-sit { display: none; }

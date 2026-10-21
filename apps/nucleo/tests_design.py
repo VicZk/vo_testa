@@ -688,6 +688,21 @@ class DentroDoContainerTests(TestCase):
         cel = self.css.index("@media (max-width: 720px) {", self.css.index("\n.corredor {"))
         self.assertLess(cont, cel)
 
+    def test_tabela_de_pessoas_esconde_colunas_pela_largura_da_tabela(self):
+        """A 821px com o menu aberto a tabela de Pessoas tinha 486px — menos que
+        no celular — e as seis colunas não cabiam: cabeçalhos uns por cima dos
+        outros, "SITUAÇÃO" cortado 23px pela própria tabela e "Ati/va" em duas
+        linhas. Quem decide é a largura da tabela (container query), e a coluna
+        Situação precisa de 12% para o cabeçalho caber a partir de 610px."""
+        self.assertIn(".tabela-rol:has(> .tabela-pessoas) { container-type: inline-size; }",
+                      self.css)
+        bloco = re.search(r"@container \(max-width: 609px\) \{([\s\S]*?)\n\}", self.css)
+        self.assertIsNotNone(bloco)
+        self.assertIn(".tabela-pessoas .c-sit { display: none; }", bloco.group(1))
+        sit = re.search(r"\.tabela-pessoas col\.c-sit \{ width: (\d+)%; \}", self.css)
+        self.assertIsNotNone(sit)
+        self.assertGreaterEqual(int(sit.group(1)), 12)
+
     def test_quadro_com_tabela_simples_rola_em_qualquer_largura(self):
         """A 821px com o menu aberto, a lista de Páginas (tabela simples num
         `.quadro`) pedia 516px numa coluna de 486 e o `overflow:hidden` do
