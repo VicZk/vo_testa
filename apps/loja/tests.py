@@ -283,3 +283,21 @@ class CupomTests(LojaBase):
         self.assertNotContains(r, "Pago com")
         self.assertNotContains(r, "cada")                       # 1 unidade: sem preço unitário
 
+
+
+class SeletorDeClienteTests(TestCase):
+    """O PDV listava TODA a lista de pessoas num <select> — com a pousada cheia,
+    rolar centenas de nomes no balcão. Agora é o mesmo combobox com busca e
+    agrupamento por papel que o Restaurante e a nova reserva usam."""
+
+    def setUp(self):
+        self.op = Usuario.objects.create_superuser(username="pdv", password="senha-forte-123")
+        self.client.force_login(self.op)
+        Pessoa.objects.create(nome="Cliente Balcão")
+
+    def test_pdv_usa_o_combobox_com_busca(self):
+        html = self.client.get(reverse("loja:pdv")).content.decode()
+        self.assertIn('x-data="comboPessoa"', html)
+        self.assertIn('data-dados="pdv-clientes-data"', html)
+        self.assertIn('name="cliente"', html)
+        self.assertIn("Cliente (vazio = avulso)", html)

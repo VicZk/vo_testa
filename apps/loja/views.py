@@ -18,6 +18,7 @@ from apps.nucleo.models import (
 from apps.nucleo.modulos import Modulo
 from apps.nucleo.paginacao import paginar
 from apps.nucleo.permissoes import eh_gerente, requer_gerencia, requer_modulo
+from apps.nucleo.seletores import pessoas_agrupadas
 
 from . import services
 from .models import Venda
@@ -65,7 +66,7 @@ def pdv(request):
         "locais": LocalEstoque.objects.filter(ativo=True),
         "produtos_json": json.dumps(produtos),
         "formas": FormaPagamento.objects.filter(ativo=True),
-        "clientes": Pessoa.objects.filter(ativo=True),
+        "clientes": pessoas_agrupadas(),
         "contas": contas,
         "url_finalizar": reverse("loja:finalizar"),
     })

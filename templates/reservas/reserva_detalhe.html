@@ -97,14 +97,14 @@ uma ficha: cada dado com o seu rótulo, lido de relance.{% endcomment %}
   {% endif %}
   {% if reserva.status == "confirmada" or reserva.status == "pre_reserva" %}
     {% if aviso_checkin %}
-      <div class="mensagem warning">{{ aviso_checkin }}
-        {% if 'governanca'|modulo_ativo %}
-          <a href="{% url 'governanca:painel' %}">Abrir governança</a>
-        {% endif %}
+      {# O impedimento vem com o caminho para resolvê-lo (ver a view): a ficha da #}
+      {# FNRH ficava no fim da página, e o erro só aparecia depois do clique. #}
+      <div class="mensagem warning">{{ aviso_checkin.texto }}
+        <a href="{{ aviso_checkin.url }}">{{ aviso_checkin.acao }}</a>
       </div>
     {% endif %}
     <form method="post" action="{% url 'reservas:checkin' reserva.pk %}">
-      {% csrf_token %}<button type="submit" class="botao-primario"{% if aviso_checkin %} disabled title="{{ aviso_checkin }}"{% endif %}>Fazer entrada (check-in)</button>
+      {% csrf_token %}<button type="submit" class="botao-primario"{% if aviso_checkin %} disabled title="{{ aviso_checkin.texto }}"{% endif %}>Fazer entrada (check-in)</button>
     </form>
   {% endif %}
   {% if reserva.status == "hospedada" %}

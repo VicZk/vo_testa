@@ -146,8 +146,8 @@
         <div class="t">Texto pronto pro WhatsApp <span class="pq-wpp-nota">— sem pontos de atenção nem «a levantar»</span></div>
         <div class="msg" x-text="texto"></div>
         <div class="pq-wpp-acoes">
-          {# O texto é montado pelo Alpine: o `data-copiar` é lido no clique
-             (static/js/copiar.js), por isso a ligação dinâmica funciona. #}
+          {% comment %}O texto é montado pelo Alpine: o `data-copiar` é lido no clique
+             (static/js/copiar.js), por isso a ligação dinâmica funciona.{% endcomment %}
           <button type="button" class="botao-primario botao-mini" :data-copiar="texto">Copiar</button>
           <button type="button" class="botao-neutro botao-mini"
                   @click="fetch('{% url 'comercial:whatsapp_enviar' op.pk %}',{method:'POST',headers:{'X-CSRFToken':'{{ csrf_token }}','X-Requested-With':'XMLHttpRequest','Content-Type':'application/x-www-form-urlencoded'},body:'texto='+encodeURIComponent(texto)}).then(r=>r.json()).then(d=>{$el.textContent=d.ok?'Enviado ✓':'Falhou'; if(!d.ok&&d.erro)alert(d.erro)})">Enviar no WhatsApp</button>

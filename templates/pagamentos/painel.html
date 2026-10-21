@@ -31,8 +31,8 @@
             <td>{{ c.descricao }}</td>
             <td class="num">{{ c.valor|intcomma_brl }}</td>
             <td><span class="selo selo-pg-{{ c.status }}">{{ c.get_status_display }}</span></td>
-            {# Mandar o link é o que mais se faz com uma cobrança pendente: fica na
-               própria linha, sem abrir o detalhe. #}
+            {% comment %}Mandar o link é o que mais se faz com uma cobrança pendente: fica na
+               própria linha, sem abrir o detalhe.{% endcomment %}
             <td onclick="event.stopPropagation()">
               {% if c.pendente %}
                 <div class="copiar-celula">
@@ -60,8 +60,8 @@
     </table>
   </section>
 
-  {# `pre` vem de `?reserva=<id>` (botão «Gerar cobrança» no detalhe da reserva):
-     abre o formulário já apontado para aquela reserva. #}
+  {% comment %}`pre` vem de `?reserva=<id>` (botão «Gerar cobrança» no detalhe da reserva):
+     abre o formulário já apontado para aquela reserva.{% endcomment %}
   <section class="painel-bloco" id="nova-cobranca"
            x-data="{ fin: '{{ pre.finalidade|default:'avulso' }}', metodo: 'pix' }">
     <h2 class="titulo-topo">Nova cobrança</h2>

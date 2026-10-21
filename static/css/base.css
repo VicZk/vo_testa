@@ -704,3 +704,16 @@ input[type="radio"] { accent-color: var(--lampiao); }
   .botao-primario,
   .botao-neutro { display: none !important; }
 }
+
+.fnrh-ficha-nome {
+  /* Encolhe (e corta com reticências) antes de empurrar o selo de situação: sem
+     o `min-width: 0` no h3 — que é item de flex do cabeçalho — a largura mínima
+     dele virava a do nome inteiro e a ficha rolava de lado em 320px. */
+  flex: 0 1 auto; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: .82rem; font-weight: 500; color: var(--tinta-suave);
+}
+
+.fnrh-ficha-cab h3 { min-width: 0; }
+
+.fnrh-ficha-cab h3 > span:not(.fnrh-ficha-ico) { min-width: 0; }

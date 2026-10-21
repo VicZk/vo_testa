@@ -230,3 +230,26 @@ class CupomTests(RestauranteBase):
         self.assertContains(self.client.get(reverse("restaurante:comanda", args=[c.pk])),
                             "Imprimir cupom")
 
+
+
+class SemPontoCadastradoTests(TestCase):
+    """Sem ponto de atendimento, o seletor abria só com "Ponto…" e nada explicava
+    — e logo abaixo a tela mandava "abra a primeira acima". Aviso, não bloqueio:
+    a comanda funciona com o hóspede ou com uma identificação livre."""
+
+    def setUp(self):
+        self.op = Usuario.objects.create_superuser(username="garcom", password="senha-forte-123")
+        self.client.force_login(self.op)
+        LocalEstoque.objects.get_or_create(
+            nome="Cozinha", defaults={"modulo": Modulo.RESTAURANTE})
+
+    def test_aviso_com_caminho_quando_nao_ha_ponto(self):
+        Mesa.objects.all().delete()
+        html = self.client.get(reverse("restaurante:comandas")).content.decode()
+        self.assertIn("Nenhum ponto de atendimento cadastrado", html)
+        self.assertIn(reverse("restaurante:mesas"), html)
+
+    def test_com_ponto_o_aviso_some(self):
+        Mesa.objects.create(nome="Mesa 01")
+        html = self.client.get(reverse("restaurante:comandas")).content.decode()
+        self.assertNotIn("Nenhum ponto de atendimento cadastrado", html)

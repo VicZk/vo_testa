@@ -28,6 +28,14 @@
     <input type="text" name="rotulo" placeholder="Ou identifique (ex.: guarda-sol 4)">
     <button type="submit" class="botao-primario">Abrir</button>
   </form>
+  {% comment %}Sem ponto cadastrado o seletor abria com "Ponto…" e mais nada, sem
+  dizer por quê — e logo abaixo a tela mandava "abra a primeira acima". A comanda
+  funciona só com hóspede ou identificação, então isto é aviso, não bloqueio.{% endcomment %}
+  {% if not mesas %}
+    <p class="ajuda">Nenhum ponto de atendimento cadastrado ainda —
+      <a href="{% url 'restaurante:mesas' %}">cadastre as mesas, guarda-sóis e o bar</a>.
+      Dá para abrir só com o hóspede ou com uma identificação.</p>
+  {% endif %}
 </section>
 
 <h2>Comandas abertas</h2>

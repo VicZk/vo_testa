@@ -19,6 +19,9 @@ igual, e a validação em pt-BR abre a ficha do campo com erro.{% endcomment %}
           {% if form.instance.titular %}★{% else %}{{ forloop.counter0 }}{% endif %}
         </span>
         {% if form.instance.titular %}Hóspede responsável{% else %}Acompanhante {{ forloop.counter0 }}{% endif %}
+        {% comment %}Com o acordeão fechado, quatro linhas diziam só "Acompanhante 1..4": quem
+           já tem nome aparece por ele, para a recepção achar a ficha certa.{% endcomment %}
+        {% if form.instance.nome %}<small class="fnrh-ficha-nome">{{ form.instance.nome }}</small>{% endif %}
       </h3>
       {% if form.instance.completa %}
         <span class="selo selo-ok">completa</span>

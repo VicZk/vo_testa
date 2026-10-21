@@ -21,8 +21,8 @@ dizia "Acesso do hóspede / acessa a própria estadia", que é outro link.{% end
 
 <div class="painel-bloco qr-hospede">
   <div class="qr-hospede-codigo">{{ svg|safe }}</div>
-  {# Nem todo hóspede está no balcão: quem já foi para o quarto (ou ainda nem
-     chegou, no caso da FNRH) recebe o mesmo endereço por mensagem. #}
+  {% comment %}Nem todo hóspede está no balcão: quem já foi para o quarto (ou ainda nem
+     chegou, no caso da FNRH) recebe o mesmo endereço por mensagem.{% endcomment %}
   {% copiar url rotulo=rotulo_link telefone=telefone_hospede recado=recado_whatsapp %}
 </div>
 

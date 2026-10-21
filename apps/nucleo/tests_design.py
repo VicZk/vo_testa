@@ -1255,3 +1255,25 @@ class TelaGrandeTests(TestCase):
     def test_mapa_de_reservas_usa_a_largura_toda(self):
         mapa = (Path(settings.BASE_DIR) / "templates" / "reservas" / "mapa.html").read_text(encoding="utf-8")
         self.assertIn("conteudo-largo", mapa)
+
+
+class ComentarioQueNaoVazaTests(TestCase):
+    """`{# … #}` do Django é de UMA LINHA: o lexer casa `{#.*?#}` SEM re.DOTALL.
+    Escrito em duas linhas ele não é comentário — o texto cru aparece na tela do
+    usuário. Aconteceu num comentário de três linhas no PDV da Loja, que saiu
+    impresso em cima do seletor de cliente. Comentário longo = `{% comment %}`."""
+
+    def test_nenhum_comentario_de_uma_linha_atravessa_a_quebra(self):
+        raiz = Path(settings.BASE_DIR)
+        vazando = []
+        for arq in sorted(raiz.rglob("*.html")):
+            if "node_modules" in arq.parts or ".venv" in arq.parts:
+                continue
+            texto = arq.read_text(encoding="utf-8")
+            for achado in re.finditer(r"\{#", texto):
+                resto = texto[achado.start():]
+                fim = resto.find("#}")
+                if fim != -1 and "\n" in resto[:fim]:
+                    linha = texto[:achado.start()].count("\n") + 1
+                    vazando.append(f"{arq.relative_to(raiz).as_posix()}:{linha}")
+        self.assertEqual(vazando, [], "comentário {# #} em várias linhas vaza na tela")

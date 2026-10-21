@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.conf import settings
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
@@ -529,15 +530,35 @@ def detalhe(request, pk):
 
     from apps.nucleo.models import modulo_ativo
 
+    # O que impede a entrada, dito ANTES do clique e com o caminho para resolver.
+    # A FNRH e o ECA barram o check-in no model, mas a tela não avisava: o botão
+    # ficava ativo e só devolvia erro depois — com a resposta (a ficha) escondida
+    # no fim de uma página longa.
     aviso_checkin = None
     if reserva.status in (Reserva.Status.CONFIRMADA, Reserva.Status.PRE_RESERVA):
-        if modulo_ativo(Modulo.GOVERNANCA):
+        if getattr(settings, "FNRH_BLOQUEAR_CHECKIN", True) and not reserva.fnrh_pronta:
+            faltam = sum(1 for f in reserva.fichas_fnrh.all() if not f.completa)
+            aviso_checkin = {
+                "texto": f"FNRH pendente: {faltam} ficha(s) de hóspede por completar.",
+                "url": reverse("reservas:fnrh", args=[reserva.pk]),
+                "acao": "Preencher a FNRH",
+            }
+        elif getattr(settings, "ECA_BLOQUEAR_CHECKIN", True) and reserva.menores_pendentes:
+            aviso_checkin = {
+                "texto": "Menor de idade sem os pais, responsável legal ou autorização "
+                         "escrita conferida (ECA, art. 82).",
+                "url": reverse("reservas:fnrh", args=[reserva.pk]),
+                "acao": "Registrar na FNRH",
+            }
+        elif modulo_ativo(Modulo.GOVERNANCA):
             from apps.governanca.services import uh_pronta_para_checkin
 
             if not uh_pronta_para_checkin(reserva.uh):
-                aviso_checkin = (
-                    f"O quarto {reserva.uh.numero} não está limpo/inspecionado."
-                )
+                aviso_checkin = {
+                    "texto": f"O quarto {reserva.uh.numero} não está limpo/inspecionado.",
+                    "url": reverse("governanca:painel"),
+                    "acao": "Abrir governança",
+                }
 
     # Prévia da política de cancelamento (quanto reteria/devolveria agora).
     politica_cancel = None
@@ -592,8 +613,22 @@ def detalhe(request, pk):
             "cobrancas_reserva": cobrancas_reserva,
             "form_cancelamento": CancelamentoForm(),
             "form_transferencia": TransferenciaForm(),
-            "form_recebimento": RecebimentoForm(),
-            "form_lancamento": LancamentoContaForm(),
+            # Durante a estadia, «Receber pagamento» já abre com o saldo em aberto:
+            # é o que se faz na saída, e digitar o valor à mão num campo vazio é
+            # onde nasce o erro de centavo. Fica editável (pagamento parcial, rateio).
+            # No «Adiantamento / sinal» (antes da entrada) segue em branco — ali o
+            # valor é combinado, não é o total.
+            # `auto_id` próprio em cada um: os dois têm um campo `valor` e ficavam
+            # com `id="id_valor"` repetido na mesma página — clicar no rótulo
+            # "Valor (R$)" de «Receber pagamento» punha o foco no campo de
+            # «Lançar na conta», logo ao lado.
+            "form_recebimento": RecebimentoForm(
+                auto_id="id_receb_%s",
+                initial={"valor": fin_saldo}
+                if reserva.status == Reserva.Status.HOSPEDADA and fin_saldo > 0
+                else None,
+            ),
+            "form_lancamento": LancamentoContaForm(auto_id="id_lanc_%s"),
             "form_acompanhante": AcompanhanteForm(),
             "quartos_livres": quartos_livres,
             "politica_cancel": politica_cancel,

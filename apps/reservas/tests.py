@@ -2692,3 +2692,66 @@ class CampoDeDataPrePreenchidoTests(ReservasTestsBase):
             reverse("reservas:nova"), {"checkin": alvo, "checkout": alvo}
         ).content.decode()
         self.assertIn(f'name="checkin" value="{alvo}"', html)
+
+
+class ContaDoQuartoSemAtritoTests(ReservasTestsBase):
+    """Dois atritos na tela mais usada da recepção: o valor a receber digitado à
+    mão com o saldo logo acima, e dois campos `valor` com o MESMO id — clicar no
+    rótulo de «Receber pagamento» punha o foco em «Lançar na conta»."""
+
+    def _hospedada(self):
+        r = self.reserva()
+        r.fazer_checkin(self.usuario)
+        return r
+
+    def test_receber_abre_com_o_saldo_em_aberto(self):
+        r = self._hospedada()
+        self.client.force_login(self.usuario)
+        html = self.client.get(reverse("reservas:detalhe", args=[r.pk])).content.decode()
+        from apps.nucleo.templatetags.moeda import intcomma_brl
+
+        saldo = r.conta.saldo()
+        self.assertGreater(saldo, 0)
+        esperado = intcomma_brl(saldo).removeprefix("R$ ")   # máscara: "1.234,56"
+        self.assertIn(f'name="valor" value="{esperado}"', html)
+
+    def test_adiantamento_antes_da_entrada_segue_em_branco(self):
+        """Ali o valor é combinado (10%, metade), não o total da estadia."""
+        r = self.reserva(status=Reserva.Status.CONFIRMADA)
+        self.client.force_login(self.usuario)
+        html = self.client.get(reverse("reservas:detalhe", args=[r.pk])).content.decode()
+        self.assertNotIn('name="valor" value="', html)
+
+    def test_cada_formulario_tem_o_seu_id(self):
+        r = self._hospedada()
+        self.client.force_login(self.usuario)
+        html = self.client.get(reverse("reservas:detalhe", args=[r.pk])).content.decode()
+        self.assertIn('id="id_receb_valor"', html)
+        self.assertIn('id="id_lanc_valor"', html)
+        self.assertNotIn('id="id_valor"', html)
+        self.assertIn('for="id_receb_valor"', html)
+
+
+class AvisoDoCheckinTests(ReservasTestsBase):
+    """O que impede a entrada é dito ANTES do clique, com o caminho para resolver:
+    o botão ficava ativo e o erro só aparecia depois, com a ficha da FNRH
+    escondida no fim de uma página longa."""
+
+    @override_settings(FNRH_BLOQUEAR_CHECKIN=True)
+    def test_fnrh_pendente_desliga_o_botao_e_aponta_a_ficha(self):
+        from .services import garantir_fichas_fnrh
+
+        r = self.reserva(status=Reserva.Status.CONFIRMADA)
+        garantir_fichas_fnrh(r)
+        self.client.force_login(self.usuario)
+        html = self.client.get(reverse("reservas:detalhe", args=[r.pk])).content.decode()
+        self.assertIn("FNRH pendente", html)
+        self.assertIn(reverse("reservas:fnrh", args=[r.pk]), html)
+        self.assertIn("disabled", html)
+
+    @override_settings(FNRH_BLOQUEAR_CHECKIN=False)
+    def test_sem_impedimento_o_botao_fica_livre(self):
+        r = self.reserva(status=Reserva.Status.CONFIRMADA)
+        self.client.force_login(self.usuario)
+        html = self.client.get(reverse("reservas:detalhe", args=[r.pk])).content.decode()
+        self.assertNotIn("FNRH pendente", html)
