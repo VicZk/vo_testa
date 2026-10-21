@@ -1200,3 +1200,42 @@ class CupomTermicoTests(TestCase):
         self.assertIn("'@page cupom { size: 80mm ' + mm + 'mm; margin: 0; }'", texto)
         self.assertIn("addEventListener('beforeprint', ajustar)", texto)
 
+
+
+class DicasTests(TestCase):
+    """As caixinhas de hover eram um ::after dentro de cada elemento: centradas na
+    caixa inteira (longe do que se via numa célula larga), cortadas por contêiner com
+    overflow (a tabela do mapa, a coluna de Pessoas) e soltas na borda da tela; o
+    Marketing e a ficha tinham motores próprios, e o menu recolhido usava o `title`
+    do navegador. Agora é um balão só (static/js/dicas.js), fixo por cima de tudo."""
+
+    def setUp(self):
+        self.css = CSS.read_text(encoding="utf-8").replace("\r\n", "\n")
+        self.base = (Path(settings.BASE_DIR) / "templates" / "base.html").read_text(encoding="utf-8")
+
+    def test_motor_unico_carregado_no_base(self):
+        self.assertIn("js/dicas.js", self.base)
+        motor = (Path(settings.BASE_DIR) / "static" / "js" / "dicas.js").read_text(encoding="utf-8")
+        self.assertIn("dica-flutuante", motor)
+        bloco = re.search(r"\n\.dica-flutuante \{([^}]*)\}", self.css)
+        self.assertIsNotNone(bloco)
+        self.assertIn("position: fixed", bloco.group(1))
+
+    def test_nenhuma_dica_desenhada_dentro_do_elemento(self):
+        self.assertNotIn(".dica::after", self.css)
+        self.assertNotIn(".porta.dica::after", self.css)
+        self.assertNotIn(".mk-dica", self.css)
+        self.assertNotIn("#fx-tip", self.css)
+        marketing = Path(settings.BASE_DIR) / "templates" / "marketing"
+        for arq in ("_dica.html", "_ficha_drawer.html"):
+            texto = (marketing / arq).read_text(encoding="utf-8")
+            self.assertNotIn("addEventListener", texto, arq)
+        self.assertNotIn("data-tip=", (marketing / "_ficha_drawer.html").read_text(encoding="utf-8"))
+
+    def test_menu_recolhido_usa_o_balao_da_casa(self):
+        """O `title` do template fica (vale sem JavaScript); com JS ele vira data-dica
+        à direita do ícone, na hora."""
+        funcao = self.base[self.base.index("function rotularSidebar()"):]
+        funcao = funcao[:funcao.index("rotularSidebar();")]
+        self.assertIn("el.removeAttribute('title')", funcao)
+        self.assertIn("el.setAttribute('data-dica-lado', 'direita')", funcao)

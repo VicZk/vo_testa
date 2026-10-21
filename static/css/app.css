@@ -1719,47 +1719,67 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
   color: var(--lampiao);
   vertical-align: middle;
 }
-.dica::after {
-  content: attr(data-dica);
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 7px);
-  transform: translateX(-50%);
-  white-space: nowrap;
+/* O balão em si: um só, fixo por cima de tudo, posicionado por static/js/dicas.js —
+   centrado no que se vê (ou no ponteiro, num elemento largo), em cima quando cabe e
+   embaixo quando não, sempre dentro da tela. Antes era um ::after dentro de cada
+   elemento: centrado na caixa inteira, cortado por contêiner com overflow e solto na
+   borda da tela. */
+.dica-flutuante {
+  position: fixed; z-index: 1000; left: 0; top: 0;
+  max-width: min(280px, calc(100vw - 16px));
+  padding: .32rem .6rem;
   background: var(--noturno);
   color: var(--pergaminho);
-  padding: .28rem .55rem;
-  border-radius: 5px;
-  font-size: .72rem;
+  border-radius: calc(var(--raio-p) / 2);
+  font-family: var(--fonte-ui);
+  font-size: .74rem;
   font-weight: 600;
+  line-height: 1.4;
   letter-spacing: normal;
   text-transform: none;
+  text-align: center;
+  white-space: pre-line;
+  /* fio claro: sobre fundo escuro (corredor, menu) o balão não se funde com ele */
+  border: 1px solid color-mix(in srgb, var(--pergaminho) 14%, transparent);
   box-shadow: 0 4px 12px color-mix(in srgb, var(--noturno) 30%, transparent);
-  opacity: 0;
   pointer-events: none;
-  transition: opacity .08s;
-  z-index: 60;
+  opacity: 0;
+  transition: opacity var(--mov-toque) var(--curva);
 }
-.dica::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 2px);
-  transform: translateX(-50%);
+.dica-flutuante[hidden] { display: none; }
+.dica-flutuante.visivel { opacity: 1; }
+/* A seta aponta para o elemento mesmo quando o balão encosta na borda da tela. */
+.dica-flutuante::after {
+  content: ""; position: absolute;
   border: 5px solid transparent;
-  border-top-color: var(--noturno);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .08s;
-  z-index: 60;
 }
-.dica:hover::after, .dica:hover::before,
-.dica:focus-visible::after, .dica:focus-visible::before { opacity: 1; }
-/* A dica só entra no layout quando aparece: invisível (opacity 0) ela ainda ocupava
-   espaço, e as dicas perto da borda direita (portas do corredor, selo de status)
-   faziam a página inteira rolar na horizontal. */
-.dica:not(:hover):not(:focus-visible)::after,
-.dica:not(:hover):not(:focus-visible)::before { display: none; }
+.dica-flutuante[data-lado="cima"]::after {
+  top: 100%; left: var(--seta-x, 50%); transform: translateX(-50%);
+  border-top-color: var(--noturno);
+}
+.dica-flutuante[data-lado="baixo"]::after {
+  bottom: 100%; left: var(--seta-x, 50%); transform: translateX(-50%);
+  border-bottom-color: var(--noturno);
+}
+.dica-flutuante[data-lado="direita"]::after {
+  right: 100%; top: var(--seta-y, 50%); transform: translateY(-50%);
+  border-right-color: var(--noturno);
+}
+.dica-flutuante[data-lado="esquerda"]::after {
+  left: 100%; top: var(--seta-y, 50%); transform: translateY(-50%);
+  border-left-color: var(--noturno);
+}
+/* Corredor de portas: cartão com a lista do quarto, alinhado à esquerda. */
+.dica-flutuante.cartao {
+  min-width: 200px; max-width: 260px;
+  padding: .55rem .7rem;
+  text-align: left;
+  font-size: .82rem;
+  line-height: 1.5;
+  border: 1px solid color-mix(in srgb, var(--lampiao) 35%, transparent);
+  border-radius: calc(var(--raio-p) * .8);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--noturno) 55%, transparent);
+}
 
 .filtros { display: flex; gap: .4rem; margin: .4rem 0 1rem; flex-wrap: wrap; }
 .subnav { margin: .2rem 0 1.4rem; padding-bottom: .9rem; border-bottom: 1px solid var(--fio); }
@@ -3093,35 +3113,6 @@ div.porta.dica[data-dica] { cursor: default; }
 .porta.sit-bloqueada .porta-fecho,
 .porta.sit-inativa .porta-fecho { background: #6B808C; box-shadow: none; }
 
-/* Dica do corredor: abaixo da porta (não cobre a fileira de cima), fundo opaco */
-.porta.dica::after {
-  top: calc(100% + 8px);
-  bottom: auto;
-  left: 50%;
-  transform: translateX(-50%);
-  white-space: pre-line;   /* respeita as quebras de linha da lista (- item) */
-  width: max(200px, 140%);
-  max-width: 260px;
-  text-align: left;
-  font-size: .82rem;
-  font-weight: 600;
-  line-height: 1.5;
-  padding: .55rem .7rem;
-  background: var(--noturno);
-  color: var(--pergaminho);
-  border: 1px solid color-mix(in srgb, var(--lampiao) 35%, transparent);
-  border-radius: 8px;
-  box-shadow: 0 10px 28px color-mix(in srgb, var(--noturno) 55%, transparent);
-  z-index: 40;
-}
-.porta.dica::before {
-  top: calc(100% + 2px);
-  bottom: auto;
-  border: 5px solid transparent;
-  border-bottom-color: var(--noturno);
-  border-top-color: transparent;
-  z-index: 41;
-}
 
 .porta.sit-ocupada, .porta.sit-chegada {
   background: linear-gradient(180deg, #243F2F, #163024);
@@ -4148,14 +4139,6 @@ form.filtros:not(.subnav) select:focus {
 }
 .mk-cal-legenda { padding: 13px 20px; background: var(--canvas); border-top: 1px solid var(--fio); }
 .mk-cal-legenda p { margin: 0; font-size: 11.5px; line-height: 1.45; color: var(--tinta-suave); }
-/* Balão da dica instantânea (posicionado por JS). */
-.mk-dica {
-  position: fixed; z-index: 120; max-width: 22rem; pointer-events: none;
-  background: var(--noturno); color: var(--superficie); padding: 8px 12px; border-radius: 9px;
-  font-size: 11.5px; font-weight: 600; line-height: 1.5; white-space: pre-line; text-align: left;
-  box-shadow: var(--sombra-3); opacity: 0; transition: opacity var(--mov-toque) var(--curva);
-  transform: translate(-50%, -100%);
-}
 
 /* ── Ficha da campanha (gaveta sobre o quadro, carregada por HTMX) ──
    O CSS vinha num <style> dentro do próprio fragmento: reinjetado a cada swap do
@@ -4280,14 +4263,6 @@ form.filtros:not(.subnav) select:focus {
   width: 15px; height: 15px; color: var(--tinta-suave); cursor: help;
 }
 .fx-info svg { width: 14px; height: 14px; }
-#fx-tip {
-  position: fixed; z-index: 9999; max-width: 260px; padding: 8px 11px; display: none;
-  background: var(--tinta); color: var(--superficie);
-  font-size: 12px; font-weight: 500; line-height: 1.4;
-  border-radius: var(--raio-p); box-shadow: var(--sombra-cartao);
-  white-space: normal; text-align: left; pointer-events: none;
-  opacity: 0; transition: opacity var(--mov-toque) var(--curva);
-}
 /* Nota opcional por item */
 .fx-nota {
   width: 100%; box-sizing: border-box; padding: 6px 9px;

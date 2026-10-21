@@ -368,7 +368,7 @@ class CalendarioTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertContains(r, "Camp cal")     # linha da campanha na timeline
         self.assertContains(r, "Post 15")       # peça na dica do ponto
-        self.assertContains(r, "mkt-dica")      # o balão da dica instantânea
+        self.assertContains(r, "js/dicas.js")   # o balão é o motor único do CRM
 
     def test_calendario_ano_renderiza(self):
         self._peca(10)

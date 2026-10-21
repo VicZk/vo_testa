@@ -434,3 +434,59 @@ class MenuLateralE2ETests(_BaseE2E):
         self.assertEqual(set(aberta["opacidades"]), {"1"})
         self.assertEqual(aberta["fora"], [])                          # nada passa da borda
         self.assertLess(trilho["largura"], aberta["largura"])
+
+
+@unittest.skipUnless(_PLAYWRIGHT_OK, "playwright não instalado (ver docstring)")
+class DicasE2ETests(_BaseE2E):
+    """O balão de hover (static/js/dicas.js) fica inteiro na tela mesmo encostado na
+    borda, aponta para o elemento, e no menu recolhido aparece à direita do ícone."""
+
+    BALAO = """() => { const b = document.getElementById('dica-flutuante');
+      if (!b || b.hidden) return null; const r = b.getBoundingClientRect();
+      return {l: r.left, r: r.right, t: r.top, b: r.bottom, cy: r.top + r.height / 2,
+              lado: b.dataset.lado, texto: b.textContent}; }"""
+
+    def _entrar(self, estado_menu):
+        from apps.nucleo.models import Usuario
+        Usuario.objects.create_superuser(username="dica", password="forte-123-abc")
+        self.page.set_viewport_size({"width": 1440, "height": 900})
+        self.page.add_init_script(f"localStorage.setItem('sidebar', '{estado_menu}')")
+        self.page.goto(self.url("/crm/entrar/"))
+        self.page.fill("input[name=username]", "dica")
+        self.page.fill("input[name=password]", "forte-123-abc")
+        self.page.press("input[name=password]", "Enter")
+        self.page.wait_for_selector(".sidebar")
+        self.page.wait_for_load_state("load")      # dicas.js vem com defer
+        self.page.mouse.move(700, 450)
+        # Logo depois de abrir, a página ajusta a rolagem uma vez (e rolar esconde a
+        # dica, de propósito): espera assentar antes de apontar.
+        self.page.wait_for_timeout(300)
+
+    def test_balao_na_borda_da_tela_fica_inteiro(self):
+        self._entrar("aberta")
+        self.page.evaluate("""() => { const s = document.createElement('span');
+            s.id = 'teste-dica'; s.textContent = 'x';
+            s.setAttribute('data-dica', 'Uma dica bem comprida, encostada na borda direita da tela');
+            s.style.cssText = 'position:fixed; right:2px; top:300px;';
+            document.body.appendChild(s); }""")
+        self.page.hover("#teste-dica")
+        self.page.wait_for_timeout(150)
+        b = self.page.evaluate(self.BALAO)
+        self.assertIsNotNone(b)
+        self.assertGreaterEqual(b["l"], 0)
+        self.assertLessEqual(b["r"], 1440)
+        self.assertIn("encostada na borda", b["texto"])
+
+    def test_menu_recolhido_mostra_o_nome_ao_lado_do_icone(self):
+        self._entrar("recolhida")
+        item = self.page.locator(".sidebar a.nav-item").first
+        item.hover()
+        self.page.wait_for_timeout(150)
+        b = self.page.evaluate(self.BALAO)
+        caixa = item.bounding_box()
+        self.assertIsNotNone(b)
+        self.assertEqual(b["lado"], "direita")
+        self.assertGreater(b["l"], caixa["x"] + caixa["width"])
+        self.assertLess(abs(b["cy"] - (caixa["y"] + caixa["height"] / 2)), 2)
+        self.assertIsNone(item.get_attribute("title"))
+

@@ -1,29 +1,4 @@
-{% comment %}Dica instantânea: balão que aparece no instante em que o ponteiro passa por
-[data-dica]. O title nativo demora ~1s — num calendário/ocupação a leitura é de varredura.{% endcomment %}
-<div id="mkt-dica" class="mk-dica"></div>
-<script>
-(function(){
-  if (window.__mktDica) return;              // uma vez só (sobrevive aos swaps do HTMX)
-  window.__mktDica = true;
-  var atual = null;
-  // O balão é procurado a cada evento: o partial pode ser re-renderizado num swap
-  // e a referência velha ficaria apontando para um nó solto, fora da página.
-  function balao(){
-    var el = document.getElementById('mkt-dica');
-    return (el && el.isConnected) ? el : null;
-  }
-  document.addEventListener('pointermove', function(e){
-    var el = balao();
-    if(!el) return;
-    var t = e.target.closest ? e.target.closest('[data-dica]') : null;
-    var txt = t ? (t.getAttribute('data-dica') || '') : '';
-    if(!txt){ if(atual){ atual = null; el.style.opacity = 0; } return; }
-    var r = t.getBoundingClientRect();
-    el.textContent = txt;
-    el.style.left = Math.round(r.left + r.width/2) + 'px';
-    el.style.top  = Math.round(r.top - 8) + 'px';
-    el.style.opacity = 1;
-    atual = t;
-  }, {passive:true});
-})();
-</script>
+{% comment %}As dicas ([data-dica]) do calendário e da ocupação usam o motor único do
+CRM (static/js/dicas.js, carregado no base.html): instantâneo, centrado no que se vê —
+numa barra comprida, no ponteiro — e sempre dentro da tela. Este include ficou vazio
+para não quebrar quem o chama.{% endcomment %}
