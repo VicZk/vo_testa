@@ -1764,7 +1764,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
    texto centrado (sem flex, para o "…" do nome comprido continuar funcionando). O JS
    do mapa acha a célula pelo ponto tocado, não pela altura da linha. */
 @media (pointer: coarse), (max-width: 820px) {
-  .mapa-barra { line-height: 1.5; padding-block: calc((40px - 1.5em) / 2); }
+  .mapa-barra { line-height: 1.5; padding-block: calc((44px - 1.5em) / 2); }
   .mapa td.mapa-livre { height: 44px; }
 }
 
@@ -4961,12 +4961,29 @@ body.escala-dragging .escala-drop { cursor: copy; }
     min-height: 44px;
   }
   .sidebar button.link, .sidebar-toggle { min-width: 44px; }
+  /* Controles que escaparam da lista original: aba do Marketing (35px), chip do
+     painel de quartos (26px), navegação do calendário (32px) e link do mural
+     (19px) — todos coisas que se TOCA, não texto corrido. */
+  .mk-aba, .pq-chip, .mk-cal-nav, .mural-link {
+    min-height: 44px; display: inline-flex; align-items: center;
+  }
+  .mk-cal-nav { min-width: 44px; justify-content: center; }
+  /* Botões próprios do Marketing, do painel de quartos e do PDV: são controles
+     (salvar, aprovar, trocar de aba), não texto, e mediam 14 a 36px. */
+  .mk-pil, .mk-nova-ideia, .mk-btn-aprovar, .mk-btn-reprovar, .mk-teto-salvar,
+  .pq-editar, .pq-vertodos, .pdv-seg button, .mural-vazio, .cal-barra {
+    min-height: 44px; display: inline-flex; align-items: center;
+  }
+  /* <summary> é o botão que abre o painel (ação sensível, período
+     personalizado) e media 20px. Cresce por dentro: mexer no `display` apagaria
+     o triângulo de abrir. */
+  .conteudo summary { padding-block: .85rem; }
   .botao-primario, .botao-mini { display: inline-flex; align-items: center; justify-content: center; }
   .modal-fechar, .toast-x { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
   .conteudo input, .conteudo select, .conteudo textarea { min-height: 44px; }
   /* Link de texto na tabela: a área de toque cresce para a altura da linha
      sem mudar o desenho — o texto fica onde está. */
-  .tabela td > a:not([class]) { display: inline-block; padding-block: .62rem; margin-block: -.62rem; }
+  .tabela td > a:not([class]) { display: inline-block; padding-block: .8rem; margin-block: -.8rem; }
 
   /* ─── Telas que NÃO vivem dentro de `.conteudo` ───────────────────────────
      Portal do hóspede, página de pagamento e login ficam fora da casca do CRM,
