@@ -45,6 +45,15 @@ def quantidade(valor, unidade: str) -> str:
     return f"{numero(valor)} {sigla(unidade)}"
 
 
+def para_campo(valor) -> str:
+    """Valor para dentro de um <input type="number">: ponto decimal e sem os
+    zeros à direita (6.000 → "6"). Vazio para nulo."""
+    if valor is None:
+        return ""
+    texto = f"{Decimal(str(valor)):f}"
+    return texto.rstrip("0").rstrip(".") if "." in texto else texto
+
+
 def com_sinal(valor, unidade: str) -> str:
     """'+12 un' / '−3 un' — movimento do kardex, onde o sinal é a informação.
     O menos é o sinal tipográfico (U+2212), que alinha com os algarismos."""

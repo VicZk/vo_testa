@@ -1,7 +1,7 @@
 """Filtros das telas de Estoque — quantidade legível (ver `apps/estoque/formato.py`)."""
 from django import template
 
-from ..formato import com_sinal, numero, quantidade, sigla
+from ..formato import com_sinal, numero, para_campo, quantidade, sigla
 
 register = template.Library()
 
@@ -27,3 +27,9 @@ def num(valor):
 @register.filter
 def unidade_sigla(unidade):
     return sigla(unidade)
+
+
+@register.filter
+def campo_num(valor):
+    """Valor dentro de `<input type=number>`: ponto decimal, sem zero à toa."""
+    return para_campo(valor)

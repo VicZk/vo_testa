@@ -72,7 +72,7 @@
     </thead>
     <tbody>
       {% for item in itens %}
-        <tr x-data="linhaContagem({{ item.saldo_sistema|unlocalize }}, {{ item.produto.custo_medio|unlocalize }}, '{{ item.produto.nome|escapejs }} {{ item.produto.categoria.nome|escapejs }}', '{% if item.contado %}{{ item.quantidade_contada|unlocalize }}{% endif %}')"
+        <tr x-data="linhaContagem({{ item.saldo_sistema|unlocalize }}, {{ item.produto.custo_medio|unlocalize }}, '{{ item.produto.nome|escapejs }} {{ item.produto.categoria.nome|escapejs }}', '{% if item.contado %}{{ item.quantidade_contada|campo_num }}{% endif %}')"
             x-init="registrar($data)" x-show="visivel($data)" :class="preenchido && dif !== 0 && 'est-linha-diferenca'">
           <td>
             <span class="est-produto-nome">{{ item.produto.nome }}</span>

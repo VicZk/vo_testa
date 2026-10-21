@@ -10,6 +10,8 @@ from apps.nucleo.models import (
     Produto,
 )
 
+from .formato import para_campo
+
 # Produto, local e fornecedor são escolhidos por combobox com busca
 # (`estoque/partials/combo.html`), não por `<select>`: a lista de produtos
 # cresce, e rolar 300 opções para achar "Água 500ml" não é escolher. O campo
@@ -38,13 +40,7 @@ class ProdutoForm(forms.ModelForm):
         # O campo guarda 3 casas (existe meio quilo de café), mas abrir a ficha
         # com "24.000" escrito no campo não ajuda ninguém a editar.
         if self.instance and self.instance.pk:
-            self.initial["estoque_minimo"] = _enxuto(self.instance.estoque_minimo)
-
-
-def _enxuto(valor: Decimal):
-    """24.000 → 24 · 0.500 → 0.5 (ponto decimal: é valor de <input type=number>)."""
-    texto = f"{valor:f}"
-    return texto.rstrip("0").rstrip(".") if "." in texto else texto
+            self.initial["estoque_minimo"] = para_campo(self.instance.estoque_minimo)
 
 
 class CategoriaProdutoForm(forms.ModelForm):

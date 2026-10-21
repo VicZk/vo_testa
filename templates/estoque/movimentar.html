@@ -40,7 +40,7 @@ que são quatro jeitos de mexer no mesmo saldo, e troca sem sair da tela.
 
     <div class="campo est-passo">
       <label for="id_produto">1. Produto</label>
-      {% include "componentes/combo_pessoa.html" with dados=produtos_json dados_id="produtos-data" campo="produto" placeholder="Buscar produto pelo nome…" valor_id=escolhido autofocus=1 %}
+      {% include "componentes/combo_pessoa.html" with dados=produtos_json dados_id="produtos-data" campo="produto" placeholder="Buscar produto pelo nome…" valor_id=escolhido %}
       {% for erro in form.produto.errors %}<small class="erro">{{ erro }}</small>{% endfor %}
       <small class="ajuda" x-show="p" x-cloak>
         <span x-text="p ? p.grupo : ''"></span> ·
