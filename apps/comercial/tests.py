@@ -3295,3 +3295,38 @@ class TokenMetaForaDaURLTests(TestCase):
         req = self._capturar(lambda: GatewayMeta().enviar_conversao(evento))
         self.assertNotIn("segredo-capi-123", req.full_url)
         self.assertEqual(req.get_header("Authorization"), "Bearer segredo-capi-123")
+
+
+class LpsAutocontidasPedemConsentimentoTests(TestCase):
+    """LGPD: as três LPs autocontidas (LPs/*.html) carregavam GA4 e Meta Pixel na hora,
+    sem aviso de cookies — e o <noscript> do Pixel disparava o PageView até sem JS.
+    Agora as tags vêm como `type="text/plain" data-consentimento` e o servidor põe o
+    aviso (o mesmo do site) no fim do <body>; o consentimento.js liga no "Aceitar".
+    Se uma versão nova de LP chegar com a tag solta, este teste avisa."""
+
+    URLS = ("/lp/fundador/", "/lp/fundador-2/", "/lp/inauguracao_31_10_2026/")
+
+    def test_rastreamento_so_depois_do_aceite(self):
+        import re
+
+        for url in self.URLS:
+            with self.subTest(url=url):
+                r = self.client.get(url)
+                self.assertEqual(r.status_code, 200)
+                html = r.content.decode("utf-8")
+                self.assertIn('id="consentimento"', html)
+                self.assertIn("js/consentimento.js", html)
+                self.assertNotIn("facebook.com/tr?", html)   # <noscript> do Pixel
+                abre = re.compile(r"<script([^>]*)>(.*?)</script>", re.S)
+                soltas = [attrs for attrs, corpo in abre.findall(html)
+                          if ("fbevents.js" in corpo or "googletagmanager.com/gtag/js" in corpo)
+                          and not ('type="text/plain"' in attrs and "data-consentimento" in attrs)]
+                self.assertEqual(soltas, [], "tag de medição que roda sem consentimento")
+                self.assertEqual(html.count("</body>"), 1)
+                self.assertLess(html.index('id="consentimento"'), html.index("</body>"))
+
+    def test_raiz_com_lp_tambem_pede_consentimento(self):
+        with self.settings(HOME_MODO="lp_fundador"):
+            r = self.client.get("/")
+        self.assertIn(b'id="consentimento"', r.content)
+

@@ -19,8 +19,10 @@
 <meta name="twitter:description" content="Acolhimento de família, conforto de hotel e o Lago de Itá. Entre para a lista de fundadores e reserve primeiro quando abrir.">
 <meta name="twitter:image" content="https://www.pousadavotesta.com.br/static/lp/og.jpg">
 
-<!-- Google tag (gtag.js) — ID injetado pelo servidor via GOOGLE_TAG_ID. Sem ID, não carrega. -->
-<script>
+<!-- Google tag (gtag.js) — ID injetado pelo servidor via GOOGLE_TAG_ID. Sem ID, não carrega.
+     `type="text/plain" data-consentimento`: o navegador não executa; o consentimento.js
+     (aviso de cookies que o servidor põe no fim do <body>) liga só no "Aceitar" — LGPD. -->
+<script type="text/plain" data-consentimento>
   window.__GTAG_ID = "__GTAG_ID__";
   (function(){
     var id = window.__GTAG_ID;
@@ -34,12 +36,12 @@
   })();
 </script>
 
-<!-- Meta Pixel Code -->
-<script>
+<!-- Meta Pixel Code — também só depois do "Aceitar" (ver o Google tag acima) -->
+<script type="text/plain" data-consentimento>
 !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
 fbq('init','38503344465975740');fbq('track','PageView');
 </script>
-<noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=38503344465975740&ev=PageView&noscript=1"/></noscript>
+<!-- Sem o <noscript> do Pixel: a imagem disparava o PageView sem consentimento. -->
 <!-- End Meta Pixel Code -->
 
 <link rel="preconnect" href="https://fonts.googleapis.com">

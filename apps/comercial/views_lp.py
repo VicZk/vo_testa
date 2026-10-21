@@ -10,6 +10,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
+from django.template.loader import render_to_string
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -27,10 +28,23 @@ _VISITA_COOKIE = "lpv_fundador"   # conta 1 visita por navegador (dedupe reload)
 _VISITA_TTL = 6 * 3600
 
 
+def _com_aviso_de_cookies(html: str) -> str:
+    """Põe o aviso de cookies (o mesmo do site) no fim do <body> da LP autocontida.
+
+    LGPD: as tags de medição das LPs (Google tag, Meta Pixel) vêm no HTML como
+    `<script type="text/plain" data-consentimento>` — o navegador não executa — e o
+    consentimento.js do aviso só as liga no "Aceitar". Antes, as três LPs carregavam
+    GA4 e Pixel na hora, sem pergunta. Usa a ÚLTIMA ocorrência de </body>."""
+    antes, fecho, depois = html.rpartition("</body>")
+    if not fecho:
+        return html
+    return antes + render_to_string("componentes/consentimento.html") + fecho + depois
+
+
 def _lp_html() -> str:
     # Em produção lê uma vez (cache em memória); em DEBUG relê p/ editar ao vivo.
     if _LP_CACHE["html"] is None or settings.DEBUG:
-        _LP_CACHE["html"] = _LP_PATH.read_text(encoding="utf-8")
+        _LP_CACHE["html"] = _com_aviso_de_cookies(_LP_PATH.read_text(encoding="utf-8"))
     return _LP_CACHE["html"]
 
 
@@ -186,7 +200,7 @@ _VISITA2_COOKIE = "lpv_fundador_2"       # conta 1 visita por navegador (dedupe 
 
 def _lp2_html() -> str:
     if _LP2_CACHE["html"] is None or settings.DEBUG:
-        _LP2_CACHE["html"] = _LP2_PATH.read_text(encoding="utf-8")
+        _LP2_CACHE["html"] = _com_aviso_de_cookies(_LP2_PATH.read_text(encoding="utf-8"))
     return _LP2_CACHE["html"]
 
 
@@ -265,7 +279,7 @@ def _lpinaug_html() -> str:
         html = _LPINAUG_PATH.read_text(encoding="utf-8")
         # O HTML vem reusando o endpoint da Fundador II; aponta para a rota própria.
         html = html.replace("/lp/fundador-2/lead/", f"/lp/{_LPINAUG_SLUG}/lead/")
-        _LPINAUG_CACHE["html"] = html
+        _LPINAUG_CACHE["html"] = _com_aviso_de_cookies(html)
     return _LPINAUG_CACHE["html"]
 
 
