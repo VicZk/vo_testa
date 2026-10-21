@@ -27,6 +27,14 @@
        valor aparecia em vermelho no CRM. Verde é quitado; âmbar é a pagar. */
     .pt-saldo { font-family: var(--fonte-titulo); font-size: 2.2rem; color: var(--musgo); }
     .pt-saldo.devendo { color: var(--alerta); }
+    /* Saldo dentro de uma linha (início e total da conta): menor que o do cartão. */
+    .pt-saldo-linha { font-size: 1.3rem; }
+    .pt-linha.pt-linha-total { border-top: 2px solid var(--fio); margin-top: .4rem; padding-top: .7rem; }
+    .pt-linha-total .pt-saldo { font-size: 1.4rem; }
+    .pt-acoes-rodape { margin-top: 1rem; }
+    .pt-acoes-pedido { margin-top: .8rem; }
+    .pt-acoes a.botao-primario, .pt-acoes a.botao-neutro { text-align: center; text-decoration: none; }
+    .pt-nota { margin-top: 1rem; font-size: .85rem; }
     .pt-linha { display: flex; justify-content: space-between; gap: 1rem; padding: .4rem 0;
                 border-bottom: 1px solid var(--fio); font-size: .92rem; }
     .pt-linha:last-child { border-bottom: none; }

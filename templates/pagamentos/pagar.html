@@ -37,7 +37,7 @@
       color: var(--tinta); background: var(--superficie); border: 1px solid var(--fio-forte);
       border-radius: var(--raio-p); transition: border-color .15s, box-shadow .15s;
     }
-    .card-form input:focus { outline: none; border-color: var(--lampiao); box-shadow: 0 0 0 3px rgba(215,160,72,.25); }
+    .card-form input:focus { outline: none; border-color: var(--lampiao); box-shadow: 0 0 0 3px color-mix(in srgb, var(--lampiao) 25%, transparent); }
     .card-form .linha { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
     .card-seguro { font-size: .72rem; color: var(--tinta-suave); margin-top: .8rem; display: flex; align-items: center; gap: .35rem; justify-content: center; }
     /* Número do cartão com a bandeira dentro do campo: a pessoa confirma que
@@ -63,8 +63,17 @@
     .pay-confianca .ok { color: var(--sucesso); flex: none; font-weight: 700; }
     .pay-confianca a { color: var(--madeira); font-weight: 600; }
     .pix-qr { width: 220px; height: 220px; margin: .4rem auto .2rem; padding: 12px; background: #fff;
-      border: 1px solid var(--fio); border-radius: var(--raio); box-shadow: var(--sombra-1, 0 1px 3px rgba(0,0,0,.08)); }
+      border: 1px solid var(--fio); border-radius: var(--raio); box-shadow: var(--sombra-1); }
     .pix-qr svg { width: 100%; height: 100%; display: block; }
+    .aviso-pg { background: var(--pergaminho); border-radius: var(--raio-p); padding: .7rem .9rem; margin: 1rem 0; font-size: .85rem; }
+    .pay-ok-texto { margin: 0; }
+    .pix-instrucao { font-size: .85rem; margin: .2rem 0 1rem; }
+    .pay .pix-copia { margin-top: .35rem; }
+    .pay-dica { font-size: .8rem; margin-top: .7rem; }
+    .pay-boleto { display: block; margin-top: .6rem; }
+    .pay-enviar { width: 100%; margin-top: 1rem; }
+    .card-form .pay-enviar { margin-top: 1.1rem; }
+    .pay-rodape { margin-top: 1rem; font-size: .78rem; }
   </style>
 </head>
 <body>
@@ -81,13 +90,13 @@
 
     {% if messages %}
       {% for message in messages %}
-        <p class="aviso-pg aviso-pg-{{ message.tags }}" style="background:var(--pergaminho);border-radius:var(--raio-p);padding:.7rem .9rem;margin:1rem 0;font-size:.85rem">{{ message }}</p>
+        <p class="aviso-pg aviso-pg-{{ message.tags }}">{{ message }}</p>
       {% endfor %}
     {% endif %}
 
     {% if cobranca.status == 'pago' %}
       <p class="pay-ok"><span class="pay-ok-ico">✓</span> Pagamento confirmado. Obrigado!</p>
-      <p class="subtitulo" style="margin:0">Sua reserva está garantida. Guarde o comprovante se precisar.</p>
+      <p class="subtitulo pay-ok-texto">Sua reserva está garantida. Guarde o comprovante se precisar.</p>
       <div class="acoes">
         {% if url_recibo_site %}
           <a href="{{ url_recibo_site }}" class="botao-primario">Ver minha reserva</a>
@@ -104,22 +113,22 @@
       {% if cobranca.metodo == 'pix' and cobranca.pix_copia_cola %}
         {% if qr_svg %}
           <div class="pix-qr">{{ qr_svg|safe }}</div>
-          <p class="subtitulo" style="font-size:.85rem;margin:.2rem 0 1rem">Abra o app do seu banco e <b>escaneie o QR</b> — ou use o copia-e-cola abaixo.</p>
+          <p class="subtitulo pix-instrucao">Abra o app do seu banco e <b>escaneie o QR</b> — ou use o copia-e-cola abaixo.</p>
         {% endif %}
         <span class="letreiro">Pix copia-e-cola</span>
-        <button type="button" class="pix-copia" data-copiar="{{ cobranca.pix_copia_cola }}" style="margin-top:.35rem">
+        <button type="button" class="pix-copia" data-copiar="{{ cobranca.pix_copia_cola }}">
           {{ cobranca.pix_copia_cola }}
           <span class="pix-dica">Toque para copiar</span>
         </button>
-        <p class="subtitulo" style="font-size:.8rem;margin-top:.7rem">Abra o app do seu banco, escolha Pix copia-e-cola e cole o código.</p>
+        <p class="subtitulo pay-dica">Abra o app do seu banco, escolha Pix copia-e-cola e cole o código.</p>
       {% elif cobranca.metodo == 'boleto' and cobranca.payload.linha_digitavel %}
         <span class="letreiro">Linha digitável</span>
-        <button type="button" class="pix-copia" data-copiar="{{ cobranca.payload.linha_digitavel }}" style="margin-top:.35rem">
+        <button type="button" class="pix-copia" data-copiar="{{ cobranca.payload.linha_digitavel }}">
           {{ cobranca.payload.linha_digitavel }}
           <span class="pix-dica">Toque para copiar</span>
         </button>
         {% if cobranca.payload.boleto_url %}
-          <a href="{{ cobranca.payload.boleto_url }}" target="_blank" rel="noopener" class="botao-neutro" style="display:block;margin-top:.6rem">Abrir boleto (PDF)</a>
+          <a href="{{ cobranca.payload.boleto_url }}" target="_blank" rel="noopener" class="botao-neutro pay-boleto">Abrir boleto (PDF)</a>
         {% endif %}
       {% endif %}
 
@@ -152,7 +161,7 @@
           </div>
           <label for="cc-doc">CPF do titular</label>
           <input type="text" id="cc-doc" name="documento" inputmode="numeric" placeholder="Somente números">
-          <button type="submit" class="botao-primario" style="width:100%;margin-top:1.1rem">
+          <button type="submit" class="botao-primario pay-enviar">
             <span class="btn-label">Pagar {{ cobranca.valor|intcomma_brl }}</span>
             <span class="btn-spin" aria-hidden="true"></span>
           </button>
@@ -165,17 +174,17 @@
         {% endif %}
         <form method="post" action="{% url 'pagamentos:pagar_simular' cobranca.token %}" data-verificar>
           {% csrf_token %}
-          <button type="submit" class="botao-primario" style="width:100%;margin-top:1rem">
+          <button type="submit" class="botao-primario pay-enviar">
             <span class="btn-label">Já paguei</span>
             <span class="btn-spin" aria-hidden="true"></span>
           </button>
         </form>
         {% if sandbox %}
-          <p class="subtitulo" style="margin-top:1rem;font-size:.78rem">Ambiente de testes (sandbox). Nenhum valor real é cobrado.</p>
+          <p class="subtitulo pay-rodape">Ambiente de testes (sandbox). Nenhum valor real é cobrado.</p>
         {% elif pix_direto %}
-          <p class="subtitulo" style="margin-top:1rem;font-size:.78rem">Depois de pagar pelo app do seu banco, toque em “Já paguei”. Confirmamos o valor na conta e liberamos sua reserva.</p>
+          <p class="subtitulo pay-rodape">Depois de pagar pelo app do seu banco, toque em “Já paguei”. Confirmamos o valor na conta e liberamos sua reserva.</p>
         {% else %}
-          <p class="subtitulo" style="margin-top:1rem;font-size:.78rem">Após pagar, clique acima — verificamos a confirmação com o banco. Pode levar alguns instantes.</p>
+          <p class="subtitulo pay-rodape">Após pagar, clique acima — verificamos a confirmação com o banco. Pode levar alguns instantes.</p>
         {% endif %}
       {% endif %}
       {% if cobranca.metodo != 'cartao' or sandbox %}{% include "pagamentos/_confianca.html" %}{% endif %}

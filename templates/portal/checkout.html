@@ -15,8 +15,8 @@
   {% empty %}
     <p class="subtitulo">Nenhum lançamento até agora.</p>
   {% endfor %}
-  <div class="pt-linha" style="border-top:2px solid var(--fio);margin-top:.4rem;padding-top:.7rem">
-    <strong>Saldo a pagar</strong><strong class="pt-saldo" style="font-size:1.4rem">{{ e.saldo|intcomma_brl }}</strong>
+  <div class="pt-linha pt-linha-total">
+    <strong>Saldo a pagar</strong><strong class="pt-saldo">{{ e.saldo|intcomma_brl }}</strong>
   </div>
 </div>
 

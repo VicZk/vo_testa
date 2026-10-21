@@ -6,9 +6,9 @@
   <p class="letreiro">Olá, {{ e.hospede }}</p>
   <h2>{{ e.uh }}</h2>
   <p class="subtitulo">Estadia de {{ e.checkin|date:"d/m" }} a {{ e.checkout|date:"d/m/Y" }}.</p>
-  <div class="pt-linha"><span>Saldo da conta</span><strong class="pt-saldo{% if e.saldo > 0 %} devendo{% endif %}" style="font-size:1.3rem">{{ e.saldo|intcomma_brl }}</strong></div>
-  <div class="pt-acoes" style="margin-top:1rem">
-    <a href="{% url 'portal:checkout' token %}" class="botao-primario" style="text-align:center;text-decoration:none">Ver conta & check-out</a>
+  <div class="pt-linha"><span>Saldo da conta</span><strong class="pt-saldo pt-saldo-linha{% if e.saldo > 0 %} devendo{% endif %}">{{ e.saldo|intcomma_brl }}</strong></div>
+  <div class="pt-acoes pt-acoes-rodape">
+    <a href="{% url 'portal:checkout' token %}" class="botao-primario">Ver conta & check-out</a>
   </div>
   <div class="pt-atalhos">
     <a href="{% url 'portal:nps' token %}" class="pt-atalho destaque" title="Avaliar a estadia (NPS)">
@@ -31,7 +31,7 @@
         <input type="number" name="qtd_{{ item.id }}" min="0" value="0" inputmode="numeric">
       </div>
     {% endfor %}
-    <div class="pt-acoes" style="margin-top:.8rem">
+    <div class="pt-acoes pt-acoes-pedido">
       <button type="submit" class="botao-primario">Enviar pedido ao quarto</button>
     </div>
   </form>
@@ -49,7 +49,7 @@
   <div class="pt-acoes">
     <form method="post" action="{% url 'portal:solicitar' token %}">
       {% csrf_token %}<input type="hidden" name="tipo" value="limpeza">
-      <button type="submit" class="botao-neutro" style="width:100%">Pedir limpeza extra</button>
+      <button type="submit" class="botao-neutro botao-largo">Pedir limpeza extra</button>
     </form>
     <form method="post" action="{% url 'portal:solicitar' token %}" class="pt-pedido">
       {% csrf_token %}<input type="hidden" name="tipo" value="manutencao">
