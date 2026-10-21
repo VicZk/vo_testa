@@ -1112,3 +1112,33 @@ class CssDasTelasPublicasTests(TestCase):
         self.assertIn("@media (max-width: 600px) {", saida)
         self.assertNotIn(".z", saida)
         self.assertLess(saida.index(".b {"), saida.index(".c {"))
+
+
+class CorSoPorTokenTests(TestCase):
+    """O `<style>` das telas do CRM pinta só com os tokens do app.css. A tela do lead
+    tinha 33 cores escritas à mão (hex, rgba e "fallbacks" de tokens que não existem,
+    como `--info-suave` — a casa usa `--info-bg`); mudar a paleta não chegava lá.
+
+    Fora da regra, de propósito: e-mails (cor inline é o que o cliente de e-mail lê),
+    o site e as páginas públicas de captação (paleta própria, sem o app.css), o aviso
+    de cookies (também serve o site: precisa do fallback) e o branco puro atrás do QR
+    do Pix (contraste máximo para o leitor do banco)."""
+
+    FORA = {"comercial/captacao_publica.html", "comercial/captacao_blueprint.html",
+            "lp/privacidade.html", "componentes/consentimento.html"}
+    PERMITIDO = {"pagamentos/pagar.html": ["#fff"]}
+
+    def test_style_das_telas_sem_cor_escrita_a_mao(self):
+        raiz = Path(settings.BASE_DIR) / "templates"
+        achados = []
+        for arq in sorted(raiz.rglob("*.html")):
+            rel = arq.relative_to(raiz).as_posix()
+            if "email" in rel or rel.startswith("site/") or rel in self.FORA:
+                continue
+            css = "\n".join(re.findall(r"<style[^>]*>(.*?)</style>", arq.read_text(encoding="utf-8"), re.S))
+            literais = re.findall(r"#[0-9A-Fa-f]{3,8}\b|rgba?\([^)]*\)", css)
+            sobra = [c for c in literais if c not in self.PERMITIDO.get(rel, [])]
+            if sobra:
+                achados.append(f"{rel}: {sobra[:4]}")
+        self.assertEqual(achados, [], "cor escrita à mão no <style> de tela do CRM")
+
