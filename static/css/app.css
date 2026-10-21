@@ -2255,6 +2255,9 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 
 .botao-mini {
   flex-shrink: 0;
+  /* inline-flex centrado: numa linha de botões que estica (cabeçalho do relatório,
+     do kit, do lead), o texto ficava grudado no topo de um botão de 40 px. */
+  display: inline-flex; align-items: center; justify-content: center;
   padding: 0 .85rem;
   font-family: var(--fonte-ui);
   font-size: .82rem;
