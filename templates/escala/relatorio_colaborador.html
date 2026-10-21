@@ -66,7 +66,7 @@
         {% if c %}
         <div class="rc-dia{% if c.domingo %} dom{% endif %}{% if c.trabalhou %} trab{% endif %}{% if c.extra_txt %} extra{% endif %}{% if c.feriado %} feriado{% endif %}{% if c.ausencia %} aus{% endif %}">
           <span class="n">{{ c.dia }}</span>
-          {% if c.feriado %}<span class="ferm">🎌</span>{% endif %}
+          {% if c.feriado %}<span class="ferm" title="Feriado" aria-label="Feriado"></span>{% endif %}
           <span class="barra"></span>
           {% if c.extra_txt %}<span class="he">{{ c.extra_txt }}</span>{% endif %}
           {% if c.ausencia %}<span class="austxt">{{ c.ausencia|lower }}</span>{% endif %}
@@ -94,7 +94,7 @@
           <span class="tot">+{{ he.total_txt }}</span><span class="tag {{ he.tipo }}">{{ he.get_tipo_display }}</span></div>
         {% endfor %}
       </div>
-      {% if dados.banco_txt != '0h00' %}<div class="rc-saldo">💡 Saldo de <b>banco de horas</b> a compensar: <b>{{ dados.banco_txt }}</b>.</div>{% endif %}
+      {% if dados.banco_txt != '0h00' %}<div class="rc-saldo">Saldo de <b>banco de horas</b> a compensar: <b>{{ dados.banco_txt }}</b>.</div>{% endif %}
       {% else %}<p class="rc-vazio">Sem horas extras no mês.</p>{% endif %}
     </section>
 
@@ -103,7 +103,7 @@
       {% if dados.feriados_trabalhados or dados.ausencias %}
       <div class="rc-lista">
         {% for fe in dados.feriados_trabalhados %}
-        <div class="rc-row"><span class="data">{{ fe.data|date:"d/m" }}</span><span class="per">🎌 Feriado · {{ fe.turno }}</span>
+        <div class="rc-row"><span class="data">{{ fe.data|date:"d/m" }}</span><span class="per">Feriado · {{ fe.turno }}</span>
           <span class="tag {% if fe.compensacao == 'Pagamento em dobro' %}dobro{% else %}folga{% endif %}">{{ fe.compensacao }}</span></div>
         {% endfor %}
         {% for au in dados.ausencias %}

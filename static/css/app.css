@@ -2687,7 +2687,8 @@ a.modulo-ativo:hover {
 .modulo-dep { margin: 0; font-size: .76rem; color: var(--madeira); }
 .modulo-card-acao { display: flex; align-items: center; gap: .5rem; margin-top: .3rem; }
 .modulo-card-acao .botao-primario, .modulo-card-acao .botao-neutro { padding: .42rem .9rem; font-size: .84rem; }
-.modulo-trava { font-size: 1rem; }
+.modulo-trava { display: inline-flex; color: var(--tinta-suave); }
+.modulo-trava .ico { width: 16px; height: 16px; }
 
 /* Precisa de atenção */
 .atencao-secao { margin: 1.4rem 0 .2rem; }
@@ -5029,7 +5030,8 @@ body.escala-dragging .escala-drop { cursor: copy; }
 .rc-dia.extra .barra { background: linear-gradient(90deg, var(--noturno) 58%, var(--alerta) 58%); }
 .rc-dia .he { font-size: 9.5px; font-weight: 700; color: var(--alerta); margin-top: 2px; }
 .rc-dia.feriado { background: var(--sucesso-bg); border-color: color-mix(in srgb, var(--sucesso) 30%, transparent); } .rc-dia.feriado .barra { background: var(--sucesso); }
-.rc-dia .ferm { position: absolute; top: 5px; right: 6px; font-size: 11px; }
+/* Feriado no calendário do colaborador: ponto dourado no canto (era a bandeirinha 🎌). */
+.rc-dia .ferm { position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--lampiao); }
 .rc-dia.aus { background: var(--perigo-bg); border-color: color-mix(in srgb, var(--perigo) 28%, transparent); } .rc-dia.aus .barra { background: var(--perigo); }
 .rc-dia .austxt { font-size: 9.5px; font-weight: 700; color: var(--perigo); margin-top: 2px; }
 

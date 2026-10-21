@@ -30,12 +30,12 @@
       Para <b>{{ painel_quartos.composicao.adultos }} adulto{{ painel_quartos.composicao.adultos|pluralize }}{% if painel_quartos.composicao.criancas %} + {{ painel_quartos.composicao.criancas }} criança{{ painel_quartos.composicao.criancas|pluralize:"s" }}{% endif %}</b>{% if painel_quartos.composicao.idades %} ({{ painel_quartos.composicao.idades|join:", " }}){% endif %}
       {% if painel_quartos.tem_datas %} · <b>{{ painel_quartos.composicao.checkin|date:"d/m" }}–{{ painel_quartos.composicao.checkout|date:"d/m" }}</b>{% else %} · <span class="pq-sem-datas">sem datas — disponibilidade não conferida</span>{% endif %}
     </span>
-    <button type="button" class="pq-editar" @click="editar=!editar">Editar ✎</button>
+    <button type="button" class="pq-editar" @click="editar=!editar">Editar</button>
   </div>
 
   {% if painel_quartos.tem_datas %}
   <div class="pq-berco {% if painel_quartos.berco_disponivel %}pq-berco-ok{% else %}pq-berco-nao{% endif %}">
-    🍼 Berço (grátis): {% if painel_quartos.berco_disponivel %}<b>disponível</b> nessas datas{% else %}<b>já reservado</b> nessas datas — não prometa{% endif %}
+    Berço (grátis): {% if painel_quartos.berco_disponivel %}<b>disponível</b> nessas datas{% else %}<b>já reservado</b> nessas datas — não prometa{% endif %}
   </div>
   {% endif %}
 
@@ -60,13 +60,13 @@
 
   {# ---- B: sem datas → chama pra preencher ---- #}
   {% if not painel_quartos.tem_datas %}
-  <button type="button" class="pq-datas-cta" @click="editar=true">📅 Informe as datas pra conferir a disponibilidade e o preço →</button>
+  <button type="button" class="pq-datas-cta" @click="editar=true">Informe as datas pra conferir a disponibilidade e o preço →</button>
   {% endif %}
 
   {# ---- pontos de atenção no topo ---- #}
   {% if painel_quartos.atencao_topo %}
   <div class="pq-atencao">
-    <div class="t">⚠️ Antes de oferecer</div>
+    <div class="t">Antes de oferecer</div>
     <ul>
       {% for nome, numero, ponto in painel_quartos.atencao_topo %}
       <li><b>{{ nome }}{% if nome != numero %} ({{ numero }}){% endif %}:</b> {{ ponto }}</li>
@@ -78,9 +78,9 @@
   {# ---- filtros rápidos (o "mas precisa ter…" do cliente) ---- #}
   {% if painel_quartos.servem %}
   <div class="pq-filtros-rapidos">
-    <button type="button" class="pq-chip" :class="fVista && 'on'" @click="fVista=!fVista">🌅 Vista lago</button>
-    <button type="button" class="pq-chip" :class="fVaranda && 'on'" @click="fVaranda=!fVaranda">🪵 Varanda</button>
-    <button type="button" class="pq-chip" :class="fPet && 'on'" @click="fPet=!fPet">🐾 Aceita pet</button>
+    <button type="button" class="pq-chip" :class="fVista && 'on'" @click="fVista=!fVista">Vista lago</button>
+    <button type="button" class="pq-chip" :class="fVaranda && 'on'" @click="fVaranda=!fVaranda">Varanda</button>
+    <button type="button" class="pq-chip" :class="fPet && 'on'" @click="fPet=!fPet">Aceita pet</button>
   </div>
   {% endif %}
 
@@ -95,8 +95,8 @@
           <div class="pq-nome">{{ item.nome }}{% if item.nome != item.uh.numero %} <span class="pq-num">· {{ item.uh.numero }}</span>{% endif %}</div>
           <div class="pq-cat">{{ item.uh.tipo.nome }}</div>
           <div class="pq-cap"><span class="pq-ok">✓ acomoda</span> — {{ item.capacidade }}</div>
-          {% if item.arranjo %}<div class="pq-montagem">🛏️ {{ item.arranjo.montagem }}</div>{% endif %}
-          {% for ponto in item.pontos_atencao %}<span class="pq-selo-at">⚠️ {{ ponto }}</span>{% endfor %}
+          {% if item.arranjo %}<div class="pq-montagem">{{ item.arranjo.montagem }}</div>{% endif %}
+          {% for ponto in item.pontos_atencao %}<span class="pq-selo-at">{{ ponto }}</span>{% endfor %}
         </div>
         <div class="pq-preco">
           {% if item.total %}
@@ -143,7 +143,7 @@
 
       {# texto pronto pro WhatsApp #}
       <div class="pq-wpp" x-show="texto" x-cloak>
-        <div class="t">💬 Texto pronto pro WhatsApp <span class="pq-wpp-nota">— sem pontos de atenção nem «a levantar»</span></div>
+        <div class="t">Texto pronto pro WhatsApp <span class="pq-wpp-nota">— sem pontos de atenção nem «a levantar»</span></div>
         <div class="msg" x-text="texto"></div>
         <div class="pq-wpp-acoes">
           <button type="button" class="botao-primario botao-mini"
@@ -162,7 +162,7 @@
   {# ---- lotou? datas vizinhas com vaga (#5) ---- #}
   {% if painel_quartos.datas_alternativas %}
   <div class="pq-vizinhas">
-    <div class="t">📅 Lotou nessas datas — mas tem vaga por perto:</div>
+    <div class="t">Lotou nessas datas — mas tem vaga por perto:</div>
     <div class="pq-vizinhas-chips">
       {% for alt in painel_quartos.datas_alternativas %}
       <button type="button" class="pq-chip"
@@ -185,13 +185,13 @@
   <div class="pq-cmp-bar" x-show="sel.length>=2" x-cloak>
     <span x-text="sel.length + ' quartos selecionados'"></span>
     <button type="button" class="botao-primario botao-mini" @click="comparar()">Comparar ⇄</button>
-    <button type="button" class="botao-neutro botao-mini" @click="proposta()">Proposta (1 msg) 💬</button>
+    <button type="button" class="botao-neutro botao-mini" @click="proposta()">Proposta (1 msg)</button>
     <button type="button" class="botao-neutro botao-mini" @click="sel=[]">Limpar</button>
   </div>
 
   {# proposta com 2–3 quartos numa mensagem só #}
   <div class="pq-wpp pq-wpp-proposta" x-show="propostaTexto" x-cloak>
-    <div class="t">💬 Proposta pro WhatsApp <span class="pq-wpp-nota">— as opções selecionadas numa mensagem</span></div>
+    <div class="t">Proposta pro WhatsApp <span class="pq-wpp-nota">— as opções selecionadas numa mensagem</span></div>
     <div class="msg" x-text="propostaTexto"></div>
     <div class="pq-wpp-acoes">
       <button type="button" class="botao-primario botao-mini"

@@ -28,7 +28,7 @@
       <div class="campo"><label>Fim do intervalo</label>{{ form.intervalo_fim }}</div>
       <div class="campo"><label>Excedente de jornada</label>{{ form.regime_horas }}</div>
       <div class="campo"><label>Feriado trabalhado</label>{{ form.compensacao_feriado }}</div>
-      {% if form.salario %}<div class="campo"><label>Salário base 🔒 (só gerência)</label>{{ form.salario }}</div>{% endif %}
+      {% if form.salario %}<div class="campo"><label>Salário base (só gerência)</label>{{ form.salario }}</div>{% endif %}
     </div>
   </div>
 
@@ -72,15 +72,15 @@
   {% if gerente %}
   <div x-show="aba==='historico'" x-cloak class="func-conteudo">
     <div class="func-cards">
-      <div class="func-card"><span class="k">⏱ Tempo de casa</span><span class="v">{{ historico.tempo_de_casa|default:"—" }}</span><span class="n">desde {{ historico.admissao|date:"d/m/Y"|default:"—" }}</span></div>
+      <div class="func-card"><span class="k">Tempo de casa</span><span class="v">{{ historico.tempo_de_casa|default:"—" }}</span><span class="n">desde {{ historico.admissao|date:"d/m/Y"|default:"—" }}</span></div>
       {% if historico.escala %}
-        <div class="func-card"><span class="k">📅 Dias trabalhados</span><span class="v">{{ historico.escala.dias_trabalhados }}</span><span class="n">{{ historico.periodo_rotulo }}</span></div>
-        <div class="func-card"><span class="k">⏳ Horas</span><span class="v">{{ historico.escala.horas_trabalhadas }}h</span><span class="n">escaladas no mês</span></div>
-        <div class="func-card"><span class="k">🏖 Ausências</span><span class="v">{{ historico.escala.dias_ausente }}</span><span class="n">{{ historico.escala.trocas }} troca{{ historico.escala.trocas|pluralize }} de turno</span></div>
+        <div class="func-card"><span class="k">Dias trabalhados</span><span class="v">{{ historico.escala.dias_trabalhados }}</span><span class="n">{{ historico.periodo_rotulo }}</span></div>
+        <div class="func-card"><span class="k">Horas</span><span class="v">{{ historico.escala.horas_trabalhadas }}h</span><span class="n">escaladas no mês</span></div>
+        <div class="func-card"><span class="k">Ausências</span><span class="v">{{ historico.escala.dias_ausente }}</span><span class="n">{{ historico.escala.trocas }} troca{{ historico.escala.trocas|pluralize }} de turno</span></div>
       {% else %}
-        <div class="func-card"><span class="k">📅 Dias com acesso</span><span class="v">{% if historico.presenca %}{{ historico.presenca.dias_com_acesso }}{% else %}—{% endif %}</span><span class="n">últimos 30 dias</span></div>
-        <div class="func-card"><span class="k">💰 Reajustes</span><span class="v">{{ historico.progressao|length }}</span><span class="n">registros de salário</span></div>
-        <div class="func-card"><span class="k">🔁 Movimentações</span><span class="v">{{ historico.movimentacoes|length }}</span><span class="n">marcos registrados</span></div>
+        <div class="func-card"><span class="k">Dias com acesso</span><span class="v">{% if historico.presenca %}{{ historico.presenca.dias_com_acesso }}{% else %}—{% endif %}</span><span class="n">últimos 30 dias</span></div>
+        <div class="func-card"><span class="k">Reajustes</span><span class="v">{{ historico.progressao|length }}</span><span class="n">registros de salário</span></div>
+        <div class="func-card"><span class="k">Movimentações</span><span class="v">{{ historico.movimentacoes|length }}</span><span class="n">marcos registrados</span></div>
       {% endif %}
     </div>
 

@@ -1143,3 +1143,30 @@ class CorSoPorTokenTests(TestCase):
                 achados.append(f"{rel}: {sobra[:4]}")
         self.assertEqual(achados, [], "cor escrita à mão no <style> de tela do CRM")
 
+class SemEmojiNoCrmTests(TestCase):
+    """Tela do CRM não usa emoji. Eram 73 em 22 telas — rótulo de cartão ("⏱ Tempo de
+    casa"), filtro ("🌅 Vista lago"), estado vazio ("Nada pendente. 🎉"), status
+    ("🟢 janela 24h aberta") e até botão ("📎", "🎤"). Emoji muda de desenho em cada
+    aparelho e briga com os ícones da casa; o que era decorativo saiu, status ficou na
+    cor/selo, e botão de ícone é SVG (`.ico`).
+
+    Fora, de propósito: e-mails, o site e as páginas públicas de captação (têm
+    linguagem de campanha própria). Glifos de texto (✓ ✕ ★ setas) seguem valendo."""
+
+    FORA = {"comercial/captacao_publica.html", "comercial/captacao_blueprint.html"}
+    # pictogramas (U+1F300…), símbolos (☀…➿), estrela e os de mídia/relógio (⏩…⏺).
+    EMOJI = re.compile("[\\U0001F300-\\U0001FAFF\\u2600-\\u27BF\\u2B50\\u23E9-\\u23FA]\\uFE0F?")
+    GLIFOS = {"✓", "✕", "★", "✔"}   # ✓ ✕ ★ ✔
+
+    def test_telas_do_crm_sem_emoji(self):
+        raiz = Path(settings.BASE_DIR) / "templates"
+        achados = []
+        for arq in sorted(raiz.rglob("*.html")):
+            rel = arq.relative_to(raiz).as_posix()
+            if rel.startswith(("site/", "lp/")) or "email" in rel or rel in self.FORA:
+                continue
+            emojis = [e for e in self.EMOJI.findall(arq.read_text(encoding="utf-8"))
+                      if e not in self.GLIFOS]
+            if emojis:
+                achados.append(f"{rel}: {''.join(emojis[:6])}")
+        self.assertEqual(achados, [], "emoji em tela do CRM")

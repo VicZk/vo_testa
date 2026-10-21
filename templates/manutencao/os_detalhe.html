@@ -18,7 +18,7 @@
 <div class="colunas colunas-2-1">
   <section class="painel-bloco">
     <dl class="ficha">
-      <div><dt>Alvo</dt><dd>{{ os.alvo }}{% if os.bloqueia_uh %} <span class="selo prioridade-urgente">🔒 bloqueado</span>{% endif %}</dd></div>
+      <div><dt>Alvo</dt><dd>{{ os.alvo }}{% if os.bloqueia_uh %} <span class="selo prioridade-urgente">bloqueado</span>{% endif %}</dd></div>
       <div><dt>Tipo</dt><dd>{{ os.get_tipo_display }}</dd></div>
       <div><dt>Prioridade</dt><dd><span class="selo prioridade-{{ os.prioridade }}">{{ os.get_prioridade_display }}</span></dd></div>
       <div><dt>Responsável</dt><dd>{% if os.responsavel %}{{ os.responsavel.get_short_name|default:os.responsavel.username }}{% else %}A definir{% endif %}</dd></div>

@@ -209,7 +209,7 @@
 
               {# 5 datas + pessoas #}
               {% if op.checkin_previsto %}
-                <p class="card-linha">📅 {{ op.checkin_previsto|date:"d/m" }}{% if op.checkout_previsto %}→{{ op.checkout_previsto|date:"d/m" }}{% endif %} · {{ op.hospedes }}p</p>
+                <p class="card-linha">{{ op.checkin_previsto|date:"d/m" }}{% if op.checkout_previsto %}→{{ op.checkout_previsto|date:"d/m" }}{% endif %} · {{ op.hospedes }}p</p>
               {% endif %}
 
               <div class="rodape">
@@ -233,7 +233,7 @@
               {% if op.proxima_tarefa %}
                 <p class="tarefa {% if op.proxima_tarefa.quando < agora %}alerta{% endif %}">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-                  {% if op.proxima_tarefa.quando < agora %}⏰ atrasado — {% endif %}{{ op.proxima_tarefa.quando|date:"d/m H:i" }}
+                  {% if op.proxima_tarefa.quando < agora %}atrasado — {% endif %}{{ op.proxima_tarefa.quando|date:"d/m H:i" }}
                 </p>
               {% else %}
                 <p class="tarefa alerta">
@@ -248,7 +248,7 @@
               {# 3 WhatsApp · 7 responsável / assumir #}
               <div class="card-acao" onclick="event.stopPropagation()">
                 {% if op.responsavel %}
-                  <span class="card-dono" title="Responsável">👤 {{ op.responsavel.get_full_name|default:op.responsavel.username }}</span>
+                  <span class="card-dono" title="Responsável">{{ op.responsavel.get_full_name|default:op.responsavel.username }}</span>
                 {% else %}
                   <form method="post" action="{% url 'comercial:assumir' op.pk %}" class="card-assumir-form">{% csrf_token %}
                     <button type="submit" class="botao-mini card-assumir">Assumir</button>

@@ -905,7 +905,7 @@
         colch.classList.remove('tarifa-hint-alta', 'tarifa-hint-erro');
         if (d.colchoes_status === 'bloqueio') colch.classList.add('tarifa-hint-erro');
         else if (d.colchoes_status === 'aviso') colch.classList.add('tarifa-hint-alta');
-        colch.innerHTML = '🛏️ ' + d.colchoes_msg;
+        colch.textContent = d.colchoes_msg;
       } else if (colch) { colch.innerHTML = ''; }
       // Restrição de venda do período: aviso, menos "parar vendas", que exige gerência.
       if (restr) {

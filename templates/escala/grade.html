@@ -59,7 +59,7 @@
 
   {% if publicacao %}
   <p class="escala-pub {% if publicacao.forcado %}escala-pub-forcado{% endif %}">
-    {% if publicacao.forcado %}⚠ Publicada com violação{% else %}✓ Publicada{% endif %}
+    {% if publicacao.forcado %}Publicada com violação{% else %}✓ Publicada{% endif %}
     em {{ publicacao.publicado_em|date:"d/m H:i" }} por {{ publicacao.publicado_por }}{% if publicacao.justificativa %} — “{{ publicacao.justificativa }}”{% endif %}.
   </p>
   {% endif %}
@@ -76,7 +76,7 @@
         <span class="rpill" draggable="true" data-func="{{ f.pk }}" title="{{ f.cargo }}{% if f.setor %} · {{ f.setor }}{% endif %}">{{ f.pessoa.nome }}</span>
       {% endfor %}
     </div>
-    <span class="escala-trash" id="escala-trash">🗑 soltar aqui para remover</span>
+    <span class="escala-trash" id="escala-trash">Soltar aqui para remover</span>
   </div>
   {% else %}
   <div class="estado-vazio">

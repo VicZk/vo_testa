@@ -32,7 +32,7 @@
       <button type="submit" class="botao-primario">Pagar {{ e.saldo|intcomma_brl }} e sair</button>
     </form>
   {% else %}
-    <p class="subtitulo">Sua conta está quitada. 🎉</p>
+    <p class="subtitulo">Sua conta está quitada.</p>
     <form method="post" action="{% url 'portal:checkout_recepcao' token %}" class="pt-acoes">
       {% csrf_token %}
       <button type="submit" class="botao-primario">Solicitar check-out</button>
