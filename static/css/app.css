@@ -5791,3 +5791,367 @@ body.escala-dragging .escala-drop { cursor: copy; }
   /* Centrado: na bobina de 80 mm, os 72 mm do cupom caem na faixa que a cabeça imprime. */
   .cupom { width: 72mm; margin: 0 auto; box-shadow: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   ESTOQUE — abas, seleção de local, nível e movimentação
+
+   O dono olhou a tela e disse "parece uma coisa muito simplória" — e a
+   medição deu razão: a navegação do módulo eram NOVE filtro-chips, e a
+   seleção de local, mais quatro chips idênticos logo abaixo. Dois papéis
+   diferentes (ir para outra tela × filtrar esta) com exatamente o mesmo
+   desenho. Aqui a navegação vira aba (com ícone e sublinhado), o local
+   vira cartão com o que ele guarda, e o saldo ganha a régua do mínimo.
+   Tudo em token: nenhuma cor, raio ou sombra escrita à mão.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ---------- Abas do módulo ---------- */
+.est-abas {
+  display: flex; flex-wrap: wrap; gap: .15rem;
+  margin: .2rem 0 1.5rem;
+  border-bottom: 1px solid var(--fio);
+}
+.est-aba {
+  display: inline-flex; align-items: center; gap: .45rem;
+  padding: .6rem .85rem;
+  margin-bottom: -1px;                   /* o sublinhado encosta no fio da barra */
+  border-bottom: 2px solid transparent;
+  font-size: .9rem; font-weight: 600; color: var(--tinta-suave);
+  text-decoration: none; white-space: nowrap;
+  transition: color var(--mov-rapido) var(--curva),
+              border-color var(--mov-rapido) var(--curva);
+}
+.est-aba .ico { width: 17px; height: 17px; color: var(--fio-mais-forte); }
+.est-aba:hover { color: var(--tinta); }
+.est-aba:hover .ico { color: var(--tinta-suave); }
+.est-aba[aria-current="page"] {
+  color: var(--noturno);
+  border-bottom-color: var(--lampiao);
+}
+.est-aba[aria-current="page"] .ico { color: var(--lampiao); }
+
+/* ---------- Indicadores e títulos de seção ---------- */
+.est-kpis { margin: 1.3rem 0 1.6rem; }
+.est-titulo-secao {
+  margin: 0 0 .7rem;
+  font-family: var(--fonte-ui); font-size: .68rem; color: var(--tinta-suave);
+}
+
+/* ---------- Seleção de local (o ponto que o dono apontou) ---------- */
+/* `minmax(min(190px, 100%), 1fr)`: a faixa cede quando a tela é menor que ela —
+   senão o cartão vaza do contêiner no celular (mesma regra de `.atencao-grid`). */
+.est-locais {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr));
+  gap: .7rem; margin-bottom: 1.6rem;
+}
+.est-local {
+  display: flex; flex-direction: column; gap: .1rem; min-width: 0;
+  padding: .7rem .85rem .75rem;
+  /* Mais discreto que o KPI de propósito: isto é CONTROLE (escolher o
+     depósito), não indicador. Sem elevação enquanto não está escolhido. */
+  background: var(--superficie-2);
+  border: 1px solid var(--fio); border-radius: var(--raio);
+  text-decoration: none; color: inherit;
+  transition: border-color var(--mov-rapido) var(--curva),
+              box-shadow var(--mov-rapido) var(--curva),
+              transform var(--mov-rapido) var(--curva);
+}
+.est-local:hover {
+  border-color: color-mix(in srgb, var(--lampiao) 55%, transparent);
+  box-shadow: var(--sombra-2); transform: translateY(-2px);
+}
+.est-local:active { transform: translateY(0); }
+.est-local[aria-current="page"] {
+  border-color: var(--lampiao);
+  background: color-mix(in srgb, var(--lampiao) 8%, var(--superficie));
+  box-shadow: var(--sombra-1);
+}
+.est-local-nome {
+  font-size: .82rem; font-weight: 600; color: var(--tinta-suave);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.est-local[aria-current="page"] .est-local-nome { color: var(--madeira); }
+.est-local-valor {
+  font-family: var(--fonte-titulo); font-size: 1.1rem; font-weight: 600;
+  line-height: 1.15; letter-spacing: -.02em; color: var(--noturno);
+  font-variant-numeric: tabular-nums;
+}
+.est-local-meta {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .1rem .45rem;
+  margin-top: .2rem; font-size: .76rem;
+}
+
+/* ---------- Filtros da posição ---------- */
+.est-filtros { margin-bottom: 1.2rem; }
+.est-filtro-busca { flex: 1 1 220px; max-width: 400px; }
+.est-filtro-busca input { width: 100%; }
+
+/* ---------- Tabela: saldo com régua do mínimo ---------- */
+.est-produto-nome { font-weight: 600; }
+.est-produto-meta {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .1rem .45rem;
+  margin-top: .15rem;
+}
+.est-saldo-cel { white-space: nowrap; }
+.est-saldo { display: block; font-weight: 600; }
+/* A régua: o quanto o saldo preenche o mínimo. Verde passou do mínimo, âmbar
+   está raspando, vermelho acabou. Em 3px, porque é apoio do número — não é ele
+   que deve puxar o olho da coluna de dinheiro ao lado. */
+.est-nivel {
+  display: block; width: 100%; max-width: 76px; height: 3px;
+  margin: .3rem 0 0 auto;
+  background: var(--fio); border-radius: 99px; overflow: hidden;
+}
+.est-nivel-marca { display: block; height: 100%; background: var(--sucesso); border-radius: 99px; }
+.est-nivel-abaixo .est-nivel-marca { background: var(--alerta); }
+.est-nivel-zerado { background: color-mix(in srgb, var(--perigo) 28%, var(--fio)); }
+.est-minimo { color: var(--tinta-suave); }
+
+/* "Abaixo do mínimo" é aviso, não emergência: bolinha + texto (a cápsula fica
+   para «Sem saldo», que é o que trava a venda). Estado novo = uma linha. */
+.selo.est-abaixo { --selo-cor: var(--alerta); }
+
+/* ---------- Ações rápidas da linha ---------- */
+.est-acoes { display: flex; align-items: center; justify-content: flex-end; gap: .25rem; }
+.est-acao {
+  display: inline-grid; place-items: center;
+  width: 32px; height: 32px; flex: none;
+  color: var(--tinta-suave);
+  border: 1px solid transparent; border-radius: var(--raio-p);
+  transition: background var(--mov-rapido) var(--curva),
+              color var(--mov-rapido) var(--curva),
+              border-color var(--mov-rapido) var(--curva);
+}
+.est-acao:hover {
+  color: var(--madeira);
+  background: color-mix(in srgb, var(--lampiao) 14%, transparent);
+  border-color: color-mix(in srgb, var(--lampiao) 45%, transparent);
+}
+.est-acao:active { transform: scale(.94); }
+.est-acao .ico { width: 17px; height: 17px; }
+
+@media (pointer: coarse) {
+  .est-aba { min-height: 44px; }
+  .est-acao { width: 44px; height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .est-local:hover { transform: none; }
+}
+
+/* ---------- Movimentar: segmentado, passos, locais e prévia ---------- */
+/* Mesma forma do segmentado do PDV (é o mesmo gesto: escolher um de poucos),
+   mas aqui cada opção é um link — cada movimentação tem endereço próprio. */
+.est-seg {
+  display: flex; flex-wrap: wrap; gap: .15rem;
+  margin: 0 0 1.4rem; padding: .25rem;
+  background: var(--canvas);
+  border: 1px solid var(--fio); border-radius: 99px;
+  max-width: 560px;
+}
+.est-seg a {
+  flex: 1 1 auto; min-width: 5.5rem;
+  padding: .5rem .9rem;
+  border-radius: 99px;
+  font-size: .86rem; font-weight: 600; color: var(--tinta-suave);
+  text-align: center; text-decoration: none;
+  transition: background var(--mov-rapido) var(--curva), color var(--mov-rapido) var(--curva);
+}
+.est-seg a:hover { color: var(--tinta); }
+.est-seg a[aria-current="page"] {
+  background: var(--superficie); color: var(--noturno); box-shadow: var(--sombra-1);
+}
+
+/* Duas colunas que decidem pelo ESPAÇO (flex-basis), não pela janela: a
+   largura útil muda quando o menu abre ou recolhe, e o @media só vê a janela. */
+.est-mov { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 1.1rem; margin-bottom: 2rem; }
+.est-mov-campos { flex: 1 1 420px; min-width: 0; }
+.est-previa { flex: 1 1 260px; min-width: 0; position: sticky; top: calc(var(--topbar-h) + 1rem); }
+.est-mov-titulo { margin: 0; font-size: 1.1rem; }
+.est-mov-intro { margin: .3rem 0 1.2rem; }
+.est-passo { margin-bottom: 1.1rem; }
+.est-mov-grade {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+  gap: 0 1rem;
+}
+.est-mov-grade > * { min-width: 0; }
+/* Quantidade sozinha na linha (saída, ajuste, transferência) não precisa de
+   meio metro de campo: a caixa fica do tamanho do que se digita nela. */
+.est-mov-grade > .campo:only-child { max-width: 16rem; }
+
+/* Campo com unidade colada (quantidade, custo): a sigla vira parte do campo. */
+.est-campo-unidade { display: flex; align-items: center; gap: .5rem; }
+.est-campo-unidade input { flex: 1; min-width: 0; }
+.est-unidade {
+  flex: none; font-size: .82rem; font-weight: 600; color: var(--tinta-suave);
+  min-width: 1.6rem;
+}
+.est-unidade-antes { min-width: 0; }
+
+/* Escolha do local: cartão com o saldo DAQUELE produto naquele depósito,
+   ao vivo. Era um <select> com o nome do local e nada mais. */
+.est-locais-escolha {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
+  gap: .5rem; margin-top: .35rem;
+}
+/* Dupla classe: estes rótulos moram dentro de `.campo`, e `.campo label` (que
+   é mais específica que uma classe só) fazia deles bloco — o saldo colava no
+   nome em vez de ficar na linha de baixo. */
+.est-local-opt.est-local-opt {
+  display: flex; flex-direction: column; gap: .1rem; min-width: 0; margin-bottom: 0;
+  padding: .6rem .7rem;
+  background: var(--superficie);
+  border: 1px solid var(--fio-forte); border-radius: var(--raio-p);
+  cursor: pointer;
+  transition: border-color var(--mov-rapido) var(--curva),
+              background var(--mov-rapido) var(--curva);
+}
+.est-local-opt:hover { border-color: var(--lampiao); }
+.est-local-opt input { position: absolute; opacity: 0; width: 0; height: 0; }
+.est-local-opt:has(input:checked) {
+  border-color: var(--lampiao);
+  background: color-mix(in srgb, var(--lampiao) 10%, var(--superficie));
+  box-shadow: inset 0 0 0 1px var(--lampiao);
+}
+/* Teclado: o anel vai no cartão, porque o <input> em si está escondido. */
+.est-local-opt:has(input:focus-visible) {
+  outline: 2px solid var(--foco-contorno); outline-offset: 1px;
+  box-shadow: var(--foco-anel);
+}
+.est-local-opt-nome {
+  font-size: .86rem; font-weight: 600; color: var(--tinta);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.est-local-opt-saldo { font-size: .76rem; color: var(--tinta-suave); font-variant-numeric: tabular-nums; }
+
+/* Motivo da saída: a escolha que o contador vai ler depois. */
+.est-motivos { display: grid; gap: .5rem; margin-top: .35rem; }
+.est-motivo.est-motivo {
+  display: grid; gap: .1rem; margin-bottom: 0;
+  padding: .6rem .75rem;
+  background: var(--superficie);
+  border: 1px solid var(--fio-forte); border-radius: var(--raio-p);
+  cursor: pointer;
+  transition: border-color var(--mov-rapido) var(--curva), background var(--mov-rapido) var(--curva);
+}
+.est-motivo:hover { border-color: var(--lampiao); }
+.est-motivo input { position: absolute; opacity: 0; width: 0; height: 0; }
+.est-motivo:has(input:checked) {
+  border-color: var(--lampiao);
+  background: color-mix(in srgb, var(--lampiao) 10%, var(--superficie));
+  box-shadow: inset 0 0 0 1px var(--lampiao);
+}
+.est-motivo:has(input:focus-visible) {
+  outline: 2px solid var(--foco-contorno); outline-offset: 1px;
+  box-shadow: var(--foco-anel);
+}
+.est-motivo-nome { font-size: .88rem; font-weight: 600; }
+.est-motivo-nota { font-size: .78rem; color: var(--tinta-suave); }
+
+/* Prévia: "saldo hoje → depois" antes de gravar. */
+.est-previa h3 { margin: 0 0 .7rem; color: var(--tinta-suave); }
+.est-previa-vazia { margin: 0; font-size: .86rem; color: var(--tinta-suave); }
+.est-previa-produto {
+  margin: 0 0 .6rem; font-family: var(--fonte-titulo); font-size: 1.02rem; color: var(--noturno);
+}
+.est-previa-linhas { margin: 0; display: grid; gap: .35rem; }
+.est-previa-linhas > div {
+  display: flex; align-items: baseline; justify-content: space-between; gap: .8rem;
+}
+.est-previa-linhas dt { font-size: .8rem; color: var(--tinta-suave); min-width: 0; }
+.est-previa-linhas dd {
+  margin: 0; font-size: .88rem; font-weight: 600; text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.est-previa-destaque { padding-top: .35rem; border-top: 1px solid var(--fio); }
+.est-previa-destaque dd { font-family: var(--fonte-titulo); font-size: 1.08rem; color: var(--noturno); }
+.est-previa-delta { color: var(--madeira); }
+.est-previa-erro { color: var(--perigo); }
+.est-previa-custo { margin-top: .7rem; padding-top: .55rem; border-top: 1px solid var(--fio); }
+.est-previa-aviso {
+  margin: .7rem 0 0; padding: .55rem .65rem;
+  font-size: .8rem; color: var(--perigo);
+  background: var(--perigo-bg); border-radius: var(--raio-p);
+}
+.est-previa-botao { width: 100%; margin-top: 1rem; }
+.est-previa-botao:disabled { opacity: .5; cursor: not-allowed; }
+.est-previa-nota { margin-top: .6rem; }
+
+@media (pointer: coarse) {
+  .est-seg a { min-height: 44px; display: flex; align-items: center; justify-content: center; }
+  .est-local-opt, .est-motivo { min-height: 44px; }
+}
+
+/* ---------- Kardex, contagem e cadastros ---------- */
+/* Sentido do movimento pela bolinha do selo (sem cápsula: kardex é história,
+   não pedido de ação); o número ao lado leva o sinal. */
+.selo.est-entra { --selo-cor: var(--sucesso); }
+.selo.est-sai   { --selo-cor: var(--perigo); }
+.est-kardex-qtd { font-weight: 600; }
+.est-kardex-saldo { color: var(--tinta-suave); }
+
+.est-titulo-respiro.est-titulo-respiro { margin-top: 1.6rem; }
+.est-grade-respiro { margin-top: .6rem; }
+
+/* Contagem: progresso + resumo ao vivo */
+.est-contagem-topo {
+  display: flex; flex-wrap: wrap; gap: 1rem; align-items: stretch;
+  margin: 1.2rem 0 .4rem;
+}
+.est-progresso-bloco {
+  flex: 1 1 320px; min-width: 0;
+  padding: 1rem 1.15rem 1.1rem;
+  background: var(--superficie);
+  border: 1px solid var(--fio); border-radius: var(--raio-g);
+  box-shadow: var(--sombra-cartao);
+}
+.est-progresso-cab {
+  display: flex; align-items: baseline; justify-content: space-between; gap: .8rem;
+  color: var(--tinta-suave);
+}
+.est-progresso-cab strong {
+  font-family: var(--fonte-titulo); font-size: 1.1rem; color: var(--noturno);
+  font-variant-numeric: tabular-nums;
+}
+.est-progresso {
+  height: 8px; margin: .55rem 0 .5rem;
+  background: var(--fio); border-radius: 99px; overflow: hidden;
+}
+.est-progresso-marca {
+  display: block; height: 100%; background: var(--lampiao); border-radius: 99px;
+  transition: width var(--mov-padrao) var(--curva);
+}
+.est-contagem-resumo {
+  flex: 0 1 260px; display: flex; gap: 1rem; flex-wrap: wrap;
+  padding: 1rem 1.15rem;
+  background: var(--superficie-2);
+  border: 1px solid var(--fio); border-radius: var(--raio-g);
+}
+.est-resumo-item { flex: 1 1 100px; min-width: 0; }
+.est-campo-contagem { max-width: 9rem; margin-left: auto; }
+.est-campo-contagem input { text-align: right; }
+.est-dif { font-weight: 600; }
+.est-dif-sobra { color: var(--sucesso); }
+.est-linha-diferenca { background: var(--alerta-bg); }
+.est-linha-diferenca:hover { background: var(--alerta-bg) !important; }
+.est-aplicar {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 1rem; margin-bottom: 2rem;
+}
+.est-aplicar-texto { flex: 1 1 280px; min-width: 0; font-size: .88rem; color: var(--tinta-suave); }
+.est-aplicar .acoes { margin-top: 0; }
+.est-previa-aviso.est-aviso-neutro { color: var(--info); background: var(--info-bg); }
+
+/* Cadastros: duas listas lado a lado, cada uma com o seu formulário. */
+.est-cadastros {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
+  gap: 1.4rem; align-items: start;
+}
+.est-cadastros > * { min-width: 0; }
+.est-cadastro-bloco { display: flex; flex-direction: column; }
+.est-form-inline { margin-top: .2rem; }
+.est-form-inline h3 { margin: 0 0 .8rem; color: var(--tinta-suave); }
+.est-form-inline .campo:last-of-type { margin-bottom: 1rem; }
+.est-nota-catalogo { margin: -1.2rem 0 1.8rem; font-size: .84rem; color: var(--tinta-suave); }
+/* Número não quebra linha: a 821 px com o menu aberto, a coluna de dinheiro
+   ficava com "R$" numa linha e "4,20" na outra. Quando falta espaço, a tabela
+   rola dentro do cartão (tabela-rol.js) — que é o jeito da casa. */
+.est-tabela td.num, .est-tabela th.num { white-space: nowrap; }

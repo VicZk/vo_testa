@@ -1,47 +1,132 @@
 {% extends "base.html" %}
-{% load moeda %}
+{% load moeda estoque_extras %}
 
 {% block titulo %}Kardex — {{ produto.nome }}{% endblock %}
 
 {% block conteudo %}
-<p class="pagina-eyebrow letreiro">Vendas & Estoque</p>
+<p class="pagina-eyebrow letreiro">Vendas &amp; Estoque</p>
 <div class="pagina-cabecalho">
-  <h1>Kardex — {{ produto.nome }}</h1>
-  <a href="{% url 'estoque:produtos' %}" class="botao-neutro">Voltar aos produtos</a>
+  <h1>{{ produto.nome }}</h1>
+  <div class="linha-botoes">
+    <a href="{% url 'estoque:entrada' %}?produto={{ produto.pk }}" class="botao-primario">Entrada</a>
+    <a href="{% url 'estoque:saida' %}?produto={{ produto.pk }}" class="botao-neutro">Saída</a>
+    <a href="{% url 'estoque:produto_editar' produto.pk %}" class="botao-mini">Editar produto</a>
+  </div>
 </div>
 {% include "estoque/partials/nav.html" %}
 
-<div class="cartoes cartoes-indicadores">
-  <div class="cartao">
-    <span class="indicador-rotulo letreiro">Saldo total</span>
-    <span class="indicador-valor">{{ saldo }} {{ produto.get_unidade_display|lower }}</span>
+<p class="subtitulo">
+  <span class="rotulo-dado">{{ produto.categoria.nome }}</span>
+  <span class="rotulo-dado">{{ produto.get_unidade_display }}</span>
+  <span class="rotulo-dado">{{ produto.get_natureza_display }}</span>
+</p>
+
+<div class="kpis est-kpis">
+  <div class="kpi">
+    <span class="kpi-rotulo letreiro">Saldo na pousada</span>
+    <span class="kpi-valor">{{ saldo|qtd:produto.unidade }}</span>
+    <span class="kpi-nota">{% if produto.estoque_minimo %}mínimo {{ produto.estoque_minimo|qtd:produto.unidade }}{% else %}sem mínimo definido{% endif %}</span>
   </div>
-  <div class="cartao">
-    <span class="indicador-rotulo letreiro">Custo médio</span>
-    <span class="indicador-valor">{{ produto.custo_medio|intcomma_brl }}</span>
+  <div class="kpi">
+    <span class="kpi-rotulo letreiro">Custo médio</span>
+    <span class="kpi-valor">{{ produto.custo_medio|intcomma_brl }}</span>
+    <span class="kpi-nota">média ponderada das entradas</span>
   </div>
-  <div class="cartao">
-    <span class="indicador-rotulo letreiro">Preço de venda</span>
-    <span class="indicador-valor">{{ produto.preco_venda|intcomma_brl }}</span>
+  <div class="kpi">
+    <span class="kpi-rotulo letreiro">Valor em estoque</span>
+    <span class="kpi-valor">{{ valor|intcomma_brl }}</span>
+    <span class="kpi-nota">saldo × custo médio</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi-rotulo letreiro">Preço de venda</span>
+    <span class="kpi-valor">{{ produto.preco_venda|intcomma_brl }}</span>
+    <span class="kpi-nota">{% if produto.margem %}margem de {{ produto.margem|floatformat:0 }}%{% else %}sem preço definido{% endif %}</span>
   </div>
 </div>
 
-<table class="tabela">
+<h2 class="est-titulo-secao letreiro">Onde está</h2>
+<div class="est-locais">
+  {% for s in saldos %}
+    <a href="?local={{ s.local.pk }}" class="est-local"{% if filtros.local == s.local.pk|stringformat:"s" %} aria-current="page"{% endif %}>
+      <span class="est-local-nome">{{ s.local.nome }}</span>
+      <span class="est-local-valor">{{ s.saldo|qtd:produto.unidade }}</span>
+      <span class="est-local-meta"><span class="rotulo-dado">{{ s.local.get_modulo_display }}</span></span>
+    </a>
+  {% endfor %}
+</div>
+
+<form method="get" class="filtro-barra est-filtros">
+  <div class="filtro-campo">
+    <label for="k-local">Local</label>
+    <select name="local" id="k-local" onchange="this.form.submit()">
+      <option value="">Todos os locais</option>
+      {% for s in saldos %}
+        <option value="{{ s.local.pk }}" {% if filtros.local == s.local.pk|stringformat:"s" %}selected{% endif %}>{{ s.local.nome }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="filtro-campo">
+    <label for="k-tipo">Tipo</label>
+    <select name="tipo" id="k-tipo" onchange="this.form.submit()">
+      {% for valor, texto in tipos %}
+        <option value="{{ valor }}" {% if filtros.tipo == valor %}selected{% endif %}>{{ texto }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="filtro-campo">
+    <label for="k-de">De</label>
+    <input type="date" name="de" id="k-de" value="{{ filtros.de }}">
+  </div>
+  <div class="filtro-campo">
+    <label for="k-ate">Até</label>
+    <input type="date" name="ate" id="k-ate" value="{{ filtros.ate }}">
+  </div>
+  <button type="submit" class="botao-primario filtro-aplicar">Aplicar</button>
+  {% if tem_filtro %}<a href="{% url 'estoque:kardex' produto.pk %}" class="botao-mini">Limpar</a>{% endif %}
+</form>
+
+<table class="tabela est-tabela">
   <thead>
-    <tr><th>Data</th><th>Tipo</th><th>Local</th><th class="num">Quantidade</th><th class="num">Custo unit.</th><th>Documento</th></tr>
+    <tr>
+      <th>Quando</th>
+      <th>Movimento</th>
+      <th>Local</th>
+      <th class="num">Quantidade</th>
+      <th class="num">Saldo depois<small class="camp-sub">{% if filtros.local %}neste local{% else %}todos os locais{% endif %}</small></th>
+      <th class="num">Custo unit.</th>
+      <th>Origem</th>
+    </tr>
   </thead>
   <tbody>
-    {% for m in movimentos %}
+    {% for l in linhas %}
       <tr>
-        <td>{{ m.criado_em|date:"d/m/Y H:i" }}</td>
-        <td>{{ m.get_tipo_display }}</td>
-        <td>{{ m.local.nome }}</td>
-        <td class="num {% if m.entrada %}texto-entrada{% else %}texto-alerta{% endif %}">{{ m.quantidade }}</td>
-        <td class="num">{{ m.custo_unitario|intcomma_brl }}</td>
-        <td>{{ m.documento|default:"—" }}{% if m.observacao %} <small class="ajuda">{{ m.observacao }}</small>{% endif %}</td>
+        <td class="nao-quebra">{{ l.movimento.criado_em|date:"d/m/Y" }}<small class="camp-sub">{{ l.movimento.criado_em|date:"H:i" }}</small></td>
+        <td>
+          {% comment %}Bolinha na cor do sentido (entra/sai) + o nome do tipo: a
+          cor fica no selo, e o número ao lado carrega o sinal. Sem cápsula —
+          movimento de kardex não pede ação de ninguém.{% endcomment %}
+          <span class="selo {% if l.movimento.entrada %}est-entra{% else %}est-sai{% endif %}">{{ l.movimento.get_tipo_display }}</span>
+          {% if l.movimento.observacao %}<small class="camp-sub">{{ l.movimento.observacao }}</small>{% endif %}
+        </td>
+        <td>{{ l.movimento.local.nome }}</td>
+        <td class="num est-kardex-qtd">{{ l.movimento.quantidade|qtd_sinal:produto.unidade }}</td>
+        <td class="num est-kardex-saldo">{{ l.saldo|qtd:produto.unidade }}</td>
+        <td class="num">{{ l.movimento.custo_unitario|intcomma_brl }}</td>
+        <td>
+          {% if l.movimento.fornecedor %}{{ l.movimento.fornecedor.nome }}{% endif %}
+          {% if l.movimento.documento %}<small class="camp-sub">{{ l.movimento.documento }}</small>{% endif %}
+          {% if not l.movimento.fornecedor and not l.movimento.documento %}<span class="celula-suave">—</span>{% endif %}
+          <small class="camp-sub">por {{ l.movimento.criado_por.get_short_name|default:l.movimento.criado_por.username }}</small>
+        </td>
       </tr>
     {% empty %}
-      <tr><td colspan="6" class="vazio">Sem movimentos. Registre uma entrada para começar.</td></tr>
+      <tr><td colspan="7" class="vazio">
+        {% if tem_filtro %}Nenhum movimento com esses filtros.
+          <a href="{% url 'estoque:kardex' produto.pk %}">Ver tudo</a>.
+        {% else %}Sem movimentos ainda.
+          <a href="{% url 'estoque:entrada' %}?produto={{ produto.pk }}">Registre a primeira entrada</a>.
+        {% endif %}
+      </td></tr>
     {% endfor %}
   </tbody>
 </table>

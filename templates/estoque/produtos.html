@@ -1,39 +1,100 @@
 {% extends "base.html" %}
-{% load moeda %}
+{% load moeda estoque_extras %}
 
 {% block titulo %}Produtos — Estoque{% endblock %}
 
 {% block conteudo %}
-<p class="pagina-eyebrow letreiro">Vendas & Estoque</p>
+<p class="pagina-eyebrow letreiro">Vendas &amp; Estoque</p>
 <div class="pagina-cabecalho">
   <h1>Produtos</h1>
-  <a href="{% url 'estoque:produto_novo' %}" class="botao-primario">Novo produto</a>
+  <div class="linha-botoes">
+    <a href="{% url 'estoque:cadastros' %}" class="botao-neutro">Categorias e locais</a>
+    <a href="{% url 'estoque:produto_novo' %}" class="botao-primario">Novo produto</a>
+  </div>
 </div>
 {% include "estoque/partials/nav.html" %}
 
-<form method="get" class="barra-busca">
-  <input type="search" name="q" value="{{ busca }}" placeholder="Buscar por nome ou código de barras">
-  <button type="submit" class="botao-neutro">Buscar</button>
+<p class="subtitulo">O catálogo. Quanto cada produto custa (custo médio, calculado pelas
+  entradas), por quanto é vendido e quanto existe hoje somando todos os depósitos.</p>
+
+<form method="get" class="filtro-barra est-filtros">
+  <div class="filtro-campo est-filtro-busca">
+    <label for="q-prod">Buscar</label>
+    <input type="search" id="q-prod" name="q" value="{{ filtros.q }}" placeholder="Nome ou código de barras">
+  </div>
+  <div class="filtro-campo">
+    <label for="f-cat">Categoria</label>
+    <select name="categoria" id="f-cat" onchange="this.form.submit()">
+      <option value="">Todas</option>
+      {% for c in categorias %}
+        <option value="{{ c.pk }}" {% if filtros.categoria == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.nome }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="filtro-campo">
+    <label for="f-sit">Situação</label>
+    <select name="situacao" id="f-sit" onchange="this.form.submit()">
+      <option value="">Só ativos</option>
+      <option value="inativo" {% if filtros.situacao == 'inativo' %}selected{% endif %}>Só inativos</option>
+      <option value="todos" {% if filtros.situacao == 'todos' %}selected{% endif %}>Ativos e inativos</option>
+    </select>
+  </div>
+  <button type="submit" class="botao-primario filtro-aplicar">Aplicar</button>
 </form>
 
-<table class="tabela">
+<table class="tabela est-tabela">
   <thead>
-    <tr><th>Produto</th><th>Categoria</th><th>Unidade</th><th>Natureza</th><th class="num">Custo médio</th><th class="num">Preço venda</th><th class="num">Saldo</th></tr>
+    <tr>
+      <th>Produto</th>
+      <th>Unidade</th>
+      <th class="num">Custo médio</th>
+      <th class="num">Preço de venda</th>
+      <th class="num">Saldo</th>
+      <th class="col-acao">Ações</th>
+    </tr>
   </thead>
   <tbody>
     {% for p in produtos %}
       <tr>
-        <td><a href="{% url 'estoque:produto_editar' p.pk %}">{{ p.nome }}</a>{% if not p.ativo %} <span class="selo selo-neutro">inativo</span>{% endif %}</td>
-        <td>{{ p.categoria.nome }}</td>
+        <td>
+          <a href="{% url 'estoque:produto_editar' p.pk %}" class="est-produto-nome">{{ p.nome }}</a>
+          <span class="est-produto-meta">
+            <span class="rotulo-dado">{{ p.categoria.nome }}</span>
+            {% comment %}Natureza fiscal só quando foge do normal: produto físico é
+            consumo, e repetir "CONSUMO" em 32 linhas não informa nada.{% endcomment %}
+            {% if p.natureza != 'consumo' %}<span class="rotulo-dado">{{ p.get_natureza_display }}</span>{% endif %}
+            {% if p.codigo_barras %}<span class="rotulo-dado">{{ p.codigo_barras }}</span>{% endif %}
+            {% if not p.ativo %}<span class="selo selo-neutro">Inativo</span>{% endif %}
+          </span>
+        </td>
         <td>{{ p.get_unidade_display }}</td>
-        <td>{{ p.get_natureza_display }}</td>
         <td class="num">{{ p.custo_medio|intcomma_brl }}</td>
-        <td class="num">{{ p.preco_venda|intcomma_brl }}</td>
-        <td class="num">{{ p.saldo }}</td>
+        <td class="num">
+          {{ p.preco_venda|intcomma_brl }}
+          {% if p.margem %}<small class="camp-sub">margem {{ p.margem|floatformat:0 }}%</small>{% endif %}
+        </td>
+        <td class="num est-saldo-cel">
+          <span class="est-saldo">{{ p.saldo_total|qtd:p.unidade }}</span>
+          {% if p.estoque_minimo %}<small class="camp-sub">mín. {{ p.estoque_minimo|qtd:p.unidade }}</small>{% endif %}
+        </td>
+        <td class="col-acao">
+          <span class="est-acoes">
+            <a href="{% url 'estoque:kardex' p.pk %}" class="botao-mini">Kardex</a>
+            <a href="{% url 'estoque:produto_editar' p.pk %}" class="botao-mini">Editar</a>
+          </span>
+        </td>
       </tr>
     {% empty %}
-      <tr><td colspan="7" class="vazio">Nenhum produto cadastrado. Cadastre categorias e locais primeiro, depois os produtos.</td></tr>
+      <tr><td colspan="6" class="vazio">
+        {% if filtros.q or filtros.categoria or filtros.situacao %}Nenhum produto com esses filtros.
+          <a href="{% url 'estoque:produtos' %}">Ver todos</a>.
+        {% else %}Nenhum produto cadastrado. Crie as categorias em
+          <a href="{% url 'estoque:cadastros' %}">Cadastros</a> e depois
+          <a href="{% url 'estoque:produto_novo' %}">cadastre o primeiro produto</a>.
+        {% endif %}
+      </td></tr>
     {% endfor %}
   </tbody>
 </table>
+{% include "componentes/paginacao.html" with pagina=pagina %}
 {% endblock %}

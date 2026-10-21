@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% load moeda estoque_extras nucleo_extras %}
+
+{% block titulo %}{% if produto %}{{ produto.nome }}{% else %}Novo produto{% endif %} — Estoque{% endblock %}
+
+{% block conteudo %}
+<p class="pagina-eyebrow letreiro">Vendas &amp; Estoque</p>
+<div class="pagina-cabecalho">
+  <h1>{% if produto %}{{ produto.nome }}{% else %}Novo produto{% endif %}</h1>
+  <a href="{% url 'estoque:produtos' %}" class="botao-neutro">Voltar aos produtos</a>
+</div>
+{% include "estoque/partials/nav.html" %}
+
+<div class="est-mov">
+  <form method="post" class="cartao-el est-mov-campos">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="mensagem error">{{ form.non_field_errors|join:" " }}</div>
+    {% endif %}
+
+    <h2 class="est-mov-titulo">Identificação</h2>
+    <div class="est-mov-grade est-grade-respiro">
+      <div class="campo">{{ form.nome|rotulo }}{{ form.nome }}
+        {% for e in form.nome.errors %}<small class="erro">{{ e }}</small>{% endfor %}</div>
+      <div class="campo">{{ form.codigo_barras|rotulo }}{{ form.codigo_barras }}
+        {% for e in form.codigo_barras.errors %}<small class="erro">{{ e }}</small>{% endfor %}</div>
+      <div class="campo">{{ form.categoria|rotulo }}{{ form.categoria }}
+        {% for e in form.categoria.errors %}<small class="erro">{{ e }}</small>{% endfor %}</div>
+      <div class="campo">{{ form.unidade|rotulo }}{{ form.unidade }}
+        <small class="ajuda">Como este produto é contado na prateleira.</small></div>
+    </div>
+
+    <h2 class="est-mov-titulo est-titulo-respiro">Preço e mínimo</h2>
+    <div class="est-mov-grade est-grade-respiro">
+      <div class="campo">{{ form.preco_venda|rotulo }}{{ form.preco_venda }}
+        {% for e in form.preco_venda.errors %}<small class="erro">{{ e }}</small>{% endfor %}</div>
+      <div class="campo">{{ form.estoque_minimo|rotulo }}{{ form.estoque_minimo }}
+        <small class="ajuda">{{ form.estoque_minimo.help_text }}</small>
+        {% for e in form.estoque_minimo.errors %}<small class="erro">{{ e }}</small>{% endfor %}</div>
+      <div class="campo">{{ form.natureza|rotulo }}{{ form.natureza }}
+        <small class="ajuda">{{ form.natureza.help_text }}</small></div>
+      <div class="campo campo-marcador">
+        <label class="check-inline">{{ form.ativo }} <span>{{ form.ativo.label }}</span></label>
+      </div>
+    </div>
+
+    <div class="acoes">
+      <button type="submit" class="botao-primario">Salvar produto</button>
+      <a href="{% url 'estoque:produtos' %}" class="botao-neutro">Cancelar</a>
+    </div>
+  </form>
+
+  <aside class="cartao-el est-previa">
+    {% if produto %}
+      <h3 class="letreiro">Como está hoje</h3>
+      <dl class="est-previa-linhas">
+        <div><dt>Custo médio</dt><dd>{{ produto.custo_medio|intcomma_brl }}</dd></div>
+        <div><dt>Preço de venda</dt><dd>{{ produto.preco_venda|intcomma_brl }}</dd></div>
+        {% if produto.margem %}<div><dt>Margem</dt><dd>{{ produto.margem|floatformat:0 }}%</dd></div>{% endif %}
+      </dl>
+      <h3 class="letreiro est-titulo-respiro">Saldo por local</h3>
+      <dl class="est-previa-linhas">
+        {% for s in saldos %}
+          <div><dt>{{ s.local.nome }}</dt><dd>{{ s.saldo|qtd:produto.unidade }}</dd></div>
+        {% empty %}
+          <div><dt>Nenhum local ativo</dt><dd>—</dd></div>
+        {% endfor %}
+      </dl>
+      <a href="{% url 'estoque:kardex' produto.pk %}" class="botao-neutro est-previa-botao">Ver kardex</a>
+      <p class="ajuda est-previa-nota">O custo médio é do motor: muda sozinho a cada
+        entrada, pela média ponderada. Não se digita aqui.</p>
+    {% else %}
+      <h3 class="letreiro">Antes de salvar</h3>
+      <p class="est-previa-vazia">O saldo não nasce no cadastro: depois de salvar,
+        registre uma <strong>entrada</strong> para o produto existir em algum depósito —
+        é ela que forma o custo médio.</p>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

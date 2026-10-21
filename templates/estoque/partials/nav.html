@@ -1,13 +1,33 @@
+{% comment %}
+Seções do Estoque. Eram NOVE filtro-chips em fila — e como a tela de Posição
+também filtra por local com chips, navegação e filtro ficavam idênticos na
+mesma página. Agora são cinco abas (controle de navegação, com ícone e
+sublinhado), e o chip volta a significar só uma coisa: filtro.
+
+As quatro movimentações (entrada, saída, transferência, ajuste) moram DENTRO de
+«Movimentar», no segmentado da própria tela; categorias e locais, em «Cadastros».
+{% endcomment %}
 {% with atual=request.resolver_match.url_name %}
-<div class="filtros subnav">
-  <a href="{% url 'estoque:posicao' %}" class="filtro-chip"{% if atual == 'posicao' %} aria-current="page"{% endif %}>Posição</a>
-  <a href="{% url 'estoque:produtos' %}" class="filtro-chip"{% if 'produto' in atual or atual == 'kardex' %} aria-current="page"{% endif %}>Produtos</a>
-  <a href="{% url 'estoque:entrada' %}" class="filtro-chip"{% if atual == 'entrada' %} aria-current="page"{% endif %}>Entrada</a>
-  <a href="{% url 'estoque:saida' %}" class="filtro-chip"{% if atual == 'saida' %} aria-current="page"{% endif %}>Saída</a>
-  <a href="{% url 'estoque:transferencia' %}" class="filtro-chip"{% if atual == 'transferencia' %} aria-current="page"{% endif %}>Transferência</a>
-  <a href="{% url 'estoque:ajuste' %}" class="filtro-chip"{% if atual == 'ajuste' %} aria-current="page"{% endif %}>Ajuste</a>
-  <a href="{% url 'estoque:inventarios' %}" class="filtro-chip"{% if 'inventario' in atual %} aria-current="page"{% endif %}>Inventário</a>
-  <a href="{% url 'estoque:categorias' %}" class="filtro-chip"{% if atual == 'categorias' %} aria-current="page"{% endif %}>Categorias</a>
-  <a href="{% url 'estoque:locais' %}" class="filtro-chip"{% if atual == 'locais' %} aria-current="page"{% endif %}>Locais</a>
-</div>
+<nav class="est-abas" aria-label="Seções do Estoque">
+  <a href="{% url 'estoque:posicao' %}" class="est-aba"{% if atual == 'posicao' %} aria-current="page"{% endif %}>
+    <svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
+    <span>Posição</span>
+  </a>
+  <a href="{% url 'estoque:produtos' %}" class="est-aba"{% if 'produto' in atual or atual == 'kardex' %} aria-current="page"{% endif %}>
+    <svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0l-7.2-7.2a2 2 0 0 1-.6-1.4V4a1 1 0 0 1 1-1h8a2 2 0 0 1 1.4.6l7.4 7.4a2 2 0 0 1 0 2.8z"/><circle cx="7.6" cy="7.6" r="1.2"/></svg>
+    <span>Produtos</span>
+  </a>
+  <a href="{% url 'estoque:entrada' %}" class="est-aba"{% if atual == 'entrada' or atual == 'saida' or atual == 'transferencia' or atual == 'ajuste' %} aria-current="page"{% endif %}>
+    <svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><path d="M4 8h12"/><path d="M13 5l3 3-3 3"/><path d="M20 16H8"/><path d="M11 13l-3 3 3 3"/></svg>
+    <span>Movimentar</span>
+  </a>
+  <a href="{% url 'estoque:inventarios' %}" class="est-aba"{% if 'inventario' in atual %} aria-current="page"{% endif %}>
+    <svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9z"/><path d="M9 13l2 2 4-4"/></svg>
+    <span>Inventário</span>
+  </a>
+  <a href="{% url 'estoque:cadastros' %}" class="est-aba"{% if atual == 'cadastros' %} aria-current="page"{% endif %}>
+    <svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="18" r="2"/></svg>
+    <span>Cadastros</span>
+  </a>
+</nav>
 {% endwith %}

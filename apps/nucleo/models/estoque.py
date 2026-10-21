@@ -15,7 +15,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import models, transaction
+from django.db import IntegrityError, models, transaction
 from django.db.models import Sum
 
 from .financeiro import NaturezaFiscal, centro_choices, registrar_auditoria
@@ -152,10 +152,19 @@ class MovimentoEstoque(models.Model):
         "documento de origem", max_length=80, blank=True,
         help_text="Nota fiscal, comanda, ordem — de onde veio o movimento.",
     )
+    fornecedor = models.ForeignKey(
+        "nucleo.Pessoa", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="entradas_estoque", verbose_name="fornecedor",
+        help_text="De quem veio a mercadoria (entrada por compra).",
+    )
     observacao = models.CharField("observação", max_length=200, blank=True)
     transferencia_par = models.ForeignKey(
         "self", on_delete=models.PROTECT, null=True, blank=True,
         related_name="par", verbose_name="par da transferência",
+    )
+    chave = models.UUIDField(
+        "chave do envio", null=True, blank=True, unique=True, editable=False,
+        help_text="Idempotência: o reenvio do mesmo formulário não grava de novo.",
     )
     criado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
@@ -208,7 +217,16 @@ def saldo(produto: Produto, local: LocalEstoque | None = None) -> Decimal:
 
 
 def posicao_estoque(local: LocalEstoque | None = None):
-    """Saldo por produto (opcionalmente de um local) + flag de estoque mínimo."""
+    """Saldo por produto (opcionalmente de um local) + flag de estoque mínimo.
+
+    DUAS consultas, qualquer que seja o tamanho do catálogo: uma soma os
+    movimentos agrupados por produto, a outra traz os produtos.
+
+    Situação (`situacao`) separa o que a tela precisa distinguir: `zerado`
+    (não tem nenhum) de `abaixo` (tem, mas menos que o mínimo). A chave antiga
+    `abaixo_minimo` (saldo <= mínimo, zerado incluído) continua valendo — é o
+    alerta que o painel e a Auditoria consomem.
+    """
     qs = MovimentoEstoque.objects.all()
     if local is not None:
         qs = qs.filter(local=local)
@@ -219,22 +237,122 @@ def posicao_estoque(local: LocalEstoque | None = None):
     linhas = []
     for produto in Produto.objects.filter(ativo=True).select_related("categoria"):
         atual = saldos.get(produto.pk, ZERO)
+        minimo = produto.estoque_minimo
+        zerado = atual <= ZERO
         linhas.append(
             {
                 "produto": produto,
                 "saldo": atual,
-                "abaixo_minimo": atual <= produto.estoque_minimo,
+                "abaixo_minimo": atual <= minimo,
+                "zerado": zerado,
+                "abaixo": not zerado and atual <= minimo,
+                "situacao": "zerado" if zerado else ("abaixo" if atual <= minimo else "ok"),
+                "nivel": _nivel(atual, minimo),
+                # Saldo zero tem dois sentidos bem diferentes quando se olha UM
+                # depósito: "acabou aqui" (tem história) e "nunca foi estocado
+                # aqui" (o catálogo inteiro aparecendo como falta).
+                "nunca_movimentou": produto.pk not in saldos,
                 "valor": (atual * produto.custo_medio).quantize(Decimal("0.01")),
             }
         )
     return linhas
 
 
+def _nivel(saldo_atual: Decimal, minimo: Decimal) -> int:
+    """0–100: o quanto o saldo preenche o mínimo (barra de nível da posição).
+
+    Sem mínimo definido não há régua: ou tem (cheio) ou não tem (vazio).
+    """
+    if saldo_atual <= ZERO:
+        return 0
+    if minimo <= ZERO:
+        return 100
+    return min(100, int(saldo_atual / minimo * 100))
+
+
 def produtos_abaixo_minimo() -> int:
     return sum(1 for linha in posicao_estoque() if linha["abaixo_minimo"])
 
 
+# ---------- Consultas de leitura para as telas (não mexem em nada) ----------
+
+
+def saldos_por_local(produto: Produto | None = None) -> dict:
+    """Saldo por local — de um produto (`{local_id: saldo}`) ou de todos
+    (`{(produto_id, local_id): saldo}`). UMA consulta nos dois casos."""
+    qs = MovimentoEstoque.objects.all()
+    if produto is not None:
+        qs = qs.filter(produto=produto)
+        return {
+            linha["local"]: linha["s"]
+            for linha in qs.values("local").annotate(s=Sum("quantidade"))
+        }
+    return {
+        (linha["produto"], linha["local"]): linha["s"]
+        for linha in qs.values("produto", "local").annotate(s=Sum("quantidade"))
+    }
+
+
+def resumo_locais():
+    """Por local: quantos produtos têm saldo, quanto vale e quantos estão no
+    mínimo. Alimenta a seleção de local da posição. DUAS consultas, sempre."""
+    saldos = saldos_por_local()
+    produtos = {
+        p.pk: p for p in Produto.objects.filter(ativo=True).only(
+            "id", "custo_medio", "estoque_minimo"
+        )
+    }
+    por_local: dict[int, dict] = {}
+    for (produto_id, local_id), saldo_atual in saldos.items():
+        produto = produtos.get(produto_id)
+        if produto is None or saldo_atual <= ZERO:
+            continue
+        acumulado = por_local.setdefault(local_id, {"itens": 0, "valor": ZERO, "alertas": 0})
+        acumulado["itens"] += 1
+        acumulado["valor"] += saldo_atual * produto.custo_medio
+        if saldo_atual <= produto.estoque_minimo:
+            acumulado["alertas"] += 1
+    vazio = {"itens": 0, "valor": ZERO, "alertas": 0}
+    return [
+        {"local": local, **por_local.get(local.pk, vazio),
+         "valor": por_local.get(local.pk, vazio)["valor"].quantize(Decimal("0.01"))}
+        for local in LocalEstoque.objects.filter(ativo=True)
+    ]
+
+
+def indicadores_estoque(linhas) -> dict:
+    """Totais da posição a partir das linhas já calculadas — sem consulta nova."""
+    return {
+        "valor": sum((linha["valor"] for linha in linhas), ZERO),
+        "abaixo": sum(1 for linha in linhas if linha["abaixo"]),
+        "zerados": sum(1 for linha in linhas if linha["zerado"]),
+        "itens": len(linhas),
+        "com_saldo": sum(1 for linha in linhas if linha["saldo"] > ZERO),
+    }
+
+
 # ---------- Movimentações (interface pública do motor) ----------
+
+
+def movimento_da_chave(chave):
+    """O movimento já gravado com esta chave de envio, se existir.
+
+    A chave é o antídoto do clique duplo: mesma chave = mesmo movimento. Quem
+    chama sem chave (Loja, Restaurante, Lavanderia, Frigobar) não muda em nada.
+    """
+    if not chave:
+        return None
+    return MovimentoEstoque.objects.filter(chave=chave).first()
+
+
+def _repetido(chave, erro):
+    """Numa corrida, o segundo envio esbarra na unicidade da chave — pela
+    exceção do banco (IntegrityError) ou pelo `full_clean` (ValidationError).
+    Se o movimento daquela chave está lá, foi repetição; senão, o erro é real."""
+    existente = movimento_da_chave(chave)
+    if existente is None:
+        raise erro
+    return existente
 
 
 def _novo_movimento(produto, local, tipo, quantidade, usuario, **extra):
@@ -246,11 +364,31 @@ def _novo_movimento(produto, local, tipo, quantidade, usuario, **extra):
     return mov
 
 
-@transaction.atomic
 def registrar_entrada(
-    produto, local, quantidade, custo_unitario, usuario, documento="", observacao=""
+    produto, local, quantidade, custo_unitario, usuario, documento="", observacao="",
+    fornecedor=None, chave=None,
 ):
-    """Entrada por compra: soma ao saldo e recalcula o custo médio ponderado."""
+    """Entrada por compra: soma ao saldo e recalcula o custo médio ponderado.
+
+    Com `chave`, o reenvio do mesmo formulário devolve a entrada já gravada em
+    vez de somar de novo (e deslocar o custo médio)."""
+    existente = movimento_da_chave(chave)
+    if existente:
+        return existente
+    try:
+        return _registrar_entrada(
+            produto, local, quantidade, custo_unitario, usuario,
+            documento, observacao, fornecedor, chave,
+        )
+    except (IntegrityError, ValidationError) as erro:
+        return _repetido(chave, erro)
+
+
+@transaction.atomic
+def _registrar_entrada(
+    produto, local, quantidade, custo_unitario, usuario, documento, observacao,
+    fornecedor, chave,
+):
     quantidade = Decimal(quantidade)
     custo_unitario = Decimal(custo_unitario)
     if quantidade <= ZERO:
@@ -269,15 +407,31 @@ def registrar_entrada(
     return _novo_movimento(
         produto, local, MovimentoEstoque.Tipo.ENTRADA_COMPRA, quantidade, usuario,
         custo_unitario=custo_unitario, documento=documento, observacao=observacao,
+        fornecedor=fornecedor, chave=chave,
     )
 
 
-@transaction.atomic
 def registrar_saida(
     produto, local, quantidade, usuario,
-    tipo=MovimentoEstoque.Tipo.SAIDA_VENDA, documento="", observacao="",
+    tipo=MovimentoEstoque.Tipo.SAIDA_VENDA, documento="", observacao="", chave=None,
 ):
-    """Saída (venda/consumo/perda): valida saldo e baixa pelo custo médio."""
+    """Saída (venda/consumo/perda): valida saldo e baixa pelo custo médio.
+
+    Com `chave`, o reenvio devolve a saída já gravada em vez de baixar duas vezes."""
+    existente = movimento_da_chave(chave)
+    if existente:
+        return existente
+    try:
+        return _registrar_saida(
+            produto, local, quantidade, usuario, tipo, documento, observacao, chave
+        )
+    except (IntegrityError, ValidationError) as erro:
+        return _repetido(chave, erro)
+
+
+@transaction.atomic
+def _registrar_saida(produto, local, quantidade, usuario, tipo, documento,
+                     observacao, chave):
     quantidade = Decimal(quantidade)
     if quantidade <= ZERO:
         raise ValidationError("A quantidade de saída deve ser positiva.")
@@ -294,12 +448,29 @@ def registrar_saida(
     return _novo_movimento(
         produto, local, tipo, -quantidade, usuario,
         custo_unitario=produto.custo_medio, documento=documento, observacao=observacao,
+        chave=chave,
     )
 
 
+def transferir(produto, origem, destino, quantidade, usuario, observacao="",
+               chave=None):
+    """Transferência entre locais — registrada dos dois lados (movimentos ligados).
+
+    A `chave` fica na perna de SAÍDA (uma transferência, um envio): o reenvio
+    devolve o par já gravado."""
+    existente = movimento_da_chave(chave)
+    if existente:
+        return existente, existente.transferencia_par
+    try:
+        return _transferir(produto, origem, destino, quantidade, usuario,
+                           observacao, chave)
+    except (IntegrityError, ValidationError) as erro:
+        saida = _repetido(chave, erro)
+        return saida, saida.transferencia_par
+
+
 @transaction.atomic
-def transferir(produto, origem, destino, quantidade, usuario, observacao=""):
-    """Transferência entre locais — registrada dos dois lados (movimentos ligados)."""
+def _transferir(produto, origem, destino, quantidade, usuario, observacao, chave):
     quantidade = Decimal(quantidade)
     if origem == destino:
         raise ValidationError("Origem e destino não podem ser o mesmo local.")
@@ -316,7 +487,7 @@ def transferir(produto, origem, destino, quantidade, usuario, observacao=""):
     custo = produto.custo_medio
     saida = _novo_movimento(
         produto, origem, MovimentoEstoque.Tipo.TRANSFERENCIA_SAIDA, -quantidade,
-        usuario, custo_unitario=custo,
+        usuario, custo_unitario=custo, chave=chave,
         observacao=observacao or f"Transferência para {destino}",
     )
     entrada = _novo_movimento(
@@ -413,11 +584,20 @@ class Inventario(models.Model):
         return f"Inventário {self.local} ({self.get_status_display()})"
 
     @transaction.atomic
-    def aplicar(self, usuario):
-        """Gera um ajuste para cada item com diferença e fecha o inventário."""
+    def aplicar(self, usuario, somente_contados=False):
+        """Gera um ajuste para cada item com diferença e fecha o inventário.
+
+        `somente_contados=True` (o que a tela de contagem usa) ignora o item que
+        ninguém contou. Importa: o item nasce com `quantidade_contada` = saldo da
+        ABERTURA; se houver uma venda durante a contagem, aplicar esse número de
+        volta apagaria a baixa. Quem não foi contado fica como está.
+        """
         if self.status != self.Status.ABERTO:
             raise ValidationError("Este inventário já foi aplicado ou cancelado.")
-        for item in self.itens.select_related("produto"):
+        itens = self.itens.select_related("produto")
+        if somente_contados:
+            itens = itens.filter(contado=True)
+        for item in itens:
             ajustar(
                 item.produto, self.local, item.quantidade_contada, usuario,
                 motivo=f"Inventário #{self.pk}",
@@ -445,6 +625,10 @@ class ItemInventario(models.Model):
     quantidade_contada = models.DecimalField(
         "quantidade contada", max_digits=12, decimal_places=3, default=ZERO
     )
+    contado = models.BooleanField(
+        "contado", default=False,
+        help_text="Alguém conferiu este item na prateleira (não é o palpite da abertura).",
+    )
 
     class Meta:
         verbose_name = "item de inventário"
@@ -461,3 +645,8 @@ class ItemInventario(models.Model):
     @property
     def diferenca(self) -> Decimal:
         return self.quantidade_contada - self.saldo_sistema
+
+    @property
+    def valor_diferenca(self) -> Decimal:
+        """Quanto a diferença vale (ao custo médio) — sobra ou falta em dinheiro."""
+        return (self.diferenca * self.produto.custo_medio).quantize(Decimal("0.01"))

@@ -1,38 +1,76 @@
 {% extends "base.html" %}
+{% load moeda nucleo_extras %}
 
 {% block titulo %}Inventário — Estoque{% endblock %}
 
 {% block conteudo %}
-<p class="pagina-eyebrow letreiro">Vendas & Estoque</p>
-<h1>Inventário</h1>
+<p class="pagina-eyebrow letreiro">Vendas &amp; Estoque</p>
+<div class="pagina-cabecalho">
+  <h1>Inventário</h1>
+</div>
 {% include "estoque/partials/nav.html" %}
-<p class="subtitulo">Contagem física por local. Ao aplicar, o sistema gera os ajustes auditados das diferenças.</p>
 
-<div class="colunas">
-  <section>
-    <h2>Inventários</h2>
-    <table class="tabela">
-      <thead><tr><th>Aberto em</th><th>Local</th><th>Status</th></tr></thead>
+<p class="subtitulo">Contagem física de um depósito. Enquanto a contagem está aberta nada
+  muda no saldo; ao aplicar, o sistema gera um ajuste auditado para cada diferença —
+  e deixa de fora o que ninguém contou.</p>
+
+<div class="est-mov">
+  <div class="est-mov-campos">
+    <table class="tabela est-tabela">
+      <thead>
+        <tr>
+          <th>Contagem</th>
+          <th>Local</th>
+          <th>Situação</th>
+          <th class="num">Contados</th>
+          <th class="num">Diferença</th>
+          <th class="col-acao">Ações</th>
+        </tr>
+      </thead>
       <tbody>
         {% for inv in inventarios %}
           <tr>
-            <td><a href="{% url 'estoque:inventario' inv.pk %}">{{ inv.criado_em|date:"d/m/Y H:i" }}</a></td>
+            <td class="nao-quebra">
+              <a href="{% url 'estoque:inventario' inv.pk %}" class="est-produto-nome">#{{ inv.pk }} · {{ inv.criado_em|date:"d/m/Y" }}</a>
+              <small class="camp-sub">por {{ inv.criado_por.get_short_name|default:inv.criado_por.username }}</small>
+            </td>
             <td>{{ inv.local.nome }}</td>
-            <td>{{ inv.get_status_display }}</td>
+            <td>
+              <span class="selo {% if inv.status == 'aberto' %}selo-pendente{% elif inv.status == 'aplicado' %}selo-concluida{% else %}selo-neutro{% endif %}">{{ inv.get_status_display }}</span>
+            </td>
+            <td class="num">{{ inv.itens_contados }} <span class="celula-suave">/ {{ inv.itens_total }}</span></td>
+            {% comment %}Falta é vermelho; sobra, verde. Os dois merecem olhar,
+            mas só a falta é dinheiro que sumiu.{% endcomment %}
+            <td class="num {% if inv.valor_diferenca < 0 %}est-previa-erro{% elif inv.valor_diferenca > 0 %}est-dif-sobra{% endif %}">
+              {% if inv.itens_contados %}{{ inv.valor_diferenca|intcomma_brl }}{% else %}—{% endif %}
+            </td>
+            <td class="col-acao">
+              <a href="{% url 'estoque:inventario' inv.pk %}" class="botao-mini">
+                {% if inv.status == 'aberto' %}Continuar{% else %}Ver{% endif %}</a>
+            </td>
           </tr>
         {% empty %}
-          <tr><td colspan="3" class="vazio">Nenhum inventário ainda. Comece uma contagem física em <strong>Abrir contagem</strong>, ao lado.</td></tr>
+          <tr><td colspan="6" class="vazio">Nenhuma contagem ainda. Abra a primeira ao lado.</td></tr>
         {% endfor %}
       </tbody>
     </table>
-  </section>
-  <section>
-    <h2>Abrir contagem</h2>
-    <form method="post" class="form-cartao">
+    {% include "componentes/paginacao.html" with pagina=pagina %}
+  </div>
+
+  <aside class="cartao-el est-previa">
+    <h3 class="letreiro">Abrir contagem</h3>
+    <form method="post">
       {% csrf_token %}
       {% include "nucleo/partials/campos.html" %}
-      <div class="acoes"><button type="submit" class="botao-primario">Abrir inventário</button></div>
+      <button type="submit" class="botao-primario est-previa-botao">Abrir inventário</button>
     </form>
-  </section>
+    <p class="ajuda est-previa-nota">A contagem abre com todos os produtos ativos e o saldo
+      do sistema de agora. Conte na prateleira e digite o que encontrou; o que ficar em
+      branco continua como está.</p>
+    {% if abertos %}
+      <p class="est-previa-aviso est-aviso-neutro">{{ abertos }} contagem{{ abertos|pluralize:"ns" }} em aberto.
+        Duas contagens do mesmo local ao mesmo tempo brigam entre si — feche uma antes de abrir outra.</p>
+    {% endif %}
+  </aside>
 </div>
 {% endblock %}

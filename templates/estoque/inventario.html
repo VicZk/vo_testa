@@ -1,58 +1,214 @@
 {% extends "base.html" %}
+{% load l10n moeda estoque_extras %}
 
-{% block titulo %}Contagem — Estoque{% endblock %}
+{% block titulo %}Contagem #{{ inventario.pk }} — Estoque{% endblock %}
 
 {% block conteudo %}
-<p class="pagina-eyebrow letreiro">Vendas & Estoque</p>
+<p class="pagina-eyebrow letreiro">Vendas &amp; Estoque</p>
 <div class="pagina-cabecalho">
-  <h1>Inventário #{{ inventario.pk }} — {{ inventario.local.nome }}</h1>
-  <span class="selo">{{ inventario.get_status_display }}</span>
+  <h1>Contagem #{{ inventario.pk }} — {{ inventario.local.nome }}</h1>
+  <div class="linha-botoes">
+    <span class="selo {% if inventario.status == 'aberto' %}selo-pendente{% elif inventario.status == 'aplicado' %}selo-concluida{% else %}selo-neutro{% endif %}">{{ inventario.get_status_display }}</span>
+    <a href="{% url 'estoque:inventarios' %}" class="botao-neutro">Voltar</a>
+  </div>
 </div>
 {% include "estoque/partials/nav.html" %}
 
 {% if inventario.status == "aberto" %}
-  <p class="subtitulo">Informe a quantidade contada de cada produto. Salve para continuar depois, ou aplique para gerar os ajustes.</p>
-  <form method="post">
-    {% csrf_token %}
-    <table class="tabela">
-      <thead>
-        <tr><th>Produto</th><th>Saldo no sistema</th><th>Contado</th><th>Diferença</th></tr>
-      </thead>
-      <tbody>
-        {% for item in itens %}
-          <tr>
-            <td>{{ item.produto.nome }}</td>
-            <td>{{ item.saldo_sistema }} {{ item.produto.get_unidade_display|lower }}</td>
-            <td><input type="number" step="0.001" min="0" name="item_{{ item.pk }}" value="{{ item.quantidade_contada }}"></td>
-            <td class="{% if item.diferenca %}texto-alerta{% endif %}">{{ item.diferenca }}</td>
-          </tr>
-        {% empty %}
-          <tr><td colspan="4" class="vazio">Nenhum produto ativo para contar.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+<form method="post" x-data="contagemEstoque({{ resumo.total }})">
+  {% csrf_token %}
+
+  <div class="est-contagem-topo">
+    <div class="est-progresso-bloco">
+      <div class="est-progresso-cab">
+        <span class="letreiro">Contados</span>
+        <strong><span x-text="contados">{{ resumo.contados }}</span> de {{ resumo.total }}</strong>
+      </div>
+      <div class="est-progresso" role="progressbar" aria-label="Itens contados"
+           :aria-valuenow="progresso" aria-valuemin="0" aria-valuemax="100">
+        <span class="est-progresso-marca" :style="`width: ${progresso}%`"></span>
+      </div>
+      <p class="ajuda">Conte na prateleira e digite o que encontrou. O que ficar em branco
+        não entra no ajuste — fica exatamente como está.</p>
+    </div>
+
+    <div class="est-contagem-resumo">
+      <div class="est-resumo-item">
+        <span class="kpi-rot">Com diferença</span>
+        <span class="kpi-val" x-text="divergentes">0</span>
+      </div>
+      <div class="est-resumo-item">
+        <span class="kpi-rot">Vale</span>
+        <span class="kpi-val" :class="valor < 0 && 'est-previa-erro'" x-text="dinheiro(valor)">R$ 0,00</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="filtro-barra est-filtros">
+    <div class="filtro-campo est-filtro-busca">
+      <label for="busca-item">Buscar na lista</label>
+      <input type="search" id="busca-item" x-model="busca" placeholder="Nome do produto ou categoria"
+             autocomplete="off" @keydown.enter.prevent>
+    </div>
+    <div class="filtro-campo">
+      <label for="modo-lista">Mostrar</label>
+      <select id="modo-lista" x-model="modo">
+        <option value="todos">Todos os produtos</option>
+        <option value="faltam">Só o que falta contar</option>
+        <option value="diferem">Só o que deu diferença</option>
+      </select>
+    </div>
+  </div>
+
+  <table class="tabela est-tabela">
+    <thead>
+      <tr>
+        <th>Produto</th>
+        <th class="num">Sistema</th>
+        <th class="num">Contado</th>
+        <th class="num">Diferença</th>
+        <th class="num">Vale</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in itens %}
+        <tr x-data="linhaContagem({{ item.saldo_sistema|unlocalize }}, {{ item.produto.custo_medio|unlocalize }}, '{{ item.produto.nome|escapejs }} {{ item.produto.categoria.nome|escapejs }}', '{% if item.contado %}{{ item.quantidade_contada|campo_num }}{% endif %}')"
+            x-init="registrar($data)" x-show="visivel($data)" :class="preenchido && dif !== 0 && 'est-linha-diferenca'">
+          <td>
+            <span class="est-produto-nome">{{ item.produto.nome }}</span>
+            <span class="est-produto-meta"><span class="rotulo-dado">{{ item.produto.categoria.nome }}</span></span>
+          </td>
+          <td class="num celula-suave">{{ item.saldo_sistema|qtd:item.produto.unidade }}</td>
+          <td class="num">
+            <div class="est-campo-unidade est-campo-contagem">
+              <input type="number" step="0.001" min="0" name="item_{{ item.pk }}" x-model="valor"
+                     aria-label="Contagem de {{ item.produto.nome }}" inputmode="decimal">
+              <span class="est-unidade">{{ item.produto.unidade|unidade_sigla }}</span>
+            </div>
+          </td>
+          <td class="num est-dif" :class="dif > 0 ? 'est-dif-sobra' : (dif < 0 ? 'est-previa-erro' : '')"
+              x-text="preenchido ? sinal(dif) + ' {{ item.produto.unidade|unidade_sigla }}' : '—'">—</td>
+          <td class="num celula-suave" x-text="preenchido && dif ? dinheiro(dif * custo) : '—'">—</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="vazio">Nenhum produto ativo para contar.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="est-aplicar cartao-el">
+    <div class="est-aplicar-texto">
+      <strong>Ao aplicar:</strong>
+      <span x-text="divergentes"></span> ajuste<span x-show="divergentes !== 1">s</span>
+      <span x-show="divergentes" x-cloak>(diferença de <span x-text="dinheiro(valor)"></span>)</span>,
+      com motivo «Inventário #{{ inventario.pk }}» e autor na trilha.
+      <span x-show="faltam" x-cloak x-text="fraseFaltam"></span>
+    </div>
     <div class="acoes">
       <button type="submit" class="botao-neutro">Salvar contagem</button>
       <button type="submit" name="aplicar" value="1" class="botao-primario"
-              onclick="return confirm('Aplicar o inventário? Os ajustes serão gerados e não podem ser desfeitos (só por novo ajuste).')">
+              onclick="return confirm('Aplicar a contagem? Os ajustes das diferenças serão gerados e não podem ser desfeitos (só por um novo ajuste).')">
         Aplicar inventário
       </button>
     </div>
-  </form>
+  </div>
+</form>
+
+<script>
+  // Totais ao vivo da contagem. Cada linha se registra no componente de cima; o
+  // número que vale é o do servidor, ao salvar — isto aqui é só o espelho.
+  function contagemEstoque(total) {
+    return {
+      busca: '', modo: 'todos', linhas: [], total: total,
+      registrar(linha) { this.linhas.push(linha); },
+      get contados() { return this.linhas.filter((l) => l.preenchido).length; },
+      get faltam() { return this.total - this.contados; },
+      get divergentes() { return this.linhas.filter((l) => l.preenchido && l.dif !== 0).length; },
+      get valor() {
+        return this.linhas.reduce((s, l) => s + (l.preenchido ? l.dif * l.custo : 0), 0);
+      },
+      get progresso() { return this.total ? Math.round(this.contados / this.total * 100) : 0; },
+      get fraseFaltam() {
+        const n = this.faltam;
+        return n === 1
+          ? '1 produto sem contagem fica como está.'
+          : n + ' produtos sem contagem ficam como estão.';
+      },
+      visivel(linha) {
+        const termo = this.busca.trim().toLowerCase();
+        if (termo && !linha.busca.includes(termo)) return false;
+        if (this.modo === 'faltam') return !linha.preenchido;
+        if (this.modo === 'diferem') return linha.preenchido && linha.dif !== 0;
+        return true;
+      },
+      dinheiro(v) {
+        return 'R$ ' + Number(v || 0).toLocaleString('pt-BR', {
+          minimumFractionDigits: 2, maximumFractionDigits: 2,
+        });
+      },
+    };
+  }
+
+  function linhaContagem(sistema, custo, busca, valorInicial) {
+    return {
+      sistema: sistema, custo: custo, busca: busca.toLowerCase(), valor: valorInicial,
+      get preenchido() { return this.valor !== '' && this.valor !== null && this.valor !== undefined; },
+      get dif() { return this.preenchido ? Number(this.valor) - this.sistema : 0; },
+      sinal(d) {
+        const n = Number(d || 0).toLocaleString('pt-BR', { maximumFractionDigits: 3 });
+        if (d > 0) return '+' + n;
+        if (d < 0) return '−' + n.replace('-', '');
+        return n;
+      },
+      dinheiro(v) {
+        return 'R$ ' + Number(v || 0).toLocaleString('pt-BR', {
+          minimumFractionDigits: 2, maximumFractionDigits: 2,
+        });
+      },
+    };
+  }
+</script>
+
 {% else %}
-  <p class="subtitulo">Inventário {{ inventario.get_status_display|lower }} em {{ inventario.aplicado_em|date:"d/m/Y H:i" }}.</p>
-  <table class="tabela">
-    <thead><tr><th>Produto</th><th>Saldo no sistema</th><th>Contado</th><th>Diferença</th></tr></thead>
+  <p class="subtitulo">Contagem {{ inventario.get_status_display|lower }}
+    {% if inventario.aplicado_em %}em {{ inventario.aplicado_em|date:"d/m/Y H:i" }}{% endif %}.
+    As diferenças viraram ajustes no kardex de cada produto.</p>
+
+  <div class="kpis est-kpis">
+    <div class="kpi">
+      <span class="kpi-rotulo letreiro">Itens contados</span>
+      <span class="kpi-valor">{{ resumo.contados }}<small> de {{ resumo.total }}</small></span>
+    </div>
+    <div class="kpi {% if resumo.divergentes %}alerta{% endif %}">
+      <span class="kpi-rotulo letreiro">Com diferença</span>
+      <span class="kpi-valor">{{ resumo.divergentes }}</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi-rotulo letreiro">Diferença em dinheiro</span>
+      <span class="kpi-valor">{{ resumo.valor|intcomma_brl }}</span>
+    </div>
+  </div>
+
+  <table class="tabela est-tabela">
+    <thead>
+      <tr><th>Produto</th><th class="num">Sistema</th><th class="num">Contado</th><th class="num">Diferença</th><th class="num">Vale</th></tr>
+    </thead>
     <tbody>
       {% for item in itens %}
-        <tr>
-          <td>{{ item.produto.nome }}</td>
-          <td>{{ item.saldo_sistema }}</td>
-          <td>{{ item.quantidade_contada }}</td>
-          <td>{{ item.diferenca }}</td>
+        <tr class="{% if item.contado and item.diferenca %}est-linha-diferenca{% endif %}">
+          <td>
+            <span class="est-produto-nome">{{ item.produto.nome }}</span>
+            {% if not item.contado %}<span class="est-produto-meta"><span class="rotulo-dado">Não contado</span></span>{% endif %}
+          </td>
+          <td class="num celula-suave">{{ item.saldo_sistema|qtd:item.produto.unidade }}</td>
+          <td class="num">{% if item.contado %}{{ item.quantidade_contada|qtd:item.produto.unidade }}{% else %}—{% endif %}</td>
+          <td class="num {% if item.contado and item.diferenca < 0 %}est-previa-erro{% elif item.contado and item.diferenca > 0 %}est-dif-sobra{% endif %}">
+            {% if item.contado %}{{ item.diferenca|qtd_sinal:item.produto.unidade }}{% else %}—{% endif %}
+          </td>
+          <td class="num celula-suave">{% if item.contado and item.diferenca %}{{ item.valor_diferenca|intcomma_brl }}{% else %}—{% endif %}</td>
         </tr>
       {% empty %}
-        <tr><td colspan="4" class="vazio">Este inventário foi fechado sem nenhum produto contado.</td></tr>
+        <tr><td colspan="5" class="vazio">Esta contagem foi fechada sem nenhum produto.</td></tr>
       {% endfor %}
     </tbody>
   </table>
