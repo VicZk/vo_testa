@@ -67,6 +67,38 @@ def aviso_nfce():
                        AVISO_SEM_NFCE)
 
 
+@register.inclusion_tag("componentes/copiar.html")
+def copiar(texto, rotulo="", recado="", telefone="", mostrar=True):
+    """Botão «Copiar» (+ «Enviar pelo WhatsApp») para tudo que a equipe manda a alguém.
+
+    Antes, link de pagamento, Pix copia-e-cola, endereço do portal e link da página
+    de captação eram texto solto: a recepção selecionava com o mouse, copiava e
+    colava no WhatsApp — com o risco clássico de levar meio código.
+
+    Uso:
+        {% copiar url rotulo="Link de pagamento"
+                  recado="Olá! Segue o link…" telefone=hospede.telefone %}
+
+    - `texto`    o que vai para a área de transferência (e para a mensagem);
+    - `rotulo`   legenda discreta em cima do bloco (entra também no leitor de tela);
+    - `recado`   frase cordial que abre a mensagem; vazio = sem botão de WhatsApp;
+    - `telefone` do destinatário; sem ele (ou ilegível) o WhatsApp abre para
+                 escolher o contato, em vez de não abrir;
+    - `mostrar`  False esconde o `<code>` e deixa só os botões (linha apertada).
+    """
+    from ..compartilhar import link_whatsapp, mensagem_whatsapp, telefone_whatsapp
+
+    texto = "" if texto is None else str(texto)
+    destino = telefone_whatsapp(telefone)
+    return {
+        "texto": texto,
+        "rotulo": rotulo,
+        "mostrar": mostrar,
+        "whatsapp": link_whatsapp(mensagem_whatsapp(recado, texto), telefone) if recado else "",
+        "tem_destino": bool(destino),
+    }
+
+
 @register.filter
 def rotulo(campo):
     """Rótulo do campo SEM o dois-pontos que o Django acrescenta.

@@ -301,3 +301,34 @@ class NovoQRTests(PortalBase):
         self.client.force_login(self.op)
         self.client.get(reverse("portal:qr_novo", args=[self.reserva.pk]))
         self.assertEqual(services.get_acesso(self.reserva.pk).token, antigo)
+
+
+class LinkDoQRTests(PortalBase):
+    """O QR serve quem está no balcão. Quem já subiu para o quarto — ou ainda nem
+    chegou, no caso do pré check-in — recebe o mesmo endereço por mensagem."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.op)
+        Pessoa.objects.filter(pk=self.hospede.pk).update(telefone="(49) 99964-8702")
+
+    def test_qr_do_portal_copia_o_link_e_manda_no_whatsapp_do_hospede(self):
+        html = self.client.get(reverse("portal:qr", args=[self.reserva.pk])).content.decode()
+        token = services.get_acesso(self.reserva.pk).token
+        self.assertIn(f'data-copiar="http://testserver/hospede/{token}/"', html)
+        self.assertIn("https://wa.me/5549999648702?text=", html)
+        self.assertIn("Enviar pelo WhatsApp", html)
+
+    def test_tela_do_pre_checkin_fala_de_ficha_e_nao_de_estadia(self):
+        """Mesma tela, dois links: o contexto mandava `finalidade` e o template
+        ignorava — o QR da FNRH dizia "acessa a própria estadia"."""
+        html = self.client.get(reverse("portal:qr_fnrh", args=[self.reserva.pk])).content.decode()
+        self.assertIn("Pré check-in (FNRH)", html)
+        self.assertIn("preenche a ficha de todos", html)
+        self.assertNotIn("acessa a própria estadia", html)
+        token = services.get_acesso(self.reserva.pk).token
+        self.assertIn(f'data-copiar="http://testserver/hospede/{token}/checkin/"', html)
+
+    def test_voltar_leva_para_a_reserva_e_nao_so_para_tras(self):
+        html = self.client.get(reverse("portal:qr", args=[self.reserva.pk])).content.decode()
+        self.assertIn(reverse("reservas:detalhe", args=[self.reserva.pk]), html)

@@ -1992,6 +1992,17 @@ class PaginaCaptacaoTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertContains(r, "/captacao/promo-lp/")
 
+    def test_link_publico_tem_copiar_e_whatsapp(self):
+        """Divulgar a LP é mandar o link: antes era um input e um `Copiar` sem
+        plano B onde a Clipboard API não existe (servidor local em http)."""
+        pag = self._pagina()
+        self.client.login(username="com", password="senha-forte-123")
+        r = self.client.get(reverse("comercial:pagina_detalhe", args=[pag.pk]))
+        html = r.content.decode()
+        self.assertIn('data-copiar="http://testserver/captacao/promo-lp/"', html)
+        self.assertIn("https://wa.me/?text=", html)
+        self.assertIn("Enviar pelo WhatsApp", html)
+
     def test_pixel_e_whatsapp_renderizam(self):
         self._pagina(meta_pixel_id="123456789", whatsapp_destino="5549999990000")
         r = self.client.get(reverse("captacao:publica", args=["promo-lp"]))

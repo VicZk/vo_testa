@@ -1120,6 +1120,24 @@ def pendentes_de_sinal():
     ]
 
 
+def contato_da_reserva(reserva_id) -> dict:
+    """Para quem mandar a mensagem desta reserva: {"nome", "telefone"}.
+
+    Quem paga vem primeiro (é dele a cobrança); sem pagador distinto, o hóspede.
+    Interface pública — o Pagamentos só tem o `reserva_id` solto e precisa do
+    telefone para o botão de WhatsApp. Reserva inexistente devolve dict vazio.
+    """
+    reserva = (
+        Reserva.objects.filter(pk=reserva_id)
+        .select_related("hospede", "titular")
+        .first()
+    )
+    if reserva is None:
+        return {}
+    pessoa = reserva.pagador          # titular do faturamento ou o próprio hóspede
+    return {"nome": pessoa.nome, "telefone": pessoa.telefone or ""}
+
+
 def estadia_ativa(reserva_id):
     """Reserva hospedada (em casa) por id, ou None. Base do Portal do Hóspede."""
     return (

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load nucleo_extras %}
 
 {% block titulo %}{{ pagina.nome }} — Páginas de Captação{% endblock %}
 
@@ -29,10 +30,8 @@
   <div class="detalhe-2col">
     <div class="cartao-el">
       <h3>Link público</h3>
-      <div class="linha-copia">
-        <input type="text" id="urlpub" value="{{ url_publica }}" readonly>
-        <button class="botao-mini" onclick="navigator.clipboard.writeText(document.getElementById('urlpub').value);this.textContent='Copiado!'">Copiar</button>
-      </div>
+      {# Era um input + copiar à mão, sem plano B onde a Clipboard API não existe. #}
+      {% copiar url_publica recado="Olá! Esta é a página da Pousada Vô Testa com a oferta que combinamos:" %}
       {% if not pagina.publicada %}
         <p class="eleg-intro respiro">A página está em <strong>{{ pagina.get_status_display|lower }}</strong> — o link só funciona depois de publicar.</p>
       {% endif %}

@@ -200,7 +200,7 @@
         <div class="l"><span>Score</span><b>{{ op.score }}/100</b></div>
       </div>
       {% if op.observacao %}<p class="op-obs op-obs-respiro">{{ op.observacao }}</p>{% endif %}
-      {% if op.reserva_id %}<p class="aviso-inline op-aviso">Convertida na reserva <a href="{% url 'reservas:detalhe' op.reserva_id %}">#{{ op.reserva_id }}</a>{% if op.cobranca_sinal_id %} · sinal #{{ op.cobranca_sinal_id }}{% endif %}.</p>{% endif %}
+      {% if op.reserva_id %}<p class="aviso-inline op-aviso">Convertida na reserva <a href="{% url 'reservas:detalhe' op.reserva_id %}">#{{ op.reserva_id }}</a>{% if op.cobranca_sinal_id %} · sinal <a href="{% url 'pagamentos:detalhe' op.cobranca_sinal_id %}">#{{ op.cobranca_sinal_id }}</a>{% endif %}.</p>{% endif %}
       {% if op.nps_convidado_em %}<p class="aviso-inline op-aviso">Hand-off NPS em {{ op.nps_convidado_em|date:"d/m/Y H:i" }}.</p>{% endif %}
       {% if op.status == 'perdida' and op.motivo_perda %}<p class="aviso-inline op-aviso">Perdida — motivo: {{ op.motivo_perda.nome }}.{% if op.motivo_perda_detalhe %} <span class="op-citacao">“{{ op.motivo_perda_detalhe }}”</span>{% endif %}</p>{% endif %}
     </div>

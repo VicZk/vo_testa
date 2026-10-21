@@ -834,3 +834,44 @@ class ConciliacaoRotuloTests(PagamentosBase):
         linha = services.conciliacao()[0]
         self.assertEqual(linha["rotulo"], dict(Cobranca.Status.choices)[linha["status"]])
         self.assertTrue(linha["rotulo"][0].isupper())
+
+
+class BotoesDeCopiarTests(PagamentosBase):
+    """Mandar o link é o que mais se faz com uma cobrança pendente. Antes era
+    selecionar o texto com o mouse; agora tem botão no painel e no detalhe."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.op)
+
+    def link(self, cobranca):
+        return "http://testserver" + reverse("pagamentos:pagar", args=[cobranca.token])
+
+    def test_detalhe_copia_o_link_e_o_pix(self):
+        c = self.cobranca(metodo="pix")
+        html = self.client.get(reverse("pagamentos:detalhe", args=[c.pk])).content.decode()
+        self.assertIn(f'data-copiar="{self.link(c)}"', html)
+        self.assertIn(f'data-copiar="{c.pix_copia_cola}"', html)
+        self.assertIn("Enviar pelo WhatsApp", html)
+
+    def test_whatsapp_do_detalhe_vai_para_o_telefone_do_pagador(self):
+        pagador = Pessoa.objects.create(nome="Maria Teste", telefone="(49) 99964-8702")
+        c = self.cobranca(pagador=pagador)
+        html = self.client.get(reverse("pagamentos:detalhe", args=[c.pk])).content.decode()
+        self.assertIn("https://wa.me/5549999648702?text=", html)
+
+    def test_sem_pagador_o_whatsapp_abre_para_escolher_o_contato(self):
+        c = self.cobranca()
+        html = self.client.get(reverse("pagamentos:detalhe", args=[c.pk])).content.decode()
+        self.assertIn("https://wa.me/?text=", html)
+
+    def test_painel_copia_o_link_da_cobranca_pendente_na_propria_linha(self):
+        c = self.cobranca()
+        html = self.client.get(reverse("pagamentos:painel")).content.decode()
+        self.assertIn(f'data-copiar="{self.link(c)}"', html)
+
+    def test_painel_nao_oferece_link_de_cobranca_ja_paga(self):
+        c = self.cobranca()
+        services.confirmar_pagamento(c, self.op)
+        html = self.client.get(reverse("pagamentos:painel")).content.decode()
+        self.assertNotIn(f'data-copiar="{self.link(c)}"', html)

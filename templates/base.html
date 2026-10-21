@@ -19,6 +19,8 @@
   <script src="{% static 'js/form-pt.js' %}" defer></script>
   {# Dicas (balão de hover) de todo [data-dica]: um motor só, fixo e dentro da tela. #}
   <script src="{% static 'js/dicas.js' %}" defer></script>
+  {# Botão "Copiar" de qualquer `data-copiar` (componentes/copiar.html). #}
+  <script src="{% static 'js/copiar.js' %}" defer></script>
   {% comment %}Movimento na navegação: a View Transition vale só para a troca de
   página (o hx-boost do menu leva `transition:true`; a navegação comum, o
   `@view-transition` do app.css). As trocas parciais do HTMX (item na comanda,

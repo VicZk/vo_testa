@@ -554,6 +554,11 @@ def detalhe(request, pk):
         cobrancas_reserva = cobrancas_da_reserva(reserva.pk)
         fin_cobr_pendente = sum((c.valor for c in cobrancas_reserva if c.pendente),
                                 Decimal("0.00"))
+        # Link público pronto para copiar/mandar no WhatsApp direto da linha.
+        for cobranca in cobrancas_reserva:
+            cobranca.link_publico = request.build_absolute_uri(
+                reverse("pagamentos:pagar", args=[cobranca.token])
+            )
     fin_saldo = fin_total - fin_recebido
 
     return render(

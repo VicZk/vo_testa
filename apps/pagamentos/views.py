@@ -5,12 +5,13 @@ from django.conf import settings
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-from apps.nucleo.models import Pessoa
+from apps.nucleo.models import Pessoa, modulo_ativo
 from apps.nucleo.modulos import Modulo
 from apps.nucleo.permissoes import eh_gerente, requer_gerencia, requer_modulo
 from apps.nucleo.ratelimit import limite_excedido
@@ -34,8 +35,19 @@ def _reservas_para_sinal(request):
 @never_cache
 @requer_modulo(Modulo.PAGAMENTOS)
 def painel(request):
+    cobrancas = list(Cobranca.objects.select_related("pagador")[:60])
+    # O link público de cada linha, pronto para o botão «Copiar» da lista: a
+    # recepção manda o link sem precisar abrir a cobrança. O telefone sai só do
+    # pagador do cadastro (o da reserva custaria uma consulta por linha).
+    for cobranca in cobrancas:
+        cobranca.link_publico = request.build_absolute_uri(
+            reverse("pagamentos:pagar", args=[cobranca.token])
+        )
+        cobranca.telefone_destino = (
+            cobranca.pagador.telefone if cobranca.pagador else ""
+        )
     return render(request, "pagamentos/painel.html", {
-        "cobrancas": Cobranca.objects.select_related("pagador")[:60],
+        "cobrancas": cobrancas,
         "pagadores": pessoas_agrupadas(),
         "metodos": Cobranca.Metodo.choices,
         "finalidades": Cobranca.Finalidade.choices,
@@ -172,7 +184,26 @@ def detalhe(request, pk):
     )
     return render(request, "pagamentos/detalhe.html", {
         "cobranca": cobranca, "eh_gerente": eh_gerente(request.user),
+        "link_publico": request.build_absolute_uri(
+            reverse("pagamentos:pagar", args=[cobranca.token])
+        ),
+        "telefone_destino": _telefone_do_pagador(cobranca),
     })
+
+
+def _telefone_do_pagador(cobranca) -> str:
+    """Para onde vai o botão «Enviar pelo WhatsApp» desta cobrança.
+
+    O pagador do cadastro manda; sem ele, vale o contato da reserva (o módulo
+    Reservas responde por service — aqui só temos o `reserva_id` solto). Sem
+    nenhum dos dois o botão abre o WhatsApp para escolher o contato.
+    """
+    if cobranca.pagador and cobranca.pagador.telefone:
+        return cobranca.pagador.telefone
+    if cobranca.reserva_id and modulo_ativo(Modulo.RESERVAS):
+        from apps.reservas.services import contato_da_reserva
+        return contato_da_reserva(cobranca.reserva_id).get("telefone", "")
+    return ""
 
 
 @requer_modulo(Modulo.PAGAMENTOS)

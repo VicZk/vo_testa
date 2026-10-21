@@ -5456,8 +5456,6 @@ body.escala-dragging .escala-drop { cursor: copy; }
   width: 100%; padding: .6rem .75rem; border: 1px solid var(--fio-forte); border-radius: var(--raio-p);
   background: var(--superficie); color: var(--tinta); font: inherit; margin-top: .25rem;
 }
-.linha-copia { display: flex; gap: .5rem; align-items: center; }
-.linha-copia input { flex: 1; margin-top: 0; }
 .qr-el { width: 100%; max-width: 180px; border-radius: var(--raio); }
 /* QR do hóspede (recepção → Portal): bloco estreito e centrado, o código no meio.
    `.form-cartao.qr-hospede-form` vem depois de `.form-cartao:not(:has(.form-grade))`
@@ -6155,3 +6153,48 @@ body.escala-dragging .escala-drop { cursor: copy; }
    ficava com "R$" numa linha e "4,20" na outra. Quando falta espaço, a tabela
    rola dentro do cartão (tabela-rol.js) — que é o jeito da casa. */
 .est-tabela td.num, .est-tabela th.num { white-space: nowrap; }
+
+/* ═══════════════════════════════════════════════════════════════
+   USABILIDADE — copiar e mandar pelo WhatsApp
+   O que a equipe antes selecionava com o mouse e colava na conversa: link de
+   pagamento, Pix copia-e-cola, endereço do portal, link da página de captação.
+   Markup em componentes/copiar.html, comportamento em static/js/copiar.js.
+   ═══════════════════════════════════════════════════════════════ */
+.copiar { margin-top: 1rem; }
+.copiar > .letreiro { display: block; }
+/* Mesmo papel morno do `.pix-box`: o código é texto para ler e conferir. */
+.copiar-texto {
+  display: block; margin-top: .3rem; padding: .7rem;
+  background: var(--superficie-2); border: 1px solid var(--fio);
+  border-radius: var(--raio-p);
+  font-size: .78rem; word-break: break-all;
+}
+/* Decide pelo espaço que tem, não pela janela: dentro de um cartão estreito
+   (painel lateral, coluna do detalhe) os dois botões empilham sozinhos. */
+.copiar-acoes { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .45rem; }
+.copiar-botao, .copiar-whats { gap: .35rem; padding-block: .45rem; }
+.copiar-botao .ico, .copiar-whats .ico { width: 15px; height: 15px; }
+/* Os dois ícones e os dois rótulos ocupam a MESMA célula: o botão já nasce com a
+   largura do maior, e confirmar a cópia não empurra o botão vizinho. */
+.copiar-pilha, .copiar-troca { display: grid; }
+.copiar-pilha > *, .copiar-troca > * {
+  grid-area: 1 / 1;
+  transition: opacity var(--mov-rapido) var(--curva);
+}
+.copiar-rot-feito, .copiar-ico-feito { opacity: 0; }
+.copiar-botao.copiado { color: var(--sucesso); background: var(--sucesso-bg);
+  border-color: color-mix(in srgb, var(--sucesso) 45%, transparent); }
+.copiar-botao.copiado .copiar-rot, .copiar-botao.copiado .copiar-ico-folha { opacity: 0; }
+.copiar-botao.copiado .copiar-rot-feito, .copiar-botao.copiado .copiar-ico-feito { opacity: 1; }
+/* Campo do plano B (navegador sem Clipboard API): existe só durante a cópia. */
+.copiar-plano-b { position: fixed; top: 0; left: 0; width: 1px; height: 1px;
+  padding: 0; border: 0; opacity: 0; }
+/* Botão centrado sob um bloco centrado (chave do MFA). */
+.copiar-centrado { display: flex; justify-content: center; }
+.copiar-centrado .copiar { margin-top: 0; }
+/* Dentro de uma célula de tabela o bloco não tem respiro próprio: ele divide a
+   linha com os outros botões e quebra quando a coluna aperta. */
+.copiar-celula { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+.copiar-celula .copiar, .copiar-celula .copiar-acoes { margin-top: 0; }
+/* No papel não há o que copiar. */
+@media print { .copiar-acoes { display: none; } }

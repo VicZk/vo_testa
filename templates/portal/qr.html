@@ -1,18 +1,29 @@
 {% extends "base.html" %}
+{% load nucleo_extras %}
 
-{% block titulo %}QR do hóspede — Portal{% endblock %}
+{% block titulo %}{% if finalidade %}QR do pré check-in{% else %}QR do hóspede{% endif %} — Portal{% endblock %}
 
 {% block conteudo %}
-<a href="#" class="voltar" onclick="history.back();return false;">
-  <svg viewBox="0 0 24 24" class="ico"><path d="M15 6l-6 6 6 6"/></svg> Voltar
+{% comment %}A mesma tela serve dois links: o portal da estadia e o pré check-in
+(FNRH). O contexto mandava `finalidade` e o template ignorava — a tela do FNRH
+dizia "Acesso do hóspede / acessa a própria estadia", que é outro link.{% endcomment %}
+<a href="{% url 'reservas:detalhe' reserva_id %}" class="voltar">
+  <svg viewBox="0 0 24 24" class="ico"><path d="M15 6l-6 6 6 6"/></svg> Reserva #{{ reserva_id }}
 </a>
 <p class="pagina-eyebrow letreiro">Portal do Hóspede</p>
-<h1>Acesso do hóspede — reserva #{{ reserva_id }}</h1>
-<p class="subtitulo">Mostre ou imprima este QR Code. O hóspede aponta a câmera e acessa a própria estadia (sem senha).</p>
+{% if finalidade %}
+  <h1>Pré check-in (FNRH) — reserva #{{ reserva_id }}</h1>
+  <p class="subtitulo">Mostre o QR Code — ou mande o link pelo WhatsApp. O hóspede responsável preenche a ficha de todos num celular só, antes de chegar.</p>
+{% else %}
+  <h1>Acesso do hóspede — reserva #{{ reserva_id }}</h1>
+  <p class="subtitulo">Mostre ou imprima este QR Code — ou mande o link pelo WhatsApp. O hóspede acessa a própria estadia sem senha.</p>
+{% endif %}
 
 <div class="painel-bloco qr-hospede">
   <div class="qr-hospede-codigo">{{ svg|safe }}</div>
-  <p class="ficha-texto qr-hospede-url"><code>{{ url }}</code></p>
+  {# Nem todo hóspede está no balcão: quem já foi para o quarto (ou ainda nem
+     chegou, no caso da FNRH) recebe o mesmo endereço por mensagem. #}
+  {% copiar url rotulo=rotulo_link telefone=telefone_hospede recado=recado_whatsapp %}
 </div>
 
 <form method="post" action="{% url 'portal:qr_novo' reserva_id %}" class="form-cartao qr-hospede-form">

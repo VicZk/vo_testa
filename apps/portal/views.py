@@ -148,6 +148,12 @@ def checkin(request, token):
 
 # ───────────────────────── Recepção (staff): QR do hóspede ─────────────────────────
 
+def _telefone_da_reserva(reserva_id) -> str:
+    """Telefone de quem recebe o link — o QR só serve a quem está no balcão."""
+    from apps.reservas.services import contato_da_reserva
+    return contato_da_reserva(reserva_id).get("telefone", "")
+
+
 @requer_modulo(Modulo.APPSITE)
 def qr(request, reserva_id):
     from apps.reservas.services import estadia_ativa
@@ -157,6 +163,11 @@ def qr(request, reserva_id):
     url = request.build_absolute_uri(reverse("portal:home", args=[acesso.token]))
     return render(request, "portal/qr.html", {
         "url": url, "svg": _qr_svg(url), "reserva_id": reserva_id, "voltar": "portal:qr",
+        "rotulo_link": "Link do portal do hóspede",
+        "telefone_hospede": _telefone_da_reserva(reserva_id),
+        "recado_whatsapp": "Olá! Este é o seu acesso à estadia na Pousada Vô Testa — "
+                           "aqui você vê a conta do quarto, pede no restaurante e "
+                           "solicita limpeza. Não precisa de senha:",
     })
 
 
@@ -184,6 +195,11 @@ def qr_fnrh(request, reserva_id):
     return render(request, "portal/qr.html", {
         "url": url, "svg": _qr_svg(url), "reserva_id": reserva_id,
         "finalidade": "FNRH (check-in online)", "voltar": "portal:qr_fnrh",
+        "rotulo_link": "Link do pré check-in",
+        "telefone_hospede": _telefone_da_reserva(reserva_id),
+        "recado_whatsapp": "Olá! Para a sua entrada na Pousada Vô Testa ser rápida, "
+                           "preencha a ficha de hospedagem por este link antes de "
+                           "chegar (dá para preencher a de todos num celular só):",
     })
 
 

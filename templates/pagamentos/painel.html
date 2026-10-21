@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load moeda %}
+{% load moeda nucleo_extras %}
 
 {% block titulo %}Pagamentos Online — CRM Vô Testa{% endblock %}
 
@@ -22,7 +22,7 @@
   <section>
     <h2>Cobranças</h2>
     <table class="tabela">
-      <thead><tr><th>#</th><th>Método</th><th>Descrição</th><th class="num">Valor</th><th>Situação</th></tr></thead>
+      <thead><tr><th>#</th><th>Método</th><th>Descrição</th><th class="num">Valor</th><th>Situação</th><th>Enviar</th></tr></thead>
       <tbody>
         {% for c in cobrancas %}
           <tr class="linha-clique" onclick="location.href='{% url 'pagamentos:detalhe' c.pk %}'">
@@ -31,9 +31,18 @@
             <td>{{ c.descricao }}</td>
             <td class="num">{{ c.valor|intcomma_brl }}</td>
             <td><span class="selo selo-pg-{{ c.status }}">{{ c.get_status_display }}</span></td>
+            {# Mandar o link é o que mais se faz com uma cobrança pendente: fica na
+               própria linha, sem abrir o detalhe. #}
+            <td onclick="event.stopPropagation()">
+              {% if c.pendente %}
+                <div class="copiar-celula">
+                  {% copiar c.link_publico mostrar=False telefone=c.telefone_destino recado="Olá! Aqui está o link para pagar a sua reserva na Pousada Vô Testa:" %}
+                </div>
+              {% endif %}
+            </td>
           </tr>
         {% empty %}
-          <tr><td colspan="5" class="vazio">Nenhuma cobrança ainda.</td></tr>
+          <tr><td colspan="6" class="vazio">Nenhuma cobrança ainda.</td></tr>
         {% endfor %}
       </tbody>
     </table>

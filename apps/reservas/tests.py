@@ -2492,7 +2492,10 @@ class PainelFinanceiroReservaTests(ReservasTestsBase):
         self.assertContains(resp, "Total previsto")
         self.assertContains(resp, "Saldo a receber")
         self.assertContains(resp, "Sinal de reserva")       # finalidade da cobrança
-        self.assertContains(resp, "Link de pagamento")       # cobrança pendente → link público
+        # Cobrança pendente → o link público, pronto para copiar/mandar. Antes era
+        # um link que ABRIA a página do hóspede; ver LinkDePagamentoNaReservaTests.
+        self.assertContains(resp, "data-copiar=")
+        self.assertContains(resp, "Enviar pelo WhatsApp")
 
     def test_detalhe_sem_cobranca_mostra_vazio(self):
         r = self.reserva(status=Reserva.Status.PRE_RESERVA)
@@ -2589,3 +2592,51 @@ class DesempenhoDoModalENoBancoTests(TestCase):
             cur.execute("SHOW jit")
             self.assertEqual(cur.fetchone()[0], "off")
 
+
+
+class ContatoDaReservaTests(ReservasTestsBase):
+    """Para onde o Pagamentos e o Portal mandam a mensagem desta reserva — sem
+    importar models de Reservas (interface pública)."""
+
+    def test_sem_titular_o_contato_e_o_hospede(self):
+        from . import services
+
+        Pessoa.objects.filter(pk=self.hospede.pk).update(telefone="(49) 99964-8702")
+        contato = services.contato_da_reserva(self.reserva().pk)
+        self.assertEqual(contato["nome"], "Maria Teste")
+        self.assertEqual(contato["telefone"], "(49) 99964-8702")
+
+    def test_com_titular_quem_recebe_e_quem_paga(self):
+        from . import services
+
+        agencia = Pessoa.objects.create(nome="Agência Teste", telefone="4920550005")
+        r = self.reserva()
+        r.titular = agencia
+        r.faturamento = Reserva.Faturamento.AGENCIA
+        r.save()
+        self.assertEqual(services.contato_da_reserva(r.pk)["nome"], "Agência Teste")
+
+    def test_reserva_inexistente_nao_estoura(self):
+        from . import services
+
+        self.assertEqual(services.contato_da_reserva(999999), {})
+
+
+class LinkDePagamentoNaReservaTests(ReservasTestsBase):
+    """Na linha da cobrança pendente, copiar/mandar o link é o passo seguinte —
+    antes só dava para abrir a página e copiar a barra de endereços."""
+
+    def test_linha_da_cobranca_pendente_tem_botao_de_copiar(self):
+        from apps.pagamentos import services as pagamentos
+
+        Pessoa.objects.filter(pk=self.hospede.pk).update(telefone="(49) 99964-8702")
+        r = self.reserva(status=Reserva.Status.PRE_RESERVA)
+        cobranca = pagamentos.criar_cobranca(
+            self.usuario, valor=Decimal("150.00"), metodo="pix",
+            descricao="Sinal", finalidade="sinal_reserva", reserva_id=r.pk,
+        )
+        self.client.force_login(self.usuario)
+        html = self.client.get(reverse("reservas:detalhe", args=[r.pk])).content.decode()
+        link = "http://testserver" + reverse("pagamentos:pagar", args=[cobranca.token])
+        self.assertIn(f'data-copiar="{link}"', html)
+        self.assertIn("https://wa.me/5549999648702?text=", html)

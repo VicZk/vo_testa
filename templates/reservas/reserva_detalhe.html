@@ -53,9 +53,18 @@ uma ficha: cada dado com o seu rótulo, lido de relance.{% endcomment %}
         <td>{{ c.get_finalidade_display }}</td>
         <td class="num">{{ c.valor|intcomma_brl }}</td>
         <td><span class="selo selo-pg-{{ c.status }}">{{ c.get_status_display }}</span></td>
-        <td class="nao-quebra">
-          <a href="{% url 'pagamentos:detalhe' c.pk %}" class="botao-mini">Abrir</a>
-          {% if c.pendente %}<a href="{% url 'pagamentos:pagar' c.token %}" target="_blank" class="botao-mini">Link de pagamento</a>{% endif %}
+        <td>
+          <div class="copiar-celula">
+            <a href="{% url 'pagamentos:detalhe' c.pk %}" class="botao-mini">Abrir</a>
+            {% comment %}Era um «Link de pagamento» que ABRIA a página do hóspede
+            numa aba — e a recepção então copiava a barra de endereços para colar
+            no WhatsApp. O que ela quer é mandar o link, não visitá-lo (a página
+            tem o botão «Já paguei»): agora copia ou manda daqui, e a página em si
+            segue a um clique, no detalhe da cobrança.{% endcomment %}
+            {% if c.pendente %}
+              {% copiar c.link_publico mostrar=False telefone=reserva.pagador.telefone recado="Olá! Aqui está o link para pagar a sua reserva na Pousada Vô Testa:" %}
+            {% endif %}
+          </div>
         </td>
       </tr>
       {% endfor %}
