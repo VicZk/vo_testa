@@ -1062,6 +1062,48 @@ def uhs_em_permanencia(dia=None):
     return UH.objects.filter(pk__in=ids)
 
 
+def ocupacao_por_uh(dia=None) -> dict:
+    """O que o PMS diz de cada quarto — base da conferência de ocupação da Governança
+    (relatório de discrepância). Interface pública: devolve dados, não models.
+
+    `{uh_id: {reserva_id, hospede, checkin, checkout, ocupado, chegada, saida_ate}}`
+    numa consulta. **Quarto fora do dicionário = o PMS o considera VAZIO** — e é essa
+    ausência, confrontada com o que a camareira viu, que acende o "sleeper".
+
+    - `ocupado`: hóspede em casa (status hospedada) — o que o PMS afirma AGORA;
+    - `chegada`: entrada prevista para `dia` cujo check-in ainda não foi lançado;
+    - `saida_ate`: a saída já era (checkout ≤ dia) — quarto visto vago aqui é saída
+      não lançada, não um hóspede que fugiu.
+    """
+    from django.db.models import Q
+
+    dia = dia or timezone.localdate()
+    reservas = list(
+        Reserva.objects.filter(
+            Q(status=Reserva.Status.HOSPEDADA)
+            | Q(status__in=[Reserva.Status.PRE_RESERVA, Reserva.Status.CONFIRMADA],
+                checkin=dia)
+        ).select_related("hospede")
+    )
+
+    def _info(r, *, ocupado, chegada):
+        return {
+            "reserva_id": r.pk, "hospede": r.hospede.nome,
+            "checkin": r.checkin, "checkout": r.checkout,
+            "ocupado": ocupado, "chegada": chegada, "saida_ate": r.checkout <= dia,
+        }
+
+    # Duas passadas na MESMA lista (sem consulta nova): no back-to-back o quarto tem
+    # chegada de hoje e hóspede ainda em casa — quem manda é quem está dentro.
+    info = {r.uh_id: _info(r, ocupado=False, chegada=True)
+            for r in reservas if r.status != Reserva.Status.HOSPEDADA}
+    for r in reservas:
+        if r.status == Reserva.Status.HOSPEDADA:
+            chegada = r.uh_id in info
+            info[r.uh_id] = _info(r, ocupado=True, chegada=chegada)
+    return info
+
+
 def pendentes_de_sinal():
     """Reservas que ainda podem receber sinal (orçamento/pré-reserva) — para o
     módulo Pagamentos vincular a cobrança. Retorna [{id, rotulo}]."""

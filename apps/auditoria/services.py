@@ -74,6 +74,7 @@ def varrer():
     # derrubar toda a varredura (degradação graciosa prometida no docstring).
     donos = [
         (Modulo.RESERVAS, "apps.reservas.services"),
+        (Modulo.GOVERNANCA, "apps.governanca.services"),
         (Modulo.MANUTENCAO, "apps.manutencao.services"),
         (Modulo.RESTAURANTE, "apps.restaurante.services"),
         (Modulo.LAVANDERIA, "apps.lavanderia.services"),

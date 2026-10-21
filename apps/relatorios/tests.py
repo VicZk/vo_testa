@@ -122,3 +122,84 @@ class RelatoriosViewTests(TestCase):
         Usuario.objects.create_user(username="op", password="senha-forte-123")
         self.client.login(username="op", password="senha-forte-123")
         self.assertEqual(self.client.get(reverse("relatorios:index")).status_code, 403)
+
+
+class RelatoriosGovernancaTests(TestCase):
+    """Os três relatórios da Governança entram no registro como os outros: grupo
+    "Por módulo", presos ao módulo, com CSV e a mesma regra de acesso."""
+
+    CHAVES = ["governanca_faxinas", "governanca_inspecao", "governanca_discrepancias"]
+
+    def setUp(self):
+        self.ger = Usuario.objects.create_superuser(
+            username="ger", password="senha-forte-123")
+        self.client.login(username="ger", password="senha-forte-123")
+        self.tipo = TipoUH.objects.create(nome="Standard", tarifa_base=Decimal("200"))
+        self.uh = UH.objects.create(numero="Quarto 01", tipo=self.tipo)
+
+    def test_estao_no_registro_amarrados_ao_modulo(self):
+        from apps.nucleo.modulos import Modulo
+        for chave in self.CHAVES:
+            r = services.RELATORIOS[chave]
+            self.assertEqual(r["grupo"], "Por módulo", chave)
+            self.assertEqual(r["modulo"], Modulo.GOVERNANCA, chave)
+        nomes = [r["nome"] for r in services.disponiveis()["Por módulo"]]
+        self.assertTrue(any("Governança" in n for n in nomes))
+
+    def test_somem_do_indice_com_o_modulo_inativo(self):
+        from apps.nucleo.models import ModuloContratado
+        from apps.nucleo.modulos import Modulo
+        ModuloContratado.objects.filter(codigo=Modulo.GOVERNANCA).update(ativo=False)
+        chaves = {r["chave"] for grupo in services.disponiveis().values() for r in grupo}
+        self.assertTrue(set(self.CHAVES).isdisjoint(chaves))
+        for chave in self.CHAVES:
+            self.assertEqual(
+                self.client.get(reverse("relatorios:relatorio", args=[chave])).status_code,
+                404, chave)
+
+    def test_renderizam_e_exportam_csv(self):
+        from apps.governanca import services as gov
+        gov.registrar_conferencia(self.uh, "vago", usuario=self.ger)
+        for chave in self.CHAVES:
+            url = reverse("relatorios:relatorio", args=[chave])
+            self.assertEqual(self.client.get(url).status_code, 200, chave)
+            csv_resp = self.client.get(url, {"export": "csv"})
+            self.assertIn("text/csv", csv_resp["Content-Type"], chave)
+
+    def test_sem_gerencia_403(self):
+        Usuario.objects.create_user(username="op", password="senha-forte-123")
+        self.client.logout()
+        self.client.login(username="op", password="senha-forte-123")
+        for chave in self.CHAVES:
+            self.assertEqual(
+                self.client.get(reverse("relatorios:relatorio", args=[chave])).status_code,
+                403, chave)
+
+    def test_faxinas_mostram_tempo_medio_legivel(self):
+        from apps.governanca.models import TarefaGovernanca
+        agora = timezone.now()
+        TarefaGovernanca.objects.create(
+            uh=self.uh, camareira=self.ger, status=TarefaGovernanca.Status.CONCLUIDA,
+            iniciada_em=agora - timedelta(minutes=75), concluida_em=agora)
+        hoje = timezone.localdate()
+        dados = services.rel_governanca_faxinas(hoje - timedelta(days=1), hoje)
+        self.assertEqual(dict(dados["kpis"])["Tempo médio"], "1 h 15 min")
+        self.assertEqual(dados["linhas"][0][-1], "1 h 15 min")
+
+    def test_sem_medida_de_tempo_a_celula_diz_isso(self):
+        """Zero minutos mentiria: faxina sem horário aparece como "—"."""
+        hoje = timezone.localdate()
+        dados = services.rel_governanca_faxinas(hoje - timedelta(days=1), hoje)
+        self.assertEqual(dict(dados["kpis"])["Tempo médio"], "—")
+
+    def test_discrepancias_tem_uma_coluna_por_tipo_de_achado(self):
+        from apps.governanca.models import ConferenciaOcupacao
+        hoje = timezone.localdate()
+        ConferenciaOcupacao.objects.create(
+            uh=self.uh, dia=hoje, visto="ocupado", pms_ocupado=False,
+            divergencia=ConferenciaOcupacao.Divergencia.SLEEPER)
+        dados = services.rel_governanca_discrepancias(hoje - timedelta(days=1), hoje)
+        self.assertEqual(dados["colunas"][:3], ["Dia", "Conferências", "Divergências"])
+        self.assertEqual(dict(dados["kpis"])["Divergências no período"], "1")
+        self.assertIn("Hóspede sem check-in (sleeper)", dados["colunas"])
+        self.assertEqual(dados["linhas"][0][:3], [f"{hoje:%d/%m/%Y}", "1", "1"])

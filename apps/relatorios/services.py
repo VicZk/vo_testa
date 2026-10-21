@@ -49,6 +49,14 @@ def _parte(parte, total):
 TRACO = "—"   # célula sem sentido naquela linha (não é zero)
 
 
+def _minutos(n):
+    """Duração em minutos como texto curto ("48 min", "1 h 12 min"). None = sem medida
+    — e aí a célula diz isso, em vez de mostrar um zero que mentiria."""
+    if n is None:
+        return "—"
+    return f"{n // 60} h {n % 60:02d} min" if n >= 60 else f"{n} min"
+
+
 # ───────────────────────── Consolidados (cruzados) ─────────────────────────
 
 def _movimentos_por_forma(inicio, fim):
@@ -371,6 +379,70 @@ def rel_comercial(inicio, fim):
     }
 
 
+def rel_governanca_faxinas(inicio, fim):
+    """Produtividade da governança: quem entregou quantas faxinas, de que tipo, e
+    quanto tempo levou entre iniciar e concluir."""
+    from apps.governanca.services import relatorio_faxinas
+    g = relatorio_faxinas(inicio, fim)
+    colunas = ["Camareira", "Concluídas"] + [label for _, label in g["tipos"]] + ["Tempo médio"]
+    linhas = [
+        [ln["camareira"], str(ln["n"])]
+        + [str(ln["tipos"].get(cod, 0)) for cod, _ in g["tipos"]]
+        + [_minutos(ln["minutos"])]
+        for ln in g["linhas"]
+    ]
+    return {
+        "kpis": [("Faxinas concluídas", str(g["total"])),
+                 ("Tempo médio", _minutos(g["minutos_medios"])),
+                 ("Com tempo medido", str(g["cronometradas"])),
+                 ("Camareiras", str(len(g["linhas"])))],
+        "colunas": colunas,
+        "linhas": linhas,
+    }
+
+
+def rel_governanca_inspecao(inicio, fim):
+    """Qualidade da entrega: faxinas aprovadas na inspeção × devolvidas para refazer."""
+    from apps.governanca.services import relatorio_inspecoes
+    g = relatorio_inspecoes(inicio, fim)
+    linhas = [[ln["camareira"], str(ln["inspecionadas"]), str(ln["reprovadas"]),
+               f"{ln['retrabalho']}%".replace(".", ",")]
+              for ln in g["linhas"]]
+    linhas += [[f"Motivo: {motivo}", "", str(n), ""] for motivo, n in g["motivos"]]
+    return {
+        "kpis": [("Aprovadas na inspeção", str(g["inspecionadas"])),
+                 ("Reprovadas (refazer)", str(g["reprovadas"])),
+                 ("Retrabalho", f"{g['retrabalho']}%".replace(".", ",")),
+                 ("Entregues sem inspeção", str(g["sem_inspecao"]))],
+        "colunas": ["Camareira", "Aprovadas", "Reprovadas", "Retrabalho"],
+        "linhas": linhas,
+    }
+
+
+def rel_governanca_discrepancias(inicio, fim):
+    """Discrepância da ronda por dia: onde a conferência da camareira não bateu com o
+    sistema. Skip = hóspede foi embora sem baixa (conta aberta); sleeper = tem gente
+    num quarto que o sistema dá como livre (check-in não lançado)."""
+    from apps.governanca.models import ConferenciaOcupacao
+    from apps.governanca.services import relatorio_discrepancias
+    g = relatorio_discrepancias(inicio, fim)
+    rotulos = dict(ConferenciaOcupacao.Divergencia.choices)
+    tipos = list(ConferenciaOcupacao.DIVERGENTES)
+    linhas = [
+        [f"{d['dia']:%d/%m/%Y}", str(d["conferencias"]), str(d["divergencias"])]
+        + [str(d[cod]) for cod in tipos]
+        for d in g["linhas"]
+    ]
+    return {
+        "kpis": [("Divergências no período", str(g["divergencias"])),
+                 ("Conferências registradas", str(g["conferencias"])),
+                 ("Dias com divergência", str(g["dias_com_divergencia"]))]
+                + [(rotulos[cod], str(g["por_tipo"][cod])) for cod in tipos],
+        "colunas": ["Dia", "Conferências", "Divergências"] + [rotulos[c] for c in tipos],
+        "linhas": linhas,
+    }
+
+
 def rel_reservas(inicio, fim):
     from apps.reservas.models import Reserva
     from apps.reservas.services import relatorio_reservas
@@ -414,6 +486,18 @@ RELATORIOS = {
                 "builder": rel_estoque_consumo, "modulo": Modulo.ESTOQUE},
     "reservas": {"nome": "Reservas — canal e status", "grupo": "Por módulo",
                  "builder": rel_reservas, "modulo": Modulo.RESERVAS},
+    "governanca_faxinas": {"nome": "Governança — faxinas por camareira",
+                           "grupo": "Por módulo",
+                           "builder": rel_governanca_faxinas,
+                           "modulo": Modulo.GOVERNANCA},
+    "governanca_inspecao": {"nome": "Governança — inspeção e retrabalho",
+                            "grupo": "Por módulo",
+                            "builder": rel_governanca_inspecao,
+                            "modulo": Modulo.GOVERNANCA},
+    "governanca_discrepancias": {"nome": "Governança — discrepâncias da ronda",
+                                 "grupo": "Por módulo",
+                                 "builder": rel_governanca_discrepancias,
+                                 "modulo": Modulo.GOVERNANCA},
     "comercial": {"nome": "Comercial — funil e conversão", "grupo": "Por módulo",
                   "builder": rel_comercial, "modulo": Modulo.COMERCIAL},
 }
