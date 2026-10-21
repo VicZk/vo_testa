@@ -103,13 +103,24 @@ def exclusao_dados(request):
 
 
 def quartos_todos(request):
-    """Página com TODOS os quartos (venda por unidade) — a partir do "Ver todos"."""
+    """Página com TODOS os quartos (venda por unidade) — a partir do "Ver todos".
+
+    Filtros (pessoas, tipo, qualidades) e ordem rodam no navegador
+    (`site/js/vitrine.js`); daqui só vão as opções que existem nos quartos publicados —
+    qualidade que nenhum quarto tem não vira filtro morto."""
+    from django.utils.text import slugify
+
     from apps.reservas import services as reservas
     vitrines = _vitrines_publicadas().order_by('ordem', 'uh__numero')
     quartos = [_card_de_uh(v, reservas.tarifa_base_unidade(v.uh)) for v in vitrines]
+    presentes = {nome for q in quartos for nome in q.qualidades}
+    qualidades = sorted(presentes, key=_posicao_da_qualidade)
     return render(request, 'site/quartos_todos.html', {
         'config': ConfiguracaoSite.load(),
         'quartos': quartos,
+        'filtro_qualidades': [(slugify(nome), nome) for nome in qualidades],
+        'filtro_tipos': sorted({q.categoria.nome for q in quartos}),
+        'filtro_pessoas': range(1, max((q.capacidade for q in quartos), default=0) + 1),
     })
 
 
@@ -237,6 +248,14 @@ def _temporada_de(data):
         classificacao=classificacao, get_tipo_display=rotulo,
         nome=vigente.nome if vigente else rotulo,
     )
+
+
+def _posicao_da_qualidade(nome):
+    """Ordem fixa dos filtros de qualidade na vitrine: a mesma do `_qualidades_uh`."""
+    from apps.nucleo.models import UH
+    ordem = (['Vista para o lago', 'Varanda', 'Ar-condicionado', 'Aceita pet']
+             + [rotulo for _, rotulo in UH.Cama.choices] + ['Acessível (PCD)'])
+    return ordem.index(nome) if nome in ordem else len(ordem)
 
 
 def _qualidades_uh(uh):

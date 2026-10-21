@@ -6,7 +6,7 @@
 
 {% block content %}
 <section class="bg-noturno min-h-screen pt-28 md:pt-32 pb-20 relative overflow-hidden">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 relative z-10" data-vitrine>
         <div class="text-center mb-12">
             <p class="text-lampiao text-xs sm:text-sm tracking-[0.3em] uppercase mb-3">Acomodações</p>
             <h1 class="font-display text-3xl sm:text-4xl md:text-5xl font-black text-pergaminho mb-3">Todos os Quartos</h1>
@@ -16,9 +16,60 @@
             </p>
         </div>
 
-        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+        {% comment %}Filtros: escondidos sem JS (a página mostra todos os quartos, como
+        antes); o `site/js/vitrine.js` revela a barra e filtra/ordena os cartões no
+        navegador pelos `data-*` de cada um.{% endcomment %}
+        {% if quartos|length > 1 %}
+        <div data-vitrine-filtros class="hidden mb-8 rounded-2xl border border-lampiao/20 bg-noturno/60 p-4 sm:p-5">
+            <div class="flex flex-wrap items-end gap-3 sm:gap-4">
+                <label class="flex flex-col gap-1.5 text-pergaminho/70 text-xs uppercase tracking-wider">
+                    Pessoas
+                    <select name="pessoas" class="min-h-[44px] rounded-lg border border-lampiao/30 bg-noturno px-3 text-sm normal-case tracking-normal text-pergaminho focus:border-lampiao focus:outline-none">
+                        <option value="">Qualquer</option>
+                        {% for n in filtro_pessoas %}<option value="{{ n }}">{{ n }} {% if n == 1 %}pessoa{% else %}pessoas{% endif %}</option>{% endfor %}
+                    </select>
+                </label>
+                {% if filtro_tipos|length > 1 %}
+                <label class="flex flex-col gap-1.5 text-pergaminho/70 text-xs uppercase tracking-wider">
+                    Tipo
+                    <select name="tipo" class="min-h-[44px] rounded-lg border border-lampiao/30 bg-noturno px-3 text-sm normal-case tracking-normal text-pergaminho focus:border-lampiao focus:outline-none">
+                        <option value="">Todos</option>
+                        {% for tipo in filtro_tipos %}<option value="{{ tipo }}">{{ tipo }}</option>{% endfor %}
+                    </select>
+                </label>
+                {% endif %}
+                <label class="flex flex-col gap-1.5 text-pergaminho/70 text-xs uppercase tracking-wider">
+                    Ordenar
+                    <select name="ordem" class="min-h-[44px] rounded-lg border border-lampiao/30 bg-noturno px-3 text-sm normal-case tracking-normal text-pergaminho focus:border-lampiao focus:outline-none">
+                        <option value="">Sugestão da casa</option>
+                        <option value="preco">Menor preço</option>
+                        <option value="preco-desc">Maior preço</option>
+                        <option value="nome">Nome (A–Z)</option>
+                    </select>
+                </label>
+            </div>
+            {% if filtro_qualidades %}
+            <div class="mt-4 flex flex-wrap gap-2" role="group" aria-label="Qualidades do quarto">
+                {% for slug, nome in filtro_qualidades %}
+                <button type="button" data-qualidade="{{ slug }}" aria-pressed="false"
+                        class="min-h-[44px] rounded-lg border border-lampiao/30 px-3 text-sm text-pergaminho/80 transition hover:border-lampiao/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lampiao aria-pressed:border-lampiao aria-pressed:bg-lampiao aria-pressed:text-noturno">{{ nome }}</button>
+                {% endfor %}
+            </div>
+            {% endif %}
+            <div class="mt-4 flex items-center justify-between gap-3 border-t border-pergaminho/10 pt-3 text-sm">
+                <p data-vitrine-contador aria-live="polite" class="text-pergaminho/70">{{ quartos|length }} quartos</p>
+                <button type="button" data-vitrine-limpar class="hidden min-h-[44px] text-lampiao underline-offset-4 hover:underline">Limpar filtros</button>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8" data-vitrine-grade>
             {% for quarto in quartos %}
-            <div class="group bg-noturno border border-lampiao/20 rounded-2xl overflow-hidden hover:border-lampiao/50 transition-all duration-500 hover:-translate-y-1 flex flex-col">
+            <div class="group bg-noturno border border-lampiao/20 rounded-2xl overflow-hidden hover:border-lampiao/50 transition-all duration-500 hover:-translate-y-1 flex flex-col"
+                 data-quarto data-ordem="{{ forloop.counter }}" data-nome="{{ quarto.nome }}"
+                 data-capacidade="{{ quarto.capacidade }}" data-tipo="{{ quarto.categoria.nome }}"
+                 data-preco="{{ quarto.preco_base|floatformat:'0u' }}"
+                 data-qualidades="{% for q in quarto.qualidades %}{{ q|slugify }}{% if not forloop.last %} {% endif %}{% endfor %}">
                 <a href="{% url 'core:quarto_detalhe' quarto.uh_id %}" class="block aspect-[4/3] bg-gradient-to-br from-madeira/30 to-madeira/10 flex items-center justify-center relative overflow-hidden">
                     {% if quarto.foto_principal %}
                     <img src="{{ quarto.foto_principal.url }}" alt="{{ quarto.nome }}" class="w-full h-full object-cover">
@@ -67,6 +118,10 @@
             <p class="text-pergaminho/70 col-span-full text-center py-16">Em breve, os quartos aparecem aqui.</p>
             {% endfor %}
         </div>
+        <div data-vitrine-vazio class="hidden text-center py-16">
+            <p class="text-pergaminho/70 mb-2">Nenhum quarto com esses filtros.</p>
+            <button type="button" data-vitrine-limpar class="min-h-[44px] text-lampiao underline-offset-4 hover:underline">Limpar filtros</button>
+        </div>
 
     </div>
 
@@ -81,4 +136,8 @@
         </div>
     </div>
 </section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'site/js/vitrine.js' %}" defer></script>
 {% endblock %}

@@ -902,3 +902,42 @@ class EncarregadoLGPDTests(TestCase):
             self.assertContains(site, "mailto:dados@pousada.test")
             lp = self.client.get("/privacidade/")
             self.assertContains(lp, "Maria Dados")
+
+
+class VitrineFiltrosTests(TestCase):
+    """/quartos/ tem filtros (pessoas, tipo, qualidades) e ordem: as opções vêm só do
+    que existe nos quartos publicados, e cada cartão leva os dados para o JS filtrar."""
+
+    def setUp(self):
+        from apps.nucleo.models import UH
+        from apps.nucleo.models import TipoUH as TipoUHCrm
+        from apps.site.models import VitrineQuarto
+
+        padrao = TipoUHCrm.objects.create(nome="Padrão", tarifa_base=Decimal("250"),
+                                          capacidade=2)
+        cabana = TipoUHCrm.objects.create(nome="Cabana", tarifa_base=Decimal("540"),
+                                          capacidade=6)
+        lago = UH.objects.create(numero="Q01", tipo=padrao, nome_tematico="Beira do Lago",
+                                 vista_lago=True)
+        UH.objects.create(numero="Q02", tipo=cabana, nome_tematico="Cabana do Vô")
+        for uh in UH.objects.filter(numero__in=["Q01", "Q02"]):
+            VitrineQuarto.objects.create(uh=uh, publicar=True)
+        self.lago = lago
+
+    def test_barra_de_filtros_com_as_opcoes_existentes(self):
+        corpo = self.client.get(reverse("core:quartos_todos")).content.decode()
+        self.assertIn("data-vitrine-filtros", corpo)
+        self.assertIn('<option value="Cabana">Cabana</option>', corpo)
+        self.assertIn('<option value="6">6 pessoas</option>', corpo)
+        self.assertIn('data-qualidade="vista-para-o-lago"', corpo)
+        # qualidade que nenhum quarto tem não vira filtro
+        self.assertNotIn('data-qualidade="varanda"', corpo)
+        self.assertIn("site/js/vitrine.js", corpo)
+
+    def test_cartao_leva_os_dados_para_filtrar(self):
+        corpo = self.client.get(reverse("core:quartos_todos")).content.decode()
+        self.assertIn('data-tipo="Padrão"', corpo)
+        self.assertIn('data-capacidade="6"', corpo)
+        self.assertIn('data-qualidades="vista-para-o-lago"', corpo)
+        self.assertRegex(corpo, r'data-preco="\d+"')
+
