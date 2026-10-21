@@ -1508,6 +1508,17 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 .chip-legenda-link { text-decoration: none; cursor: pointer; }
 .chip-legenda-link:hover { border-color: var(--fio-forte); }
 .chip-legenda.limp-suja i { background: var(--alerta); }
+/* Pouca largura (celular, menu aberto no tablet): o progresso e o que pede ação
+   sobem para antes da casa em blocos — eram oito fileiras de porta antes deles — e
+   a porta encolhe para as três linhas que tem. */
+.gov-visao { container: gov-visao / inline-size; display: flex; flex-direction: column; gap: 1.4rem; }
+.gov-visao > .corredor-hero, .gov-visao > .gov-progresso,
+.gov-visao > .atencao-secao, .gov-visao > .gov-colunas { margin: 0; }
+@container gov-visao (max-width: 600px) {
+  .gov-visao > .gov-progresso { order: -2; }
+  .gov-visao > .atencao-secao { order: -1; }
+  .corredor-gov .porta { aspect-ratio: auto; min-height: 0; }
+}
 .chip-legenda.limp-em_limpeza i { background: var(--andamento); }
 .chip-legenda.limp-limpa i { background: var(--sucesso); }
 .chip-legenda.limp-inspecionada i { background: var(--info); }
@@ -3113,15 +3124,13 @@ a.modulo-ativo:hover {
 .corredor-hero {
   margin: 0 0 1.25rem;
   overflow: visible;
-  /* O espaço para a dica abaixo da última fileira só existe quando há dica:
-     reservado sempre, deixava ~110px de vazio entre o corredor e o mural. */
+  /* A dica é um balão fixo por cima de tudo (dicas.js): o corredor não reserva
+     espaço para ela. Reservar ao passar o mouse empurrava 62 px a tela de baixo. */
   padding-bottom: .6rem;
-  transition: padding-bottom var(--mov-rapido) var(--curva);
   /* Contêiner de consulta: quantas portas cabem por fileira depende da largura
      que o corredor TEM (menu aberto ou recolhido), não só da janela. */
   container-type: inline-size;
 }
-.corredor-hero:has(.porta:hover) { padding-bottom: 4.5rem; }
 /* Oito portas por fileira — o que o manual da casa descreve e o que deixa o
    NOME DO HÓSPEDE legível. Com doze colunas, 11 dos 24 cartões truncavam o
    nome no desktop e 22 dos 24 no tablet ("Fernanda M…", "Ana Beatriz …"):

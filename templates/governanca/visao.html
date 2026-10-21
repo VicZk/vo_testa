@@ -21,6 +21,10 @@ lista operacional está a um toque, na aba Quartos.{% endcomment %}
 {% include "governanca/partials/abas.html" %}
 {% include "governanca/partials/como_funciona.html" %}
 
+{% comment %}`.gov-visao`: com pouca largura (celular, ou o menu aberto no tablet) a
+casa em blocos vira seis, oito fileiras — o progresso e o que pede ação sobem para
+antes dela (app.css).{% endcomment %}
+<div class="gov-visao">
 <section class="corredor-hero">
   {% include "governanca/partials/corredor_limpeza.html" %}
 </section>
@@ -35,7 +39,7 @@ A barra mostra a casa inteira repartida pelos quatro estados.{% endcomment %}
     </div>
     <p class="gov-progresso-nota">
       {% if falta_para_pronto %}
-        Faltam <strong>{{ falta_para_pronto }}</strong> quarto(s) para a casa toda ficar pronta{% if hora_checkin %};
+        Falta{{ falta_para_pronto|pluralize:"m" }} <strong>{{ falta_para_pronto }}</strong> quarto{{ falta_para_pronto|pluralize }} para a casa toda ficar pronta{% if hora_checkin %};
         o primeiro hóspede pode entrar às {{ hora_checkin|time:"H:i" }}{% endif %}.
       {% else %}
         Casa inteira pronta para receber hóspede.
@@ -47,7 +51,7 @@ A barra mostra a casa inteira repartida pelos quatro estados.{% endcomment %}
     {% for e in ciclo %}
       {% if e.n %}
         <span class="gov-barra-parte limp-{{ e.cod }}" style="width: {{ e.pct }}%"
-              title="{{ e.n }} {{ e.rotulo }}"></span>
+              data-dica="{{ e.rotulo }}: {{ e.n }}"></span>
       {% endif %}
     {% endfor %}
   </div>
@@ -120,23 +124,24 @@ A barra mostra a casa inteira repartida pelos quatro estados.{% endcomment %}
           <li>
             <span class="gov-carga-nome">{{ c.nome }}</span>
             <span class="gov-carga-barra" role="img"
-                  aria-label="{{ c.feitas }} entregue(s), {{ c.fazendo }} limpando, {{ c.pendentes }} na fila">
+                  aria-label="{{ c.feitas }} entregue{{ c.feitas|pluralize }}, {{ c.fazendo }} limpando, {{ c.pendentes }} na fila">
               <i class="parte-feitas" style="width: {{ c.barra_feitas }}%"></i>
               <i class="parte-fazendo" style="width: {{ c.barra_fazendo }}%"></i>
               <i class="parte-pendentes" style="width: {{ c.barra_pendentes }}%"></i>
             </span>
-            <span class="gov-carga-num"><b>{{ c.na_mao }}</b> na mão · {{ c.feitas }} feita(s)</span>
+            <span class="gov-carga-num"><b>{{ c.na_mao }}</b> na mão · {{ c.feitas }} feita{{ c.feitas|pluralize }}</span>
           </li>
         {% endfor %}
       </ul>
       <p class="ajuda gov-carga-legenda">
-        <span class="parte-feitas"></span> entregue
-        <span class="parte-fazendo"></span> limpando
-        <span class="parte-pendentes"></span> na fila
+        <span class="parte-feitas"></span> Entregue
+        <span class="parte-fazendo"></span> Limpando
+        <span class="parte-pendentes"></span> Na fila
       </p>
     {% else %}
       <p class="ajuda">Nenhuma faxina na fila hoje.</p>
     {% endif %}
   </section>
+</div>
 </div>
 {% endblock %}

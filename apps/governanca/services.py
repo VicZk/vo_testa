@@ -497,28 +497,35 @@ def visao_geral(dia=None) -> dict:
     # Níveis no vocabulário da casa (os mesmos da Visão geral do CRM):
     # `alerta` = vermelho (dinheiro/hóspede na porta), `aviso` = âmbar (precisa de
     # alguém hoje), `info` = azul (bom saber).
+    def s(n):   # plural como na Visão geral do CRM: "1 quarto", "2 quartos"
+        return "s" if n > 1 else ""
+
     atencao = []
     if chegadas_atrasadas:
+        n = len(chegadas_atrasadas)
         quartos = ", ".join(c["uh"].numero.replace("Quarto ", "") for c in chegadas_atrasadas[:6])
-        rotulo_quartos = "Quarto" if len(chegadas_atrasadas) == 1 else "Quartos"
+        # A lista abre no estado em que esses quartos estão — "a limpar" escondia
+        # o quarto que já está limpo e só espera a inspeção.
+        estados = {c["situacao"] for c in chegadas_atrasadas}
         atencao.append({
             "nivel": "alerta",
-            "rotulo": f"{len(chegadas_atrasadas)} chegada(s) sem quarto pronto",
-            "detalhe": f"{rotulo_quartos} {quartos} — hóspede chega hoje.",
-            "url": f"{url_quartos}?estado={StatusLimpeza.Situacao.SUJA}",
+            "rotulo": f"{n} chegada{s(n)} sem quarto pronto",
+            "detalhe": f"Quarto{s(n)} {quartos} — hóspede chega hoje.",
+            "url": f"{url_quartos}?estado={estados.pop()}" if len(estados) == 1 else url_quartos,
         })
     esperando = contagem[StatusLimpeza.Situacao.LIMPA]
     if esperando:
         atencao.append({
             "nivel": "aviso",
-            "rotulo": f"{esperando} quarto(s) esperando inspeção",
+            "rotulo": f"{esperando} quarto{s(esperando)} esperando inspeção",
             "detalhe": "Limpos, mas ainda não liberados para a recepção.",
             "url": f"{url_quartos}?estado={StatusLimpeza.Situacao.LIMPA}",
         })
     if divergentes:
+        n = len(divergentes)
         atencao.append({
             "nivel": "alerta",
-            "rotulo": f"{len(divergentes)} divergência(s) na ronda",
+            "rotulo": f"{n} divergência{s(n)} na ronda",
             "detalhe": "O que a camareira viu não bate com o sistema.",
             "url": reverse("governanca:discrepancias"),
         })
@@ -530,7 +537,7 @@ def visao_geral(dia=None) -> dict:
     if sem_camareira:
         atencao.append({
             "nivel": "aviso",
-            "rotulo": f"{sem_camareira} quarto(s) a limpar sem camareira",
+            "rotulo": f"{sem_camareira} quarto{s(sem_camareira)} a limpar sem camareira",
             "detalhe": "Ninguém na fila: escolha quem limpa.",
             "url": f"{url_quartos}?estado={StatusLimpeza.Situacao.SUJA}",
         })
@@ -538,7 +545,7 @@ def visao_geral(dia=None) -> dict:
     if a_conferir and not dados["sem_base"]:
         atencao.append({
             "nivel": "info",
-            "rotulo": f"{a_conferir} quarto(s) sem ronda hoje",
+            "rotulo": f"{a_conferir} quarto{s(a_conferir)} sem ronda hoje",
             "detalhe": "Ninguém registrou o que viu dentro.",
             "url": url_quartos,
         })
