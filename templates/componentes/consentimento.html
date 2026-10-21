@@ -8,28 +8,28 @@ não há decisão guardada. As tags de medição ficam como
 As cores vêm dos tokens do CRM quando existem (`var(--lampiao, …)`) e caem na
 paleta da marca no site, que não carrega o app.css.
 {% endcomment %}
-<section id="consentimento" class="consent" role="region" aria-label="Aviso de cookies e medição" hidden aria-hidden="true">
-  <div class="consent-caixa">
-    <p class="consent-txt">
+<section id="consentimento" class="aviso-cookies" role="region" aria-label="Aviso de cookies e medição" hidden aria-hidden="true">
+  <div class="aviso-cookies-caixa">
+    <p class="aviso-cookies-txt">
       <strong>Cookies e medição.</strong>
       Usamos cookies para entender como o site é usado e melhorar a experiência de reserva.
       Nada é carregado antes da sua escolha.
       <a href="{% url 'core:politica_privacidade' %}">Política de privacidade</a>.
     </p>
-    <div class="consent-acoes">
-      <button type="button" class="consent-btn consent-sim" data-consent-aceitar>Aceitar</button>
-      <button type="button" class="consent-btn consent-nao" data-consent-recusar>Recusar</button>
+    <div class="aviso-cookies-acoes">
+      <button type="button" class="aviso-cookies-btn aviso-cookies-sim" data-consent-aceitar>Aceitar</button>
+      <button type="button" class="aviso-cookies-btn aviso-cookies-nao" data-consent-recusar>Recusar</button>
     </div>
   </div>
 </section>
 <style>
-  .consent {
+  .aviso-cookies {
     position: fixed; z-index: 90; left: 0; right: 0; bottom: 0;
     padding: 0 16px 16px;
     font-family: inherit;
   }
-  .consent[hidden] { display: none; }
-  .consent-caixa {
+  .aviso-cookies[hidden] { display: none; }
+  .aviso-cookies-caixa {
     display: flex; align-items: center; gap: 16px 20px; flex-wrap: wrap;
     max-width: 960px; margin: 0 auto; padding: 16px 20px;
     background: var(--superficie, #FFFFFF);
@@ -38,36 +38,36 @@ paleta da marca no site, que não carrega o app.css.
     border-radius: var(--raio, 14px);
     box-shadow: 0 18px 44px rgba(5, 28, 44, .22);
   }
-  .consent-txt { flex: 1 1 320px; margin: 0; font-size: 14px; line-height: 1.55; }
-  .consent-txt a { color: var(--madeira, #4F2C1D); text-decoration: underline; }
-  .consent-acoes { display: flex; gap: 10px; flex: 0 0 auto; }
+  .aviso-cookies-txt { flex: 1 1 320px; margin: 0; font-size: 14px; line-height: 1.55; }
+  .aviso-cookies-txt a { color: var(--madeira, #4F2C1D); text-decoration: underline; }
+  .aviso-cookies-acoes { display: flex; gap: 10px; flex: 0 0 auto; }
   /* Aceitar e Recusar com o MESMO peso: mesmo tamanho, mesma fonte, mesma área
      de toque (44px). O que muda é só a cor — nada de "recusar" escondido. */
-  .consent-btn {
+  .aviso-cookies-btn {
     min-height: 44px; min-width: 116px; padding: 11px 20px;
     font: inherit; font-size: 14px; font-weight: 700; line-height: 1;
     border-radius: 999px; cursor: pointer;
   }
-  .consent-sim {
+  .aviso-cookies-sim {
     color: var(--noturno, #051C2C);
     background: var(--lampiao, #D7A048);
     border: 1px solid var(--lampiao, #D7A048);
   }
-  .consent-nao {
+  .aviso-cookies-nao {
     color: var(--tinta, #2C2722);
     background: var(--superficie-2, #F7F5F1);
     border: 1px solid var(--fio-forte, rgba(79, 44, 29, .3));
   }
-  .consent-btn:hover { filter: brightness(.97); }
-  .consent-btn:active { transform: translateY(1px); }
-  .consent-btn:focus-visible {
+  .aviso-cookies-btn:hover { filter: brightness(.97); }
+  .aviso-cookies-btn:active { transform: translateY(1px); }
+  .aviso-cookies-btn:focus-visible {
     outline: 2px solid var(--madeira, #4F2C1D);
     outline-offset: 2px;
     box-shadow: 0 0 0 3px rgba(215, 160, 72, .35);
   }
   @media (max-width: 520px) {
-    .consent-acoes { width: 100%; }
-    .consent-btn { flex: 1; }
+    .aviso-cookies-acoes { width: 100%; }
+    .aviso-cookies-btn { flex: 1; }
   }
 </style>
 <script src="{% static 'js/consentimento.js' %}" defer></script>

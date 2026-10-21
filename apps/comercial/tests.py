@@ -3330,6 +3330,30 @@ class LpsAutocontidasPedemConsentimentoTests(TestCase):
             r = self.client.get("/")
         self.assertIn(b'id="consentimento"', r.content)
 
+    def test_aviso_nao_reusa_classe_das_lps(self):
+        """O aviso nasceu com a classe `.consent` — a mesma do <label> do checkbox de
+        LGPD do formulário da Fundador e da Inauguração. O `position: fixed` do aviso
+        arrancava o checkbox do formulário (o botão de enviar subia por cima do texto)
+        e o `display: grid` de 22 px das LPs espremia o aviso. Nenhuma classe que o
+        <style> do aviso define pode aparecer no HTML de uma LP."""
+        import re
+        from pathlib import Path
+
+        from django.conf import settings
+
+        componente = (Path(settings.BASE_DIR) / "templates" / "componentes"
+                      / "consentimento.html").read_text(encoding="utf-8")
+        estilo = componente[componente.index("<style>"):componente.index("</style>")]
+        do_aviso = set(re.findall(r"\.([a-zA-Z][\w-]*)", estilo))
+        self.assertIn("aviso-cookies", do_aviso)
+        for lp in (Path(settings.BASE_DIR) / "LPs").glob("*/*.html"):
+            if lp.name.startswith("mockup"):
+                continue
+            with self.subTest(lp=lp.name):
+                html = lp.read_text(encoding="utf-8")
+                da_lp = {c for attr in re.findall(r'class="([^"]*)"', html) for c in attr.split()}
+                self.assertEqual(do_aviso & da_lp, set())
+
 
 class DesempenhoDoFunilEDoLeadTests(TestCase):
     """O lead abria com 444 consultas (o painel de quartos relia temporada, tarifas e
