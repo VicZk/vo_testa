@@ -22,11 +22,28 @@
   @font-face{font-family:'Neco';src:url('{% static "site/fonts/Neco-Medium.woff2" %}') format('woff2');font-weight:500;font-display:swap}
   @font-face{font-family:'Neco';src:url('{% static "site/fonts/Neco-Bold.woff2" %}') format('woff2');font-weight:700;font-display:swap}
   @font-face{font-family:'Neco';src:url('{% static "site/fonts/Neco-Black.woff2" %}') format('woff2');font-weight:900;font-display:swap}
-  :root{--noturno:#051C2C;--madeira:#4F2C1D;--lampiao:#D7A048;--pergaminho:#EFDBB2;--musgo:#2E483E}
+  :root{--noturno:#051C2C;--madeira:#4F2C1D;--lampiao:#D7A048;--pergaminho:#EFDBB2;--musgo:#2E483E;
+        --cinza-texto:#666}
   *{box-sizing:border-box;margin:0;padding:0}
   html{background:var(--noturno)}
   body{font-family:'Neco',Georgia,serif;background:var(--pergaminho);color:var(--noturno);line-height:1.6}
   .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+  /* Tom do letreiro/título por seção (fundo escuro = ouro; fundo claro = madeira). */
+  .kicker.ouro{color:var(--lampiao)}
+  .kicker.escuro{color:var(--madeira);opacity:.6}
+  h2.escuro{color:var(--madeira)}
+  .off.esgotada{color:color-mix(in srgb, var(--pergaminho) 60%, transparent)}
+  /* Respiro dos blocos da página. */
+  .historia-texto{margin-top:16px}
+  .oferta-cta{margin-top:24px}
+  .faq-lista{margin-top:20px}
+  .btn.respiro{margin-top:16px}
+  .foto-coluna{position:relative}
+  /* Aceite de e-mail do formulário: caixa + frase alinhadas pelo topo.
+     (`.consent` já é do aviso de cookies — daí o prefixo da LP.) */
+  .lp-aceite{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--cinza-texto);
+    text-align:left;margin:4px 0 2px;font-weight:400}
+  .lp-aceite > input{margin-top:3px}
   .kicker{color:var(--lampiao);font-size:13px;letter-spacing:.3em;text-transform:uppercase;font-weight:500;margin-bottom:14px}
   h2{font-weight:900;font-size:clamp(28px,4.5vw,46px);line-height:1.1}
   .btn{display:inline-flex;align-items:center;gap:8px;background:var(--lampiao);color:var(--noturno);font-weight:700;padding:14px 30px;border-radius:100px;text-decoration:none;transition:transform .15s,background .2s;cursor:pointer;border:none;font-family:inherit;font-size:16px}
@@ -165,9 +182,9 @@ gtag('js',new Date());gtag('config','{{ pagina.google_tag_id }}');
     <div>
       <p class="kicker">Nossa História</p>
       <h2>{{ pagina.historia_titulo }}</h2>
-      <div style="margin-top:16px">{{ pagina.historia_texto|linebreaks }}</div>
+      <div class="historia-texto">{{ pagina.historia_texto|linebreaks }}</div>
     </div>
-    <div style="position:relative">
+    <div class="foto-coluna">
       <div class="foto-roda">
         <img src="{% static 'site/img/ilustracao-roda.webp' %}" alt="Roda d'água" width="789" height="700" loading="lazy" decoding="async">
         <div class="cap">[ foto da roda d'água em frente à recepção ]</div>
@@ -182,7 +199,7 @@ gtag('js',new Date());gtag('config','{{ pagina.google_tag_id }}');
 {% if pagina.oferta_titulo %}
 <section class="fundador" id="oferta">
   <div class="wrap">
-    <p class="kicker" style="color:var(--lampiao)">Oferta de Lançamento</p>
+    <p class="kicker ouro">Oferta de Lançamento</p>
     <h2>{{ pagina.oferta_titulo }}</h2>
     {% if pagina.oferta_texto %}<p class="sub">{{ pagina.oferta_texto }}</p>{% endif %}
     <div class="degraus">
@@ -190,11 +207,11 @@ gtag('js',new Date());gtag('config','{{ pagina.google_tag_id }}');
         <small>Primeiras 8 diárias · + brinde de boas-vindas (espumante e late checkout)</small></div>
       <div class="card"><div class="off">−15%</div><h3>Segunda faixa</h3>
         <small>Próximas 8 diárias</small></div>
-      <div class="card"><div class="off" style="color:rgba(239,219,178,.6)">Cheia</div><h3>Lançamento</h3>
+      <div class="card"><div class="off esgotada">Cheia</div><h3>Lançamento</h3>
         <small>Demais diárias — tarifa cheia de inauguração</small></div>
     </div>
     {% if pagina.vagas_restantes %}<div class="vagas">🔥 Restam <b>{{ pagina.vagas_restantes }}</b> vagas na faixa de fundadores.</div>{% endif %}
-    <div style="margin-top:24px"><a href="#captura" class="btn">{{ pagina.cta_texto }}</a></div>
+    <div class="oferta-cta"><a href="#captura" class="btn">{{ pagina.cta_texto }}</a></div>
   </div>
 </section>
 {% endif %}
@@ -202,8 +219,8 @@ gtag('js',new Date());gtag('config','{{ pagina.google_tag_id }}');
 <!-- PARA QUEM É -->
 <section class="publicos">
   <div class="wrap">
-    <p class="kicker" style="color:var(--madeira);opacity:.6">Feita para o seu momento</p>
-    <h2 style="color:var(--madeira)">Para quem é a Vô Testa</h2>
+    <p class="kicker escuro">Feita para o seu momento</p>
+    <h2 class="escuro">Para quem é a Vô Testa</h2>
     <div class="tri">
       <div><div class="ic">💑</div><h3>Casais</h3><p>Refúgio a dois, pôr do sol e o vinho da casa. A primeira noite perfeita.</p></div>
       <div><div class="ic">👨‍👩‍👧</div><h3>Famílias</h3><p>Espaço para todos respirarem e um dia inteiro de sossego.</p></div>
@@ -215,7 +232,7 @@ gtag('js',new Date());gtag('config','{{ pagina.google_tag_id }}');
 <!-- CAPTURA -->
 <section class="captura" id="captura">
   <div class="wrap">
-    <p class="kicker" style="color:var(--lampiao)">Lista de espera</p>
+    <p class="kicker ouro">Lista de espera</p>
     <h2>Entre na lista de fundadores</h2>
     {% if enviado %}
       <div class="ok">
@@ -223,7 +240,7 @@ gtag('js',new Date());gtag('config','{{ pagina.google_tag_id }}');
         {% if pagina.whatsapp_destino %}
           {% with msg="Oi! Entrei na lista de fundadores da Pousada Vô Testa e quero garantir minha Tarifa de Fundador." %}
           <p>Você entrou na lista de fundadores. Vamos te levar ao WhatsApp para adiantar tudo…</p>
-          <a class="btn pulse" style="margin-top:16px" href="https://wa.me/{{ pagina.whatsapp_destino }}?text={{ msg|urlencode }}">Falar no WhatsApp agora</a>
+          <a class="btn pulse respiro" href="https://wa.me/{{ pagina.whatsapp_destino }}?text={{ msg|urlencode }}">Falar no WhatsApp agora</a>
           <script>setTimeout(function(){location.href="https://wa.me/{{ pagina.whatsapp_destino }}?text={{ msg|urlencode }}";},2500);</script>
           {% endwith %}
         {% else %}
@@ -255,8 +272,8 @@ gtag('js',new Date());gtag('config','{{ pagina.google_tag_id }}');
             <option value="8">8 pessoas</option>
           </select>
         </label>
-        <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;color:#666;text-align:left;margin:4px 0 2px;font-weight:400">
-          <input type="checkbox" name="consent" value="on" style="margin-top:3px">{% load nucleo_extras %}{% campos_antirrobo %}
+        <label class="lp-aceite">
+          <input type="checkbox" name="consent" value="on">{% load nucleo_extras %}{% campos_antirrobo %}
           <span>Aceito receber novidades e ofertas da Pousada Vô Testa por e-mail. Posso cancelar quando quiser.</span>
         </label>
         <button class="btn pulse" type="submit">{{ pagina.cta_texto }}</button>
@@ -270,9 +287,9 @@ gtag('js',new Date());gtag('config','{{ pagina.google_tag_id }}');
 {% if pagina.faq_itens %}
 <section class="faq" id="faq">
   <div class="wrap">
-    <p class="kicker" style="color:var(--madeira);opacity:.6">Ainda com dúvidas?</p>
-    <h2 style="color:var(--madeira)">Perguntas frequentes</h2>
-    <div style="margin-top:20px">
+    <p class="kicker escuro">Ainda com dúvidas?</p>
+    <h2 class="escuro">Perguntas frequentes</h2>
+    <div class="faq-lista">
       {% for item in pagina.faq_itens %}
         <div class="item"><details>
           <summary>{{ item.pergunta }}</summary>
@@ -288,8 +305,8 @@ gtag('js',new Date());gtag('config','{{ pagina.google_tag_id }}');
 {% if pagina.endereco or pagina.mapa_embed %}
 <section class="local" id="localizacao">
   <div class="wrap">
-    <p class="kicker" style="color:var(--madeira);opacity:.6">Como chegar</p>
-    <h2 style="color:var(--madeira)">Em Itá, Santa Catarina</h2>
+    <p class="kicker escuro">Como chegar</p>
+    <h2 class="escuro">Em Itá, Santa Catarina</h2>
     {% if pagina.endereco %}<p class="sub">{{ pagina.endereco }}</p>{% endif %}
     {% if pagina.mapa_embed %}
       <iframe src="{{ pagina.mapa_embed }}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Mapa"></iframe>
@@ -312,7 +329,7 @@ gtag('js',new Date());gtag('config','{{ pagina.google_tag_id }}');
     var el={d:box.querySelector('[data-d]'),h:box.querySelector('[data-h]'),m:box.querySelector('[data-m]'),s:box.querySelector('[data-s]')};
     function tick(){
       var dif=alvo-new Date().getTime();
-      if(dif<0){document.getElementById('relogio').innerHTML='<b style="color:var(--lampiao)">As portas estão abertas! 🎉</b>';return;}
+      if(dif<0){document.getElementById('relogio').innerHTML='<b class="ouro">As portas estão abertas! 🎉</b>';return;}
       el.d.textContent=Math.floor(dif/86400000);el.h.textContent=Math.floor(dif%86400000/3600000);
       el.m.textContent=Math.floor(dif%3600000/60000);el.s.textContent=Math.floor(dif%60000/1000);
     }

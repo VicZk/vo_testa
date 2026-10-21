@@ -23,7 +23,7 @@
     <div class="eleg-acoes">
       <button type="submit" class="botao-primario">Salvar</button>
       {% if not novo %}
-      <form method="post" action="{% url 'comercial:resposta_excluir' resposta.pk %}" onsubmit="return confirm('Remover esta resposta?')" style="margin:0">
+      <form method="post" action="{% url 'comercial:resposta_excluir' resposta.pk %}" onsubmit="return confirm('Remover esta resposta?')" class="form-plano">
         {% csrf_token %}<button type="submit" class="botao-neutro">Excluir</button>
       </form>
       {% endif %}

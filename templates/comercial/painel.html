@@ -26,7 +26,7 @@ cartão.{% endcomment %}
   <div class="cartao"><span class="indicador-rotulo letreiro">Score médio (abertas)</span><span class="indicador-valor">{{ gestao.score_medio }}</span></div>
 </div>
 
-<div class="colunas colunas-2-1" style="margin-top:1.2rem">
+<div class="colunas colunas-2-1 com-painel-colunas">
   <section>
     <h2>Funil por etapa (em aberto)</h2>
     <table class="tabela">
@@ -44,7 +44,7 @@ cartão.{% endcomment %}
       </tbody>
     </table>
 
-    <h2 style="margin-top:1.4rem">Tempo médio por etapa (horas)</h2>
+    <h2 class="com-bloco-titulo">Tempo médio por etapa (horas)</h2>
     <table class="tabela">
       <thead><tr><th>Etapa</th><th class="num">Média (h)</th></tr></thead>
       <tbody>
@@ -56,7 +56,7 @@ cartão.{% endcomment %}
       </tbody>
     </table>
 
-    <h2 style="margin-top:1.4rem">Top scores (abertas)</h2>
+    <h2 class="com-bloco-titulo">Top scores (abertas)</h2>
     <table class="tabela">
       <thead><tr><th>Score</th><th>Oportunidade</th><th>Lead</th><th class="num">Valor</th></tr></thead>
       <tbody>
@@ -76,11 +76,11 @@ cartão.{% endcomment %}
 
   <aside>
     <h2>Meta do mês</h2>
-    <form method="post" action="{% url 'comercial:meta' %}" class="form-cartao" style="max-width:none">
+    <form method="post" action="{% url 'comercial:meta' %}" class="form-cartao form-cartao-largo">
       {% csrf_token %}
       <div class="campo">{{ meta_form.valor_meta|rotulo }}{{ meta_form.valor_meta }}</div>
       <div class="campo">{{ meta_form.oportunidades_meta|rotulo }}{{ meta_form.oportunidades_meta }}</div>
-      <p class="subtitulo" style="font-size:.8rem">Ganhos no mês: {{ gestao.ganhos_qtd }}{% if gestao.meta_qtd %} / meta {{ gestao.meta_qtd }}{% endif %}</p>
+      <p class="subtitulo subtitulo-mini">Ganhos no mês: {{ gestao.ganhos_qtd }}{% if gestao.meta_qtd %} / meta {{ gestao.meta_qtd }}{% endif %}</p>
       <button type="submit" class="botao-primario botao-largo">Salvar meta</button>
     </form>
 

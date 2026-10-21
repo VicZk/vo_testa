@@ -833,6 +833,9 @@ a.cartao-link:hover, .cartao-link:hover {
 /* A alça de redimensionar livre deixava o textarea sair do cartão. */
 textarea { resize: vertical; }
 
+/* "(opcional)" ao lado do rótulo: é nota, não rótulo. */
+.rotulo-opcional { font-weight: 400; color: var(--tinta-suave); }
+
 .campo label {
   display: block;
   font-size: .8rem;
@@ -1568,6 +1571,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
   backdrop-filter: blur(3px);
 }
 
+.modal-caixa.estreita { max-width: 420px; }
 .modal-caixa {
   width: 100%;
   max-width: 660px;
@@ -3922,14 +3926,6 @@ form.filtros:not(.subnav) select:focus {
 .funil-card .tarefa svg { width: 12px; height: 12px; }
 .funil-card .tarefa.alerta { color: var(--perigo); font-weight: 500; }
 
-.fchip {
-  font-size: .68rem; font-weight: 600; letter-spacing: .01em;
-  padding: .1rem .45rem; border-radius: 999px; white-space: nowrap;
-}
-.fchip-particular { color: var(--info);   background: var(--info-bg); }
-.fchip-agencia    { color: color-mix(in srgb, var(--madeira) 50%, var(--lampiao)); background: var(--alerta-bg); }
-.fchip-empresa    { color: var(--musgo);   background: color-mix(in srgb, var(--musgo) 10%, transparent); }
-
 .funil-vazio {
   border: 1.5px dashed var(--fio-forte); border-radius: var(--raio-p);
   color: var(--tinta-suave); font-size: .8rem; text-align: center;
@@ -3948,6 +3944,30 @@ form.filtros:not(.subnav) select:focus {
    — sem isto, a tabela da linha do tempo transborda POR CIMA da coluna direita). */
 .op-layout > * { min-width: 0; }
 @media (max-width: 900px) { .op-layout { grid-template-columns: 1fr; } }
+
+/* Os blocos da tela: a densidade de cada coluna vira classe (vinha de `style=`,
+   com três paddings quase iguais escritos à mão). */
+.op-esq { display: flex; flex-direction: column; gap: 1.1rem; }
+.op-bloco { padding: 1.1rem 1.2rem; }
+.op-bloco-lead { padding: 1.05rem 1.15rem; }
+.op-bloco-info { padding: 1rem 1.2rem; }
+/* Cartão que embute outro painel inteiro (quartos do lead). */
+.op-bloco-painel { padding: 0; overflow: hidden; }
+.op-resumo-topo.compacto { margin-bottom: .5rem; }
+/* Nota de apoio logo abaixo do rótulo da seção. */
+.op-nota { font-size: .74em; color: var(--tinta-suave); margin: -.15rem 0 .6rem; }
+.op-nota.compacta { font-size: .72em; margin-bottom: .55rem; }
+.op-nota-fim { font-size: .78em; color: var(--tinta-suave); margin-top: .3rem; }
+.op-chips { display: flex; flex-wrap: wrap; gap: .4rem; }
+.op-obs-respiro { margin-top: .6rem; }
+.op-citacao { font-style: italic; }
+.op-linha { font-size: .9em; }
+.op-linha-sub { font-size: .82em; }
+.op-linha-sub.suave, .op-linha-mini { color: var(--tinta-suave); }
+.op-linha-mini { font-size: .8em; }
+.op-form-plano { margin: 0; }
+.op-form-respiro { margin-top: .4rem; }
+.op-botao-bloco { display: block; text-align: center; margin-top: .5rem; }
 
 .op-resumo { padding: 1.15rem 1.25rem; }
 .op-resumo-topo {
@@ -4493,6 +4513,32 @@ body.escala-dragging .escala-drop { cursor: copy; }
 
 /* KPI do painel: variante em linha (rótulo + valor empilhados) */
 .kpis-el { display: flex; gap: 1rem; flex-wrap: wrap; }
+/* Espaçamento dos blocos da tela elegante — era `style=` repetido tela a tela. */
+.kpis-el.respiro { margin: .5rem 0 1.4rem; }
+.quadro-lista { margin-top: 1.25rem; }
+.cartao-el.bloco-texto { padding: 1.1rem 1.3rem; margin-bottom: 1.2rem; }
+.cartao-el.centrado { text-align: center; }
+.detalhe-2col { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; align-items: start; }
+.linha-dado { margin: .1rem 0; }
+.bloco-corpo { margin: .5rem 0 0; color: var(--tinta-suave); white-space: pre-wrap; }
+.bloco-chamada { margin: 0 0 .8rem; }
+.eleg-intro.respiro { margin-top: .6rem; }
+.eleg-intro.mini { font-size: .85em; margin-top: .5rem; }
+.eleg-acoes.respiro { margin-top: 1rem; }
+.titulo-tabela { margin: 1.5rem 0 .6rem; }
+/* Célula de texto longo: tom suave e medida de leitura. */
+.celula-texto { color: var(--tinta-suave); max-width: 520px; }
+.celula-texto.estreita { max-width: 420px; }
+.celula-suave { color: var(--tinta-suave); }
+.form-plano { margin: 0; }
+.botao-respiro { margin-top: .4rem; }
+/* Painel do Comercial: colunas e os títulos que vêm depois de uma tabela. */
+.com-painel-colunas { margin-top: 1.2rem; }
+.com-bloco-titulo { margin-top: 1.4rem; }
+.com-abas { margin: .6rem 0 1rem; }
+/* Formulário que ocupa a largura do bloco (a meta mora dentro de um painel). */
+.form-cartao.form-cartao-largo { max-width: none; }
+.subtitulo.subtitulo-mini { font-size: .8rem; }
 .kpi-rot { display: block; font-size: .7rem; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--tinta-suave); }
 .kpi-val { display: block; margin-top: .15rem; font-family: var(--fonte-titulo); font-size: 1.4rem; line-height: 1.1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .kpi-destaque { background: linear-gradient(180deg, color-mix(in srgb, var(--lampiao) 10%, transparent), color-mix(in srgb, var(--lampiao) 3%, transparent)); border-color: color-mix(in srgb, var(--lampiao) 35%, transparent); }
