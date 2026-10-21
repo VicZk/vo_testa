@@ -441,6 +441,11 @@ class MovimentarTests(TelasBase):
         ).context["form"]
         self.assertEqual(form.initial["origem"], str(self.almox.pk))
         self.assertNotIn("local", form.initial)
+        resposta = self.client.get(
+            reverse("estoque:transferencia"), {"local": self.almox.pk}
+        )
+        # É este valor que marca o cartão de origem na tela.
+        self.assertEqual(resposta.context["local_escolhido"], str(self.almox.pk))
 
     def test_catalogo_da_previa_tem_saldo_por_local(self):
         transferir(self.produto, self.almox, self.loja, 10, self.user)

@@ -445,9 +445,13 @@ def _movimentar(request, operacao):
             "locais": locais,
             "locais_json": [{"id": lo.pk, "nome": lo.nome} for lo in locais],
             "produtos_json": _produtos_json(saldos),
-            "fornecedores_json": pessoas_agrupadas(fornecedores()),
+            # Só a entrada tem fornecedor — as outras não pagam essa consulta.
+            "fornecedores_json": (
+                pessoas_agrupadas(fornecedores()) if operacao == "entrada" else []
+            ),
             "escolhido": inicial.get("produto", ""),
-            "local_escolhido": inicial.get("local", ""),
+            # Na transferência, o local que veio no atalho é a ORIGEM.
+            "local_escolhido": inicial.get("local") or inicial.get("origem") or "",
         },
     )
 
