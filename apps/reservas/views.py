@@ -492,12 +492,35 @@ def detalhe(request, pk):
             "vencimento": timezone.localdate() + _dias(days=_cfg.FATURAMENTO_PRAZO_DIAS),
         })
 
+    # Painel financeiro: o que a estadia custa (diárias + taxas), o que o hóspede já pagou
+    # e as cobranças de Pagamentos (sinal/Pix) vinculadas à reserva. "Recebido" é o
+    # `total_pago`: pela gaveta, online ou faturado, líquido de estorno — a cobrança paga
+    # já virou crédito na reserva (`registrar_pagamento_online`); somá-la de novo contava
+    # o sinal duas vezes. A pendente aparece à parte.
+    from decimal import Decimal
+
+    from .cancelamento import total_pago
+    fin_total = reserva.total_previsto()
+    fin_recebido = total_pago(reserva)
+    cobrancas_reserva, fin_cobr_pendente = [], Decimal("0.00")
+    if modulo_ativo(Modulo.PAGAMENTOS):
+        from apps.pagamentos.services import cobrancas_da_reserva
+        cobrancas_reserva = cobrancas_da_reserva(reserva.pk)
+        fin_cobr_pendente = sum((c.valor for c in cobrancas_reserva if c.pendente),
+                                Decimal("0.00"))
+    fin_saldo = fin_total - fin_recebido
+
     return render(
         request,
         "reservas/reserva_detalhe.html",
         {
             "reserva": reserva,
             "conta": conta,
+            "fin_total": fin_total,
+            "fin_recebido": fin_recebido,
+            "fin_saldo": fin_saldo,
+            "fin_cobr_pendente": fin_cobr_pendente,
+            "cobrancas_reserva": cobrancas_reserva,
             "form_cancelamento": CancelamentoForm(),
             "form_transferencia": TransferenciaForm(),
             "form_recebimento": RecebimentoForm(),

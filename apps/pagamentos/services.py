@@ -135,6 +135,12 @@ def confirmar_pagamento(cobranca, usuario=None, origem="webhook"):
     return cobranca
 
 
+def cobrancas_da_reserva(reserva_id):
+    """Interface pública para Reservas: as cobranças vinculadas à reserva, mais nova
+    primeiro (o painel financeiro do detalhe lista e soma as pendentes)."""
+    return list(Cobranca.objects.filter(reserva_id=reserva_id).order_by("-criado_em"))
+
+
 def _creditar_na_reserva(cobranca):
     """O dinheiro entrou pelo gateway, não pela gaveta: vira crédito na reserva (ou no
     folio do grupo), senão a conta cobra de novo no check-out. Idempotente."""

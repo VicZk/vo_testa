@@ -2338,3 +2338,47 @@ class FechamentoDoDiaTests(TestCase):
         self.assertIn("fechado", saida.getvalue())
         call_command("fechar_dia", "--dia", self.ontem.isoformat(), stdout=saida)
         self.assertIn("já estava fechado", saida.getvalue())
+
+
+class PainelFinanceiroReservaTests(ReservasTestsBase):
+    """Painel financeiro no detalhe da reserva: total previsto + cobranças (Pagamentos)."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="recepcao", password="senha-forte-123")
+
+    def test_detalhe_mostra_financeiro_e_cobranca_com_link(self):
+        from apps.pagamentos.services import criar_cobranca
+        r = self.reserva(status=Reserva.Status.PRE_RESERVA)  # diária 300 × 2 noites
+        criar_cobranca(self.usuario, valor=Decimal("180.00"), metodo="pix",
+                       descricao="Sinal teste", finalidade="sinal_reserva",
+                       reserva_id=r.pk)
+        resp = self.client.get(reverse("reservas:detalhe", args=[r.pk]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Financeiro")
+        self.assertContains(resp, "Total previsto")
+        self.assertContains(resp, "Saldo a receber")
+        self.assertContains(resp, "Sinal de reserva")       # finalidade da cobrança
+        self.assertContains(resp, "Link de pagamento")       # cobrança pendente → link público
+
+    def test_detalhe_sem_cobranca_mostra_vazio(self):
+        r = self.reserva(status=Reserva.Status.PRE_RESERVA)
+        resp = self.client.get(reverse("reservas:detalhe", args=[r.pk]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Financeiro")
+        self.assertContains(resp, "Nenhuma cobrança")
+
+    def test_sinal_pago_online_entra_uma_vez_no_recebido(self):
+        """No fork a cobrança paga vira crédito na reserva (`registrar_pagamento_online`):
+        somar a cobrança paga de novo ao recebido contava o sinal duas vezes."""
+        from apps.pagamentos.services import confirmar_pagamento, criar_cobranca
+        r = self.reserva(status=Reserva.Status.PRE_RESERVA)
+        c = criar_cobranca(self.usuario, valor=Decimal("180.00"), metodo="pix",
+                           descricao="Sinal teste", finalidade="sinal_reserva",
+                           reserva_id=r.pk)
+        confirmar_pagamento(c, self.usuario, origem="teste")
+        resp = self.client.get(reverse("reservas:detalhe", args=[r.pk]))
+        self.assertEqual(resp.context["fin_recebido"], Decimal("180.00"))
+        self.assertEqual(resp.context["fin_saldo"], r.total_previsto() - Decimal("180.00"))
+        self.assertEqual(resp.context["fin_cobr_pendente"], Decimal("0.00"))
+        self.assertContains(resp, "R$ 180,00")  # dinheiro pelo filtro único, não "180.00"

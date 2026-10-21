@@ -1061,6 +1061,13 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
   padding-bottom: 3px;   /* respira a sombra hairline da tabela (senão fica cortada) */
 }
 .tabela-rol > .tabela { margin: 0; }
+/* Célula que não quebra (o tipo "Sistema" partia no meio; o nº da cobrança + método). */
+.tabela .nao-quebra { white-space: nowrap; overflow-wrap: normal; }
+/* Detalhe da reserva → painel Financeiro (total previsto, recebido, saldo e as cobranças). */
+.cartao.painel-financeiro { margin: 1.2rem 0 1.6rem; }
+.painel-financeiro .kpi-grade { margin: .6rem 0 0; }
+.painel-financeiro .tabela-rol > .tabela { margin-top: 1rem; }
+.painel-financeiro .subtitulo { margin: .7rem 0 0; }
 .tabela th {
   text-align: left;
   padding: .7rem .85rem;

@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% load nucleo_extras moeda %}
 {% load static %}
+{% load comercial_extras %}
 
 {% block titulo %}{{ op.titulo }} — Comercial{% endblock %}
 
@@ -145,14 +146,14 @@
       {% endif %}
       <div class="tabela-rol">
       <table class="tabela">
-        <thead><tr><th>Quando</th><th>Quem</th><th>Tipo</th><th>Descrição</th><th></th></tr></thead>
+        <thead><tr><th>Quando</th><th>Quem</th><th class="nao-quebra">Tipo</th><th>Descrição</th><th></th></tr></thead>
         <tbody>
           {% for at in atividades %}
             <tr class="{% if not at.concluida %}linha-pendente{% endif %}">
               <td>{{ at.quando|date:"d/m/Y H:i" }}</td>
               <td>{% with quem=at.criado_por|default:at.responsavel %}{% if quem %}{{ quem.get_full_name|default:quem.username }}{% else %}—{% endif %}{% endwith %}</td>
-              <td>{{ at.get_tipo_display }}</td>
-              <td>{{ at.descricao }}{% if not at.concluida %} <span class="selo selo-em_andamento">tarefa</span>{% endif %}</td>
+              <td class="nao-quebra">{{ at.get_tipo_display }}</td>
+              <td>{{ at.descricao|linkar_reservas }}{% if not at.concluida %} <span class="selo selo-em_andamento">tarefa</span>{% endif %}</td>
               <td class="num">
                 {% if not at.concluida %}
                   <form method="post" action="{% url 'comercial:concluir_tarefa' at.pk %}">{% csrf_token %}<button class="botao-mini">Concluir</button></form>
