@@ -891,6 +891,11 @@ def temporada_form(request, pk=None):
 
 _CLASSIF_PRECO = [("baixa", "Baixa"), ("alta", "Alta"), ("feriado", "Feriados")]
 
+# Custo de vender por canal (%), na ordem em que aparece na tela. As chaves são as de
+# `Reserva.Canal` — ver `ConfiguracaoReservas.custo_por_canal()`.
+_CANAIS_CUSTO = [("ota", "Sites de reserva (OTA)"), ("site", "Site da pousada"),
+                 ("whatsapp", "WhatsApp"), ("balcao", "Balcão/telefone")]
+
 
 @requer_area(Area.QUARTOS)
 def tabela_precos(request):
@@ -956,6 +961,11 @@ def tabela_precos(request):
             cfg.iss_aliquota = iss
         if taxa is not None:
             cfg.taxa_turismo_diaria = taxa
+        # 4) custo de vender por canal (%) — base do relatório de distribuição
+        for canal, _rot in _CANAIS_CUSTO:
+            pct = _dec_post(request, f"custo_canal_{canal}")
+            if pct is not None:
+                setattr(cfg, f"custo_canal_{canal}", pct)
         for campo in ("hora_checkin", "hora_checkout"):
             try:
                 valor = datetime.time.fromisoformat((request.POST.get(campo) or "").strip())
@@ -1007,10 +1017,13 @@ def tabela_precos(request):
         "hora_checkin": cfg.hora_checkin.strftime("%H:%M"),
         "hora_checkout": cfg.hora_checkout.strftime("%H:%M"),
     }
+    custos_canal = [{"campo": f"custo_canal_{k}", "label": rotulo,
+                     "valor_fmt": _brl(getattr(cfg, f"custo_canal_{k}"))}
+                    for k, rotulo in _CANAIS_CUSTO]
 
     return render(request, "nucleo/tabela_precos.html",
-                  {"colunas": colunas, "grupos": grupos,
-                   "day_use": day_use, "parametros": parametros})
+                  {"colunas": colunas, "grupos": grupos, "day_use": day_use,
+                   "parametros": parametros, "custos_canal": custos_canal})
 
 
 # ---------- Caixa ----------

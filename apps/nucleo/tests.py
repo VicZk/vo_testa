@@ -1697,6 +1697,34 @@ class HorariosNaTabelaDePrecosTests(TestCase):
         self.assertContains(self.client.get(reverse("tabela_precos")), 'value="13:30"')
 
 
+class CustoPorCanalNaTabelaDePrecosTests(TestCase):
+    """Percentual de custo de venda por canal — base do relatório de distribuição."""
+
+    def setUp(self):
+        self.gerente = Usuario.objects.create_superuser(
+            username="precos-canal", password="x-senha-forte-1")
+        self.client.force_login(self.gerente)
+
+    def test_padrao_ota_18_e_direto_zero(self):
+        from apps.nucleo.models import ConfiguracaoReservas
+        custos = ConfiguracaoReservas.carregar().custo_por_canal()
+        self.assertEqual(custos["ota"], Decimal("18.00"))
+        self.assertEqual([custos["site"], custos["whatsapp"], custos["balcao"]],
+                         [Decimal("0.00")] * 3)
+
+    def test_salva_os_percentuais_em_formato_brl(self):
+        from apps.nucleo.models import ConfiguracaoReservas
+        self.client.post(reverse("tabela_precos"), {
+            "custo_canal_ota": "16,50", "custo_canal_site": "2,99",
+            "custo_canal_whatsapp": "0,00", "custo_canal_balcao": "0,00",
+        })
+        custos = ConfiguracaoReservas.carregar().custo_por_canal()
+        self.assertEqual(custos["ota"], Decimal("16.50"))
+        self.assertEqual(custos["site"], Decimal("2.99"))
+        self.assertContains(self.client.get(reverse("tabela_precos")),
+                            'name="custo_canal_ota" value="16,50"')
+
+
 class PaginacaoTests(TestCase):
     """Listas paginadas: total real, página estável e busca/filtros que seguem junto
     (antes cada lista cortava em 200/300 e o resto sumia; a de Pessoas trazia tudo)."""
