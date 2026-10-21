@@ -74,11 +74,23 @@
       <input type="text" name="iss" value="{{ parametros.iss }}" class="money-mask" inputmode="decimal"></label>
     <label>Taxa de turismo (R$/noite)
       <input type="text" name="taxa_turismo" value="{{ parametros.taxa_turismo }}" class="money-mask" inputmode="decimal"></label>
+  </div>
+
+  <h2>Horários e não comparecimento</h2>
+  <p class="subtitulo">Valem para todas as reservas.</p>
+  <div class="precos-param">
     <label>Check-in a partir de
       <input type="time" name="hora_checkin" value="{{ parametros.hora_checkin }}"></label>
     <label>Check-out até
       <input type="time" name="hora_checkout" value="{{ parametros.hora_checkout }}">
       <small>aparecem para o hóspede no site e no e-mail</small></label>
+    <label>No-show automático
+      <select name="no_show_noites">
+        {% for valor, rotulo in parametros.no_show_opcoes %}
+          <option value="{{ valor }}"{% if valor == parametros.no_show_noites %} selected{% endif %}>{{ rotulo }}</option>
+        {% endfor %}
+      </select>
+      <small>desligado, a recepção decide pela Auditoria; ligado, a reserva confirmada sem check-in vira "não compareceu" na auditoria da madrugada e o quarto volta à venda — o pago fica na conta e dá para desfazer se o hóspede aparecer</small></label>
   </div>
 
   <div class="acoes">

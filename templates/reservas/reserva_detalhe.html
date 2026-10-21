@@ -110,6 +110,21 @@ uma ficha: cada dado com o seu rótulo, lido de relance.{% endcomment %}
   {% endif %}
 </div>
 
+{% if reserva.status == "no_show" and pode_desfazer_no_show %}
+  <details class="acao-sensivel">
+    <summary>Desfazer não comparecimento</summary>
+    <p class="ajuda">O hóspede chegou depois, ou o check-in ficou esquecido no sistema. A reserva volta a confirmada se o {{ reserva.uh.numero }} ainda estiver livre nas noites dela.</p>
+    <form method="post" action="{% url 'reservas:desfazer_no_show' reserva.pk %}" class="form-cartao">
+      {% csrf_token %}
+      <div class="campo">
+        <label for="motivo-desfazer">Motivo</label>
+        <input type="text" id="motivo-desfazer" name="motivo" required placeholder="Ex.: voo atrasou, chegou às 9h">
+      </div>
+      <div class="acoes"><button type="submit" class="botao-primario">Voltar a confirmada</button></div>
+    </form>
+  </details>
+{% endif %}
+
 {% if reserva.status == "orcamento" or reserva.status == "pre_reserva" or reserva.status == "confirmada" %}
   <div class="colunas">
     <section>

@@ -5,9 +5,11 @@ Grupos:
   FNRH o que ficou pendente, dispara as campanhas de e-mail agendadas e reenvia as
   confirmações do site e os e-mails do Comercial que não saíram, e reprocessa os
   webhooks do WhatsApp que falharam;
-- diarias (madrugada): conversões de mídia pendentes, gasto das campanhas, o backup do
-  banco para fora do Railway (se R2_* ou BACKUP_DIR estiverem definidos) e a cópia do
-  Kit de contingência por e-mail (se KIT_CONTINGENCIA_EMAILS estiver definido).
+- diarias (madrugada): o no-show automático (se ligado na Tabela de Preços) e o
+  fechamento do dia, conversões de mídia pendentes, gasto das campanhas, o backup do
+  banco para fora do Railway (se R2_* ou BACKUP_DIR estiverem definidos), a purga da
+  trilha, as arrumações do dia e a cópia do Kit de contingência por e-mail (se
+  KIT_CONTINGENCIA_EMAILS estiver definido).
 
 Cada tarefa roda isolada: se uma falha, o erro vai para o log e as outras seguem. Ao fim,
 se alguma falhou, o comando termina com erro para o Railway marcar a execução.
@@ -36,7 +38,8 @@ GRUPOS = {
         "reprocessar_webhooks_whatsapp",
     ],
     "diarias": [
-        "fechar_dia",  # primeiro: o backup do dia já leva o fechamento
+        "marcar_no_shows",  # no-show automático (se ligado) antes de fechar o dia
+        "fechar_dia",  # o backup do dia já leva o fechamento
         "enviar_conversoes_pendentes",
         "sincronizar_gastos_midia",
         "backup_banco",

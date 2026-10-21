@@ -1213,15 +1213,21 @@ def pendencias_auditoria():
         })
 
     # Auditoria noturna: entrada que passou sem check-in (no-show provável). A decisão —
-    # marcar no-show, cobrar a política ou reagendar — é da recepção.
+    # marcar no-show, cobrar a política ou reagendar — é da recepção; com o no-show
+    # automático ligado, o achado diz em que madrugada o sistema marca sozinho.
+    noites_auto = configuracao_reservas().no_show_automatico_noites
     for r in (Reserva.objects.filter(checkin__lt=hoje)
               .filter(Q(status=Reserva.Status.CONFIRMADA)
                       | Q(status=Reserva.Status.PRE_RESERVA, expira_em__isnull=True))
               .select_related("uh", "hospede")):
+        prazo = ""
+        if noites_auto and r.status == Reserva.Status.CONFIRMADA:
+            prazo = (" O sistema marca sozinho na madrugada de "
+                     f"{r.checkin + timedelta(days=noites_auto):%d/%m}.")
         achados.append({
             "area": "Reservas", "tipo": "no_show_provavel", "gravidade": "media",
             "descricao": f"{r.uh.numero} — {r.hospede.nome}: entrada era {r.checkin:%d/%m} "
-                         "e não houve check-in. Marcar no-show ou reagendar.",
+                         f"e não houve check-in. Marcar no-show ou reagendar.{prazo}",
             "url": reverse("reservas:detalhe", args=[r.pk]),
         })
 
@@ -3040,6 +3046,36 @@ def diarias_periodo(inicio, fim) -> Decimal:
 
 
 # ── Fechamento do dia (auditoria noturna) ────────────────────────────────────
+
+
+def marcar_no_shows_vencidos(hoje: date | None = None) -> list:
+    """No-show automático da auditoria da madrugada. Reserva confirmada cuja entrada
+    passou há `no_show_automatico_noites` noite(s) sem check-in vira "não compareceu" e
+    o quarto volta à venda (a constraint de overbooking só olha pré-reserva, confirmada e
+    hospedada). Desligado (0, o padrão), a recepção decide pela Auditoria, como antes.
+
+    Não mexe em dinheiro: o que o hóspede pagou fica na conta, como no no-show manual,
+    e a reserva pode voltar com `desfazer_no_show` se ele aparecer. Devolve as marcadas."""
+    from apps.nucleo.sistema import travar, usuario_de_sistema
+
+    noites = configuracao_reservas().no_show_automatico_noites
+    if not noites:
+        return []
+    hoje = hoje or timezone.localdate()
+    limite = hoje - timedelta(days=noites)
+    robo = usuario_de_sistema("_auditoria", "Auditoria noturna")
+    marcadas = []
+    for reserva in Reserva.objects.filter(
+            status=Reserva.Status.CONFIRMADA, checkin__lte=limite).order_by("pk"):
+        with transaction.atomic():
+            travar(reserva)
+            if reserva.status != Reserva.Status.CONFIRMADA:   # check-in no meio do caminho
+                continue
+            reserva.marcar_no_show(
+                robo, motivo=f"automático: entrada {reserva.checkin:%d/%m/%Y} sem check-in "
+                             "até a auditoria da madrugada")
+        marcadas.append(reserva)
+    return marcadas
 
 
 def fechar_dia(dia: date | None = None):

@@ -962,6 +962,9 @@ def tabela_precos(request):
             except ValueError:
                 continue  # vazio ou inválido: mantém o horário atual
             setattr(cfg, campo, valor)
+        no_show = request.POST.get("no_show_noites", "")
+        if no_show.isdigit() and int(no_show) in cfg.NoShowAutomatico.values:
+            cfg.no_show_automatico_noites = int(no_show)
         cfg.save()
         messages.success(request, "Tabela de preços salva.")
         return redirect("tabela_precos")
@@ -1006,6 +1009,8 @@ def tabela_precos(request):
         "taxa_turismo": _brl(cfg.taxa_turismo_diaria),
         "hora_checkin": cfg.hora_checkin.strftime("%H:%M"),
         "hora_checkout": cfg.hora_checkout.strftime("%H:%M"),
+        "no_show_noites": cfg.no_show_automatico_noites,
+        "no_show_opcoes": cfg.NoShowAutomatico.choices,
     }
 
     return render(request, "nucleo/tabela_precos.html",

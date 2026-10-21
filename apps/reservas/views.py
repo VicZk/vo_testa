@@ -585,6 +585,9 @@ def detalhe(request, pk):
             }),
             "eh_gerente": eh_gerente(request.user),
             "aviso_checkin": aviso_checkin,
+            # No-show (manual ou automático) volta enquanto a estadia não terminou.
+            "pode_desfazer_no_show": (reserva.status == Reserva.Status.NO_SHOW
+                                      and reserva.checkout > timezone.localdate()),
             "fnrh_pronta": reserva.fnrh_pronta,
             "fnrh_total": reserva.total_hospedes,
             "fnrh_completas": sum(1 for f in reserva.fichas_fnrh.all() if f.completa),
@@ -748,6 +751,20 @@ def no_show(request, pk):
     def acao(reserva):
         reserva.marcar_no_show(request.user)
         messages.success(request, "Não comparecimento registrado.")
+
+    return _acao_reserva(request, pk, acao)
+
+
+@requer_modulo(Modulo.RESERVAS)
+def desfazer_no_show(request, pk):
+    """O hóspede apareceu depois do no-show (manual ou automático): a reserva volta a
+    confirmada, se o quarto ainda estiver livre. Motivo obrigatório (auditado)."""
+    if request.method != "POST":
+        return redirect("reservas:detalhe", pk=pk)
+
+    def acao(reserva):
+        reserva.desfazer_no_show(request.user, request.POST.get("motivo", ""))
+        messages.success(request, "Não comparecimento desfeito: a reserva voltou a confirmada.")
 
     return _acao_reserva(request, pk, acao)
 

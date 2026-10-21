@@ -19,7 +19,7 @@ from django.contrib.postgres.constraints import ExclusionConstraint
 from django.contrib.postgres.fields import DateRangeField, RangeOperators
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
-from django.db import models, transaction
+from django.db import IntegrityError, models, transaction
 from django.db.models import F, Func, Q, Sum
 from django.utils import timezone
 
@@ -814,19 +814,39 @@ class Reserva(models.Model):
             motivo=motivo, usuario=usuario,
         )
 
-    def marcar_no_show(self, usuario):
+    def marcar_no_show(self, usuario, motivo=""):
         self._exige_status(self.Status.CONFIRMADA)
         self.status = self.Status.NO_SHOW
         self.save()
-        registrar_auditoria(usuario, "no_show", self, {})
+        registrar_auditoria(usuario, "no_show", self, {"motivo": motivo} if motivo else {})
         from apps.nucleo.sinais import emitir
 
         from .signals import reserva_encerrada
 
         emitir(
             reserva_encerrada, sender=self.__class__, reserva=self, evento="no_show",
-            motivo="", usuario=usuario,
+            motivo=motivo, usuario=usuario,
         )
+
+    def desfazer_no_show(self, usuario, motivo):
+        """O hóspede apareceu depois (atraso, ou o check-in ficou esquecido no sistema):
+        a reserva volta a confirmada — se o quarto ainda estiver livre nas noites dela.
+        Se já foi vendido, a constraint de overbooking recusa e nada muda."""
+        self._exige_status(self.Status.NO_SHOW)
+        if not (motivo or "").strip():
+            raise ValidationError("Informe o motivo.")
+        if self.checkout <= timezone.localdate():
+            raise ValidationError("A estadia já terminou: faça uma reserva nova.")
+        self.status = self.Status.CONFIRMADA
+        try:
+            with transaction.atomic():
+                self.save()
+        except IntegrityError as erro:
+            self.status = self.Status.NO_SHOW
+            raise ValidationError(
+                f"O {self.uh.numero} já foi vendido para essas noites: faça uma reserva "
+                "nova ou escolha outro quarto.") from erro
+        registrar_auditoria(usuario, "no_show_desfeito", self, {"motivo": motivo.strip()})
 
 
 class GrupoReserva(models.Model):

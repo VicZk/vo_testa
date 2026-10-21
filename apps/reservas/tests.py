@@ -2195,6 +2195,135 @@ class NoShowProvavelTests(ReservasTestsBase):
                           if a["tipo"] == "no_show_provavel"])
 
 
+class NoShowAutomaticoTests(ReservasTestsBase):
+    """No-show automático da auditoria da madrugada (Tabela de Preços). Desligado, nada
+    muda; ligado, a confirmada sem check-in vira "não compareceu" N noites depois da
+    entrada, o quarto volta à venda e a reserva pode voltar se o hóspede aparecer."""
+
+    def _ligar(self, noites):
+        from apps.nucleo.models import ConfiguracaoReservas
+        ConfiguracaoReservas.objects.filter(pk=1).update(no_show_automatico_noites=noites)
+
+    def test_desligado_nao_marca_nada(self):
+        r = self.reserva(dias=3, offset=-2)
+        self.assertEqual(services.marcar_no_shows_vencidos(), [])
+        r.refresh_from_db()
+        self.assertEqual(r.status, Reserva.Status.CONFIRMADA)
+
+    def test_madrugada_seguinte_marca_quem_entrava_ontem_e_libera_o_quarto(self):
+        from apps.nucleo.models import TrilhaAuditoria
+        self._ligar(1)
+        ontem = self.reserva(dias=3, offset=-1)
+        uh2 = UH.objects.create(numero="T2", tipo=self.tipo)
+        de_hoje = self.reserva(dias=2, uh=uh2)          # entra hoje: ainda dá tempo
+        self.assertEqual([r.pk for r in services.marcar_no_shows_vencidos()], [ontem.pk])
+        ontem.refresh_from_db()
+        de_hoje.refresh_from_db()
+        self.assertEqual(ontem.status, Reserva.Status.NO_SHOW)
+        self.assertEqual(de_hoje.status, Reserva.Status.CONFIRMADA)
+        trilha = TrilhaAuditoria.objects.get(acao="no_show", alvo_id=str(ontem.pk))
+        self.assertEqual(trilha.usuario.username, "_auditoria")
+        self.assertIn("automático", trilha.detalhe["motivo"])
+        self.reserva(dias=2)    # o T1 volta à venda nas noites que sobravam
+
+    def test_tolerancia_espera_mais_um_dia(self):
+        self._ligar(2)
+        ontem = self.reserva(dias=3, offset=-1)
+        self.assertEqual(services.marcar_no_shows_vencidos(), [])
+        anteontem = self.reserva(dias=4, offset=-2, uh=UH.objects.create(numero="T3", tipo=self.tipo))
+        self.assertEqual([r.pk for r in services.marcar_no_shows_vencidos()], [anteontem.pk])
+        ontem.refresh_from_db()
+        self.assertEqual(ontem.status, Reserva.Status.CONFIRMADA)
+
+    def test_hospedada_e_pre_reserva_ficam_como_estao(self):
+        self._ligar(1)
+        hospedada = self.reserva(dias=3, offset=-1)
+        hospedada.fazer_checkin(self.usuario)
+        pre = self.reserva(status=Reserva.Status.PRE_RESERVA, dias=3, offset=-1,
+                           uh=UH.objects.create(numero="T2", tipo=self.tipo))
+        self.assertEqual(services.marcar_no_shows_vencidos(), [])
+        hospedada.refresh_from_db()
+        pre.refresh_from_db()
+        self.assertEqual(hospedada.status, Reserva.Status.HOSPEDADA)
+        self.assertEqual(pre.status, Reserva.Status.PRE_RESERVA)
+
+    def test_rodar_de_novo_nao_faz_nada(self):
+        self._ligar(1)
+        self.reserva(dias=3, offset=-1)
+        self.assertEqual(len(services.marcar_no_shows_vencidos()), 1)
+        self.assertEqual(services.marcar_no_shows_vencidos(), [])
+
+    def test_comando_da_rotina(self):
+        from io import StringIO
+
+        from django.core.management import call_command
+        saida = StringIO()
+        call_command("marcar_no_shows", stdout=saida)
+        self.assertIn("desligado", saida.getvalue())
+        self._ligar(1)
+        r = self.reserva(dias=3, offset=-1)
+        saida = StringIO()
+        call_command("marcar_no_shows", stdout=saida)
+        self.assertIn(f"#{r.pk}", saida.getvalue())
+        self.assertIn("1 não comparecimento(s)", saida.getvalue())
+
+    def test_pendencia_diz_em_que_madrugada_o_sistema_marca(self):
+        self._ligar(2)
+        r = self.reserva(dias=3, offset=-1)
+        achado = next(a for a in services.pendencias_auditoria() if a["tipo"] == "no_show_provavel")
+        self.assertIn(f"madrugada de {r.checkin + timedelta(days=2):%d/%m}", achado["descricao"])
+
+    def test_desfazer_volta_a_confirmada_com_motivo(self):
+        from apps.nucleo.models import TrilhaAuditoria
+        r = self.reserva(dias=3, offset=-1)
+        r.marcar_no_show(self.usuario)
+        with self.assertRaises(ValidationError):
+            r.desfazer_no_show(self.usuario, "  ")
+        r.desfazer_no_show(self.usuario, "voo atrasou")
+        r.refresh_from_db()
+        self.assertEqual(r.status, Reserva.Status.CONFIRMADA)
+        trilha = TrilhaAuditoria.objects.get(acao="no_show_desfeito", alvo_id=str(r.pk))
+        self.assertEqual(trilha.detalhe, {"motivo": "voo atrasou"})
+
+    def test_desfazer_recusa_quarto_ja_vendido(self):
+        r = self.reserva(dias=3, offset=-1)
+        r.marcar_no_show(self.usuario)
+        self.reserva(dias=2)                            # o T1 foi vendido de novo
+        with self.assertRaisesMessage(ValidationError, "já foi vendido"):
+            r.desfazer_no_show(self.usuario, "chegou")
+        r.refresh_from_db()
+        self.assertEqual(r.status, Reserva.Status.NO_SHOW)
+
+    def test_desfazer_recusa_estadia_que_ja_terminou(self):
+        r = self.reserva(dias=1, offset=-3)
+        r.marcar_no_show(self.usuario)
+        with self.assertRaisesMessage(ValidationError, "já terminou"):
+            r.desfazer_no_show(self.usuario, "chegou")
+
+    def test_tela_mostra_e_desfaz(self):
+        self.client.force_login(self.usuario)
+        r = self.reserva(dias=3, offset=-1)
+        r.marcar_no_show(self.usuario)
+        detalhe = reverse("reservas:detalhe", args=[r.pk])
+        self.assertContains(self.client.get(detalhe), "Desfazer não comparecimento")
+        resp = self.client.post(reverse("reservas:desfazer_no_show", args=[r.pk]),
+                                {"motivo": "chegou de manhã"})
+        self.assertRedirects(resp, detalhe, fetch_redirect_response=False)
+        r.refresh_from_db()
+        self.assertEqual(r.status, Reserva.Status.CONFIRMADA)
+        self.assertNotContains(self.client.get(detalhe), "Desfazer não comparecimento")
+
+    def test_tabela_de_precos_grava_a_regra(self):
+        from apps.nucleo.models import ConfiguracaoReservas
+        self.client.force_login(self.usuario)
+        resp = self.client.get(reverse("tabela_precos"))
+        self.assertContains(resp, "No-show automático")
+        self.client.post(reverse("tabela_precos"), {"no_show_noites": "2"})
+        self.assertEqual(ConfiguracaoReservas.carregar().no_show_automatico_noites, 2)
+        self.client.post(reverse("tabela_precos"), {"no_show_noites": "9"})   # fora da lista
+        self.assertEqual(ConfiguracaoReservas.carregar().no_show_automatico_noites, 2)
+
+
 class CompetenciaDasDiariasTests(TestCase):
     """A diária vale pela noite (competência), não pelo dia do check-in: a estadia que
     vira o mês divide a receita entre os dois meses, como a ocupação."""

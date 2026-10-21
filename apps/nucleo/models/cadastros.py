@@ -539,6 +539,20 @@ class ConfiguracaoReservas(models.Model):
         "check-out até", default=datetime.time(12, 0),
     )
 
+    class NoShowAutomatico(models.IntegerChoices):
+        DESLIGADO = 0, "Desligado"
+        MADRUGADA_SEGUINTE = 1, "Na madrugada seguinte"
+        TOLERANCIA_1_DIA = 2, "1 dia de tolerância"
+        TOLERANCIA_2_DIAS = 3, "2 dias de tolerância"
+
+    no_show_automatico_noites = models.PositiveSmallIntegerField(
+        "no-show automático", choices=NoShowAutomatico.choices,
+        default=NoShowAutomatico.DESLIGADO,
+        help_text="Quantas noites depois da entrada sem check-in a auditoria da "
+                  "madrugada marca o não comparecimento — o quarto volta à venda. "
+                  "O que o hóspede pagou fica na conta, como no no-show manual.",
+    )
+
     class Meta:
         verbose_name = "configuração de reservas"
         verbose_name_plural = "configuração de reservas"
