@@ -71,11 +71,11 @@
         <td class="num">{{ p.custo_medio|intcomma_brl }}</td>
         <td class="num">
           {{ p.preco_venda|intcomma_brl }}
-          {% if p.margem %}<small class="camp-sub">margem {{ p.margem|floatformat:0 }}%</small>{% endif %}
+          {% if p.margem %}<small class="camp-sub">Margem {{ p.margem|floatformat:0 }}%</small>{% endif %}
         </td>
         <td class="num est-saldo-cel">
           <span class="est-saldo">{{ p.saldo_total|qtd:p.unidade }}</span>
-          {% if p.estoque_minimo %}<small class="camp-sub">mín. {{ p.estoque_minimo|qtd:p.unidade }}</small>{% endif %}
+          {% if p.estoque_minimo %}<small class="camp-sub">Mín. {{ p.estoque_minimo|qtd:p.unidade }}</small>{% endif %}
         </td>
         <td class="col-acao">
           <span class="est-acoes">

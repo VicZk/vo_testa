@@ -25,22 +25,22 @@
   <div class="kpi">
     <span class="kpi-rotulo letreiro">Saldo na pousada</span>
     <span class="kpi-valor">{{ saldo|qtd:produto.unidade }}</span>
-    <span class="kpi-nota">{% if produto.estoque_minimo %}mínimo {{ produto.estoque_minimo|qtd:produto.unidade }}{% else %}sem mínimo definido{% endif %}</span>
+    <span class="kpi-nota">{% if produto.estoque_minimo %}Mínimo {{ produto.estoque_minimo|qtd:produto.unidade }}{% else %}Sem mínimo definido{% endif %}</span>
   </div>
   <div class="kpi">
     <span class="kpi-rotulo letreiro">Custo médio</span>
     <span class="kpi-valor">{{ produto.custo_medio|intcomma_brl }}</span>
-    <span class="kpi-nota">média ponderada das entradas</span>
+    <span class="kpi-nota">Média ponderada das entradas</span>
   </div>
   <div class="kpi">
     <span class="kpi-rotulo letreiro">Valor em estoque</span>
     <span class="kpi-valor">{{ valor|intcomma_brl }}</span>
-    <span class="kpi-nota">saldo × custo médio</span>
+    <span class="kpi-nota">Saldo × custo médio</span>
   </div>
   <div class="kpi">
     <span class="kpi-rotulo letreiro">Preço de venda</span>
     <span class="kpi-valor">{{ produto.preco_venda|intcomma_brl }}</span>
-    <span class="kpi-nota">{% if produto.margem %}margem de {{ produto.margem|floatformat:0 }}%{% else %}sem preço definido{% endif %}</span>
+    <span class="kpi-nota">{% if produto.margem %}Margem de {{ produto.margem|floatformat:0 }}%{% else %}Sem preço definido{% endif %}</span>
   </div>
 </div>
 

@@ -3736,7 +3736,12 @@ form.filtros:not(.subnav) {
   font-size: .68rem; font-weight: 700; letter-spacing: .06em;
   text-transform: uppercase; color: var(--tinta-suave);
 }
+/* Busca e texto entram na mesma moldura: o "Buscar" da posição do Estoque (e da
+   conciliação) saía como campo cru do navegador, baixo e de borda fina, ao lado
+   dos selects da casa. */
 .filtro-barra input[type="date"],
+.filtro-barra input[type="search"],
+.filtro-barra input[type="text"],
 .filtro-barra select,
 form.filtros:not(.subnav) input[type="date"],
 form.filtros:not(.subnav) select {
@@ -3753,6 +3758,8 @@ form.filtros:not(.subnav) select {
   background-repeat: no-repeat; background-position: right .7rem center;
 }
 .filtro-barra input[type="date"]:focus,
+.filtro-barra input[type="search"]:focus,
+.filtro-barra input[type="text"]:focus,
 .filtro-barra select:focus,
 form.filtros:not(.subnav) input[type="date"]:focus,
 form.filtros:not(.subnav) select:focus {

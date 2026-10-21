@@ -33,7 +33,7 @@ peneira a tabela; os números de cima continuam dizendo como está o depósito.{
       <svg viewBox="0 0 24 24" class="ico kpi-ico" aria-hidden="true"><path d="M12 4l9 16H3z"/><path d="M12 10v4"/><path d="M12 17h.01"/></svg>
     </div>
     <span class="kpi-valor">{{ indicadores.abaixo }}</span>
-    <span class="kpi-nota">{% if indicadores.abaixo %}comprar antes de faltar{% else %}nada para repor{% endif %}</span>
+    <span class="kpi-nota">{% if indicadores.abaixo %}Comprar antes de faltar{% else %}Nada para repor{% endif %}</span>
   </a>
 
   <a href="?situacao=zerado{% if local %}&local={{ local.pk }}{% endif %}"
@@ -43,7 +43,7 @@ peneira a tabela; os números de cima continuam dizendo como está o depósito.{
       <svg viewBox="0 0 24 24" class="ico kpi-ico" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M6.5 17.5l11-11"/></svg>
     </div>
     <span class="kpi-valor">{{ indicadores.zerados }}</span>
-    <span class="kpi-nota">{% if local %}acabaram neste depósito{% else %}zerados na pousada{% endif %}</span>
+    <span class="kpi-nota">{% if local %}Acabaram neste depósito{% else %}Zerados na pousada{% endif %}</span>
   </a>
 
   <div class="kpi">
@@ -52,7 +52,7 @@ peneira a tabela; os números de cima continuam dizendo como está o depósito.{
       <svg viewBox="0 0 24 24" class="ico kpi-ico" aria-hidden="true"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
     </div>
     <span class="kpi-valor">{{ indicadores.movimentos7 }}</span>
-    <span class="kpi-nota">entradas, saídas e ajustes</span>
+    <span class="kpi-nota">Entradas, saídas e ajustes</span>
   </div>
 </div>
 
