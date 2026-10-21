@@ -543,9 +543,11 @@ input[type="radio"] { accent-color: var(--lampiao); }
 
 .form-grade {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
   gap: .85rem 1rem;
 }
+
+.form-grade > * { min-width: 0; }
 
 .form-grade .campo { margin-bottom: 0; }
 
