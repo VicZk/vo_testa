@@ -649,10 +649,9 @@ class BuscaSemConsultaPorQuartoTests(TestCase):
     """A busca do site não faz consultas por quarto × noite (antes: 334 para 3 noites)."""
 
     def setUp(self):
+        from apps.nucleo.feriados import eh_feriado
         from apps.nucleo.models import Temporada as TemporadaCRM
         from apps.nucleo.models import TipoUH
-
-        from apps.nucleo.feriados import eh_feriado
 
         self.tipo = TipoUH.objects.create(nome='Suíte', tarifa_base=Decimal('300.00'),
                                           capacidade=4)
