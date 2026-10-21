@@ -726,6 +726,7 @@
     { rotulo: 'Mapa de reservas', tipo: 'Ir para', url: '/crm/reservas/' },
     { rotulo: 'Mapa de quartos', tipo: 'Ir para', url: '/crm/reservas/quartos/' },
     { rotulo: 'Lista de reservas', tipo: 'Ir para', url: '/crm/reservas/lista/' },
+    { rotulo: 'Kit de contingência (imprimir)', tipo: 'Ir para', url: '{% url "reservas:kit" %}' },
     {% endif %}
     {% if user|pode_area:'caixa' or user|pode_area:'financeiro' %}
     { rotulo: 'Caixa', tipo: 'Ir para', url: '{% url "caixa" %}' },

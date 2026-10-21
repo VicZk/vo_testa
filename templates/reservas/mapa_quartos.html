@@ -9,6 +9,7 @@
   <h1>O corredor</h1>
   <div class="acoes bloco-plano">
     <a href="{% url 'reservas:mapa' %}" class="botao-neutro">Mapa de reservas</a>
+    <a href="{% url 'reservas:kit' %}" class="botao-neutro">Kit de contingência</a>
     <button type="button" class="botao-primario" hx-get="{% url 'reservas:nova' %}" hx-target="#modal-conteudo">Nova reserva</button>
   </div>
 </div>

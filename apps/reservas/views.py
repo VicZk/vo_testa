@@ -197,6 +197,17 @@ def mapa_quartos(request):
     return render(request, "reservas/mapa_quartos.html", ctx)
 
 
+@requer_modulo(Modulo.RESERVAS)
+def kit(request):
+    """Kit de contingência: uma folha A4 com o essencial do dia, para a recepção
+    continuar trabalhando quando a internet cair (ver `services.kit_contingencia`)."""
+    dados = services.kit_contingencia(
+        ler_limpeza=request.user.pode_acessar(Modulo.GOVERNANCA),
+    )
+    quem = request.user.get_full_name() or request.user.get_username()
+    return render(request, "reservas/kit.html", {"kit": dados, "gerado_por": quem})
+
+
 # ---------- Lista e criação ----------
 
 

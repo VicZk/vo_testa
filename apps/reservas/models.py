@@ -389,16 +389,20 @@ class Reserva(models.Model):
         """Total das diárias que o check-in vai lançar."""
         return sum(self.valores_das_diarias(), Decimal("0.00"))
 
-    def total_previsto(self) -> Decimal:
+    def total_previsto(self, cfg=None) -> Decimal:
         """O que a estadia vai custar no check-in: diárias + ISS + taxa de turismo, pelas
-        mesmas regras de `ContaHospedagem.lancar_diarias`/`lancar_taxas`. Sem consumo."""
+        mesmas regras de `ContaHospedagem.lancar_diarias`/`lancar_taxas`. Sem consumo.
+
+        `cfg` = a `ConfiguracaoReservas` já carregada, para quem calcula o total de uma
+        LISTA de reservas (Kit de contingência) sem reler a configuração a cada linha."""
         base = self.hospedagem_prevista()
         if not getattr(settings, "PRECO_TAXAS_ATIVAS", True):
             return base
         from apps.reservas.precos import taxas
 
         t = taxas(base, cobra_iss=self.cobra_iss,
-                  cobra_taxa_turismo=self.cobra_taxa_turismo, diarias=self.noites)
+                  cobra_taxa_turismo=self.cobra_taxa_turismo, diarias=self.noites,
+                  cfg=cfg)
         return base + t["iss"] + t["taxa_turismo"]
 
     @property

@@ -5117,3 +5117,119 @@ body.escala-dragging .escala-drop { cursor: copy; }
    tamanho do dado que cabe nele. */
 .form-grade-endereco { grid-template-columns: 2fr .7fr 1fr; }
 @media (max-width: 680px) { .form-grade, .form-grade-endereco { grid-template-columns: 1fr; } }
+
+/* ═══════════════════════════════════════════════════════════════
+   KIT DE CONTINGÊNCIA — a folha de papel da recepção
+   ═══════════════════════════════════════════════════════════════
+   O sistema é todo em nuvem e a internet de Itá cai. A recepção imprime, a
+   cada turno, uma folha A4 com quem está em casa, quem chega, quem sai e como
+   estão os quartos — o que OPERA e Visual Matrix fazem há décadas.
+
+   Duas vidas, um só template: na TELA é o design system de sempre; no PAPEL,
+   o `@media print` abaixo tira o app-shell e aperta a tipografia. O desenho da
+   impressão mora aqui, e não num `<style>` pendurado na página, porque vale
+   para toda tela que alguém manda para a impressora.
+   ═══════════════════════════════════════════════════════════════ */
+.kit-cabecalho { align-items: flex-start; }
+.kit-identidade { margin-right: auto; }
+.kit-meta { margin: 0; color: var(--tinta-suave); font-size: .86rem; }
+.kit-aviso {
+  margin: .5rem 0 1.6rem;
+  padding: .5rem .8rem;
+  border-left: 3px solid var(--alerta);
+  background: var(--alerta-bg);
+  border-radius: 0 var(--raio-p) var(--raio-p) 0;
+  color: var(--alerta);
+  font-size: .86rem; font-weight: 600;
+}
+.kit-secao { margin-top: 1.8rem; }
+.kit-titulo {
+  display: flex; align-items: baseline; gap: .55rem;
+  margin: 0 0 .2rem;
+  font-size: 1.08rem;
+}
+/* Contagem é número solto (nunca pílula dentro de pílula). */
+.kit-contagem {
+  font-size: .95rem; font-weight: 700; color: var(--tinta-suave);
+  font-variant-numeric: tabular-nums; letter-spacing: -.01em;
+}
+.kit-sub-secao { margin: 0; color: var(--tinta-suave); font-size: .82rem; }
+/* Segunda linha de uma célula: nome temático do quarto, pagador, "pago R$ …". */
+.kit-sub {
+  display: block;
+  font-size: .76rem; font-weight: 400; color: var(--tinta-suave);
+}
+.kit-quarto strong { white-space: nowrap; }
+.kit-obs { color: var(--tinta-suave); font-size: .82rem; }
+.kit-tabela { margin-bottom: 1.2rem; }
+.kit-tabela-curta { max-width: 720px; }
+.kit-rodape {
+  display: flex; flex-wrap: wrap; gap: 1.6rem 2.4rem;
+  margin-top: 2rem; padding-top: 1rem;
+  border-top: 1px solid var(--fio-forte);
+}
+.kit-total { display: flex; flex-direction: column; gap: .15rem; }
+.kit-total strong { font-size: 1.3rem; letter-spacing: -.02em; }
+
+/* Situação do quarto na folha: o mesmo código do mapa (livre, ocupada,
+   a_limpar…) com a cor semântica da casa. Bolinha, não cápsula: num retrato de
+   24 linhas, status é informação — o que pede ação está nas outras seções. */
+.selo-livre                { --selo-cor: var(--sucesso); }
+.selo-ocupada              { --selo-cor: var(--perigo); }
+.selo-chegada              { --selo-cor: var(--lampiao); }
+.selo-a_limpar             { --selo-cor: var(--alerta); }
+.selo-bloqueada            { --selo-cor: var(--info); }
+.selo-inativa              { --selo-cor: var(--fio-forte); }
+
+/* ---------- Impressão ---------- */
+@page { size: A4 portrait; margin: 12mm 10mm; }
+
+@media print {
+  /* O app-shell não vai para o papel (a folha sai sem menu, busca nem botões). */
+  .sidebar, .sidebar-backdrop, .topbar, .toasts, .barra-progresso,
+  .paleta-overlay, .modal-overlay, .kit-acoes,
+  .botao-primario, .botao-neutro, .botao-mini, .botao-perigo { display: none !important; }
+  .app { display: block !important; }
+  .main { display: block !important; }
+  .conteudo { padding: 0 !important; margin: 0 !important; max-width: none !important; }
+  body, .app { background: var(--superficie) !important; }
+
+  /* Cartão e tabela em papel: hairline, sem sombra nem canto arredondado (o
+     `overflow:hidden` do canto impede a tabela de quebrar entre páginas). */
+  .cartao, .cartao-el, .quadro, .kpi, .tabela {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+  }
+  .tabela { border-collapse: collapse !important; }
+  /* O invólucro rolante (tabela-rol.js) cortaria a tabela na largura da tela. */
+  .tabela-rol { overflow: visible !important; }
+  /* Cabeçalho repetido em cada página nova; linha nunca cortada ao meio. */
+  .tabela thead { display: table-header-group; }
+  .tabela tr, .tabela td, .tabela th { break-inside: avoid; page-break-inside: avoid; }
+  .tabela tbody tr:hover { background: none !important; }
+  /* Título de seção não fica órfão no pé da página. */
+  .kit-titulo, .kit-sub-secao { break-after: avoid; page-break-after: avoid; }
+  /* A quebra cai ENTRE seções: a seção curta não parte: a longa (hospedados, 24
+     quartos) parte, mas nunca no meio de uma linha. Forçar uma página por seção
+     gastaria 5 folhas por turno. */
+  .kit-secao { break-inside: avoid; }
+
+  /* Tipografia de papel: A4 retrato tem ~19 cm úteis e a folha tem 7 colunas. */
+  .kit-folha { font-size: 9pt; }
+  .kit-folha h1 { font-size: 15pt; margin: 0; }
+  .kit-folha .kit-titulo { font-size: 11pt; margin-top: .2rem; }
+  .kit-folha .tabela { font-size: 8.5pt; margin: .3rem 0 .6rem; }
+  .kit-folha .tabela th, .kit-folha .tabela td { padding: .22rem .3rem; }
+  .kit-folha .tabela th { background: none; border-bottom: 1pt solid var(--tinta); }
+  .kit-folha .tabela td { border-bottom: .5pt solid var(--fio-forte); }
+  .kit-folha .kit-sub, .kit-folha .kit-obs { font-size: 7.5pt; }
+  .kit-folha .selo { font-size: 7.5pt; }
+  .kit-folha .selo--acao, .kit-folha .selo-alerta, .kit-folha .selo-perigo {
+    padding: 0; background: none; box-shadow: none; font-size: 7.5pt;
+  }
+  .kit-folha .rotulo-dado { font-size: 7pt; }
+  .kit-folha .kit-aviso { margin: .3rem 0 .6rem; padding: .25rem .5rem; font-size: 8pt; }
+  .kit-folha .kit-rodape { margin-top: .8rem; gap: .4rem 1.6rem; }
+  .kit-folha .kit-total strong { font-size: 11pt; }
+}

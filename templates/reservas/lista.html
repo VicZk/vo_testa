@@ -9,6 +9,7 @@
   <h1>Reservas</h1>
   <div class="acoes">
     <a href="{% url 'reservas:grupos' %}" class="botao-neutro">Grupos</a>
+    <a href="{% url 'reservas:kit' %}" class="botao-neutro">Kit de contingência</a>
     {% if eh_gerente %}<a href="{% url 'reservas:boh' %}" class="botao-neutro">BOH (Embratur)</a>
     <a href="{% url 'reservas:painel_colchoes' %}" class="botao-neutro">Colchões</a>{% endif %}
     <button type="button" class="botao-primario"
