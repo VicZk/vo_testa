@@ -60,11 +60,23 @@
       if (botao.dataset.rotuloOriginal === undefined) botao.dataset.rotuloOriginal = botao.textContent;
       botao.textContent = "Copiado";
     }
+    // Quem usa leitor de tela não vê a troca do rótulo: o `aria-label` do botão
+    // (que, existindo, é o que a tecnologia assistiva lê) vira a confirmação e
+    // volta ao normal junto com o visual.
+    if (botao.hasAttribute("aria-label")) {
+      if (botao.dataset.ariaOriginal === undefined) {
+        botao.dataset.ariaOriginal = botao.getAttribute("aria-label");
+      }
+      botao.setAttribute("aria-label", "Copiado");
+    }
     clearTimeout(botao._voltar);
     botao._voltar = setTimeout(function () {
       botao.classList.remove("copiado");
       if (simples && botao.dataset.rotuloOriginal !== undefined) {
         botao.textContent = botao.dataset.rotuloOriginal;
+      }
+      if (botao.dataset.ariaOriginal !== undefined) {
+        botao.setAttribute("aria-label", botao.dataset.ariaOriginal);
       }
     }, 2000);
   }
