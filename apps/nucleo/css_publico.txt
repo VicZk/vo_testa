@@ -119,3 +119,4 @@ cancelado
 @media (pointer: coarse), (max-width: 820px) ‖ .pay input
 @media (pointer: coarse), (max-width: 820px) ‖ .pay select
 @media (pointer: coarse), (max-width: 820px) ‖ .voltar
+@media (max-width: 820px) ‖ .form-grade input[type="number"]

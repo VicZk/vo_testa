@@ -600,6 +600,25 @@ class DentroDoContainerTests(TestCase):
             self.assertIsNotNone(bloco, regra)
             self.assertIn("text-overflow: ellipsis", bloco.group(1), regra)
 
+    def test_painel_lateral_empilha_pelo_espaco_e_nao_pela_janela(self):
+        """A largura que sobra depende de o menu estar aberto ou recolhido, e
+        `@media` só enxerga a JANELA: a 821px com o menu aberto a coluna lateral
+        virava 154px e a ficha inteira estourava 121px para fora dela. Quem
+        decide tem de ser o espaço — por isso flex-wrap, não grid + breakpoint."""
+        for regra in (r"\n\.colunas-2-1 \{([^}]*)\}", r"\n\.ficha-cols \{([^}]*)\}"):
+            bloco = re.search(regra, self.css)
+            self.assertIsNotNone(bloco, regra)
+            self.assertIn("flex-wrap: wrap", bloco.group(1), regra)
+            self.assertNotIn("grid-template-columns", bloco.group(1), regra)
+
+    def test_tabela_quebra_na_palavra_e_nao_na_letra(self):
+        """`overflow-wrap: anywhere` entra no cálculo da largura MÍNIMA da
+        coluna: o navegador espremia a coluna até caber uma letra e saía
+        quebrando tudo ("Revisã/o do/ar-condi/ciona/do")."""
+        bloco = re.search(r"\n\.tabela td \{([^}]*)\}", self.css)
+        self.assertIsNotNone(bloco)
+        self.assertIn("overflow-wrap: break-word", bloco.group(1))
+
     def test_periodo_personalizado_empilha_no_celular(self):
         """Os dois campos de data pedem 316px e a coluna do celular dá 164: com
         `overflow:hidden` no pill, a segunda data não existia."""

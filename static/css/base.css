@@ -643,6 +643,10 @@ input[type="radio"] { accent-color: var(--lampiao); }
   @keyframes pay-pop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 }
 
+@media (max-width: 820px) {
+  .form-grade input[type="number"] { min-width: 5rem; }
+}
+
 .botao-largo { width: 100%; justify-content: center; }
 
 @media (prefers-reduced-motion: reduce) {
