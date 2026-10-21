@@ -2755,3 +2755,64 @@ class AvisoDoCheckinTests(ReservasTestsBase):
         self.client.force_login(self.usuario)
         html = self.client.get(reverse("reservas:detalhe", args=[r.pk])).content.decode()
         self.assertNotIn("FNRH pendente", html)
+
+
+class BarraDeAcoesTests(ReservasTestsBase):
+    """As ações da reserva numa barra visível, com o formulário de cada uma num
+    painel largo. Antes: «Trocar de quarto» e «Estender a estadia» eram
+    `<details>` de 13px perdidos no meio da página (e o dono reclamou disso), e
+    sinal/transferir/cancelar ficavam abertos para sempre em três colunas."""
+
+    def html(self, reserva):
+        self.client.force_login(self.usuario)
+        return self.client.get(reverse("reservas:detalhe", args=[reserva.pk])).content.decode()
+
+    def test_confirmada_oferece_alterar_e_o_destrutivo_separado(self):
+        html = self.html(self.reserva(status=Reserva.Status.CONFIRMADA))
+        for rotulo in ("Fazer entrada (check-in)", "Receber sinal", "Alterar lotação",
+                       "Transferir datas", "Trocar de quarto"):
+            self.assertIn(rotulo, html, rotulo)
+        self.assertIn("acoes-reserva-risco", html)        # cancelar/no-show à parte
+        self.assertIn("Cancelar reserva", html)
+        self.assertIn("Não compareceu", html)
+        self.assertNotIn("Estender estadia", html)        # só hospedada
+
+    def test_hospedada_troca_as_acoes_pelas_da_estadia(self):
+        r = self.reserva()
+        r.fazer_checkin(self.usuario)
+        html = self.html(r)
+        self.assertIn("Fazer saída (check-out)", html)
+        self.assertIn("Estender estadia", html)
+        self.assertIn("Trocar de quarto", html)
+        self.assertNotIn("Alterar lotação", html)        # só antes da entrada
+        self.assertNotIn("Cancelar reserva", html)       # saída antecipada é outro caminho
+
+    def test_depois_da_saida_nao_oferece_acao_de_alteracao(self):
+        r = self.reserva()
+        r.fazer_checkin(self.usuario)
+        Reserva.objects.filter(pk=r.pk).update(status=Reserva.Status.CHECKOUT)
+        html = self.html(Reserva.objects.get(pk=r.pk))
+        for rotulo in ("Trocar de quarto", "Estender estadia", "Alterar lotação",
+                       "Transferir datas", "Cancelar reserva"):
+            self.assertNotIn(rotulo, html, rotulo)
+
+    def test_cada_painel_tem_o_botao_que_o_abre(self):
+        """Nenhum `<details>` sobrou, e todo painel é apontado por um botão."""
+        import re
+
+        html = self.html(self.reserva(status=Reserva.Status.CONFIRMADA))
+        paineis = set(re.findall(r'class="acao-painel[^"]*" id="(acao-[a-z]+)"', html))
+        controlados = set(re.findall(r'aria-controls="(acao-[a-z]+)"', html))
+        self.assertTrue(paineis)
+        self.assertEqual(paineis, controlados)
+        self.assertNotIn("acao-sensivel", html)
+
+    def test_link_do_pre_checkin_fica_ao_lado_do_preencher_fnrh(self):
+        from apps.portal.services import get_acesso
+
+        r = self.reserva(status=Reserva.Status.CONFIRMADA)
+        Pessoa.objects.filter(pk=self.hospede.pk).update(telefone="(49) 99964-8702")
+        html = self.html(r)
+        token = get_acesso(r.pk).token
+        self.assertIn(f'data-copiar="http://testserver/hospede/{token}/checkin/"', html)
+        self.assertIn("https://wa.me/5549999648702?text=", html)

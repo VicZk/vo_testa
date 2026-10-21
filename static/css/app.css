@@ -864,7 +864,7 @@ button.link:hover { color: var(--lampiao); background: rgba(255, 255, 255, .05);
 
 /* Barra de ações: com largura apertada, os botões descem de linha em vez de
    empurrar a página. */
-.acoes, .pagina-acoes, .eleg-acoes, .filtros, .acoes-reserva { flex-wrap: wrap; }
+.acoes, .pagina-acoes, .eleg-acoes, .filtros { flex-wrap: wrap; }
 
 
 .topbar {
@@ -2289,8 +2289,6 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 
 /* As cores de status de reserva moram na seção SELO (--selo-cor). */
 
-.acoes-reserva { flex-wrap: wrap; margin-bottom: 1.4rem; }
-.acoes-reserva form { display: inline; }
 
 /* Arrastar reserva entre quartos no mapa de reservas */
 .mapa-barra[data-reserva] { cursor: grab; }
@@ -2730,7 +2728,6 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
   :root { interpolate-size: allow-keywords; }  /* deixa animar de 0 até auto */
   .acao-bloco::details-content,
   .op-det::details-content,
-  .troca-quarto::details-content,
   .lb-resolver::details-content,
   .mais-opcoes::details-content {
     block-size: 0; overflow: hidden;
@@ -2739,7 +2736,6 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
   }
   .acao-bloco[open]::details-content,
   .op-det[open]::details-content,
-  .troca-quarto[open]::details-content,
   .lb-resolver[open]::details-content,
   .mais-opcoes[open]::details-content { block-size: auto; }
 }
@@ -3121,8 +3117,6 @@ a.modulo-ativo:hover {
 .sit-em_limpeza { color: var(--andamento); }
 .sit-bloqueada { color: var(--info); }
 .sit-inativa { color: var(--tinta-suave); }
-
-.troca-quarto summary { color: var(--madeira); }
 
 /* ---------- Corredor (herói Operação Lampião) ---------- */
 
@@ -6216,3 +6210,44 @@ body.escala-dragging .escala-drop { cursor: copy; }
 .copiar-celula .copiar, .copiar-celula .copiar-acoes { margin-top: 0; }
 /* No papel não há o que copiar. */
 @media print { .copiar-acoes { display: none; } }
+
+/* ── Ações da reserva: barra visível + painel largo ─────────────────────────
+   "Trocar de quarto" e "Estender a estadia" eram <details> de 13px no meio da
+   página; sinal/transferir/cancelar ficavam abertos para sempre em três colunas
+   estreitas. Agora: uma barra (o que fazer agora em sólido, as alterações em
+   neutro, o risco separado no fim) e o formulário da ação escolhida num painel
+   que ocupa a largura toda. */
+.acoes-reserva-bloco { margin: 0 0 1.4rem; }
+.acoes-reserva-barra {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .5rem;
+  padding: .75rem .9rem;
+  background: var(--superficie); border: 1px solid var(--fio);
+  border-radius: var(--raio); box-shadow: var(--sombra-1);
+}
+.acoes-reserva-barra form { display: contents; }
+/* O destrutivo não fica ao lado de "Trocar de quarto": vai para o fim da barra,
+   atrás de um fio. Em tela estreita desce de linha sozinho (o fio some). */
+.acoes-reserva-risco {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .5rem;
+  margin-left: auto; padding-left: .75rem;
+  border-left: 1px solid var(--fio);
+}
+@media (max-width: 720px) {
+  .acoes-reserva-risco { margin-left: 0; padding-left: 0; border-left: 0; }
+}
+/* Botão da ação aberta: o painel embaixo é dele. */
+.acao-ligada {
+  background: color-mix(in srgb, var(--lampiao) 18%, transparent);
+  border-color: var(--madeira);
+}
+.acao-painel {
+  margin-top: .7rem; padding: 1.1rem 1.2rem 1.2rem;
+  background: var(--superficie); border: 1px solid var(--fio-forte);
+  border-radius: var(--raio); box-shadow: var(--sombra-cartao);
+}
+.acao-painel-risco { border-color: color-mix(in srgb, var(--perigo) 45%, transparent); }
+.acao-painel-titulo { margin: 0 0 .2rem; font-size: 1.05rem; letter-spacing: -.01em; }
+.acao-painel .ajuda { display: block; margin: 0 0 .8rem; }
+.acao-painel .form-cartao { margin: 0; padding: 0; background: none; border: 0; box-shadow: none; }
+/* O formulário não estica até 1760px: largura de leitura, como o resto da casa. */
+.acao-painel .form-cartao, .acao-painel .aviso-politica { max-width: 760px; }

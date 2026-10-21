@@ -600,6 +600,18 @@ def detalhe(request, pk):
             )
     fin_saldo = fin_total - fin_recebido
 
+    # Link do pré check-in (FNRH) para copiar/mandar no WhatsApp ao lado do
+    # «Preencher / editar FNRH» — antes só existia dentro da tela do QR, que
+    # serve quem está no balcão. `get_acesso` cria o token da reserva se ainda
+    # não houver (é o mesmo que a tela do QR faz).
+    link_pre_checkin = ""
+    if reserva.ativa and modulo_ativo(Modulo.APPSITE):
+        from apps.portal.services import get_acesso
+
+        link_pre_checkin = request.build_absolute_uri(
+            reverse("portal:checkin", args=[get_acesso(reserva.pk).token])
+        )
+
     return render(
         request,
         "reservas/reserva_detalhe.html",
@@ -629,6 +641,7 @@ def detalhe(request, pk):
                 else None,
             ),
             "form_lancamento": LancamentoContaForm(auto_id="id_lanc_%s"),
+            "link_pre_checkin": link_pre_checkin,
             "form_acompanhante": AcompanhanteForm(),
             "quartos_livres": quartos_livres,
             "politica_cancel": politica_cancel,
