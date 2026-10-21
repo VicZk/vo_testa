@@ -185,6 +185,189 @@ class TarifaDayUse(models.Model):
         return f"Day use / {self.get_classificacao_display()}: R$ {self.valor_adulto}"
 
 
+class RestricaoVenda(models.Model):
+    """Restrição de VENDA por período — o que o calendário tarifário não diz.
+
+    Restrição não é tarifa: não mexe em preço nenhum. Ela diz quando uma estadia
+    **pode ser vendida**, para que o Réveillon não saia como uma noite solta no
+    31/12 deixando as noites ao redor vazias.
+
+    `inicio`/`fim` são datas de NOITE, as duas inclusive (o intervalo do Réveillon
+    com as noites de 29/12 a 01/01 vai de 29/12 a 01/01). Escopo: `uh` = só aquele
+    quarto, `tipo_uh` = todos os quartos do tipo, os dois vazios = casa inteira —
+    nunca os dois juntos (constraint).
+
+    Semântica de cada regra, como o mercado hoteleiro a usa:
+
+    - **`min_noites` (minimum stay through)**: vale quando QUALQUER noite da estadia
+      cai no intervalo — não só a primeira. Entrar em 30/12 e sair em 31/12 toca o
+      Réveillon e é barrado; entrar em 27/12 e sair em 03/01 atravessa o intervalo e
+      passa, porque a estadia inteira tem noites de sobra. Com várias regras valendo
+      na mesma estadia, vale o **maior** mínimo.
+    - **`fechado_chegada` (closed to arrival)**: a data de ENTRADA não pode cair no
+      intervalo. Quem já está hospedado atravessa; quem chegaria no dia, não.
+    - **`fechado_saida` (closed to departure)**: a data de SAÍDA não pode cair no
+      intervalo. Atenção ao off-by-one: a saída é o dia seguinte à última noite, então
+      sair em `fim + 1 dia` é PERMITIDO (a última noite do intervalo foi vendida);
+      sair dentro do intervalo é que deixa noite vaga.
+    - **`parar_vendas` (stop sell)**: nenhuma noite do intervalo é vendável no escopo.
+    - **Day use** (`TipoUH.modalidade=day_use`) não tem noite e não participa de
+      estadia mínima nem de chegada/saída: só `parar_vendas` com escopo daquele
+      tipo/UH o afeta (regra de casa inteira não atinge o Dia na Pousada).
+
+    Quem aplica: `reservas.services.restricoes_da_estadia()` (interface pública).
+    No site a regra barra e explica o motivo; na recepção ela vira aviso — quem
+    atende negocia —, menos `parar_vendas`, que só a gerência dispensa (e fica na
+    trilha de auditoria).
+    """
+
+    descricao = models.CharField(
+        "descrição", max_length=120,
+        help_text="O nome do período como o hóspede vai ler no site "
+                  "(ex.: “Réveillon”, “Feriado de Carnaval”).",
+    )
+    inicio = models.DateField(
+        "primeira noite", help_text="Primeira noite do intervalo (inclusive).",
+    )
+    fim = models.DateField(
+        "última noite", help_text="Última noite do intervalo (inclusive).",
+    )
+    tipo_uh = models.ForeignKey(
+        "nucleo.TipoUH", on_delete=models.CASCADE, null=True, blank=True,
+        related_name="restricoes_venda", verbose_name="tipo de quarto",
+        help_text="Vale só para os quartos deste tipo. Vazio = qualquer tipo.",
+    )
+    uh = models.ForeignKey(
+        "nucleo.UH", on_delete=models.CASCADE, null=True, blank=True,
+        related_name="restricoes_venda", verbose_name="quarto",
+        help_text="Vale só para este quarto. Vazio = qualquer quarto.",
+    )
+    min_noites = models.PositiveSmallIntegerField(
+        "estadia mínima (noites)", null=True, blank=True,
+        help_text="Quem tiver qualquer noite no intervalo precisa ficar pelo menos "
+                  "este tanto de noites. Vazio = sem mínimo.",
+    )
+    fechado_chegada = models.BooleanField(
+        "fechado para chegada", default=False,
+        help_text="Ninguém pode entrar num dia do intervalo.",
+    )
+    fechado_saida = models.BooleanField(
+        "fechado para saída", default=False,
+        help_text="Ninguém pode sair num dia do intervalo. Sair no dia seguinte à "
+                  "última noite continua permitido.",
+    )
+    parar_vendas = models.BooleanField(
+        "parar vendas", default=False,
+        help_text="Nenhuma noite do intervalo é vendida. Na recepção, só a gerência "
+                  "passa por cima.",
+    )
+    ativa = models.BooleanField(
+        "ativa", default=True,
+        help_text="Desmarque para guardar a regra sem que ela valha.",
+    )
+    criado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="restricoes_criadas", verbose_name="criada por",
+    )
+    criado_em = models.DateTimeField("criada em", auto_now_add=True)
+    atualizado_em = models.DateTimeField("atualizada em", auto_now=True)
+
+    class Meta:
+        verbose_name = "restrição de venda"
+        verbose_name_plural = "restrições de venda"
+        ordering = ["-inicio", "descricao"]
+        indexes = [
+            # Toda busca do site pergunta "que regras ativas tocam este intervalo?".
+            models.Index(fields=["ativa", "inicio", "fim"], name="restricao_janela_idx"),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(fim__gte=F("inicio")),
+                name="restricao_fim_depois_do_inicio",
+            ),
+            # Escopo é UM só: o quarto OU o tipo OU a casa inteira.
+            models.CheckConstraint(
+                condition=Q(tipo_uh__isnull=True) | Q(uh__isnull=True),
+                name="restricao_escopo_tipo_xor_uh",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.descricao} ({self.inicio:%d/%m/%Y}–{self.fim:%d/%m/%Y})"
+
+    # ---------- Leitura ----------
+
+    @property
+    def escopo(self) -> str:
+        """Onde a regra pega, em uma linha, para a tela e para as mensagens."""
+        if self.uh_id:
+            return f"Quarto {self.uh.numero}"
+        if self.tipo_uh_id:
+            return self.tipo_uh.nome
+        return "Casa inteira"
+
+    @property
+    def situacao(self) -> tuple[str, str]:
+        """(classe do selo, rótulo) — onde a regra está no calendário, hoje."""
+        hoje = timezone.localdate()
+        if not self.ativa:
+            return "selo-neutro", "Desativada"
+        if self.fim < hoje:
+            return "selo-neutro", "Encerrada"
+        if self.inicio > hoje:
+            return "selo-programada", "Programada"
+        return "selo-ativo", "Valendo"
+
+    @property
+    def regras(self) -> list[str]:
+        """As regras marcadas, em português, para a lista de gestão."""
+        itens = []
+        if self.min_noites:
+            itens.append(f"mínimo {self.min_noites} "
+                         f"noite{'s' if self.min_noites > 1 else ''}")
+        if self.fechado_chegada:
+            itens.append("sem chegada")
+        if self.fechado_saida:
+            itens.append("sem saída")
+        if self.parar_vendas:
+            itens.append("vendas paradas")
+        return itens
+
+    def vale_para(self, *, tipo_uh=None, uh=None) -> bool:
+        """A regra alcança este escopo? Regra de quarto só pega quando o quarto é
+        conhecido (a venda por tipo escolhe a unidade depois, e lá ela é checada)."""
+        if self.uh_id:
+            return uh is not None and uh.pk == self.uh_id
+        if self.tipo_uh_id:
+            tipo_id = getattr(tipo_uh, "pk", None) or (uh.tipo_id if uh else None)
+            return tipo_id == self.tipo_uh_id
+        return True
+
+    def pega_noites(self, checkin, checkout) -> bool:
+        """Alguma noite de [checkin, checkout) cai no intervalo [inicio, fim]?"""
+        return checkin <= self.fim and checkout > self.inicio
+
+    def pega_dia(self, dia) -> bool:
+        """O dia cai no intervalo (usado por chegada e saída)."""
+        return self.inicio <= dia <= self.fim
+
+    # ---------- Validação ----------
+
+    def clean(self):
+        erros = {}
+        if self.inicio and self.fim and self.fim < self.inicio:
+            erros["fim"] = "A última noite deve ser igual ou depois da primeira."
+        if self.tipo_uh_id and self.uh_id:
+            erros["uh"] = ("Escolha o tipo OU o quarto — não os dois. Deixe os dois "
+                           "vazios para valer na casa inteira.")
+        if not any([self.min_noites, self.fechado_chegada, self.fechado_saida,
+                    self.parar_vendas]):
+            erros["__all__"] = ("Marque ao menos uma regra: estadia mínima, fechado "
+                                "para chegada/saída ou parar vendas.")
+        if erros:
+            raise ValidationError(erros)
+
+
 class Reserva(models.Model):
     """
     Ciclo: Orçamento → Pré-reserva → Confirmada → Hospedada → Check-out.

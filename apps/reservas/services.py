@@ -34,6 +34,7 @@ from .models import (
     LancamentoConta,
     PagamentoConta,
     Reserva,
+    RestricaoVenda,
     Tarifa,
 )
 
@@ -625,15 +626,145 @@ def montagem_do_dia(dia: date) -> list:
     return linhas
 
 
+# ───────── Restrições de venda (estadia mínima, chegada/saída, parar vendas) ─────────
+#
+# Disponibilidade física responde "o quarto está livre?"; restrição de venda responde
+# "esta estadia pode ser vendida?" — e as duas perguntas são diferentes: no Réveillon o
+# quarto está livre no 31/12 e ainda assim não se vende uma noite solta ali, porque as
+# noites ao redor ficariam vazias. A semântica de cada regra está no docstring de
+# `RestricaoVenda` (apps/reservas/models.py).
+#
+# Isto NÃO entra em `uh_disponivel`/`uhs_disponiveis` de propósito: a recepção precisa
+# ver o quarto livre e decidir (a regra vira aviso), enquanto o site não oferece.
+
+# Canais em que o hóspede compra sozinho, sem ninguém para negociar: ali a restrição
+# BLOQUEIA no servidor (busca esconder não basta — POST forjado não fura). Nos canais
+# internos ela é aviso, e a dispensa de "parar vendas" fica na trilha de auditoria.
+CANAIS_AUTOATENDIMENTO = frozenset({Reserva.Canal.SITE})
+
+
+def _tipo_da_consulta(tipo_uh=None, uh=None):
+    return tipo_uh if tipo_uh is not None else (uh.tipo if uh is not None else None)
+
+
+def restricoes_no_periodo(checkin: date, checkout: date) -> list:
+    """Regras ATIVAS que podem alcançar a estadia [checkin, checkout) — uma consulta só.
+
+    Janela generosa de propósito: pega também a regra que começa no dia do check-out,
+    porque `fechado_saida` olha a data de SAÍDA, que é o dia seguinte à última noite.
+    A busca do site passa esta lista adiante (`regras=`) para conferir os 24 quartos
+    sem voltar ao banco por quarto."""
+    return list(
+        RestricaoVenda.objects.filter(
+            ativa=True, inicio__lte=checkout, fim__gte=checkin,
+        ).select_related("tipo_uh", "uh")
+    )
+
+
+def restricoes_da_estadia(checkin: date, checkout: date, tipo_uh=None, uh=None,
+                          regras=None) -> list[dict]:
+    """Violações de restrição de venda desta estadia — lista vazia = pode vender.
+
+    Interface pública (site, recepção, Comercial, API). Cada violação é
+    `{"regra": RestricaoVenda, "tipo": "parar_vendas"|"min_noites"|"fechado_chegada"|
+    "fechado_saida", "mensagem": <texto em português, pronto para o hóspede>}`, na
+    ordem da mais forte para a mais branda.
+
+    Escopo: informe `uh` (venda por quarto) ou `tipo_uh` (venda por tipo/day use). Sem
+    nenhum dos dois, só as regras de casa inteira respondem. `regras` = lista já lida
+    por `restricoes_no_periodo()`, para não consultar o banco por quarto."""
+    if not checkin or not checkout or checkout <= checkin:
+        return []
+    if regras is None:
+        regras = restricoes_no_periodo(checkin, checkout)
+    aplicaveis = [r for r in regras if r.vale_para(tipo_uh=tipo_uh, uh=uh)]
+    tipo = _tipo_da_consulta(tipo_uh, uh)
+    day_use = tipo is not None and tipo.modalidade == TipoUH.Modalidade.DAY_USE
+    violacoes = []
+
+    # 1) Parada de vendas — a mais forte, e a única que o Dia na Pousada conhece.
+    for r in aplicaveis:
+        if not r.parar_vendas or not r.pega_noites(checkin, checkout):
+            continue
+        # Day use não disputa quarto com a hospedagem: regra de casa inteira não o
+        # atinge, só a que aponta o tipo/unidade de day use.
+        if day_use and not (r.uh_id or r.tipo_uh_id):
+            continue
+        violacoes.append({
+            "regra": r, "tipo": "parar_vendas",
+            "mensagem": f"{r.descricao}: estas datas não estão abertas para venda.",
+        })
+
+    # Day use é de um dia e não tem noite ao redor: estadia mínima e chegada/saída
+    # fechadas não fazem sentido ali.
+    if day_use:
+        return violacoes
+
+    # 2) Estadia mínima (min stay THROUGH): basta uma noite da estadia cair no
+    # intervalo. Com várias regras valendo, vale o MAIOR mínimo.
+    exigencia = max(
+        (r for r in aplicaveis if r.min_noites and r.pega_noites(checkin, checkout)),
+        key=lambda r: r.min_noites, default=None,
+    )
+    noites = (checkout - checkin).days
+    if exigencia is not None and noites < exigencia.min_noites:
+        saida = checkin + timedelta(days=exigencia.min_noites)
+        violacoes.append({
+            "regra": exigencia, "tipo": "min_noites",
+            "mensagem": (
+                f"{exigencia.descricao}: a estadia mínima é de {exigencia.min_noites} "
+                f"noites. Com entrada em {checkin:%d/%m}, a saída precisa ser a partir "
+                f"de {saida:%d/%m}."
+            ),
+        })
+
+    # 3) Chegada e saída fechadas. A saída é o dia SEGUINTE à última noite: sair no dia
+    # seguinte ao fim do intervalo é permitido — a última noite foi vendida.
+    for r in aplicaveis:
+        if r.fechado_chegada and r.pega_dia(checkin):
+            violacoes.append({
+                "regra": r, "tipo": "fechado_chegada",
+                "mensagem": (f"{r.descricao}: não há entrada em {checkin:%d/%m}. "
+                             "Escolha outra data de chegada."),
+            })
+        if r.fechado_saida and r.pega_dia(checkout):
+            violacoes.append({
+                "regra": r, "tipo": "fechado_saida",
+                "mensagem": (f"{r.descricao}: não há saída em {checkout:%d/%m}. "
+                             "Escolha outra data de saída."),
+            })
+    return violacoes
+
+
+def exigir_venda_permitida(checkin: date, checkout: date, *, tipo_uh=None, uh=None,
+                           regras=None) -> None:
+    """Levanta `ValidationError` com os motivos se a estadia violar alguma restrição.
+    Trava do canal direto: a busca já não oferece, isto recusa o POST forjado."""
+    violacoes = restricoes_da_estadia(
+        checkin, checkout, tipo_uh=tipo_uh, uh=uh, regras=regras)
+    if violacoes:
+        raise ValidationError([v["mensagem"] for v in violacoes])
+
+
 # ───────── Interface pública para o canal Site (venda por tipo) ─────────
 
-def uh_livre_do_tipo(tipo_uh, checkin, checkout, *, adultos=None, criancas=None):
+def uh_livre_do_tipo(tipo_uh, checkin, checkout, *, adultos=None, criancas=None,
+                     respeitar_restricoes=False):
     """Uma UH livre daquele tipo no período (ordem por número), ou None. Com
-    `adultos`/`criancas`, só devolve um quarto cujo arranjo caiba no pool de colchões."""
+    `adultos`/`criancas`, só devolve um quarto cujo arranjo caiba no pool de colchões.
+    Com `respeitar_restricoes`, pula também o quarto que uma restrição de venda barra
+    (regra apontando aquela unidade) — o canal direto não aloca quarto bloqueado."""
     if (checkout - checkin).days <= 0:
         return None
-    return (uhs_disponiveis(checkin, checkout, adultos=adultos, criancas=criancas)
-            .filter(tipo=tipo_uh).order_by("numero").first())
+    livres = (uhs_disponiveis(checkin, checkout, adultos=adultos, criancas=criancas)
+              .filter(tipo=tipo_uh).order_by("numero"))
+    if not respeitar_restricoes:
+        return livres.first()
+    regras = restricoes_no_periodo(checkin, checkout)
+    for uh in livres.select_related("tipo"):
+        if not restricoes_da_estadia(checkin, checkout, uh=uh, regras=regras):
+            return uh
+    return None
 
 
 def tipo_disponivel(tipo_uh, checkin, checkout, *, adultos=None, criancas=None) -> bool:
@@ -681,7 +812,7 @@ def criar_prereserva(*, tipo_uh=None, uh=None, checkin, checkout, hospede, usuar
                      reter=False, casais=None, solteiros=None, usa_sofa_cama=None,
                      criancas_0_5=None, criancas_6_15=None,
                      cobra_iss=True, cobra_taxa_turismo=True, usa_berco=False,
-                     nao_reembolsavel=False):
+                     nao_reembolsavel=False, respeitar_restricoes=None):
     """Cria uma PRÉ-RESERVA num quarto físico. Passe `uh` para reservar uma unidade
     ESPECÍFICA (venda por quarto) ou `tipo_uh` para alocar qualquer livre do tipo. O
     antioverbooking (constraint) protege da corrida. Interface pública usada pelo Site
@@ -690,22 +821,36 @@ def criar_prereserva(*, tipo_uh=None, uh=None, checkin, checkout, hospede, usuar
     Preço: quando `valor_diaria` é None, calcula pela motor de tarifa (Manual §2 — pessoa
     adicional, single 70%, criança 6-15 meia). Arranjo de camas: se `casais`/`solteiros`
     vierem vazios, o sistema sugere; a **trava global de colchões extra por noite** é
-    validada aqui (lock serializa a corrida)."""
+    validada aqui (lock serializa a corrida).
+
+    `respeitar_restricoes`: trava das restrições de venda (estadia mínima, chegada/saída
+    fechadas, parada de vendas). `None` = decide pelo canal — autoatendimento bloqueia
+    (`CANAIS_AUTOATENDIMENTO`), canal interno não, porque ali a regra é aviso e quem
+    atende negocia (ver `restricoes_da_estadia`)."""
     from apps.reservas import precos
     from apps.reservas.models import validar_periodo_day_use
 
     validar_periodo_day_use(uh.tipo if uh is not None else tipo_uh, checkin, checkout)
+    if respeitar_restricoes is None:
+        respeitar_restricoes = canal in CANAIS_AUTOATENDIMENTO
     expirar_vencidas()  # solta retenções vencidas para não bloquear a constraint
     por_unidade = uh is not None
     if por_unidade:
         if not uh_disponivel(uh, checkin, checkout):
             raise ValidationError("Este quarto não está disponível no período.")
         tipo_uh = uh.tipo
+        if respeitar_restricoes:
+            exigir_venda_permitida(checkin, checkout, uh=uh)
     else:
+        # Restrição de tipo/casa antes de alocar: o motivo que o hóspede lê é a regra,
+        # não um "esgotado" mudo.
+        if respeitar_restricoes:
+            exigir_venda_permitida(checkin, checkout, tipo_uh=tipo_uh)
         # Aloca um quarto do tipo que também caiba no pool de colchões p/ a lotação
         # (evita escolher um quarto que a trava recusaria logo em seguida).
         uh = uh_livre_do_tipo(tipo_uh, checkin, checkout,
-                              adultos=adultos, criancas=criancas)
+                              adultos=adultos, criancas=criancas,
+                              respeitar_restricoes=respeitar_restricoes)
         if not uh:
             raise ValidationError("Não há quarto desse tipo disponível no período.")
 
