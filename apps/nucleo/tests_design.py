@@ -522,6 +522,16 @@ class MenuLateralTests(TestCase):
         self.assertIsNotNone(bloco)
         self.assertIn("min-height: var(--sidebar-topo-h)", bloco.group(1))
 
+    def test_nav_prende_o_que_sai_do_fluxo(self):
+        """No trilho, os títulos de grupo saem do fluxo. Sem `position: relative`
+        na <nav>, o ancestral posicionado mais próximo passa a ser a própria
+        `.sidebar`: eles escapam da rolagem do menu e esticam o DOCUMENTO (a
+        Visão geral ia de 900 para 1546px e ganhava barra de rolagem à toa)."""
+        bloco = re.search(r"\n\.sidebar nav \{([^}]*)\}", self.css)
+        self.assertIsNotNone(bloco)
+        self.assertIn("position: relative", bloco.group(1))
+        self.assertIn("overflow-y: auto", bloco.group(1))
+
     def test_marca_continua_clicavel_no_trilho(self):
         """Os dois logotipos saíram do fluxo para o topo não saltar; sem largura
         explícita, a <a> da marca fica com 0px — o símbolo aparece e o link para

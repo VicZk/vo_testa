@@ -261,6 +261,9 @@
      recolhida: é ela que impede o menu inteiro de saltar quando o logotipo
      grande dá lugar ao símbolo. */
   --sidebar-topo-h: 116px;
+  /* Vão entre a coluna de conteúdo e o painel lateral (`.colunas-2-1`). Fica
+     num token porque a base em porcentagem das duas colunas desconta ele. */
+  --vao-2-1: 1.4rem;
   /* Altura da barra de cima. Quem gruda abaixo dela (painel do PDV, filtro do
      BOH, rail de operação) calcula a partir daqui, em vez de repetir "76px". */
   --topbar-h: 60px;
@@ -543,7 +546,7 @@ input[type="radio"] { accent-color: var(--lampiao); }
 
 .form-grade {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: .85rem 1rem;
 }
 
