@@ -5965,3 +5965,7 @@ body.escala-dragging .escala-drop { cursor: copy; }
 .est-form-inline h3 { margin: 0 0 .8rem; color: var(--tinta-suave); }
 .est-form-inline .campo:last-of-type { margin-bottom: 1rem; }
 .est-nota-catalogo { margin: -1.2rem 0 1.8rem; font-size: .84rem; color: var(--tinta-suave); }
+/* Número não quebra linha: a 821 px com o menu aberto, a coluna de dinheiro
+   ficava com "R$" numa linha e "4,20" na outra. Quando falta espaço, a tabela
+   rola dentro do cartão (tabela-rol.js) — que é o jeito da casa. */
+.est-tabela td.num, .est-tabela th.num { white-space: nowrap; }
