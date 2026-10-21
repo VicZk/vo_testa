@@ -438,7 +438,10 @@ seguram o quarto. Overbooking é impossível no banco (`ExclusionConstraint` sob
 e número de pessoas (sozinho paga 70%; criança até 5 anos não paga, de 6 a 15 paga meia
 pessoa adicional), feriados automáticos, pool global de colchões extras e berços por
 noite, grupos com conta-mãe, troca de quarto arrastando no mapa, FNRH por hóspede com
-trava de check-in, pré-check-in por QR e BOH mensal com exportação.
+trava de check-in, pré-check-in por QR e BOH mensal com exportação. O detalhe da
+reserva tem um painel financeiro: total previsto, o que já foi pago (pela gaveta,
+online ou faturado, líquido de estornos), o sinal pendente, o saldo e as cobranças de
+Pagamentos com o link público.
 
 **Pagamentos.** `Cobranca` com token público, estados pendente → pago, estornado,
 cancelado ou expirado, e trilha `EventoPagamento`. Confirmação idempotente com trava de
@@ -476,6 +479,11 @@ saídas, transferências, ajustes, kardex e inventário.
 **Comercial.** Funil Kanban com ganho só por conversão em reserva, cotação pelo motor de
 preços, sinal online, WhatsApp Cloud API dentro do card (janela de 24 h e template de
 retomada), e-mail 1:1 e campanhas, landing pages e captura de leads com Meta CAPI.
+O «Ganhar» mostra a diária da tabela, a vendida e o total da reserva, com o sinal em
+R$ ou em %. Lead fechado pode ser reaberto ou movido por quem tem a área
+`comercial_fechados`: tirar do Ganho desfaz a venda em Reservas (`desfazer_venda`:
+cancela e devolve o que foi pago pela gaveta; pago online bloqueia até o estorno no
+gateway).
 
 **Marketing.** Gerência de campanhas com fases, peças com data, checklist, verba mensal
 e calendário, embrulhando as campanhas do Comercial.
@@ -585,7 +593,7 @@ desliga a trava da FNRH, as taxas automáticas, o MFA e o limite de login.
 
 - **Onde:** dentro de cada app (`apps/<app>/tests.py` e `tests_*.py`), com `TestCase` do
   Django. Regras de dinheiro e de disponibilidade são sempre testadas.
-- **Quantos:** cerca de 900 testes, com cerca de 74% de cobertura de instruções. Os mais densos:
+- **Quantos:** cerca de 1.190 testes. Os mais densos:
   `comercial`, `nucleo`, `reservas`, `marketing`, `pagamentos`.
 - **Navegador:** `apps/site/tests_e2e.py` usa Playwright e é pulado se ele não estiver
   instalado (`pip install playwright && playwright install chromium`).
@@ -600,7 +608,7 @@ coverage run --source=apps manage.py test && coverage report   # cobertura
 - **Lint e segurança:** `ruff check apps config`, `bandit -r apps config -ll`,
   `pip-audit -r requirements.txt` e `pre-commit install` para os hooks locais.
 - **CI de testes** (`.github/workflows/testes.yml`): a cada push em `main` e `dev` e em
-  todo PR, sobe um PostgreSQL 16, confere se as migrations estão em dia
+  todo PR, roda o ruff, sobe um PostgreSQL 16, confere se as migrations estão em dia
   (`makemigrations --check`) e roda a suíte inteira. Ele existe neste fork; no original o
   push na `main` ainda publica sem esperar teste nenhum. Para fechar essa porta lá, basta
   levar o arquivo e fazer o Railway aguardar os checks do GitHub antes de publicar.
@@ -680,13 +688,22 @@ Toda tela do CRM nasce no design system; nada de estilo paralelo nem cor fixa no
 - **App shell** (`templates/base.html`): sidebar por permissão, navegação com
   `hx-boost`, paleta de comandos (⌘K ou `/`), toasts a partir das mensagens do Django,
   atalho `N` para nova reserva.
-- **Site público:** Tailwind em build estático, com paleta própria. O CRM não usa
-  Tailwind e o site não usa o `app.css`.
+- **Portal do hóspede e página de pagamento:** carregam o `static/css/base.css`, um
+  recorte do `app.css` com só o que elas usam (6 KB comprimidos em vez de 52 KB).
+  O recorte é GERADO: edite só o `app.css` e rode `python manage.py gerar_base_css`;
+  a lista do que entra está em `apps/nucleo/css_publico.txt`, e o teste
+  `CssDasTelasPublicasTests` avisa quando o recorte ficou para trás ou quando uma
+  tela pública ganhou classe que falta nele.
+- **Site público:** Tailwind em build estático, com paleta própria e as mesmas cores
+  de aviso do CRM. O CRM não usa Tailwind e o site não usa o `app.css`.
 
 Regras para uma tela nova: estender `base.html`; telas de painel ou lista usam
 `<div class="eleg">` com o kit `comercial/_estilo_elegante.html`; colunas de número com
 `.num` no `<th>` e no `<td>`; dinheiro com `|intcomma_brl`; mensagens por
-`django.contrib.messages`. Detalhes em [`docs/ARQUITETURA.md` §11](docs/ARQUITETURA.md).
+`django.contrib.messages`; nada de `style="…"` com medida ou cor fixa (vira classe;
+o atributo só fica quando o valor é dado, como uma largura em %). Campo de R$ usa o
+`ReaisInput` do núcleo. Os testes de `apps/nucleo/tests_design.py` cobram essas
+regras. Detalhes em [`docs/ARQUITETURA.md` §11](docs/ARQUITETURA.md).
 
 ---
 

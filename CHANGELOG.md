@@ -9,11 +9,11 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
-## 21/10/2026 — Pendências do visual, novidades do original e o R$ que saía cem vezes maior (`158133c` a `aab8ce7`)
+## 21/10/2026 — Pendências do visual, novidades do original e o R$ que saía cem vezes maior (`158133c` a `f80d989`)
 
-Sétimo bloco: as pendências do visual da auditoria, os seis commits que o original
-ganhou na noite de 20/10 (já adaptados às regras do fork) e um bug antigo de dinheiro
-que eles deixaram à vista.
+Sétimo bloco: as pendências do visual da auditoria, os sete commits que o original
+ganhou entre a noite de 20/10 e a madrugada de 21/10 (já adaptados às regras do fork)
+e um bug antigo de dinheiro que eles deixaram à vista.
 
 **O que melhorou**
 - **Valor em R$ que voltava do servidor saía cem vezes maior.** O campo de R$ tira os
@@ -31,7 +31,10 @@ que eles deixaram à vista.
     - o total da reserva aparece ao vivo;
     - o sinal pode ser em R$ ou em %, sem o padrão de 30%;
   - a barra de rolagem do funil virou trilho + polegar e não treme mais;
-  - a Tabela de Preços usa a largura toda.
+  - a Tabela de Preços usa a largura toda;
+  - o detalhe da reserva ganhou o cartão "Financeiro" (previsto, recebido, sinal
+    pendente, saldo e as cobranças com o link de pagamento), e "reserva #N" na linha
+    do tempo do lead vira link.
 - **O que foi corrigido nelas ao juntar:**
   - tirar um lead do Ganho cancela a reserva e devolve o que foi pago pelo caminho do
     fork, a mesma devolução da tela da reserva. O código original quebrava com sinal
@@ -44,7 +47,10 @@ que eles deixaram à vista.
   - o sinal digitado como "150.50" virava 15050. Agora o ponto com até duas casas é
     decimal;
   - a regra da Tabela de Preços mudou de lugar: onde estava, perdia para a dos
-    620 px, que tem a mesma especificidade.
+    620 px, que tem a mesma especificidade;
+  - o "Recebido" do painel financeiro contava duas vezes o sinal pago online: no
+    fork, a cobrança paga já vira crédito na reserva. Agora é o total pago de
+    verdade, inclusive o pago na conta depois do check-in.
 - **CRM sem estilo escrito na tag:**
   - os 610 `style="…"` estáticos viraram classe do design system (Marketing tinha 352);
   - um teste impede que voltem, em qualquer tela;
@@ -65,9 +71,11 @@ que eles deixaram à vista.
 **O que foi modificado**
 - **Merges do original:**
   - `eed0969` (cadb560), `6517a9c` (7147d78 e b95b158) e `8e5902e` (2abef84, 23908e5
-    e 379fe9d);
+    e 379fe9d) e `f80d989` (fdebccc);
   - Reservas ganhou `situacao_da_venda`, `exigir_venda_desfazivel` e `desfazer_venda`.
-    O Comercial não importa mais o model de Reserva.
+    O Comercial não importa mais o model de Reserva;
+  - Pagamentos ganhou `cobrancas_da_reserva`. Reservas não importa mais o model de
+    Pagamentos.
 - **Núcleo:**
   - `ReaisInput` agora no `apps/nucleo/forms.py`, usado por Comercial e Reservas;
   - `apps/nucleo/css_publico.py`, o manifesto `css_publico.txt` e o comando
@@ -104,7 +112,7 @@ que eles deixaram à vista.
     antes chegava como 1.000.000.
 - **Um teste que dependia do dia:** o selo da temporada do site usava "hoje + 30"
   e, rodado em 21/10, caiu em 20/11 (Consciência Negra). Agora pula feriado.
-- **Suíte completa no Windows:** 1.192 testes, só a falha conhecida do ambiente
+- **Suíte completa no Windows:** 1.196 testes, só a falha conhecida do ambiente
   (`test_webhook_audio_baixa_e_salva_arquivo`, que só falha no Windows). Ruff zero,
   `makemigrations --check` limpo, `gerar_base_css --conferir` em dia.
 
