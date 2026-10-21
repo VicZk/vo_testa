@@ -8,7 +8,7 @@
   <h1>Tarefas do dia</h1>
   <a href="{% url 'comercial:funil' %}" class="botao-mini">Voltar ao funil</a>
 </div>
-<div class="pdv-seg" style="margin:.6rem 0 1rem">
+<div class="pdv-seg com-abas">
   <a href="?" class="{% if minhas %}ativo{% endif %}">Minhas</a>
   <a href="?todas=1" class="{% if not minhas %}ativo{% endif %}">Da equipe</a>
 </div>

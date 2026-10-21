@@ -190,7 +190,7 @@
   </div>
 
   {# proposta com 2–3 quartos numa mensagem só #}
-  <div class="pq-wpp" x-show="propostaTexto" x-cloak style="margin-top:10px">
+  <div class="pq-wpp pq-wpp-proposta" x-show="propostaTexto" x-cloak>
     <div class="t">💬 Proposta pro WhatsApp <span class="pq-wpp-nota">— as opções selecionadas numa mensagem</span></div>
     <div class="msg" x-text="propostaTexto"></div>
     <div class="pq-wpp-acoes">
@@ -208,7 +208,7 @@
   <div class="pq-lista">
     {% for item in painel_quartos.ocupados %}
     <div class="pq-card pq-ocupado">
-      <div class="pq-card-topo" style="cursor:default">
+      <div class="pq-card-topo pq-card-topo-fixo">
         <div class="pq-info">
           <div class="pq-nome">{{ item.nome }}{% if item.nome != item.uh.numero %} <span class="pq-num">· {{ item.uh.numero }}</span>{% endif %}</div>
           <div class="pq-cat">{{ item.uh.tipo.nome }}</div>

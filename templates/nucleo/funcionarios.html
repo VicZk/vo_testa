@@ -23,9 +23,9 @@
   </thead>
   {% for item in funcionarios %}
     <tbody x-data="{ open: false }" class="func-grupo">
-      <tr class="func-linha" :class="open && 'aberta'" @click="open = !open"
+      <tr class="func-linha clicavel" :class="open && 'aberta'" @click="open = !open"
           hx-get="{% url 'funcionario_painel' item.f.pk %}" hx-target="#painel-{{ item.f.pk }}"
-          hx-swap="innerHTML" hx-trigger="click once" style="cursor:pointer">
+          hx-swap="innerHTML" hx-trigger="click once">
         <td><strong>{{ item.f.pessoa.nome }}</strong>{% if item.f.usuario %} <small class="ajuda-inline">{{ item.f.usuario.username }}</small>{% endif %}</td>
         <td>{{ item.f.cargo }}{% if item.f.setor %} · {{ item.f.setor }}{% endif %}</td>
         <td>{% if item.f.turno %}{{ item.f.get_turno_display }}{% if item.f.expediente_inicio %} · {{ item.f.expediente_inicio|time:"H:i" }}–{{ item.f.expediente_fim|time:"H:i" }}{% endif %}{% else %}—{% endif %}</td>

@@ -5,78 +5,78 @@
 {% block conteudo %}
 {# Transcrição do protótipo. Barra em escala absoluta, trilho hachurado, zero é zero. #}
 
-<div style="margin-bottom:14px">
-  <div style="display:flex;align-items:center;gap:7px;font-size:11px;letter-spacing:.11em;color:var(--tinta-suave);font-weight:700;margin-bottom:7px">MARKETING<span aria-hidden="true">›</span><span style="color:var(--musgo)">CAMPANHAS</span></div>
-  <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
-    <a href="{% url 'marketing:quadro' %}" style="font-size:13px;padding:7px 15px;border-radius:99px;text-decoration:none;background:var(--superficie);color:var(--tinta-suave);border:1px solid var(--fio)">Quadro</a>
-    <a href="{% url 'marketing:calendario' %}" style="font-size:13px;padding:7px 15px;border-radius:99px;text-decoration:none;background:var(--superficie);color:var(--tinta-suave);border:1px solid var(--fio)">Calendário</a>
-    <a href="{% url 'marketing:ocupacao' %}" style="font-size:13px;font-weight:700;padding:7px 15px;border-radius:99px;text-decoration:none;background:var(--tinta);color:var(--superficie)">Ocupação</a>
-    <a href="{% url 'marketing:relatorio' %}" style="font-size:13px;padding:7px 15px;border-radius:99px;text-decoration:none;background:var(--superficie);color:var(--tinta-suave);border:1px solid var(--fio)">Relatório</a>
+<div class="mk-topo">
+  <div class="mk-trilha">MARKETING<span aria-hidden="true">›</span><span class="mk-trilha-atual">CAMPANHAS</span></div>
+  <div class="mk-abas">
+    <a href="{% url 'marketing:quadro' %}" class="mk-aba">Quadro</a>
+    <a href="{% url 'marketing:calendario' %}" class="mk-aba">Calendário</a>
+    <a href="{% url 'marketing:ocupacao' %}" class="mk-aba on">Ocupação</a>
+    <a href="{% url 'marketing:relatorio' %}" class="mk-aba">Relatório</a>
   </div>
 </div>
 
-<section style="border-radius:20px;background:var(--superficie-2);border:1px solid var(--fio);box-shadow:var(--sombra-cartao);overflow:hidden;margin-bottom:18px">
-  <div style="padding:16px 20px;border-bottom:1px solid var(--fio)">
-    <h2 style="margin:0;font-family:var(--fonte-titulo);font-size:16.5px;font-weight:700;color:var(--tinta)">Onde estão os vazios</h2>
-    <p style="margin:5px 0 0;font-size:13px;line-height:1.5;font-weight:600;color:{% if resumo_tom == 'perigo' %}var(--perigo){% elif resumo_tom == 'alerta' %}var(--alerta){% else %}var(--musgo){% endif %}">{{ resumo }}</p>
-    <p style="margin:4px 0 0;font-size:12px;line-height:1.45;color:var(--tinta-suave)">Ocupação semanal prevista dos próximos 90 dias, contra as campanhas que cobrem cada semana. O trilho hachurado é a casa cheia — o espaço em branco é o que está à venda.</p>
+<section class="mk-secao tom">
+  <div class="mk-secao-cab">
+    <h2 class="mk-secao-tit">Onde estão os vazios</h2>
+    <p class="mk-ocup-resumo{% if resumo_tom == 'perigo' %} perigo{% elif resumo_tom == 'alerta' %} alerta{% endif %}">{{ resumo }}</p>
+    <p class="mk-secao-sub">Ocupação semanal prevista dos próximos 90 dias, contra as campanhas que cobrem cada semana. O trilho hachurado é a casa cheia — o espaço em branco é o que está à venda.</p>
   </div>
 
-  <div style="padding:18px 16px 12px;display:flex;align-items:flex-end;gap:4px;overflow-x:auto">
+  <div class="mk-ocup-barras">
     {% for b in blocos %}
     <span data-dica="{{ b.rotulo }} · {{ b.taxa|floatformat:0 }}% ocupada&#10;{{ b.livres }} noites livres{% if b.campanhas %}&#10;{{ b.campanhas }}{% endif %}"
-          style="flex:1;min-width:34px;display:flex;flex-direction:column;align-items:center;gap:5px">
-      <span style="font-size:12px;font-weight:700;color:{% if b.situacao == 'problema' %}var(--perigo){% elif b.situacao == 'oportunidade' %}var(--alerta){% else %}var(--musgo){% endif %}">{{ b.taxa|floatformat:0 }}%</span>
-      <span style="position:relative;display:flex;align-items:flex-end;height:92px;width:100%;border-radius:7px;background:repeating-linear-gradient(135deg,var(--superficie-2) 0 5px,var(--superficie) 5px 10px);box-shadow:inset 0 0 0 1px {% if b.situacao == 'oportunidade' %}var(--alerta-bg){% else %}var(--fio){% endif %}">
-        <span style="display:block;width:100%;border-radius:7px;min-height:{% if b.taxa %}3px{% else %}0{% endif %};height:{{ b.taxa|floatformat:0 }}%;background:{% if b.situacao == 'problema' %}var(--perigo){% elif b.situacao == 'oportunidade' %}var(--lampiao){% else %}var(--musgo){% endif %}"></span>
+          class="mk-ocup-col">
+      <span class="mk-ocup-taxa{% if b.situacao == 'problema' %} problema{% elif b.situacao == 'oportunidade' %} oportunidade{% endif %}">{{ b.taxa|floatformat:0 }}%</span>
+      <span class="mk-ocup-trilho{% if b.situacao == 'oportunidade' %} oportunidade{% endif %}">
+        <span class="mk-ocup-barra{% if b.situacao == 'problema' %} problema{% elif b.situacao == 'oportunidade' %} oportunidade{% endif %}" style="min-height:{% if b.taxa %}3px{% else %}0{% endif %};height:{{ b.taxa|floatformat:0 }}%"></span>
       </span>
-      <span style="font-size:11px;color:var(--tinta-suave);white-space:nowrap">{{ b.rotulo }}</span>
+      <span class="mk-ocup-rot">{{ b.rotulo }}</span>
     </span>
     {% empty %}
-    <p style="font-size:12px;color:var(--tinta-suave)">Sem dados de ocupação.</p>
+    <p class="mk-vazio-txt">Sem dados de ocupação.</p>
     {% endfor %}
   </div>
 
   {% if resumo_tom == 'perigo' %}
-  <div style="margin:0 20px 6px;display:flex;align-items:center;gap:10px;padding:12px 15px;border-radius:13px;background:var(--alerta-bg);border:1px solid var(--fio)">
-    <svg viewBox="0 0 24 24" fill="none" stroke="var(--alerta)" stroke-width="2" style="width:18px;height:18px;flex:none"><path d="M12 2 1 21h22z"/><path d="M12 9v5M12 17v.5"/></svg>
-    <span style="font-size:12.5px;line-height:1.4;color:var(--alerta);font-weight:600">{{ resumo }}</span>
+  <div class="mk-ocup-alerta">
+    <svg viewBox="0 0 24 24" fill="none" stroke="var(--alerta)" stroke-width="2"><path d="M12 2 1 21h22z"/><path d="M12 9v5M12 17v.5"/></svg>
+    <span class="mk-ocup-alerta-txt">{{ resumo }}</span>
   </div>
   {% endif %}
 
-  <div style="padding:0 20px 20px;display:flex;flex-direction:column;gap:7px">
+  <div class="mk-ocup-semanas">
     {% for b in blocos %}{% if b.situacao != 'ok' %}
-    <div style="display:flex;align-items:center;gap:11px;flex-wrap:wrap;padding:11px 14px;border-radius:13px;background:var(--superficie);border:1px solid var(--fio)">
-      <span style="flex:none;font-size:12.5px;font-weight:700;color:var(--tinta);white-space:nowrap">{{ b.inicio|date:"d/m" }}–{{ b.fim|date:"d/m" }}</span>
-      <span style="flex:none;font-size:12px;font-weight:700;color:{% if b.situacao == 'problema' %}var(--perigo){% else %}var(--alerta){% endif %}">{{ b.taxa|floatformat:0 }}%</span>
-      <span style="flex:1;min-width:120px;font-size:11.5px;color:var(--tinta-suave);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ b.campanhas|default:"sem campanha na semana" }}</span>
+    <div class="mk-ocup-semana">
+      <span class="mk-ocup-data">{{ b.inicio|date:"d/m" }}–{{ b.fim|date:"d/m" }}</span>
+      <span class="mk-ocup-pct{% if b.situacao == 'problema' %} problema{% endif %}">{{ b.taxa|floatformat:0 }}%</span>
+      <span class="mk-ocup-camp">{{ b.campanhas|default:"sem campanha na semana" }}</span>
       {% if b.situacao == 'problema' %}
-      <span style="flex:none;font-size:11px;font-weight:700;background:var(--perigo-bg);color:var(--perigo);border-radius:99px;padding:3px 9px">campanha no ar e vazio</span>
+      <span class="mk-ocup-acao problema">campanha no ar e vazio</span>
       {% else %}
-      <span style="flex:none;font-size:11px;font-weight:700;background:var(--alerta-bg);color:var(--alerta);border-radius:99px;padding:3px 9px">anunciar aqui</span>
+      <span class="mk-ocup-acao">anunciar aqui</span>
       {% endif %}
     </div>
     {% endif %}{% endfor %}
   </div>
 </section>
 
-<section style="border-radius:20px;background:var(--superficie-2);border:1px solid var(--fio);box-shadow:var(--sombra-cartao);overflow:hidden">
-  <div style="padding:16px 20px;border-bottom:1px solid var(--fio)">
-    <h2 style="margin:0;font-family:var(--fonte-titulo);font-size:16.5px;font-weight:700;color:var(--tinta)">Datas que puxam reserva</h2>
-    <p style="margin:5px 0 0;font-size:12px;line-height:1.45;color:var(--tinta-suave)">Campanha de feriado precisa de antecedência: planejar em cima destas datas é metade do trabalho.</p>
+<section class="mk-secao tom fim">
+  <div class="mk-secao-cab">
+    <h2 class="mk-secao-tit">Datas que puxam reserva</h2>
+    <p class="mk-secao-sub respiro">Campanha de feriado precisa de antecedência: planejar em cima destas datas é metade do trabalho.</p>
   </div>
-  <div style="padding:14px 20px 20px;display:flex;flex-direction:column;gap:7px">
+  <div class="mk-marcos">
     {% for m in marcos %}
-    <div style="display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:13px;background:var(--superficie);border:1px solid var(--fio)">
-      <span style="flex:none;width:9px;height:9px;border-radius:50%;background:{% if m.coberta %}var(--musgo){% else %}var(--alerta){% endif %}"></span>
-      <span style="flex:1;min-width:0">
-        <span style="display:block;font-size:13px;font-weight:700;color:var(--tinta)">{{ m.nome }}</span>
-        <span style="display:block;margin-top:2px;font-size:11.5px;color:var(--tinta-suave)">{{ m.quando }}</span>
+    <div class="mk-marco">
+      <span class="mk-marco-ponto{% if m.coberta %} coberta{% endif %}"></span>
+      <span class="mk-elastico">
+        <span class="mk-marco-nome">{{ m.nome }}</span>
+        <span class="mk-marco-quando">{{ m.quando }}</span>
       </span>
-      <span style="flex:none;font-size:11.5px;font-weight:700;color:{% if m.coberta %}var(--musgo){% else %}var(--alerta){% endif %};text-align:right">{{ m.estado }}</span>
+      <span class="mk-marco-estado{% if m.coberta %} coberta{% endif %}">{{ m.estado }}</span>
     </div>
     {% empty %}
-    <p style="font-size:12px;color:var(--tinta-suave)">Nenhuma data-chave nos próximos 90 dias.</p>
+    <p class="mk-vazio-txt">Nenhuma data-chave nos próximos 90 dias.</p>
     {% endfor %}
   </div>
 </section>

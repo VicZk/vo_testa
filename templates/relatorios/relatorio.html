@@ -21,7 +21,7 @@ busca na folha.{% endcomment %}
   <p class="pagina-eyebrow letreiro">Relatórios · {{ grupo }}</p>
   <div class="pagina-cabecalho">
     <h1>{{ titulo }}</h1>
-    <div style="display:flex; gap:.5rem">
+    <div class="linha-botoes">
       <a href="?{% if f.de %}de={{ f.de }}&ate={{ f.ate }}{% else %}mes={{ mes_sel }}&ano={{ ano_sel }}{% endif %}&export=csv" class="botao-neutro">Exportar CSV</a>
       <button type="button" class="botao-neutro" onclick="window.print()">Imprimir / PDF</button>
       <a href="{% url 'relatorios:index' %}" class="botao-mini">Voltar</a>
@@ -68,7 +68,7 @@ busca na folha.{% endcomment %}
   {% endfor %}
 </div>
 
-<table class="tabela" style="margin-top:1.2rem">
+<table class="tabela bloco-respiro-largo">
   <thead>
     <tr>{% for c in dados.colunas %}<th {% if not forloop.first %}class="num"{% endif %}>{{ c }}</th>{% endfor %}</tr>
   </thead>

@@ -221,7 +221,7 @@ uma ficha: cada dado com o seu rótulo, lido de relance.{% endcomment %}
       <span class="selo selo-neutro">pendente de envio</span>
     {% endif %}
     {% if eh_gerente and reserva.fnrh_status != 'enviada' %}
-      <form method="post" action="{% url 'reservas:fnrh_reenviar' reserva.pk %}" style="display:inline">
+      <form method="post" action="{% url 'reservas:fnrh_reenviar' reserva.pk %}" class="form-embutido">
         {% csrf_token %}
         <button type="submit" class="botao-mini">Reenviar</button>
       </form>

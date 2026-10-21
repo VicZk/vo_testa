@@ -26,7 +26,7 @@
     {% include "componentes/paginacao.html" with pagina=pagina %}
   </section>
   <section class="painel-bloco">
-    <h2 style="margin-top:0">Nova ausência</h2>
+    <h2 class="titulo-topo">Nova ausência</h2>
     <form method="post" class="form-cartao">
       {% csrf_token %}
       <div class="campo"><label>Funcionário</label>

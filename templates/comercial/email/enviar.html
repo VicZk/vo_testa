@@ -235,7 +235,7 @@
   <!-- Modal de confirmação (centralizado, material com blur) -->
   <div class="cfm-ov" x-show="aberto" x-cloak
        x-transition:enter="cfm-ov-in" x-transition:leave="cfm-ov-out"
-       @click.self="fechar()" @keydown.escape.window="fechar()" style="display:none">
+       @click.self="fechar()" @keydown.escape.window="fechar()">
     <div class="cfm-card" role="dialog" aria-modal="true" aria-labelledby="cfm-titulo"
          x-show="aberto"
          x-transition:enter="cfm-in" x-transition:enter-start="cfm-in-ini" x-transition:enter-end="cfm-in-fim"

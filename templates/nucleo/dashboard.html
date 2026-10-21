@@ -7,7 +7,7 @@
 <div class="pagina-cabecalho">
   <h1>{% if tem_reservas %}O corredor{% else %}Visão geral{% endif %}</h1>
   {% if corredor %}
-  <div class="acoes" style="margin:0">
+  <div class="acoes bloco-plano">
     <a href="{% url 'reservas:mapa_quartos' %}" class="botao-neutro">Filtros e troca</a>
     <button type="button" class="botao-primario" hx-get="{% url 'reservas:nova' %}" hx-target="#modal-conteudo">Nova reserva</button>
   </div>

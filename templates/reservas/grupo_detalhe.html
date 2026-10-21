@@ -17,7 +17,7 @@
 </p>
 
 {% if not grupo.encerrado_em %}
-<div class="acoes" style="margin-bottom:1rem">
+<div class="acoes bloco-fim-curto">
   <form method="post" action="{% url 'reservas:grupo_confirmar' grupo.pk %}">{% csrf_token %}
     <button class="botao-neutro">Confirmar grupo</button></form>
   <form method="post" action="{% url 'reservas:grupo_checkin' grupo.pk %}">{% csrf_token %}
@@ -71,7 +71,7 @@
 </div>
 
 <!-- Quartos do bloco -->
-<div class="pagina-cabecalho" style="margin-top:1.5rem">
+<div class="pagina-cabecalho bloco-respiro-secao">
   <h2>Quartos do bloco</h2>
 </div>
 <table class="tabela">
@@ -106,7 +106,7 @@
 </table>
 
 {% if not grupo.encerrado_em %}
-<div class="cartao" style="margin-top:1rem">
+<div class="cartao bloco-respiro">
   <h3>Adicionar quarto</h3>
   {% if quartos_livres %}
   <form method="post" action="{% url 'reservas:grupo_adicionar_quarto' grupo.pk %}" class="barra-busca">
@@ -118,8 +118,8 @@
       {% endfor %}
     </select>
     {% include "componentes/combo_pessoa.html" with dados=hospedes_data dados_id="hospede-grupo-data" campo="hospede" placeholder="Hóspede do quarto…" %}
-    <input type="number" name="adultos" min="1" value="2" title="Adultos" style="width:5rem">
-    <input type="number" name="criancas" min="0" value="0" title="Crianças" style="width:5rem">
+    <input type="number" name="adultos" min="1" value="2" title="Adultos" class="campo-qtd">
+    <input type="number" name="criancas" min="0" value="0" title="Crianças" class="campo-qtd">
     <button class="botao-primario">Adicionar</button>
   </form>
   {% else %}
@@ -127,7 +127,7 @@
   {% endif %}
 </div>
 
-<div class="acoes" style="margin-top:1rem">
+<div class="acoes bloco-respiro">
   <form method="post" action="{% url 'reservas:grupo_cancelar' grupo.pk %}" class="barra-busca"
         onsubmit="return confirm('Cancelar o grupo inteiro?')">
     {% csrf_token %}
@@ -137,7 +137,7 @@
 </div>
 {% endif %}
 
-<p class="subtitulo" style="margin-top:1.5rem">
+<p class="subtitulo bloco-respiro-secao">
   Total do grupo: <strong>{{ resumo.total_geral|intcomma_brl }}</strong>
   (diárias {{ resumo.diarias|intcomma_brl }} + consumo {{ resumo.consumo_total|intcomma_brl }}).
   Saldo de consumo em aberto nos quartos: {{ resumo.saldo_consumo_total|intcomma_brl }}.

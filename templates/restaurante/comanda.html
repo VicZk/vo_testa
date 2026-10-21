@@ -62,17 +62,17 @@
             <div class="input-reais"><span>R$</span><input type="number" name="desconto" min="0" step="0.01" value="0"></div>
           </div>
         </div>
-        <div class="pdv-seg" style="margin:0 1.3rem">
+        <div class="pdv-seg pdv-seg-lateral">
           <button type="button" :class="{ativo: destino === 'caixa'}" @click="destino = 'caixa'">Pagar agora</button>
           {% if contas %}<button type="button" :class="{ativo: destino === 'conta'}" @click="destino = 'conta'">Conta do quarto</button>{% endif %}
         </div>
-        <label class="select-wrap" style="margin:.6rem 1.3rem 0" x-show="destino === 'caixa'" x-cloak>
+        <label class="select-wrap pdv-destino" x-show="destino === 'caixa'" x-cloak>
           <select name="forma"><option value="">Forma de pagamento…</option>
             {% for f in formas %}<option value="{{ f.pk }}">{{ f.nome }}</option>{% endfor %}
           </select>
         </label>
         {% if contas %}
-        <label class="select-wrap" style="margin:.6rem 1.3rem 0" x-show="destino === 'conta'" x-cloak>
+        <label class="select-wrap pdv-destino" x-show="destino === 'conta'" x-cloak>
           <select name="conta_id"><option value="">Quarto / hóspede…</option>
             {% for c in contas %}<option value="{{ c.id }}">{{ c.rotulo }}</option>{% endfor %}
           </select>

@@ -15,7 +15,7 @@
 <div class="eleg">
 
   {# ── Extrato pendente ── #}
-  <h2 class="secao-titulo letreiro" style="margin-top:1rem">Extrato — pendentes</h2>
+  <h2 class="secao-titulo letreiro respiro-curto">Extrato — pendentes</h2>
   <div class="quadro">
     <table class="tabela">
       <thead>
@@ -32,10 +32,10 @@
           </td>
           <td>
             <form method="post" action="{% url 'conciliacao:casar_extrato' %}"
-                  style="display:inline-flex;gap:.4rem;align-items:center;flex-wrap:wrap">
+                  class="form-inline-largo">
               {% csrf_token %}
               <input type="hidden" name="lancamento" value="{{ l.id }}">
-              <select name="escolha" style="max-width:340px">
+              <select name="escolha" class="campo-medio">
                 <option value="">— escolher registro do CRM —</option>
                 {% for c in cands %}
                 <option value="{{ c.origem }}:{{ c.id }}">{% if c.exato %}★ {% endif %}{{ c.rotulo }} · {{ c.valor|intcomma_brl }} · {{ c.data|date:"d/m" }}</option>
@@ -43,7 +43,7 @@
               </select>
               <button class="botao-mini" type="submit">Casar</button>
             </form>
-            <form method="post" action="{% url 'conciliacao:ignorar_extrato' %}" style="display:inline">
+            <form method="post" action="{% url 'conciliacao:ignorar_extrato' %}" class="form-embutido">
               {% csrf_token %}<input type="hidden" name="lancamento" value="{{ l.id }}">
               <button class="botao-mini" type="submit"
                       title="Tarifa, transferência entre contas próprias, etc.">Ignorar</button>
@@ -58,7 +58,7 @@
   </div>
 
   {# ── Cartão pendente ── #}
-  <h2 class="secao-titulo letreiro" style="margin-top:1.6rem">Cartão (SafraPay) — pendentes</h2>
+  <h2 class="secao-titulo letreiro">Cartão (SafraPay) — pendentes</h2>
   <div class="quadro">
     <table class="tabela">
       <thead>
@@ -72,9 +72,9 @@
           <td class="num">{{ t.bruto }}</td>
           <td>
             <form method="post" action="{% url 'conciliacao:casar_cartao' %}"
-                  style="display:inline-flex;gap:.4rem;align-items:center;flex-wrap:wrap">
+                  class="form-inline-largo">
               {% csrf_token %}<input type="hidden" name="transacao" value="{{ t.id }}">
-              <select name="escolha" style="max-width:340px">
+              <select name="escolha" class="campo-medio">
                 <option value="">— escolher recebimento —</option>
                 {% for c in cands %}
                 <option value="{{ c.origem }}:{{ c.id }}">{% if c.exato %}★ {% endif %}{{ c.rotulo }} · {{ c.valor|intcomma_brl }}</option>
@@ -82,7 +82,7 @@
               </select>
               <button class="botao-mini" type="submit">Casar</button>
             </form>
-            <form method="post" action="{% url 'conciliacao:sem_venda_cartao' %}" style="display:inline">
+            <form method="post" action="{% url 'conciliacao:sem_venda_cartao' %}" class="form-embutido">
               {% csrf_token %}<input type="hidden" name="transacao" value="{{ t.id }}">
               <button class="botao-mini" type="submit">Sem venda</button>
             </form>
@@ -97,7 +97,7 @@
 
   {# ── Conciliados recentes (desfazer) ── #}
   {% if conciliados_ext or conciliados_cartao %}
-  <h2 class="secao-titulo letreiro" style="margin-top:1.6rem">Conciliados recentes</h2>
+  <h2 class="secao-titulo letreiro">Conciliados recentes</h2>
   <div class="quadro">
     <table class="tabela">
       <thead>
@@ -111,7 +111,7 @@
           <td class="num">{{ l.valor }}</td>
           <td><span class="selo">{{ l.confianca|default:"auto" }}</span></td>
           <td class="num">
-            <form method="post" action="{% url 'conciliacao:desfazer_extrato' %}" style="display:inline">
+            <form method="post" action="{% url 'conciliacao:desfazer_extrato' %}" class="form-embutido">
               {% csrf_token %}<input type="hidden" name="lancamento" value="{{ l.id }}">
               <button class="botao-mini" type="submit">Desfazer</button>
             </form>
@@ -125,7 +125,7 @@
           <td class="num">{{ t.bruto }}</td>
           <td><span class="selo">NSU</span></td>
           <td class="num">
-            <form method="post" action="{% url 'conciliacao:desfazer_cartao' %}" style="display:inline">
+            <form method="post" action="{% url 'conciliacao:desfazer_cartao' %}" class="form-embutido">
               {% csrf_token %}<input type="hidden" name="transacao" value="{{ t.id }}">
               <button class="botao-mini" type="submit">Desfazer</button>
             </form>

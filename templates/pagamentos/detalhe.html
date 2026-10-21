@@ -39,29 +39,29 @@
   </section>
 
   <section>
-    <div class="painel-bloco" style="margin-bottom:1.2rem">
-      <h2 style="margin-top:0">Ações</h2>
+    <div class="painel-bloco bloco-fim">
+      <h2 class="titulo-topo">Ações</h2>
       {% if cobranca.pendente %}
         {% if cobranca.gateway == 'pix_direto' %}
           <form method="post" action="{% url 'pagamentos:confirmar_recebimento' cobranca.pk %}">
             {% csrf_token %}
-            <button type="submit" class="botao-primario" style="width:100%">Confirmar recebimento do Pix</button>
+            <button type="submit" class="botao-primario botao-largo">Confirmar recebimento do Pix</button>
           </form>
-          <p class="subtitulo" style="margin:.5rem 0 0">Pix direto (sem gateway). Confirme só depois de ver o valor na conta da pousada.</p>
+          <p class="subtitulo subtitulo-colado">Pix direto (sem gateway). Confirme só depois de ver o valor na conta da pousada.</p>
         {% else %}
           <form method="post" action="{% url 'pagamentos:simular' cobranca.pk %}">
             {% csrf_token %}
-            <button type="submit" class="botao-primario" style="width:100%">Simular pagamento (sandbox)</button>
+            <button type="submit" class="botao-primario botao-largo">Simular pagamento (sandbox)</button>
           </form>
         {% endif %}
-        <form method="post" action="{% url 'pagamentos:cancelar' cobranca.pk %}" style="margin-top:.6rem">
+        <form method="post" action="{% url 'pagamentos:cancelar' cobranca.pk %}" class="bloco-respiro-curto">
           {% csrf_token %}
-          <button type="submit" class="botao-neutro" style="width:100%">Cancelar cobrança</button>
+          <button type="submit" class="botao-neutro botao-largo">Cancelar cobrança</button>
         </form>
       {% elif cobranca.paga and eh_gerente %}
         <form method="post" action="{% url 'pagamentos:estornar' cobranca.pk %}">
           {% csrf_token %}
-          <button type="submit" class="botao-perigo" style="width:100%">Estornar</button>
+          <button type="submit" class="botao-perigo botao-largo">Estornar</button>
         </form>
       {% else %}
         <p class="subtitulo">Sem ações disponíveis neste status.</p>
@@ -69,7 +69,7 @@
     </div>
 
     <div class="painel-bloco">
-      <h2 style="margin-top:0">Histórico</h2>
+      <h2 class="titulo-topo">Histórico</h2>
       <ul class="timeline">
         {% for e in cobranca.eventos.all %}
           <li><strong>{{ e.get_tipo_display }}</strong> <small>{{ e.origem }} · {{ e.criado_em|date:"d/m H:i" }}</small></li>

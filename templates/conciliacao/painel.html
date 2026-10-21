@@ -14,10 +14,10 @@
 <div class="eleg">
 
   {# KPIs #}
-  <div class="kpis" style="margin-top:1rem">
+  <div class="kpis bloco-respiro">
     <div class="kpi kpi-destaque">
       <span class="kpi-rotulo letreiro">Extrato conciliado</span>
-      <span class="kpi-valor num">{{ pos.extrato_conciliado }}<span style="opacity:.4">/{{ pos.extrato_total }}</span></span>
+      <span class="kpi-valor num">{{ pos.extrato_conciliado }}<span class="total-de">/{{ pos.extrato_total }}</span></span>
     </div>
     <div class="kpi">
       <span class="kpi-rotulo letreiro">Extrato pendente</span>
@@ -25,7 +25,7 @@
     </div>
     <div class="kpi kpi-destaque">
       <span class="kpi-rotulo letreiro">Cartão conciliado</span>
-      <span class="kpi-valor num">{{ pos.cartao_conciliado }}<span style="opacity:.4">/{{ pos.cartao_total }}</span></span>
+      <span class="kpi-valor num">{{ pos.cartao_conciliado }}<span class="total-de">/{{ pos.cartao_total }}</span></span>
     </div>
     <div class="kpi">
       <span class="kpi-rotulo letreiro">Cartão pendente</span>
@@ -85,7 +85,7 @@
   </div>
 
   {# Fila do extrato #}
-  <h2 class="secao-titulo letreiro" style="margin-top:1.6rem">Extrato — pendentes de conciliação</h2>
+  <h2 class="secao-titulo letreiro">Extrato — pendentes de conciliação</h2>
   <div class="quadro">
     <table class="tabela">
       <thead>
@@ -110,7 +110,7 @@
   </div>
 
   {# Fila do cartão #}
-  <h2 class="secao-titulo letreiro" style="margin-top:1.6rem">Cartão (SafraPay) — pendentes por NSU</h2>
+  <h2 class="secao-titulo letreiro">Cartão (SafraPay) — pendentes por NSU</h2>
   <div class="quadro">
     <table class="tabela">
       <thead>

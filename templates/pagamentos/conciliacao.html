@@ -14,7 +14,7 @@
   taxa da adquirente). Use para bater com o extrato — o líquido é o que cai na conta.
 </p>
 
-<div class="kpi-grade" style="margin:1rem 0">
+<div class="kpi-grade bloco-margem">
   <div class="kpi"><span class="kpi-rotulo letreiro">Recebido (bruto)</span><strong class="kpi-valor num">{{ totais.recebido|intcomma_brl }}</strong></div>
   <div class="kpi"><span class="kpi-rotulo letreiro">Taxa</span><strong class="kpi-valor num">{{ totais.taxa|intcomma_brl }}</strong></div>
   <div class="kpi kpi-destaque"><span class="kpi-rotulo letreiro">Líquido (banco)</span><strong class="kpi-valor num">{{ totais.liquido|intcomma_brl }}</strong></div>
@@ -81,10 +81,10 @@
             {% if c.status == 'pago' and not c.liquidado %}
               <div x-data="{ aberto: false }">
                 <button type="button" class="botao-neutro" @click="aberto = !aberto"
-                        :aria-expanded="aberto" style="cursor:pointer">Liquidar</button>
+                        :aria-expanded="aberto">Liquidar</button>
                 <div class="reveal-liquidar" x-ref="painel" x-cloak
                      :style="aberto ? 'max-height:' + $refs.painel.scrollHeight + 'px;opacity:1' : 'max-height:0;opacity:0'">
-                  <form method="post" action="{% url 'pagamentos:liquidar' c.pk %}" style="margin-top:.5rem;display:grid;gap:.4rem;min-width:180px">
+                  <form method="post" action="{% url 'pagamentos:liquidar' c.pk %}" class="conc-acao-painel">
                     {% csrf_token %}
                     <input type="number" name="valor_liquido" step="0.01" placeholder="Líquido (R$)">
                     <input type="date" name="data_liquidacao">

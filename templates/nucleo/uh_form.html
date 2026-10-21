@@ -18,7 +18,7 @@
     {% for t in tarifas_quarto %}
       <div class="campo">
         <label>{{ t.rotulo }}</label>
-        <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center">
+        <div class="linha-campos">
           <div class="tarifa-input"><span class="tarifa-rs">R$</span><input type="text" name="tarifa_{{ t.cod }}" class="money-mask" value="{{ t.valor_fmt }}" placeholder="base 2 adultos" inputmode="decimal"></div>
           <div class="tarifa-input"><span class="tarifa-rs">+R$</span><input type="text" name="adicional_{{ t.cod }}" class="money-mask" value="{{ t.adicional_fmt }}" placeholder="por adulto extra" inputmode="decimal"></div>
         </div>
@@ -67,7 +67,7 @@
   <h3>Sofá-cama e colchões extras</h3>
   {% include "nucleo/partials/campos.html" with form=config_form %}
 
-  <div class="cartao" style="margin-top:1rem">
+  <div class="cartao bloco-respiro">
     <h3>Capacidade calculada</h3>
     <p>
       <strong>{{ capacidade.maxima_criancas }} pessoas</strong> —

@@ -22,10 +22,10 @@
 
 <div class="op-layout">
   <!-- ESQUERDA: conversa + cotações + linha do tempo -->
-  <main class="op-esq" style="display:flex; flex-direction:column; gap:1.1rem">
+  <main class="op-esq">
 
     <!-- WhatsApp no funil (MVP) -->
-    <section class="cartao wpp-secao" style="padding:1.1rem 1.2rem">
+    <section class="cartao wpp-secao op-bloco">
       <div class="wpp-topo">
         <span class="wpp-av">{{ op.pessoa.nome|first|upper }}</span>
         <div class="wpp-ident">
@@ -105,7 +105,7 @@
     </section>
 
     {% if cotacoes %}
-    <section class="cartao" style="padding:1.1rem 1.2rem">
+    <section class="cartao op-bloco">
       <div class="cartao-cabeca"><h2>Cotações</h2></div>
       <div class="tabela-rol">
       <table class="tabela">
@@ -129,7 +129,7 @@
     </section>
     {% endif %}
 
-    <section class="cartao" style="padding:1.1rem 1.2rem">
+    <section class="cartao op-bloco">
       <div class="cartao-cabeca"><h2>Linha do tempo</h2></div>
       {% if op.aberta %}
         <form method="post" action="{% url 'comercial:atividade' op.pk %}" class="op-nova-atividade">
@@ -172,13 +172,13 @@
   <aside class="op-rail">
     <!-- Quartos para este lead (descritivo na conversa) -->
     {% if op.tipo_interesse != 'evento' %}
-    <div class="cartao" style="padding:0; overflow:hidden">
+    <div class="cartao op-bloco-painel">
       {% include "comercial/_painel_quartos.html" %}
     </div>
     {% endif %}
     <!-- Este lead -->
-    <div class="cartao" style="padding:1.05rem 1.15rem">
-      <div class="op-resumo-topo" style="margin-bottom:.5rem">
+    <div class="cartao op-bloco-lead">
+      <div class="op-resumo-topo compacto">
         <div>
           <span class="op-lead">{{ op.pessoa.nome }}</span>
           <span class="op-sub">{{ op.get_faturamento_display }} · {{ op.get_tipo_interesse_display }}</span>
@@ -198,22 +198,22 @@
         <div class="l"><span>Responsável</span><b>{% if op.responsavel %}{{ op.responsavel.get_full_name|default:op.responsavel.username }}{% else %}—{% endif %}</b></div>
         <div class="l"><span>Score</span><b>{{ op.score }}/100</b></div>
       </div>
-      {% if op.observacao %}<p class="op-obs" style="margin-top:.6rem">{{ op.observacao }}</p>{% endif %}
+      {% if op.observacao %}<p class="op-obs op-obs-respiro">{{ op.observacao }}</p>{% endif %}
       {% if op.reserva_id %}<p class="aviso-inline op-aviso">Convertida na reserva <a href="{% url 'reservas:detalhe' op.reserva_id %}">#{{ op.reserva_id }}</a>{% if op.cobranca_sinal_id %} · sinal #{{ op.cobranca_sinal_id }}{% endif %}.</p>{% endif %}
       {% if op.nps_convidado_em %}<p class="aviso-inline op-aviso">Hand-off NPS em {{ op.nps_convidado_em|date:"d/m/Y H:i" }}.</p>{% endif %}
-      {% if op.status == 'perdida' and op.motivo_perda %}<p class="aviso-inline op-aviso">Perdida — motivo: {{ op.motivo_perda.nome }}.{% if op.motivo_perda_detalhe %} <span style="font-style:italic">“{{ op.motivo_perda_detalhe }}”</span>{% endif %}</p>{% endif %}
+      {% if op.status == 'perdida' and op.motivo_perda %}<p class="aviso-inline op-aviso">Perdida — motivo: {{ op.motivo_perda.nome }}.{% if op.motivo_perda_detalhe %} <span class="op-citacao">“{{ op.motivo_perda_detalhe }}”</span>{% endif %}</p>{% endif %}
     </div>
 
     {% if op.aberta %}
     <div class="cartao op-acoes">
       <p class="rot-secao">Ações rápidas</p>
       {% if pagamentos_ativo %}
-      <form method="post" action="{% url 'comercial:enviar_proposta_sinal' op.pk %}" onsubmit="return confirm('Gerar o sinal ({{ sinal_pct }}% do valor) e enviar no WhatsApp?')" style="margin:0">
+      <form method="post" action="{% url 'comercial:enviar_proposta_sinal' op.pk %}" onsubmit="return confirm('Gerar o sinal ({{ sinal_pct }}% do valor) e enviar no WhatsApp?')" class="op-form-plano">
         {% csrf_token %}
         <button type="submit" class="botao-primario botao-largo">Enviar proposta + sinal (Safrapay)</button>
       </form>
       {% endif %}
-      <a href="{% url 'comercial:enviar_email_lead' op.pk %}" class="botao-neutro botao-largo" style="display:block; text-align:center; margin-top:.5rem">Enviar por e-mail</a>
+      <a href="{% url 'comercial:enviar_email_lead' op.pk %}" class="botao-neutro botao-largo op-botao-bloco">Enviar por e-mail</a>
       <details class="op-det op-det-ganhar">
         <summary>Ganhar → criar reserva</summary>
         <form method="post" action="{% url 'comercial:converter' op.pk %}" id="formGanhar">
@@ -380,10 +380,10 @@
 
     {% with r=op.origem_rastreio %}
     {% if r.sexo_estimado or r.uf_estimada or r.cidade_estimada or r.dispositivo or r.navegador %}
-    <div class="cartao" style="padding:1rem 1.2rem">
+    <div class="cartao op-bloco-info">
       <p class="rot-secao">Perfil estimado</p>
-      <p style="font-size:.72em;color:var(--tinta-suave);margin:-.15rem 0 .55rem">Inferido do nome, do DDD e do dispositivo — aproximado, para segmentar o atendimento.</p>
-      <div style="display:flex;flex-wrap:wrap;gap:.4rem">
+      <p class="op-nota compacta">Inferido do nome, do DDD e do dispositivo — aproximado, para segmentar o atendimento.</p>
+      <div class="op-chips">
         {% if r.sexo_estimado %}<span class="chip-est">{% if r.sexo_estimado == 'F' %}♀ Feminino{% else %}♂ Masculino{% endif %}</span>{% endif %}
         {% if r.uf_estimada or r.cidade_estimada %}<span class="chip-est">📍 {% if r.cidade_estimada %}{{ r.cidade_estimada }}{% if r.uf_estimada %}/{% endif %}{% endif %}{{ r.uf_estimada }}</span>{% endif %}
         {% if r.dispositivo %}<span class="chip-est">📱 {{ r.dispositivo }}</span>{% endif %}
@@ -394,21 +394,21 @@
     {% endwith %}
 
     {% if op.origem_rastreio or op.campanha %}
-    <div class="cartao" style="padding:1rem 1.2rem">
+    <div class="cartao op-bloco-info">
       <p class="rot-secao">Impulsionamento</p>
-      {% if op.campanha %}<p style="font-size:.9em">🎯 {{ op.campanha.nome }}</p>{% endif %}
-      {% if op.origem_rastreio.utm_campaign %}<p style="font-size:.82em;color:var(--tinta-suave)">utm: {{ op.origem_rastreio.utm_source|default:"?" }} / {{ op.origem_rastreio.utm_campaign }}</p>{% endif %}
-      {% if op.origem_rastreio.fbclid %}<p style="font-size:.8em;color:var(--tinta-suave)">fbclid ✓ (Meta)</p>{% endif %}
-      {% if op.origem_rastreio.gclid %}<p style="font-size:.8em;color:var(--tinta-suave)">gclid ✓ (Google)</p>{% endif %}
+      {% if op.campanha %}<p class="op-linha">🎯 {{ op.campanha.nome }}</p>{% endif %}
+      {% if op.origem_rastreio.utm_campaign %}<p class="op-linha-sub suave">utm: {{ op.origem_rastreio.utm_source|default:"?" }} / {{ op.origem_rastreio.utm_campaign }}</p>{% endif %}
+      {% if op.origem_rastreio.fbclid %}<p class="op-linha-mini">fbclid ✓ (Meta)</p>{% endif %}
+      {% if op.origem_rastreio.gclid %}<p class="op-linha-mini">gclid ✓ (Google)</p>{% endif %}
       {% for c in op.conversoes_enviadas.all %}
-        <p style="font-size:.82em">{{ c.get_evento_display }} → {{ c.provedor }} · {% if c.status == 'enviada' %}✅ enviada{% else %}⚠️ erro{% endif %} · {{ c.enviado_em|date:"d/m H:i" }}</p>
+        <p class="op-linha-sub">{{ c.get_evento_display }} → {{ c.provedor }} · {% if c.status == 'enviada' %}✅ enviada{% else %}⚠️ erro{% endif %} · {{ c.enviado_em|date:"d/m H:i" }}</p>
       {% endfor %}
       {% if op.origem_rastreio.fbclid or op.origem_rastreio.gclid %}
-      <form method="post" action="{% url 'comercial:conversao_reenviar' op.pk %}" style="margin-top:.4rem">{% csrf_token %}
+      <form method="post" action="{% url 'comercial:conversao_reenviar' op.pk %}" class="op-form-respiro">{% csrf_token %}
         <button type="submit" class="botao-mini">Reenviar conversão</button>
       </form>
       {% else %}
-      <p style="font-size:.78em;color:var(--tinta-suave);margin-top:.3rem">Sem clique rastreado — nada a enviar às plataformas.</p>
+      <p class="op-nota-fim">Sem clique rastreado — nada a enviar às plataformas.</p>
       {% endif %}
     </div>
     {% endif %}
@@ -546,6 +546,8 @@
   .pq-naoconf{color:#A2988A;font-style:italic}
   .pq-naoconf .tag{font-style:normal;font-size:11px;background:#EFEAE1;color:#6f665a;padding:1px 6px;border-radius:999px;margin-left:6px;font-weight:600}
   .pq-wpp{border-top:1px solid #CDE3C6;background:#EAF4E5;padding:11px 12px}
+  .pq-wpp-proposta{margin-top:10px}
+  .pq-card-topo-fixo{cursor:default}
   .pq-wpp .t{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:#3a7a4f;font-weight:700;margin-bottom:7px}
   .pq-wpp-nota{text-transform:none;letter-spacing:0;font-weight:500;color:#5f7a62}
   .pq-wpp .msg{background:#fff;border:1px solid #DCEBD5;border-radius:10px;padding:10px 11px;font-size:12.5px;white-space:pre-wrap;line-height:1.5}

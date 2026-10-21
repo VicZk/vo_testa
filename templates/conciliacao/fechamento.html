@@ -11,15 +11,15 @@
 <p class="subtitulo">Resumo do período: quanto do extrato e das vendas no cartão foi
   conciliado, taxas e divergências. <a href="{% url 'conciliacao:painel' %}">← painel</a></p>
 
-<form method="get" style="display:flex;gap:.6rem;align-items:flex-end;flex-wrap:wrap;margin:.9rem 0">
-  <label style="display:grid;gap:.3rem">
-    <span class="letreiro" style="font-size:.8rem">Mês</span>
+<form method="get" class="filtro-linha">
+  <label class="campo-empilhado">
+    <span class="letreiro letreiro-medio">Mês</span>
     <select name="mes">
       {% for n, nome in meses %}<option value="{{ n }}" {% if n == mes_sel %}selected{% endif %}>{{ nome }}</option>{% endfor %}
     </select>
   </label>
-  <label style="display:grid;gap:.3rem">
-    <span class="letreiro" style="font-size:.8rem">Ano</span>
+  <label class="campo-empilhado">
+    <span class="letreiro letreiro-medio">Ano</span>
     <select name="ano">
       {% for a in anos %}<option value="{{ a }}" {% if a == ano_sel %}selected{% endif %}>{{ a }}</option>{% endfor %}
     </select>
@@ -27,12 +27,12 @@
   <button class="botao-primario" type="submit">Ver</button>
   <a class="botao-neutro" href="?{{ request.GET.urlencode }}&export=csv">Exportar CSV</a>
   <button class="botao-neutro" type="button" onclick="window.print()">Imprimir</button>
-  <span class="tinta-suave" style="font-size:.9rem">Período: <b>{{ rotulo }}</b></span>
+  <span class="tinta-suave texto-medio">Período: <b>{{ rotulo }}</b></span>
 </form>
 
 <div class="eleg">
 
-  <div class="kpis" style="margin-top:.3rem">
+  <div class="kpis bloco-colado">
     <div class="kpi kpi-destaque"><span class="kpi-rotulo letreiro">Extrato conciliado</span><span class="kpi-valor num">{{ dados.extrato.pct }}%</span></div>
     <div class="kpi"><span class="kpi-rotulo letreiro">Créditos conciliados</span><span class="kpi-valor num">{{ dados.extrato.creditos|intcomma_brl }}</span></div>
     <div class="kpi"><span class="kpi-rotulo letreiro">Débitos conciliados</span><span class="kpi-valor num">{{ dados.extrato.debitos|intcomma_brl }}</span></div>
@@ -41,22 +41,22 @@
   </div>
 
   {# Gráficos conciliado × pendente #}
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.2rem;margin-top:1.2rem">
+  <div class="grade-graficos">
     <div class="cartao cartao-el">
-      <span class="letreiro" style="font-size:.8rem">Extrato — conciliado × pendente</span>
+      <span class="letreiro letreiro-medio">Extrato — conciliado × pendente</span>
       {% if dados.extrato.total %}
-        <div style="height:210px;margin-top:.6rem"><canvas id="g-ext"></canvas></div>
-      {% else %}<p class="vazio" style="margin-top:.6rem">Sem linhas no período.</p>{% endif %}
+        <div class="grafico-conciliacao"><canvas id="g-ext"></canvas></div>
+      {% else %}<p class="vazio bloco-respiro-curto">Sem linhas no período.</p>{% endif %}
     </div>
     <div class="cartao cartao-el">
-      <span class="letreiro" style="font-size:.8rem">Cartão — conciliado × pendente</span>
+      <span class="letreiro letreiro-medio">Cartão — conciliado × pendente</span>
       {% if dados.cartao.total %}
-        <div style="height:210px;margin-top:.6rem"><canvas id="g-car"></canvas></div>
-      {% else %}<p class="vazio" style="margin-top:.6rem">Sem transações no período.</p>{% endif %}
+        <div class="grafico-conciliacao"><canvas id="g-car"></canvas></div>
+      {% else %}<p class="vazio bloco-respiro-curto">Sem transações no período.</p>{% endif %}
     </div>
   </div>
 
-  <h2 class="secao-titulo letreiro" style="margin-top:1.4rem">Extrato bancário</h2>
+  <h2 class="secao-titulo letreiro respiro-medio">Extrato bancário</h2>
   <div class="quadro">
     <table class="tabela">
       <tbody>
@@ -70,7 +70,7 @@
     </table>
   </div>
 
-  <h2 class="secao-titulo letreiro" style="margin-top:1.4rem">Cartão (SafraPay)</h2>
+  <h2 class="secao-titulo letreiro respiro-medio">Cartão (SafraPay)</h2>
   <div class="quadro">
     <table class="tabela">
       <tbody>

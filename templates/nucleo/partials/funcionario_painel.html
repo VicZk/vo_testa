@@ -85,7 +85,7 @@
     </div>
 
     {% if historico.produtividade %}
-    <div class="func-bloco" style="margin-bottom:14px">
+    <div class="func-bloco func-bloco-fim">
       <h4 class="letreiro">Produtividade no mês</h4>
       <div class="func-prod">
         {% for p in historico.produtividade %}<span class="prod-item"><b>{{ p.n }}</b> {{ p.rotulo }}</span>{% endfor %}

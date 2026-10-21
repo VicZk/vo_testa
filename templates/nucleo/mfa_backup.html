@@ -8,13 +8,12 @@
 <p class="subtitulo">Cada código funciona <strong>uma vez</strong> para entrar sem o celular.
 Guarde num lugar seguro — eles <strong>não serão mostrados de novo</strong>.</p>
 
-<div class="cartao" style="max-width:420px">
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem 1.2rem;
-              font-family:var(--fonte-mono);font-size:1rem;letter-spacing:.06em">
+<div class="cartao cartao-estreito mini">
+  <div class="codigos-backup">
     {% for c in codigos %}<span class="mono-num">{{ c }}</span>{% endfor %}
   </div>
 </div>
-<div class="barra-acao" style="margin-top:1.2rem">
+<div class="barra-acao bloco-respiro-largo">
   <a href="{% url 'mfa_config' %}" class="botao-primario">Já guardei, continuar</a>
 </div>
 {% endblock %}

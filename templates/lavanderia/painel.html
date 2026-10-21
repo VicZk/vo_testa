@@ -19,13 +19,13 @@
   <p class="bloco-vazio">Cadastre serviços na <a href="{% url 'lavanderia:servicos' %}">tabela de preços</a> antes de abrir ordens.</p>
 {% else %}
 
-<section class="painel-bloco" style="max-width:680px;margin-bottom:1.6rem">
-  <h2 style="margin-top:0">Nova ordem</h2>
+<section class="painel-bloco form-abertura">
+  <h2 class="titulo-topo">Nova ordem</h2>
   <form method="post" action="{% url 'lavanderia:abrir' %}" class="abrir-comanda">
     {% csrf_token %}
     {% include "componentes/combo_pessoa.html" with dados=clientes dados_id="clientes-data" campo="cliente" placeholder="Hóspede/cliente…" %}
     <input type="text" name="rotulo" placeholder="Ou identifique (ex.: quarto 12)">
-    <label class="prazo-campo">Pronto para <input type="date" name="prazo" class="combo-input" style="flex:0 0 auto;width:auto"></label>
+    <label class="prazo-campo">Pronto para <input type="date" name="prazo" class="combo-input campo-prazo"></label>
     <button type="submit" class="botao-primario">Abrir</button>
   </form>
 </section>
