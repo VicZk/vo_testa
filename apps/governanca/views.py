@@ -61,7 +61,7 @@ def _resposta_acao(request, aviso="", tipo="success"):
         if aviso:
             {"error": messages.error, "warning": messages.warning}.get(
                 tipo, messages.success)(request, aviso)
-        return redirect("governanca:painel")
+        return redirect("governanca:quartos")
     resposta = render(request, "governanca/partials/quadro.html",
                       _contexto_quadro(request.user))
     if aviso:
@@ -71,6 +71,15 @@ def _resposta_acao(request, aviso="", tipo="success"):
 
 @requer_modulo(Modulo.GOVERNANCA)
 def painel(request):
+    """Visão geral: a casa inteira em blocos coloridos, o progresso do dia, as
+    chegadas que dependem de quarto pronto e o que pede ação agora. É a porta de
+    entrada do módulo — a lista operacional fica em `quartos`."""
+    return render(request, "governanca/visao.html", services.visao_geral())
+
+
+@requer_modulo(Modulo.GOVERNANCA)
+def quartos(request):
+    """A lista operacional: uma linha por quarto, com o próximo passo de cada um."""
     # Lista de montagem de camas das chegadas do dia (vem de Reservas, se ativo).
     from django.utils import timezone
 
@@ -82,14 +91,20 @@ def painel(request):
         montagem = montagem_do_dia(timezone.localdate())
 
     contexto = _contexto_quadro(request.user)
-    contexto.update({"tipos": TarefaGovernanca.Tipo.choices, "montagem": montagem})
-    return render(request, "governanca/painel.html", contexto)
+    # A visão geral manda para cá já filtrado ("3 quartos esperando inspeção" abre a
+    # lista nesses três); sem `?estado=`, vale a última escolha de quem está usando.
+    estado = request.GET.get("estado")
+    contexto.update({
+        "tipos": TarefaGovernanca.Tipo.choices, "montagem": montagem,
+        "filtro_inicial": estado if estado in StatusLimpeza.Situacao.values else "",
+    })
+    return render(request, "governanca/quartos.html", contexto)
 
 
 @requer_modulo(Modulo.GOVERNANCA)
 def nova_tarefa(request):
     if request.method != "POST":
-        return redirect("governanca:painel")
+        return redirect("governanca:quartos")
     uh = get_object_or_404(UH, pk=request.POST.get("uh"))
     tipo = request.POST.get("tipo") or TarefaGovernanca.Tipo.FAXINA
     if tipo not in TarefaGovernanca.Tipo.values:   # não confia no POST
@@ -108,7 +123,7 @@ def nova_tarefa(request):
 @requer_modulo(Modulo.GOVERNANCA)
 def tarefa_acao(request, pk):
     if request.method != "POST":
-        return redirect("governanca:painel")
+        return redirect("governanca:quartos")
     tarefa = get_object_or_404(TarefaGovernanca, pk=pk)
     acao = request.POST.get("acao")
     aviso = ""
@@ -133,7 +148,7 @@ def tarefa_acao(request, pk):
 @requer_modulo(Modulo.GOVERNANCA)
 def status_marcar(request, pk):
     if request.method != "POST":
-        return redirect("governanca:painel")
+        return redirect("governanca:quartos")
     uh = get_object_or_404(UH, pk=pk)
     situacao = request.POST.get("situacao")
     aviso = ""
@@ -155,7 +170,7 @@ def ronda(request, pk):
     """Conferência de ocupação: a camareira registra o que VIU no quarto. Um toque,
     sem recarregar a tela (HTMX) — e cada toque é uma linha nova no histórico."""
     if request.method != "POST":
-        return redirect("governanca:painel")
+        return redirect("governanca:quartos")
     uh = get_object_or_404(UH, pk=pk)
     visto = request.POST.get("visto")
     if visto not in ConferenciaOcupacao.Visto.values:   # não confia no POST

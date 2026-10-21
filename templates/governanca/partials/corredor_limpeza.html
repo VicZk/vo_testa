@@ -1,0 +1,29 @@
+{% comment %}A casa inteira numa olhada — o mesmo corredor de portas do Mapa de
+quartos, só que pintado pelo estado da LIMPEZA. Cada porta leva para a linha
+daquele quarto na lista, onde está o próximo passo.{% endcomment %}
+<div class="corredor corredor-gov" aria-label="Quartos por estado de limpeza">
+  {% for p in portas %}
+    <a href="{% url 'governanca:quartos' %}#quarto-{{ p.uh.pk }}"
+       class="porta {{ p.cor }} dica"
+       data-dica="- {{ p.uh.numero }}&#10;- {{ p.rotulo }}&#10;- {{ p.explicacao }}{% if p.camareira %}&#10;- {{ p.camareira }}{% endif %}{% if p.chegada %}&#10;- chega hóspede hoje{% endif %}{% if p.divergente %}&#10;- {{ p.divergencia_rotulo }}{% endif %}">
+      <span class="porta-topo">
+        <span class="porta-num">{{ p.uh.numero|cut:"Quarto " }}</span>
+        <span class="porta-topo-marcas">
+          {% if p.chegada %}<span class="porta-chegada" title="Chega hóspede hoje">chega</span>{% endif %}
+          <span class="porta-fecho" aria-hidden="true"></span>
+        </span>
+      </span>
+      <span class="porta-selo">{{ p.rotulo }}</span>
+      <span class="porta-nome">{% if p.camareira %}{{ p.camareira }}{% elif p.bloqueado %}Manutenção{% else %}{{ p.uh.tipo.nome }}{% endif %}</span>
+      <span class="porta-rodape">
+        {% if p.divergente %}<span class="porta-flag">{{ p.divergencia_rotulo }}</span>{% endif %}
+      </span>
+    </a>
+  {% endfor %}
+</div>
+<div class="corredor-legenda">
+  {% for e in ciclo %}
+    <a href="{% url 'governanca:quartos' %}?estado={{ e.cod }}" class="chip-legenda chip-legenda-link limp-{{ e.cod }}"
+       title="{{ e.resumo }}"><i></i>{{ e.rotulo }} <b>{{ e.n }}</b></a>
+  {% endfor %}
+</div>

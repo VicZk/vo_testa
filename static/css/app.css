@@ -1455,6 +1455,113 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
   .filtro-chip:active { transform: none; }
 }
 
+/* ───────── Governança — visão geral (a casa fala primeiro) ─────────
+   Mesma leitura do corredor do Mapa de quartos, pintado pelo estado da LIMPEZA.
+   Classes próprias (`limp-*`), e não as `sit-*` do mapa: lá a cor fala de ocupação,
+   aqui de limpeza. As cores seguem o `.selo` do mesmo estado na lista ao lado —
+   limpo é verde, pronto (inspecionado) é azul — para a tela não dizer duas coisas
+   diferentes sobre o mesmo quarto. Os hexes são da paleta noturna do corredor: o
+   painel é escuro e precisa do próprio contraste. */
+.corredor-gov .porta { background: linear-gradient(180deg, #1A3A4C, #122937); }
+.corredor-gov .porta.limp-suja,
+.corredor-gov .porta.limp-em_limpeza { background: linear-gradient(180deg, #4A2E22, #2E1A14); }
+.corredor-gov .porta.limp-limpa {
+  background: linear-gradient(180deg, #1B3B33, #102722);
+  box-shadow: inset 0 0 0 1px rgba(127, 201, 163, .22);
+}
+.corredor-gov .porta.limp-inspecionada {
+  background: linear-gradient(180deg, #1C3A4E, #112636);
+  box-shadow: inset 0 0 0 1px rgba(127, 180, 217, .22);
+}
+.corredor-gov .porta.limp-bloqueada { opacity: .45; filter: grayscale(.35); }
+/* O trinco é o pontinho de cor: o estado se lê mesmo de longe. */
+.corredor-gov .limp-suja .porta-fecho { background: #E8B07A; box-shadow: 0 0 8px rgba(232, 176, 122, .5); }
+.corredor-gov .limp-em_limpeza .porta-fecho { background: #D98A4A; box-shadow: 0 0 8px rgba(217, 138, 74, .5); }
+.corredor-gov .limp-limpa .porta-fecho { background: #7FC9A3; box-shadow: 0 0 8px rgba(127, 201, 163, .5); }
+.corredor-gov .limp-inspecionada .porta-fecho { background: #7FB4D9; box-shadow: 0 0 8px rgba(127, 180, 217, .5); }
+.corredor-gov .limp-bloqueada .porta-fecho { background: #6B808C; box-shadow: none; }
+.corredor-gov .limp-suja .porta-selo { color: #E8B07A; }
+.corredor-gov .limp-em_limpeza .porta-selo { color: #D98A4A; }
+.corredor-gov .limp-limpa .porta-selo { color: #7FC9A3; }
+.corredor-gov .limp-inspecionada .porta-selo { color: #7FB4D9; }
+/* "chega hóspede hoje" é o que muda a urgência da porta — e por isso é o único
+   enfeite que ela ganha. */
+.porta-chegada {
+  font-size: .56rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+  padding: 1px 4px; border-radius: 4px;
+  background: color-mix(in srgb, var(--lampiao) 30%, transparent);
+  color: var(--pergaminho);
+}
+/* A legenda do corredor também filtra a lista. */
+.chip-legenda-link { text-decoration: none; cursor: pointer; }
+.chip-legenda-link:hover { border-color: var(--fio-forte); }
+.chip-legenda.limp-suja i { background: var(--alerta); }
+.chip-legenda.limp-em_limpeza i { background: var(--andamento); }
+.chip-legenda.limp-limpa i { background: var(--sucesso); }
+.chip-legenda.limp-inspecionada i { background: var(--info); }
+
+/* Progresso do dia: a casa inteira repartida pelos quatro estados, numa barra só.
+   Responde à pergunta da manhã ("dá tempo?") melhor que quatro números soltos. */
+.gov-progresso { margin: 1.4rem 0 1.6rem; }
+.gov-progresso-topo {
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
+  gap: .4rem 1.2rem; margin-bottom: .6rem;
+}
+.gov-progresso-num {
+  margin: .1rem 0 0; font-family: var(--fonte-titulo); font-size: 1.5rem;
+  line-height: 1.1; color: var(--noturno);
+  font-variant-numeric: tabular-nums; letter-spacing: -.02em;
+}
+.gov-progresso-num strong { font-weight: 700; }
+.gov-progresso-nota { margin: 0; font-size: .86rem; color: var(--tinta-suave); max-width: 46ch; }
+.gov-barra {
+  display: flex; height: 14px; border-radius: 999px; overflow: hidden;
+  background: var(--superficie-2); border: 1px solid var(--fio);
+}
+.gov-barra-parte { display: block; min-width: 2px; transition: width var(--mov-padrao) var(--curva); }
+.gov-barra-parte.limp-suja { background: var(--alerta); }
+.gov-barra-parte.limp-em_limpeza { background: var(--andamento); }
+.gov-barra-parte.limp-limpa { background: var(--sucesso); }
+.gov-barra-parte.limp-inspecionada { background: var(--info); }
+@media (prefers-reduced-motion: reduce) { .gov-barra-parte { transition: none; } }
+
+/* Duas colunas que viram uma quando o espaço aperta — quem decide é o espaço. */
+.gov-colunas {
+  display: grid; gap: 1rem; margin-top: 1.4rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+}
+.gov-colunas > * { min-width: 0; }
+.gov-bloco { margin: 0; }
+.gov-bloco .secao-cabecalho { margin-bottom: .5rem; }
+.gov-bloco .tabela { margin: .6rem 0 0; }
+/* Chegadas de hoje: uma linha por chegada, quebrando sozinha quando aperta. */
+.gov-chegadas { list-style: none; margin: .6rem 0 0; padding: 0; display: grid; gap: .1rem; }
+.gov-chegadas li {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: .3rem .8rem; padding: .55rem 0; border-top: 1px solid var(--fio);
+}
+.gov-chegadas li:first-child { border-top: none; }
+.gov-chegada-quarto { font-weight: 600; text-decoration: none; }
+.gov-chegada-quarto .ajuda { font-weight: 400; }
+
+/* Carga das camareiras: a barra compara de relance quem está com o quê. */
+.gov-carga { list-style: none; margin: .4rem 0 0; padding: 0; display: grid; gap: .7rem; }
+.gov-carga li { display: grid; gap: .25rem; }
+.gov-carga-nome { font-weight: 600; font-size: .9rem; }
+.gov-carga-barra {
+  display: flex; height: 10px; border-radius: 999px; overflow: hidden;
+  background: var(--superficie-2); border: 1px solid var(--fio);
+}
+.gov-carga-barra i { display: block; }
+.gov-carga-num { font-size: .78rem; color: var(--tinta-suave); font-variant-numeric: tabular-nums; }
+.gov-carga-num b { color: var(--tinta); }
+.parte-feitas { background: var(--sucesso); }
+.parte-fazendo { background: var(--andamento); }
+.parte-pendentes { background: var(--alerta); }
+.gov-carga-legenda { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; margin-top: .8rem; }
+.gov-carga-legenda span { width: 10px; height: 10px; border-radius: 3px; margin-left: .5rem; }
+.gov-carga-legenda span:first-child { margin-left: 0; }
+
 /* Governança — o CICLO do quarto é a própria barra de filtros: lida da esquerda
    para a direita, ela ensina a ordem (A limpar › Em limpeza › Limpo › Pronto) e, de
    quebra, filtra. Quem nunca trabalhou em hotel aprende o fluxo só de olhar. */

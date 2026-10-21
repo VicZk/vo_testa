@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% comment %}Visão geral da Governança: a casa fala primeiro (corredor de portas),
+depois o progresso do dia, o que pede ação agora, as chegadas que dependem de
+quarto pronto e a carga de cada camareira. Tudo clicável para a ação certa — a
+lista operacional está a um toque, na aba Quartos.{% endcomment %}
+
+{% block titulo %}Governança — visão geral{% endblock %}
+
+{% block conteudo %}
+<p class="pagina-eyebrow letreiro">Hospedagem · Governança</p>
+<div class="pagina-cabecalho">
+  <h1>Como está a casa</h1>
+  <div class="acoes bloco-plano">
+    <a href="{% url 'governanca:quartos' %}" class="botao-primario">Ver a lista de quartos</a>
+  </div>
+</div>
+<p class="subtitulo">O dia da governança em uma olhada: cada bloco é um quarto, pintado
+  pelo estado da limpeza. Clique em qualquer coisa desta tela para ir direto ao que fazer.</p>
+
+{% include "governanca/partials/abas.html" %}
+{% include "governanca/partials/como_funciona.html" %}
+
+<section class="corredor-hero">
+  {% include "governanca/partials/corredor_limpeza.html" %}
+</section>
+
+{% comment %}O progresso do dia é a pergunta da supervisora de manhã: "dá tempo?".
+A barra mostra a casa inteira repartida pelos quatro estados.{% endcomment %}
+<section class="gov-progresso">
+  <div class="gov-progresso-topo">
+    <div>
+      <span class="kpi-rotulo letreiro">Progresso do dia</span>
+      <p class="gov-progresso-num"><strong>{{ prontos }}</strong> de {{ total }} prontos</p>
+    </div>
+    <p class="gov-progresso-nota">
+      {% if falta_para_pronto %}
+        Faltam <strong>{{ falta_para_pronto }}</strong> quarto(s) para a casa toda ficar pronta{% if hora_checkin %};
+        o primeiro hóspede pode entrar às {{ hora_checkin|time:"H:i" }}{% endif %}.
+      {% else %}
+        Casa inteira pronta para receber hóspede.
+      {% endif %}
+    </p>
+  </div>
+  <div class="gov-barra" role="img"
+       aria-label="{% for e in ciclo %}{{ e.n }} {{ e.rotulo }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+    {% for e in ciclo %}
+      {% if e.n %}
+        <span class="gov-barra-parte limp-{{ e.cod }}" style="width: {{ e.pct }}%"
+              title="{{ e.n }} {{ e.rotulo }}"></span>
+      {% endif %}
+    {% endfor %}
+  </div>
+</section>
+
+{% if atencao %}
+<section class="atencao-secao">
+  <div class="secao-cabecalho">
+    <h2>Precisa de atenção agora</h2>
+    <span class="secao-contagem">{{ atencao|length }}</span>
+  </div>
+  <div class="atencao-grid">
+    {% for a in atencao %}
+      <a href="{{ a.url }}" class="atencao-item atencao-{{ a.nivel }}">
+        <span class="atencao-ponto"></span>
+        <span class="atencao-txt">
+          <strong>{{ a.rotulo }}</strong>
+          <small>{{ a.detalhe }}</small>
+        </span>
+        <svg viewBox="0 0 24 24" class="ico atencao-seta"><path d="M9 6l6 6-6 6"/></svg>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+{% else %}
+<section class="atencao-secao">
+  <div class="estado-vazio">
+    <p>Nada pendente na governança agora.</p>
+    <p class="ajuda">Quando um hóspede fizer check-out, o quarto aparece aqui para limpar.</p>
+  </div>
+</section>
+{% endif %}
+
+<div class="gov-colunas">
+  <section class="cartao gov-bloco">
+    <div class="secao-cabecalho">
+      <h2>Chegadas de hoje</h2>
+      {% if chegadas %}<span class="secao-contagem">{{ chegadas|length }}</span>{% endif %}
+    </div>
+    {% if sem_base %}
+      <p class="ajuda">Sem o módulo Reservas ativo não há como saber quem chega hoje.</p>
+    {% elif chegadas %}
+      <p class="bloco-subtitulo">Quarto precisa estar <strong>pronto</strong> antes do hóspede chegar.</p>
+      {% comment %}Lista, não tabela: são dois dados por chegada (o quarto e como
+      ele está) e assim a linha quebra sozinha no celular, sem rolagem dentro do
+      cartão.{% endcomment %}
+      <ul class="gov-chegadas">
+        {% for c in chegadas %}
+          <li>
+            <a href="{% url 'governanca:quartos' %}#quarto-{{ c.uh.pk }}" class="gov-chegada-quarto">
+              {{ c.uh.numero }}<small class="ajuda">{{ c.hospede }}</small>
+            </a>
+            <span class="selo selo-{{ c.situacao }}">{{ c.rotulo }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="ajuda">Nenhuma chegada prevista para hoje.</p>
+    {% endif %}
+  </section>
+
+  <section class="cartao gov-bloco">
+    <div class="secao-cabecalho">
+      <h2>Carga das camareiras</h2>
+    </div>
+    {% if carga %}
+      <p class="bloco-subtitulo">Na fila, limpando agora e já entregue hoje.</p>
+      <ul class="gov-carga">
+        {% for c in carga %}
+          <li>
+            <span class="gov-carga-nome">{{ c.nome }}</span>
+            <span class="gov-carga-barra" role="img"
+                  aria-label="{{ c.feitas }} entregue(s), {{ c.fazendo }} limpando, {{ c.pendentes }} na fila">
+              <i class="parte-feitas" style="width: {{ c.barra_feitas }}%"></i>
+              <i class="parte-fazendo" style="width: {{ c.barra_fazendo }}%"></i>
+              <i class="parte-pendentes" style="width: {{ c.barra_pendentes }}%"></i>
+            </span>
+            <span class="gov-carga-num"><b>{{ c.na_mao }}</b> na mão · {{ c.feitas }} feita(s)</span>
+          </li>
+        {% endfor %}
+      </ul>
+      <p class="ajuda gov-carga-legenda">
+        <span class="parte-feitas"></span> entregue
+        <span class="parte-fazendo"></span> limpando
+        <span class="parte-pendentes"></span> na fila
+      </p>
+    {% else %}
+      <p class="ajuda">Nenhuma faxina na fila hoje.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

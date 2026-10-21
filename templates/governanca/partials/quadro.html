@@ -53,7 +53,9 @@ aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% e
   </thead>
   <tbody>
     {% for ln in linhas %}
-    <tr x-show="(f==='todas' || f==='{{ ln.situacao }}') && (!soMeus || {{ ln.minha|yesno:'true,false' }})"
+    {# `id` por quarto: a porta da visão geral aponta para a linha dele. #}
+    <tr id="quarto-{{ ln.uh.pk }}"
+        x-show="(f==='todas' || f==='{{ ln.situacao }}') && (!soMeus || {{ ln.minha|yesno:'true,false' }})"
         x-transition.opacity>
       <td data-rotulo="Quarto"><strong>{{ ln.uh.numero }}</strong><small class="ajuda">{{ ln.uh.tipo.nome }}</small></td>
 

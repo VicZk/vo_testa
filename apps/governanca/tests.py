@@ -103,15 +103,19 @@ class MapaIntegracaoTests(GovernancaBase):
 
 
 class PermissaoTests(GovernancaBase):
+    """A entrada do módulo (visão geral) e a lista seguem a mesma regra."""
+
     def test_exige_modulo(self):
         Usuario.objects.create_user(username="sem", password="senha-forte-123")
         self.client.login(username="sem", password="senha-forte-123")
-        self.assertEqual(self.client.get(reverse("governanca:painel")).status_code, 403)
+        for rota in ("governanca:painel", "governanca:quartos"):
+            self.assertEqual(self.client.get(reverse(rota)).status_code, 403, rota)
 
     def test_modulo_inativo_da_404(self):
         ModuloContratado.objects.filter(codigo=Modulo.GOVERNANCA).update(ativo=False)
         self.client.login(username="governanta", password="senha-forte-123")
-        self.assertEqual(self.client.get(reverse("governanca:painel")).status_code, 404)
+        for rota in ("governanca:painel", "governanca:quartos"):
+            self.assertEqual(self.client.get(reverse(rota)).status_code, 404, rota)
 
 
 class TarefaIdempotenteTests(GovernancaBase):
@@ -187,19 +191,19 @@ class PainelHtmxTests(GovernancaBase):
         r = self.client.post(
             reverse("governanca:tarefa_acao", args=[tarefa.pk]), {"acao": "iniciar"}
         )
-        self.assertRedirects(r, reverse("governanca:painel"))
+        self.assertRedirects(r, reverse("governanca:quartos"))
         self.assertEqual(services.situacao_uh(self.uh).situacao, "em_limpeza")
 
     def test_atribuir_camareira_nao_dispara_sozinho(self):
         """O <select> não pode mais ter onchange=submit: quem confirma é o botão."""
         services.abrir_faxina(self.uh, usuario=self.user)
-        r = self.client.get(reverse("governanca:painel"))
+        r = self.client.get(reverse("governanca:quartos"))
         corpo = r.content.decode()
         self.assertNotIn("this.form.submit()", corpo)
         self.assertIn('name="camareira"', corpo)
 
     def test_filtro_sem_quarto_explica_em_vez_de_tabela_vazia(self):
-        r = self.client.get(reverse("governanca:painel"))
+        r = self.client.get(reverse("governanca:quartos"))
         # O único quarto está "limpa" por padrão; "a limpar" fica sem ninguém.
         self.assertContains(r, "Nenhum quarto")
 
@@ -460,7 +464,7 @@ class DiscrepanciaSemReservasTests(RondaBase):
 
     def test_painel_e_tela_de_discrepancia_abrem(self):
         self.client.login(username="governanta", password="senha-forte-123")
-        self.assertEqual(self.client.get(reverse("governanca:painel")).status_code, 200)
+        self.assertEqual(self.client.get(reverse("governanca:quartos")).status_code, 200)
         r = self.client.get(reverse("governanca:discrepancias"))
         self.assertEqual(r.status_code, 200)
         self.assertContains(r, "não há com o que comparar")
@@ -516,7 +520,7 @@ class RondaViewTests(RondaBase):
     def test_sem_htmx_redireciona(self):
         r = self.client.post(reverse("governanca:ronda", args=[self.uh.pk]),
                              {"visto": "ocupado"})
-        self.assertRedirects(r, reverse("governanca:painel"))
+        self.assertRedirects(r, reverse("governanca:quartos"))
         self.assertEqual(ConferenciaOcupacao.objects.count(), 1)
 
     def test_divergencia_avisa_na_hora_e_nao_desaparece(self):
@@ -554,11 +558,11 @@ class RondaViewTests(RondaBase):
 
     def test_get_nao_grava(self):
         r = self.client.get(reverse("governanca:ronda", args=[self.uh.pk]))
-        self.assertRedirects(r, reverse("governanca:painel"))
+        self.assertRedirects(r, reverse("governanca:quartos"))
         self.assertEqual(ConferenciaOcupacao.objects.count(), 0)
 
     def test_painel_mostra_os_tres_botoes_da_ronda(self):
-        corpo = self.client.get(reverse("governanca:painel")).content.decode()
+        corpo = self.client.get(reverse("governanca:quartos")).content.decode()
         for rotulo in ("Vago", "Com mala", "Sem mala"):
             self.assertIn(rotulo, corpo)
 
@@ -631,7 +635,7 @@ class InspecaoTests(GovernancaBase):
         secundária ("Devolver para limpar"), que leva ao formulário do motivo."""
         self._faxina_entregue()
         self.client.login(username="governanta", password="senha-forte-123")
-        corpo = self.client.get(reverse("governanca:painel")).content.decode()
+        corpo = self.client.get(reverse("governanca:quartos")).content.decode()
         self.assertIn("Aprovar limpeza", corpo)
         self.assertIn("Devolver para limpar", corpo)
         self.assertIn(reverse("governanca:devolver", args=[self.uh.pk]), corpo)
@@ -737,7 +741,7 @@ class FluxoDidaticoTests(GovernancaBase):
         self.client.login(username="governanta", password="senha-forte-123")
 
     def _painel(self):
-        return self.client.get(reverse("governanca:painel")).content.decode()
+        return self.client.get(reverse("governanca:quartos")).content.decode()
 
     def test_o_ciclo_aparece_na_tela_na_ordem_certa(self):
         corpo = self._painel()
@@ -854,7 +858,7 @@ class DevolverParaLimparTests(GovernancaBase):
                          {"situacao": "reprovada", "motivo": "Banheiro"})
         nova = TarefaGovernanca.objects.get(origem="reprovada")
         self.assertEqual(nova.observacoes, "Banheiro")
-        corpo = self.client.get(reverse("governanca:painel")).content.decode()
+        corpo = self.client.get(reverse("governanca:quartos")).content.decode()
         self.assertIn("Devolvido para limpar: Banheiro", corpo)
 
     def test_exige_o_modulo(self):
@@ -882,12 +886,12 @@ class FilaDaCamareiraTests(GovernancaBase):
         funciona», então a asserção olha o controle, não a palavra."""
         self.client.login(username="maria", password="senha-forte-123")
         self.assertNotIn("chip-meus",
-                         self.client.get(reverse("governanca:painel")).content.decode())
+                         self.client.get(reverse("governanca:quartos")).content.decode())
         tarefa = services.abrir_faxina(self.uh, usuario=self.user)
         tarefa.camareira = self.maria
         tarefa.save(update_fields=["camareira"])
         self.assertIn("chip-meus",
-                      self.client.get(reverse("governanca:painel")).content.decode())
+                      self.client.get(reverse("governanca:quartos")).content.decode())
 
     def test_so_os_quartos_dela_sao_marcados_como_dela(self):
         tarefa = services.abrir_faxina(self.uh, usuario=self.user)
@@ -907,4 +911,183 @@ class FilaDaCamareiraTests(GovernancaBase):
         tarefa.save(update_fields=["camareira"])
         self.client.login(username="governanta", password="senha-forte-123")
         self.assertIn("Na fila de Maria.",
-                      self.client.get(reverse("governanca:painel")).content.decode())
+                      self.client.get(reverse("governanca:quartos")).content.decode())
+
+
+class VisaoGeralTests(GovernancaBase):
+    """A entrada da Governança é gráfica: a casa em blocos, o progresso do dia e o
+    que pede ação — tudo clicável para o lugar certo."""
+
+    def setUp(self):
+        super().setUp()
+        self.uh2 = UH.objects.create(numero="Quarto 02", tipo=self.tipo)
+        self.uh3 = UH.objects.create(numero="Quarto 03", tipo=self.tipo)
+        self.client.login(username="governanta", password="senha-forte-123")
+
+    def test_entrada_do_modulo_e_a_visao_geral(self):
+        r = self.client.get(reverse("governanca:painel"))
+        self.assertEqual(r.status_code, 200)
+        self.assertTemplateUsed(r, "governanca/visao.html")
+        self.assertContains(r, "Como está a casa")
+        self.assertContains(r, "corredor-gov")       # a casa em blocos
+
+    def test_uma_porta_por_quarto_levando_para_a_linha_dele(self):
+        dados = services.visao_geral()
+        self.assertEqual(len(dados["portas"]), 3)
+        corpo = self.client.get(reverse("governanca:painel")).content.decode()
+        self.assertIn(f"#quarto-{self.uh.pk}", corpo)
+
+    def test_progresso_do_dia_conta_os_prontos(self):
+        services.inspecionar(self.uh, self.user)
+        dados = services.visao_geral()
+        self.assertEqual((dados["prontos"], dados["total"]), (1, 3))
+        self.assertEqual(dados["falta_para_pronto"], 2)
+        self.assertContains(self.client.get(reverse("governanca:painel")), "de 3 prontos")
+
+    def test_a_porta_ganha_a_cor_do_estado(self):
+        services.abrir_faxina(self.uh, usuario=self.user)
+        services.inspecionar(self.uh2, self.user)
+        cores = {p["uh"].numero: p["cor"] for p in services.visao_geral()["portas"]}
+        self.assertEqual(cores["Quarto 01"], "limp-suja")
+        self.assertEqual(cores["Quarto 02"], "limp-inspecionada")   # pronto
+        self.assertEqual(cores["Quarto 03"], "limp-limpa")          # falta inspeção
+
+    def test_quarto_bloqueado_aparece_como_manutencao(self):
+        self.uh.status = UH.Status.BLOQUEADA
+        self.uh.save(update_fields=["status"])
+        porta = next(p for p in services.visao_geral()["portas"] if p["uh"] == self.uh)
+        self.assertEqual(porta["cor"], "limp-bloqueada")
+        self.assertTrue(porta["bloqueado"])
+
+    def test_atencao_aponta_inspecao_esperando_e_leva_a_lista_filtrada(self):
+        dados = services.visao_geral()
+        item = next(a for a in dados["atencao"] if "esperando inspeção" in a["rotulo"])
+        self.assertEqual(item["nivel"], "aviso")
+        self.assertIn(reverse("governanca:quartos"), item["url"])
+        self.assertIn("estado=limpa", item["url"])
+
+    def test_atencao_cobra_camareira_para_o_que_esta_sujo(self):
+        services.abrir_faxina(self.uh, usuario=self.user)
+        achados = {a["rotulo"] for a in services.visao_geral()["atencao"]}
+        self.assertTrue(any("sem camareira" in a for a in achados), achados)
+
+    def test_sem_nada_pendente_a_tela_diz_isso(self):
+        for uh in (self.uh, self.uh2, self.uh3):
+            services.inspecionar(uh, self.user)
+            services.registrar_conferencia(uh, "vago", usuario=self.user)
+        dados = services.visao_geral()
+        self.assertEqual(dados["atencao"], [])
+        self.assertContains(self.client.get(reverse("governanca:painel")),
+                            "Nada pendente na governança agora")
+
+    def test_carga_por_camareira_soma_fila_andamento_e_entregue(self):
+        maria = Usuario.objects.create_user(
+            username="maria2", password="senha-forte-123", first_name="Maria")
+        t1 = services.abrir_faxina(self.uh, usuario=self.user)
+        t1.camareira = maria
+        t1.save(update_fields=["camareira"])
+        t2 = services.abrir_faxina(self.uh2, usuario=self.user)
+        t2.camareira = maria
+        t2.save(update_fields=["camareira"])
+        services.iniciar_tarefa(t2, maria)
+        t3 = services.abrir_faxina(self.uh3, usuario=self.user)
+        t3.camareira = maria
+        t3.save(update_fields=["camareira"])
+        services.iniciar_tarefa(t3, maria)
+        services.concluir_tarefa(t3, maria)
+        carga = {c["nome"]: c for c in services.carga_das_camareiras()}
+        self.assertEqual(
+            (carga["Maria"]["pendentes"], carga["Maria"]["fazendo"], carga["Maria"]["feitas"]),
+            (1, 1, 1))
+        self.assertEqual(carga["Maria"]["na_mao"], 2)
+        self.assertEqual(carga["Maria"]["barra_pendentes"], 33)   # 1 de 3
+
+    def test_faxina_sem_camareira_aparece_como_sem_camareira(self):
+        services.abrir_faxina(self.uh, usuario=self.user)
+        nomes = [c["nome"] for c in services.carga_das_camareiras()]
+        self.assertIn("Sem camareira", nomes)
+
+    def test_consultas_constantes(self):
+        """A visão geral não pode virar uma consulta por quarto."""
+        services.abrir_faxina(self.uh, usuario=self.user)
+        services.visao_geral()   # aquece o singleton de configuração (ele nasce aqui)
+        with self.assertNumQueries(12):
+            services.visao_geral()
+        for n in range(4, 12):
+            UH.objects.create(numero=f"Quarto {n:02d}", tipo=self.tipo)
+        with self.assertNumQueries(12):   # 3 quartos ou 11: o mesmo número
+            services.visao_geral()
+
+class VisaoGeralComReservasTests(RondaBase):
+    """As chegadas de hoje são o prazo real da governança."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="governanta", password="senha-forte-123")
+
+    def _chegada_hoje(self, uh, nome="Quem chega"):
+        from apps.reservas.models import Reserva
+        return Reserva.objects.create(
+            uh=uh, hospede=Pessoa.objects.create(nome=nome),
+            checkin=self.hoje, checkout=self.hoje + timedelta(days=2),
+            status=Reserva.Status.CONFIRMADA, valor_diaria=Decimal("200"),
+            criado_por=self.user)
+
+    def test_chegada_com_quarto_sujo_vira_o_alerta_mais_grave(self):
+        self._chegada_hoje(self.uh)
+        services.abrir_faxina(self.uh, usuario=self.user)
+        dados = services.visao_geral()
+        self.assertEqual(dados["chegadas_atrasadas"], 1)
+        item = dados["atencao"][0]
+        self.assertEqual(item["nivel"], "alerta")     # o mais grave da tela
+        self.assertIn("sem quarto pronto", item["rotulo"])
+
+    def test_chegada_com_quarto_pronto_nao_alarma(self):
+        self._chegada_hoje(self.uh)
+        services.inspecionar(self.uh, self.user)
+        dados = services.visao_geral()
+        self.assertEqual(dados["chegadas_atrasadas"], 0)
+        self.assertFalse(any("sem quarto pronto" in a["rotulo"] for a in dados["atencao"]))
+        self.assertEqual(dados["chegadas"][0]["hospede"], "Quem chega")
+
+    def test_a_tela_mostra_o_horario_de_entrada_do_hospede(self):
+        self.assertContains(self.client.get(reverse("governanca:painel")),
+                            "o primeiro hóspede pode entrar")
+
+    def test_o_bloco_de_chegadas_lista_quarto_e_hospede(self):
+        self._chegada_hoje(self.uh, nome="Ana Chegando")
+        r = self.client.get(reverse("governanca:painel"))
+        self.assertContains(r, "gov-chegadas")
+        self.assertContains(r, "Ana Chegando")
+        self.assertContains(r, self.uh.numero)
+
+    def test_sem_reservas_a_visao_nao_quebra(self):
+        ModuloContratado.objects.filter(codigo=Modulo.RESERVAS).update(ativo=False)
+        dados = services.visao_geral()
+        self.assertTrue(dados["sem_base"])
+        self.assertEqual(dados["chegadas"], [])
+        self.assertIsNone(dados["hora_checkin"])
+        r = self.client.get(reverse("governanca:painel"))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "não há como saber quem chega hoje")
+
+
+class ListaFiltradaPelaVisaoTests(GovernancaBase):
+    """Clicar em "3 esperando inspeção" abre a lista nesses três."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="governanta", password="senha-forte-123")
+
+    def test_estado_da_url_vira_o_filtro_inicial(self):
+        r = self.client.get(reverse("governanca:quartos"), {"estado": "limpa"})
+        self.assertEqual(r.context["filtro_inicial"], "limpa")
+        self.assertContains(r, "'limpa' || (function ()")
+
+    def test_estado_invalido_e_ignorado(self):
+        r = self.client.get(reverse("governanca:quartos"), {"estado": "sei_la"})
+        self.assertEqual(r.context["filtro_inicial"], "")
+
+    def test_cada_linha_tem_ancora_para_a_porta_da_visao(self):
+        self.assertContains(self.client.get(reverse("governanca:quartos")),
+                            f'id="quarto-{self.uh.pk}"')
