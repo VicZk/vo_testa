@@ -1109,7 +1109,7 @@ class RestricaoDeVendaNoSiteTests(TestCase):
             'checkout': self.n01.strftime('%Y-%m-%d'), 'hospedes': 2,
             'metodo_pagamento': 'pix', 'nome': 'Forja Teste',
             'email': 'forja@ex.com', 'telefone': '49999990000', 'cpf': CPF_VALIDO,
-            'observacoes': '',
+            'observacoes': '', 'aceite_politica': '1',   # recusa tem de vir da REGRA
         })
         self.assertEqual(resp.status_code, 302)
         self.assertEqual(CrmReserva.objects.count(), 0)
@@ -1123,7 +1123,7 @@ class RestricaoDeVendaNoSiteTests(TestCase):
             'checkout': self.d02.strftime('%Y-%m-%d'), 'hospedes': 2,
             'metodo_pagamento': 'pix', 'nome': 'Forja Tipo',
             'email': 'forjatipo@ex.com', 'telefone': '49999990000', 'cpf': CPF_VALIDO,
-            'observacoes': '',
+            'observacoes': '', 'aceite_politica': '1',   # recusa tem de vir da REGRA
         })
         self.assertEqual(resp.status_code, 302)
         self.assertEqual(CrmReserva.objects.count(), 0)
@@ -1136,7 +1136,7 @@ class RestricaoDeVendaNoSiteTests(TestCase):
             'checkout': self.n01.strftime('%Y-%m-%d'), 'hospedes': 2,
             'metodo_pagamento': 'pix', 'nome': 'Passa Teste',
             'email': 'passa@ex.com', 'telefone': '49999990000', 'cpf': CPF_VALIDO,
-            'observacoes': '',
+            'observacoes': '', 'aceite_politica': '1',
         })
         self.assertEqual(CrmReserva.objects.count(), 1)
 
