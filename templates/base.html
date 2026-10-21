@@ -854,8 +854,10 @@
     const ci = document.getElementById('id_checkin');
     const co = document.getElementById('id_checkout');
     const colch = document.getElementById('colchoes-hint');
+    const restr = document.getElementById('restricao-hint');
     if (!uh || !ci || !co || !uh.value || !ci.value || !co.value) {
-      hint.innerHTML = ''; if (colch) colch.innerHTML = ''; return;
+      hint.innerHTML = ''; if (colch) colch.innerHTML = '';
+      if (restr) restr.innerHTML = ''; return;
     }
     const ad = document.getElementById('id_adultos');
     const c05 = document.getElementById('id_criancas_0_5');
@@ -878,7 +880,10 @@
         url += '&casais=' + ca.value + '&solteiros=' + so.value + '&sofa=' + (sf && sf.checked ? '1' : '0');
       }
       const d = await (await fetch(url)).json();
-      if (d.erro) { hint.innerHTML = ''; if (colch) colch.innerHTML = ''; return; }
+      if (d.erro) {
+        hint.innerHTML = ''; if (colch) colch.innerHTML = '';
+        if (restr) restr.innerHTML = ''; return;
+      }
       hint.classList.toggle('tarifa-hint-alta', d.feriado_ou_alta);
       let linha = 'Diária <strong>R$ ' + d.diaria + '</strong> · ' + d.noites
         + ' noite' + (d.noites > 1 ? 's' : '') + ' = hospedagem <strong>R$ ' + d.hospedagem + '</strong>';
@@ -897,7 +902,22 @@
         else if (d.colchoes_status === 'aviso') colch.classList.add('tarifa-hint-alta');
         colch.innerHTML = '🛏️ ' + d.colchoes_msg;
       } else if (colch) { colch.innerHTML = ''; }
-    } catch (e) { hint.innerHTML = ''; if (colch) colch.innerHTML = ''; }
+      // Restrição de venda do período: aviso, menos "parar vendas", que exige gerência.
+      if (restr) {
+        const regras = d.restricoes || [];
+        restr.classList.remove('tarifa-hint-alta', 'tarifa-hint-erro');
+        if (!regras.length) { restr.innerHTML = ''; }
+        else {
+          const parada = regras.some(r => r.tipo === 'parar_vendas');
+          restr.classList.add(parada ? 'tarifa-hint-erro' : 'tarifa-hint-alta');
+          restr.textContent = (parada ? 'Vendas paradas — ' : 'Restrição de venda — ')
+            + regras.map(r => r.mensagem).join(' ');
+        }
+      }
+    } catch (e) {
+      hint.innerHTML = ''; if (colch) colch.innerHTML = '';
+      if (restr) restr.innerHTML = '';
+    }
   }
   document.addEventListener('change', e => {
     if (['id_casais', 'id_solteiros', 'id_usa_sofa_cama'].includes(e.target.id)) arranjoTocado = true;

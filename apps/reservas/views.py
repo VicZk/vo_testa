@@ -3,16 +3,29 @@ from datetime import timedelta
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
-from django.db.models import Q
+from django.db.models import Case, IntegerField, Q, Value, When
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.nucleo.models import UH, FormaPagamento, Pessoa, Temporada, TipoUH
+from apps.nucleo.areas import Area
+from apps.nucleo.models import (
+    UH,
+    FormaPagamento,
+    Pessoa,
+    Temporada,
+    TipoUH,
+    registrar_auditoria,
+)
 from apps.nucleo.modulos import Modulo
 from apps.nucleo.paginacao import paginar
-from apps.nucleo.permissoes import eh_gerente, requer_gerencia, requer_modulo
+from apps.nucleo.permissoes import (
+    eh_gerente,
+    requer_area,
+    requer_gerencia,
+    requer_modulo,
+)
 from apps.nucleo.seletores import pessoas_agrupadas
 from apps.nucleo.templatetags.moeda import intcomma_brl
 
@@ -27,9 +40,10 @@ from .forms import (
     LancamentoContaForm,
     RecebimentoForm,
     ReservaForm,
+    RestricaoVendaForm,
     TransferenciaForm,
 )
-from .models import ColchoesExtra, GrupoReserva, Reserva
+from .models import ColchoesExtra, GrupoReserva, Reserva, RestricaoVenda
 
 DIAS_MAPA = 14
 
@@ -301,7 +315,19 @@ def nova(request):
                 "(reserva ativa ou bloqueio de manutenção).",
             )
             return render(request, template, contexto)
-        if "orcamento" in request.POST:
+        # Restrição de venda (estadia mínima, chegada/saída fechadas, parada de vendas):
+        # na recepção ela AVISA, não barra — quem atende negocia, e o site é que não
+        # oferece. A exceção é "parar vendas": só a gerência passa, e com registro na
+        # trilha. Orçamento é cotação (não prende data), então nem isso barra.
+        violacoes = services.restricoes_da_estadia(
+            reserva.checkin, reserva.checkout, uh=reserva.uh)
+        paradas = [v for v in violacoes if v["tipo"] == "parar_vendas"]
+        eh_orcamento = "orcamento" in request.POST
+        if paradas and not eh_orcamento and not eh_gerente(request.user):
+            for v in paradas:
+                form.add_error(None, f"{v['mensagem']} Só a gerência pode liberar.")
+            return render(request, template, contexto)
+        if eh_orcamento:
             reserva.status = Reserva.Status.ORCAMENTO
         else:
             # Pré-reserva vencida ainda trava a constraint até ser expirada.
@@ -340,6 +366,15 @@ def nova(request):
                 "(reserva em dobro bloqueada).",
             )
             return render(request, template, contexto)
+        for v in violacoes:
+            messages.warning(request, v["mensagem"])
+        if paradas and not eh_orcamento:
+            # Quem dispensou a parada de vendas foi a gerência (o resto já foi barrado).
+            registrar_auditoria(
+                request.user, "restricao_dispensada", reserva,
+                {"motivo": " ".join(v["mensagem"] for v in paradas),
+                 "restricoes": [v["regra"].pk for v in paradas]},
+            )
         messages.success(request, f"{reserva} criada.")
         if em_modal:
             resposta = HttpResponse(status=204)
@@ -442,6 +477,12 @@ def tarifa_preview(request):
             "colchoes_extra": conf["extra"],
             "colchoes_status": colchoes_status,
             "colchoes_msg": colchoes_msg,
+            # Restrição de venda ao vivo: a recepção lê o motivo ANTES de salvar
+            # (aviso, não bloqueio — "parar vendas" é que exige gerência).
+            "restricoes": [
+                {"tipo": v["tipo"], "mensagem": v["mensagem"]}
+                for v in services.restricoes_da_estadia(checkin, checkout, uh=uh)
+            ],
         }
     )
 
@@ -1322,3 +1363,65 @@ def grupo_sinal(request, pk):
     except ValidationError as erro:
         messages.error(request, " ".join(erro.messages))
     return _grupo_redirect(pk)
+
+
+# ---------- Restrições de venda (estadia mínima, chegada/saída, parar vendas) ----------
+#
+# Mora no calendário tarifário, não no módulo: quem cuida de temporada e preço é quem
+# fecha o Réveillon para noite solta. Por isso a área é TEMPORADAS, e não o módulo
+# Reservas. Restrição NÃO é tarifa: nada aqui mexe em preço.
+
+
+@requer_area(Area.TEMPORADAS)
+def restricoes(request):
+    hoje = timezone.localdate()
+    lista_qs = (
+        RestricaoVenda.objects.select_related("tipo_uh", "uh")
+        # O que ainda vale (valendo ou por vir) sobe; a soonest primeiro, porque é a que
+        # a recepção vai perguntar. O que já passou ou foi desativado desce.
+        .annotate(
+            encerrada=Case(
+                When(ativa=True, fim__gte=hoje, then=Value(0)),
+                default=Value(1), output_field=IntegerField(),
+            )
+        )
+        .order_by("encerrada", "inicio")
+    )
+    pagina = paginar(request, lista_qs)
+    return render(request, "reservas/restricoes.html", {
+        "restricoes": pagina, "pagina": pagina,
+        "total_valendo": sum(1 for r in lista_qs if r.situacao[1] == "Valendo"),
+    })
+
+
+@requer_area(Area.TEMPORADAS)
+def restricao_form(request, pk=None):
+    restricao = get_object_or_404(RestricaoVenda, pk=pk) if pk else None
+    form = RestricaoVendaForm(request.POST or None, instance=restricao)
+    if request.method == "POST" and form.is_valid():
+        nova = form.save(commit=False)
+        if restricao is None:
+            nova.criado_por = request.user
+        nova.save()
+        messages.success(request, f"Restrição “{nova.descricao}” salva.")
+        return redirect("reservas:restricoes")
+    return render(request, "reservas/restricao_form.html", {
+        "form": form, "restricao": restricao,
+        "titulo": "Restrição de venda" if restricao else "Nova restrição de venda",
+    })
+
+
+@requer_area(Area.TEMPORADAS)
+def restricao_alternar(request, pk):
+    """Liga/desliga a regra sem apagá-la (o histórico do Réveillon passado serve de
+    molde para o próximo). A trilha de auditoria registra sozinha, pelo signal."""
+    restricao = get_object_or_404(RestricaoVenda, pk=pk)
+    if request.method == "POST":
+        restricao.ativa = not restricao.ativa
+        restricao.save(update_fields=["ativa", "atualizado_em"])
+        messages.success(
+            request,
+            f"Restrição “{restricao.descricao}” "
+            + ("reativada." if restricao.ativa else "desativada."),
+        )
+    return redirect("reservas:restricoes")

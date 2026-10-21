@@ -6,9 +6,13 @@
 <p class="pagina-eyebrow letreiro">Cadastros</p>
 <div class="pagina-cabecalho">
   <h1>Temporadas</h1>
+  <a href="{% url 'reservas:restricoes' %}" class="botao-neutro">Restrições de venda</a>
   <a href="{% url 'temporada_nova' %}" class="botao-primario">Nova temporada</a>
 </div>
-<p class="subtitulo">Calendário tarifário: períodos de baixa, alta e feriados.</p>
+<p class="subtitulo">Calendário tarifário: períodos de baixa, alta e feriados.
+  A temporada diz <strong>quanto</strong> custa a noite; quem diz <strong>quando</strong>
+  a data pode ser vendida (estadia mínima, fechado para chegada/saída, parada de vendas)
+  são as <a href="{% url 'reservas:restricoes' %}">restrições de venda</a>.</p>
 
 <form method="post" class="cartao linha-opcao">
   {% csrf_token %}
