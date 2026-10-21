@@ -24,11 +24,11 @@
             <td>{{ t.motivo }}</td>
             <td class="num">
               {% if eh_gerente %}
-                <form method="post" action="{% url 'escala:decidir_troca' t.pk %}" style="display:inline">
+                <form method="post" action="{% url 'escala:decidir_troca' t.pk %}" class="form-embutido">
                   {% csrf_token %}<input type="hidden" name="acao" value="aprovar">
                   <button class="botao-mini" title="Aprovar">✓</button>
                 </form>
-                <form method="post" action="{% url 'escala:decidir_troca' t.pk %}" style="display:inline">
+                <form method="post" action="{% url 'escala:decidir_troca' t.pk %}" class="form-embutido">
                   {% csrf_token %}<input type="hidden" name="acao" value="recusar">
                   <button class="chip-x" title="Recusar">&times;</button>
                 </form>
@@ -42,7 +42,7 @@
     </table>
 
     {% if recentes %}
-      <h2 style="margin-top:1.4rem">Decididas</h2>
+      <h2 class="secao-titulo respiro-medio">Decididas</h2>
       <table class="tabela">
         <thead><tr><th>Sai → Entra</th><th>Situação</th></tr></thead>
         <tbody>
@@ -56,7 +56,7 @@
   </section>
 
   <section class="painel-bloco">
-    <h2 style="margin-top:0">Solicitar troca</h2>
+    <h2 class="titulo-topo">Solicitar troca</h2>
     <form method="post" class="form-cartao">
       {% csrf_token %}
       <div class="campo"><label>Turno a ceder</label>

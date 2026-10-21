@@ -35,8 +35,8 @@
 
   <section>
     {% if doc.autorizada and eh_gerente %}
-      <div class="painel-bloco" style="margin-bottom:1.2rem">
-        <h2 style="margin-top:0">Cancelar</h2>
+      <div class="painel-bloco bloco-fim">
+        <h2 class="titulo-topo">Cancelar</h2>
         <form method="post" action="{% url 'fiscal:cancelar' doc.pk %}" class="form-cartao">
           {% csrf_token %}
           <div class="campo"><label>Motivo</label><input type="text" name="motivo" required></div>
@@ -45,7 +45,7 @@
       </div>
     {% endif %}
     <div class="painel-bloco">
-      <h2 style="margin-top:0">Histórico</h2>
+      <h2 class="titulo-topo">Histórico</h2>
       <ul class="timeline">
         {% for e in doc.eventos.all %}
           <li><strong>{{ e.tipo }}</strong> <small>{{ e.criado_em|date:"d/m H:i" }}</small></li>

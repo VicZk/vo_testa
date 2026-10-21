@@ -45,13 +45,13 @@
     <div class="cartao cartao-el">
       <span class="letreiro letreiro-medio">Extrato — conciliado × pendente</span>
       {% if dados.extrato.total %}
-        <div class="grafico-caixa"><canvas id="g-ext"></canvas></div>
+        <div class="grafico-conciliacao"><canvas id="g-ext"></canvas></div>
       {% else %}<p class="vazio bloco-respiro-curto">Sem linhas no período.</p>{% endif %}
     </div>
     <div class="cartao cartao-el">
       <span class="letreiro letreiro-medio">Cartão — conciliado × pendente</span>
       {% if dados.cartao.total %}
-        <div class="grafico-caixa"><canvas id="g-car"></canvas></div>
+        <div class="grafico-conciliacao"><canvas id="g-car"></canvas></div>
       {% else %}<p class="vazio bloco-respiro-curto">Sem transações no período.</p>{% endif %}
     </div>
   </div>

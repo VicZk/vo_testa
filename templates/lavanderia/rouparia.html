@@ -35,8 +35,8 @@
   </section>
 
   <section>
-    <div class="painel-bloco" style="margin-bottom:1.2rem">
-      <h2 style="margin-top:0">Movimentar</h2>
+    <div class="painel-bloco bloco-fim">
+      <h2 class="titulo-topo">Movimentar</h2>
       <form method="post" action="{% url 'lavanderia:rouparia_mover' %}" class="form-cartao" x-data="{ acao: 'adquirir' }">
         {% csrf_token %}
         <div class="campo"><label>Item</label>
@@ -52,7 +52,7 @@
             <option value="baixar">Baixar (desgaste/dano)</option>
           </select>
         </div>
-        <div class="form-grade" x-show="acao === 'baixar'" x-cloak style="display:none">
+        <div class="form-grade" x-show="acao === 'baixar'" x-cloak>
           <div class="campo"><label>De qual estado</label>
             <select name="estado">{% for v, r in estados %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select>
           </div>
@@ -64,7 +64,7 @@
     </div>
 
     <div class="painel-bloco">
-      <h2 style="margin-top:0">Novo item de enxoval</h2>
+      <h2 class="titulo-topo">Novo item de enxoval</h2>
       <form method="post" action="{% url 'lavanderia:rouparia_item' %}" class="form-cartao">
         {% csrf_token %}
         <div class="campo"><label>Nome</label><input type="text" name="nome" placeholder="Ex.: Lençol casal" required></div>

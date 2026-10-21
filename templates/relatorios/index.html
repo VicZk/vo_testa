@@ -10,7 +10,7 @@
 <p class="subtitulo">Consolidados que cruzam módulos e relatórios individuais por módulo. Escolha um período dentro de cada relatório.</p>
 
 {% for grupo, itens in grupos.items %}
-  <h2 class="secao-titulo letreiro" style="margin-top:1.4rem">{{ grupo }}</h2>
+  <h2 class="secao-titulo letreiro respiro-medio">{{ grupo }}</h2>
   <div class="cartoes-atalhos colunas">
     {% for r in itens %}
       <a href="{% url 'relatorios:relatorio' r.chave %}" class="cartao cartao-atalho">

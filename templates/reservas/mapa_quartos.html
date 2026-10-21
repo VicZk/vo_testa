@@ -7,7 +7,7 @@
 <p class="pagina-eyebrow letreiro">Reservas</p>
 <div class="pagina-cabecalho">
   <h1>O corredor</h1>
-  <div class="acoes" style="margin:0">
+  <div class="acoes bloco-plano">
     <a href="{% url 'reservas:mapa' %}" class="botao-neutro">Mapa de reservas</a>
     <button type="button" class="botao-primario" hx-get="{% url 'reservas:nova' %}" hx-target="#modal-conteudo">Nova reserva</button>
   </div>
@@ -38,7 +38,7 @@
   {% include "reservas/partials/corredor.html" with quartos=quartos hoje=hoje amanha=amanha filtravel=True arrastar=True %}
 </div>
 
-<form style="display:none">{% csrf_token %}</form>
+<form class="form-csrf">{% csrf_token %}</form>
 <script>
 // Troca de quarto por manipulação direta (Apple "Fluid Interfaces"):
 // a porta segue o dedo 1:1 respeitando onde foi pega (§2), o alvo se ilumina

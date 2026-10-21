@@ -38,12 +38,12 @@
 
   {% if os.aberta_ou_andamento %}
   <section class="painel-bloco">
-    <h2 style="margin-top:0">Ações</h2>
+    <h2 class="titulo-topo">Ações</h2>
 
     {% if os.status == 'aberta' %}
       <form method="post" action="{% url 'manutencao:iniciar' os.pk %}">
         {% csrf_token %}
-        <button type="submit" class="botao-neutro" style="width:100%">Iniciar (em andamento)</button>
+        <button type="submit" class="botao-neutro botao-largo">Iniciar (em andamento)</button>
       </form>
     {% endif %}
 

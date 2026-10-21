@@ -31,9 +31,9 @@
 
   <div class="campo">
     <label>Quartos do bloco</label>
-    <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:.4rem">
+    <div class="grade-marcadores">
       {% for uh in quartos %}
-        <label style="display:flex; align-items:center; gap:.4rem; cursor:pointer">
+        <label class="marcador-item">
           <input type="checkbox" name="quartos" value="{{ uh.pk }}">
           <span>{{ uh.numero }} <small class="ajuda">{{ uh.tipo.nome }}</small></span>
         </label>

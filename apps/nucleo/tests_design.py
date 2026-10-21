@@ -555,3 +555,49 @@ class UmJeitoSoTests(TestCase):
         for morta in (".quartos-grid", ".quarto-porta", ".porta-circulo",
                       ".porta-badge", ".porta-legenda", ".porta-dot", ".porta-ico"):
             self.assertNotIn(morta, self.css_sem_comentario, morta)
+
+
+class EstiloForaDoAtributoTests(TestCase):
+    """O desenho mora no CSS, não no `style=` da tag.
+
+    As telas do Marketing e do Comercial nasceram como transcrição de protótipo:
+    439 `style="…"` estáticos, a mesma cápsula escrita à mão em quatro arquivos e
+    nenhuma chance de reuso ou de tema. Agora cada papel tem classe; o atributo só
+    fica onde o valor é DADO (largura em %, posição calculada, cor vinda do banco)
+    ou onde o estilo é a única linguagem possível (corpo de e-mail).
+    """
+
+    # Corpo de e-mail precisa de estilo inline: cliente de e-mail ignora CSS externo.
+    EMAILS = {"comercial/email/proposta.html", "comercial/email/campanha.html"}
+
+    def setUp(self):
+        self.raiz = Path(settings.BASE_DIR) / "templates"
+
+    def _estaticos(self, caminho):
+        """style="…" sem variável de template dentro (o dinâmico é dado, não estilo)."""
+        texto = caminho.read_text(encoding="utf-8")
+        return [v for v in re.findall(r'style="([^"]*)"', texto)
+                if "{{" not in v and "{%" not in v]
+
+    def test_marketing_e_comercial_sem_style_estatico(self):
+        sobras = []
+        for pasta in ("marketing", "comercial"):
+            for p in (self.raiz / pasta).rglob("*.html"):
+                rel = p.relative_to(self.raiz).as_posix()
+                if rel in self.EMAILS:
+                    continue
+                for valor in self._estaticos(p):
+                    sobras.append(f"{rel}: {valor[:60]}")
+        self.assertEqual(sobras, [])
+
+    def test_funil_sem_capsula_de_enfeite(self):
+        """`.mchip` eram quatro cápsulas por cartão (origem, reativação, campanha,
+        temperatura). Dado virou `.rotulo-dado`; estado, `.selo`."""
+        funil = (self.raiz / "comercial" / "funil.html").read_text(encoding="utf-8")
+        self.assertNotIn("mchip", funil)
+        self.assertIn("rotulo-dado", funil)
+        self.assertIn("selo temp-", funil)
+
+    def test_fchip_morto_nao_volta(self):
+        """Classe sem nenhum template usando — saiu junto com as cápsulas."""
+        self.assertNotIn(".fchip", CSS.read_text(encoding="utf-8"))

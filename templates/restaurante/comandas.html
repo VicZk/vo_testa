@@ -18,8 +18,8 @@
   <p class="bloco-vazio">Cadastre um depósito do Restaurante em Estoque → Locais para começar.</p>
 {% else %}
 
-<section class="painel-bloco" style="max-width:640px;margin-bottom:1.6rem">
-  <h2 style="margin-top:0">Abrir comanda</h2>
+<section class="painel-bloco form-abertura estreito">
+  <h2 class="titulo-topo">Abrir comanda</h2>
   <form method="post" action="{% url 'restaurante:abrir' %}" class="abrir-comanda">
     {% csrf_token %}
     <label class="select-wrap"><select name="mesa"><option value="">Ponto…</option>

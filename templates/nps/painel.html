@@ -10,22 +10,22 @@
 </div>
 <p class="subtitulo">{{ proposta.objetivo }}</p>
 
-<div class="cartao" style="margin-top:1rem">
-  <h2 class="letreiro" style="margin:0 0 .6rem;font-size:.85rem">Proposta registrada</h2>
-  <p style="margin:0 0 .8rem;color:var(--tinta-suave)">
+<div class="cartao respiro">
+  <h2 class="letreiro bloco-subtitulo">Proposta registrada</h2>
+  <p class="bloco-nota">
     Status: <strong>{{ proposta.status }}</strong> · Fase: {{ proposta.fase }} ·
     Documento: <code>{{ proposta.documento }}</code>
   </p>
-  <ul style="margin:0;padding-left:1.1rem;line-height:1.6">
+  <ul class="lista-simples">
     {% for item in proposta.escopo_ui %}
       <li>{{ item }}</li>
     {% endfor %}
   </ul>
 </div>
 
-<div class="cartao" style="margin-top:1rem">
-  <h2 class="letreiro" style="margin:0 0 .6rem;font-size:.85rem">API específica (stub)</h2>
-  <p style="margin:0 0 .8rem;color:var(--tinta-suave)">
+<div class="cartao respiro">
+  <h2 class="letreiro bloco-subtitulo">API específica (stub)</h2>
+  <p class="bloco-nota">
     Base <code>{{ proposta.api.base }}</code> — endpoints respondem
     <strong>HTTP 501</strong> até a implementação.
   </p>
@@ -45,9 +45,9 @@
   </table>
 </div>
 
-<div class="cartao" style="margin-top:1rem">
-  <h2 class="letreiro" style="margin:0 0 .6rem;font-size:.85rem">Fora desta fase</h2>
-  <ul style="margin:0;padding-left:1.1rem;line-height:1.6">
+<div class="cartao respiro">
+  <h2 class="letreiro bloco-subtitulo">Fora desta fase</h2>
+  <ul class="lista-simples">
     {% for item in proposta.fora_desta_fase %}
       <li>{{ item }}</li>
     {% endfor %}
