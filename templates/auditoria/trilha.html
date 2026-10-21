@@ -17,7 +17,7 @@
   <div class="filtro-campo">
     <label>Ação</label>
     <select name="acao" onchange="this.form.submit()"><option value="">Todas</option>
-      {% for a in acoes %}<option value="{{ a }}" {% if f.acao == a %}selected{% endif %}>{{ a }}</option>{% endfor %}
+      {% for cod, rot in acoes %}<option value="{{ cod }}" {% if f.acao == cod %}selected{% endif %}>{{ rot }}</option>{% endfor %}
     </select>
   </div>
   <div class="filtro-campo">
@@ -59,8 +59,8 @@
       <tr>
         <td>{{ t.criado_em|date:"d/m/Y H:i" }}</td>
         <td>{% if t.usuario %}<a href="?usuario={{ t.usuario.pk }}&mes={{ mes_sel }}&ano={{ ano_sel }}" title="Ver só as ações de {{ t.usuario }}">{{ t.usuario }}</a>{% else %}—{% endif %}</td>
-        <td><span class="selo">{{ t.acao }}</span></td>
-        <td>{{ t.alvo }} #{{ t.alvo_id }}</td>
+        <td><span class="selo">{{ t.acao|rotulo_acao }}</span></td>
+        <td>{{ t.alvo|rotulo_alvo }} #{{ t.alvo_id }}</td>
         <td><span title="{{ t.detalhe }}">{{ t|frase_auditoria }}</span></td>
       </tr>
     {% empty %}

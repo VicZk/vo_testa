@@ -224,11 +224,15 @@ def cancelar(cobranca, operador):
 def conciliacao():
     """Resumo por status para conferência gateway × sistema."""
     from django.db.models import Count, Sum
-    return list(
+    linhas = list(
         Cobranca.objects.values("status")
         .annotate(qtd=Count("id"), total=Sum("valor"))
         .order_by("status")
     )
+    rotulos = dict(Cobranca.Status.choices)
+    for linha in linhas:   # a tela mostrava o código ("pendente"), não o rótulo
+        linha["rotulo"] = rotulos.get(linha["status"], linha["status"])
+    return linhas
 
 
 @transaction.atomic

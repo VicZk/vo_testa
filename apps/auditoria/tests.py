@@ -235,3 +235,29 @@ class FechamentosTelaTests(TestCase):
         self.client.login(username="ger", password="senha-forte-123")
         self.assertContains(self.client.get(reverse("auditoria:painel")),
                             reverse("auditoria:fechamentos"))
+
+
+class RotulosDaTrilhaTests(TestCase):
+    """A coluna Ação e o filtro da trilha mostravam o código cru ("no_show",
+    "bloqueio_uh", "lead_fechado_movido") e a gravidade saía "media". Agora palavra de
+    gente; o código continua no banco e no CSV (forense)."""
+
+    def test_rotulos(self):
+        from .formatacao import rotulo_acao, rotulo_alvo, rotulo_gravidade
+        self.assertEqual(rotulo_acao("no_show"), "Não comparecimento")
+        self.assertEqual(rotulo_acao("algo_novo_aqui"), "Algo novo aqui")   # sem molde
+        self.assertEqual(rotulo_alvo("SessaoCaixa"), "Caixa")
+        self.assertEqual(rotulo_alvo("OrdemServico"), "Ordem de serviço")
+        self.assertEqual(rotulo_alvo("ModeloQualquer"), "ModeloQualquer")
+        self.assertEqual(rotulo_gravidade("media"), "Média")
+
+    def test_trilha_e_filtro_mostram_o_rotulo(self):
+        op = Usuario.objects.create_superuser(username="aud2", password="senha-forte-123")
+        self.client.force_login(op)
+        registrar_auditoria(op, "no_show", op, {})
+        r = self.client.get(reverse("auditoria:trilha"))
+        self.assertContains(r, '<span class="selo">Não comparecimento</span>', html=True)
+        self.assertContains(r, '<option value="no_show">Não comparecimento</option>', html=True)
+        self.assertNotContains(r, ">no_show<")
+        csv_resp = self.client.get(reverse("auditoria:trilha"), {"export": "csv"})
+        self.assertIn("no_show", csv_resp.content.decode())                # o CSV guarda o código

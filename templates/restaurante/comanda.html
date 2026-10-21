@@ -28,7 +28,7 @@
             <span class="pdv-produto-nome">{{ p.nome }}</span>
             <span class="pdv-produto-meta">
               <span class="pdv-preco">{{ p.preco|intcomma_brl }}</span>
-              <small class="pdv-saldo">{% if p.saldo > 0 %}saldo {{ p.saldo|floatformat:"-3" }}{% else %}esgotado{% endif %}</small>
+              <small class="pdv-saldo">{% if p.saldo > 0 %}Saldo {{ p.saldo|floatformat:"-3" }}{% else %}Esgotado{% endif %}</small>
             </span>
             <span class="pdv-add" aria-hidden="true">+</span>
           </button>

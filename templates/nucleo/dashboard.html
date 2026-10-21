@@ -144,7 +144,7 @@
   {% endif %}
   {% if graficos.receita %}
     <div class="grafico-card col2">
-      <h3>Receita da semana <small>serviço × consumo</small></h3>
+      <h3>Receita da semana <small>Serviço × consumo</small></h3>
       <div class="grafico-caixa"><canvas id="g-receita" role="img"
         aria-label="Gráfico de barras: receita por dia, de {{ graficos.receita.labels|first }} a {{ graficos.receita.labels|last }}.
                     Dias: {{ graficos.receita.labels|join:", " }}. Serviço, em reais: {{ graficos.receita.servico|join:", " }}.
@@ -153,7 +153,7 @@
   {% endif %}
   {% if graficos.tipos %}
     <div class="grafico-card">
-      <h3>Ocupação por tipo <small>média 14 dias</small></h3>
+      <h3>Ocupação por tipo <small>Média de 14 dias</small></h3>
       <div class="grafico-caixa"><canvas id="g-tipos" role="img"
         aria-label="Gráfico de barras: ocupação média dos próximos 14 dias por tipo de quarto.
                     Tipos: {{ graficos.tipos.labels|join:", " }}. Ocupação: {{ graficos.tipos.valores|join:"%, " }}%."></canvas></div>
@@ -177,7 +177,7 @@
   {% endif %}
   {% if graficos.pagamento %}
     <div class="grafico-card grafico-pizza">
-      <h3>Mix de pagamento <small>recebido no caixa</small></h3>
+      <h3>Mix de pagamento <small>Recebido no caixa</small></h3>
       <div class="grafico-caixa"><canvas id="g-pagamento" role="img"
         aria-label="Mix de pagamento recebido no caixa. Formas: {{ graficos.pagamento.labels|join:", " }}.
                     Valor em reais: {{ graficos.pagamento.valores|join:", " }}."></canvas></div>

@@ -14,6 +14,7 @@ from apps.nucleo.periodos import periodo, selecao_periodo
 from apps.nucleo.permissoes import eh_gerente, pode_ver_salario, requer_modulo
 
 from . import services
+from .formatacao import rotulo_acao
 
 Usuario = get_user_model()
 
@@ -78,7 +79,9 @@ def trilha(request):
         "registros": registros,
         "pagina": pagina,
         "rotulo": rotulo,
-        "acoes": TrilhaAuditoria.objects.order_by("acao").values_list("acao", flat=True).distinct(),
+        # (código, rótulo) em ordem do rótulo — o filtro mostra palavra de gente.
+        "acoes": sorted(((a, rotulo_acao(a)) for a in TrilhaAuditoria.objects.order_by("acao")
+                         .values_list("acao", flat=True).distinct()), key=lambda par: par[1]),
         "usuarios": Usuario.objects.filter(auditorias__isnull=False).distinct(),
         "f": request.GET,
         **selecao_periodo(request),

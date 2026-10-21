@@ -114,7 +114,7 @@ def dashboard(request):
             atencao.append({
                 "nivel": "alerta",
                 "rotulo": f"{contas_vencidas} conta{'s' if contas_vencidas > 1 else ''} vencida{'s' if contas_vencidas > 1 else ''}",
-                "detalhe": "a pagar/receber em atraso",
+                "detalhe": "A pagar/receber em atraso",
                 "url": reverse("contas") + "?situacao=abertas",
             })
         if tem_graficos:
@@ -151,7 +151,7 @@ def dashboard(request):
             atencao.append({
                 "nivel": "aviso",
                 "rotulo": f"{pendentes} pré-reserva{'s' if pendentes > 1 else ''} aguardando confirmação",
-                "detalhe": "confirme o sinal ou cancele",
+                "detalhe": "Confirme o sinal ou cancele",
                 "url": reverse("reservas:lista") + "?status=pre_reserva",
             })
         # Saídas vencidas — o atendente finaliza (cobra e/ou fecha).
@@ -168,7 +168,7 @@ def dashboard(request):
                     f"{'s' if n_saldo > 1 else ''} com saldo em aberto — "
                     f"R$ {vencidas['total_aberto']} a receber"
                 ),
-                "detalhe": "cobre no caixa e finalize o check-out",
+                "detalhe": "Cobre no caixa e finalize o check-out",
                 "url": reverse("reservas:lista") + "?saida=vencida_saldo",
             })
         if n_quit:
@@ -179,7 +179,7 @@ def dashboard(request):
                     f"{'s' if n_quit > 1 else ''} já quitada"
                     f"{'s' if n_quit > 1 else ''} — confirmar saída"
                 ),
-                "detalhe": "conta zerada, só finalizar o check-out",
+                "detalhe": "Conta zerada, só finalizar o check-out",
                 "url": reverse("reservas:lista") + "?saida=vencida_quitada",
             })
         # Colchões extra no limite/esgotados nas próximas noites.
@@ -195,7 +195,7 @@ def dashboard(request):
                 atencao.append({
                     "nivel": "alerta",
                     "rotulo": f"Colchões extra esgotados em {esg} noite{'s' if esg > 1 else ''}",
-                    "detalhe": f"sem extra para novas lotações em {noites}",
+                    "detalhe": f"Sem extra para novas lotações em {noites}",
                     "url": reverse("reservas:painel_colchoes"),
                 })
             if ap:
@@ -204,7 +204,7 @@ def dashboard(request):
                 atencao.append({
                     "nivel": "aviso",
                     "rotulo": f"Colchões extra no limite em {ap} noite{'s' if ap > 1 else ''}",
-                    "detalhe": f"resta pouco em {noites}",
+                    "detalhe": f"Resta pouco em {noites}",
                     "url": reverse("reservas:painel_colchoes"),
                 })
 
@@ -220,7 +220,7 @@ def dashboard(request):
             atencao.append({
                 "nivel": "aviso",
                 "rotulo": f"{minimo} produto{'s' if minimo > 1 else ''} no estoque mínimo",
-                "detalhe": "repor antes de faltar",
+                "detalhe": "Repor antes de faltar",
                 "url": reverse("estoque:posicao") + "?alerta=1",
             })
 

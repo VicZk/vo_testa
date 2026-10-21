@@ -128,7 +128,7 @@ def extras_para(uh, pessoas: int) -> int:
 def faixa_do_tipo(tipo_uh) -> str:
     """Faixa de lotação das unidades de um tipo (usa `maxima_criancas`).
 
-    "até N pessoas" quando todas iguais; "N a M pessoas" quando variam — assim o
+    "Até N pessoas" quando todas iguais; "N a M pessoas" quando variam — assim o
     Quarto 03 não herda a promessa do Quarto 17.
     """
     caps = [
@@ -140,5 +140,5 @@ def faixa_do_tipo(tipo_uh) -> str:
         return "—"
     menor, maior = min(caps), max(caps)
     if menor == maior:
-        return f"até {maior} pessoas"
+        return f"Até {maior} pessoas"
     return f"{menor} a {maior} pessoas"

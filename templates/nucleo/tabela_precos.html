@@ -66,10 +66,10 @@
   <div class="precos-param">
     <label>Hóspede sozinho (%)
       <input type="text" name="single_pct" value="{{ parametros.single_pct }}" class="money-mask" inputmode="decimal">
-      <small>paga essa % do valor de 2 adultos</small></label>
+      <small>Paga essa % do valor de 2 adultos</small></label>
     <label>Não-reembolsável (% desconto)
       <input type="text" name="nao_reemb_pct" value="{{ parametros.nao_reemb_pct }}" class="money-mask" inputmode="decimal">
-      <small>desconto pré-pago sem cancelamento</small></label>
+      <small>Desconto pré-pago, sem cancelamento</small></label>
     <label>ISS (%)
       <input type="text" name="iss" value="{{ parametros.iss }}" class="money-mask" inputmode="decimal"></label>
     <label>Taxa de turismo (R$/noite)
@@ -83,14 +83,14 @@
       <input type="time" name="hora_checkin" value="{{ parametros.hora_checkin }}"></label>
     <label>Check-out até
       <input type="time" name="hora_checkout" value="{{ parametros.hora_checkout }}">
-      <small>aparecem para o hóspede no site e no e-mail</small></label>
+      <small>Aparecem para o hóspede no site e no e-mail</small></label>
     <label>No-show automático
       <select name="no_show_noites">
         {% for valor, rotulo in parametros.no_show_opcoes %}
           <option value="{{ valor }}"{% if valor == parametros.no_show_noites %} selected{% endif %}>{{ rotulo }}</option>
         {% endfor %}
       </select>
-      <small>desligado, a recepção decide pela Auditoria; ligado, a reserva confirmada sem check-in vira "não compareceu" na auditoria da madrugada e o quarto volta à venda — o pago fica na conta e dá para desfazer se o hóspede aparecer</small></label>
+      <small>Desligado, a recepção decide pela Auditoria; ligado, a reserva confirmada sem check-in vira "não compareceu" na auditoria da madrugada e o quarto volta à venda — o pago fica na conta e dá para desfazer se o hóspede aparecer</small></label>
   </div>
 
   <h2>Custo de vender por canal</h2>

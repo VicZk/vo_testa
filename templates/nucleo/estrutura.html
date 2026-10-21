@@ -50,7 +50,7 @@
         </td>
         <td>{{ uh.tipo.nome }}</td>
         <td class="ajuda">{{ uh|camas_uh }}</td>
-        <td class="num">{% with n=uh|lotacao_uh %}{% if n %}até {{ n }}{% else %}—{% endif %}{% endwith %}</td>
+        <td class="num">{% with n=uh|lotacao_uh %}{% if n %}Até {{ n }}{% else %}—{% endif %}{% endwith %}</td>
         <td>{{ uh.bloco|default:"—" }}</td>
         <td>{{ uh.get_status_display }}</td>
         <td class="col-acao"><a href="{% url 'uh_editar' uh.pk %}" class="botao-mini">Editar</a></td>

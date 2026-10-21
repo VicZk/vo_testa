@@ -27,6 +27,64 @@ ALVOS = {
     "RestricaoVenda": "restrição de venda",
 }
 
+# Rótulo de cada ação para a coluna "Ação" e o filtro da trilha. O código continua
+# no banco e no CSV (forense); a tela mostra palavra de gente — eram "no_show",
+# "lead_fechado_movido", "bloqueio_uh" em minúsculo, com sublinhado.
+ACOES = {
+    "login": "Entrada no sistema", "logout": "Saída do sistema",
+    "criar": "Criação", "editar": "Edição", "excluir": "Exclusão",
+    "ajuste_arredondamento": "Ajuste de arredondamento", "ajuste_estoque": "Ajuste de estoque",
+    "alteracao_lotacao": "Alteração de lotação", "alterar_acesso": "Alteração de acesso",
+    "baixa_conta": "Baixa de conta", "baixa_enxoval": "Baixa de enxoval",
+    "bloqueio_uh": "Bloqueio de quarto", "liberacao_uh": "Liberação de quarto",
+    "cancelamento_comanda": "Cancelamento de comanda", "cancelamento_fiscal": "Cancelamento de nota fiscal",
+    "cancelamento_lavanderia": "Cancelamento de lavanderia", "cancelamento_os": "Cancelamento de OS",
+    "cancelamento_reserva": "Cancelamento de reserva", "cancelamento_venda": "Cancelamento de venda",
+    "criar_grupo": "Criação de grupo", "cancelar_grupo": "Cancelamento de grupo",
+    "encerrar_grupo": "Encerramento de grupo",
+    "devolucao_hospede": "Devolução ao hóspede",
+    "diaria_vendida_divergente": "Diária vendida divergente",
+    "escala_forcar_interjornada": "Escala sem descanso entre jornadas",
+    "estorno": "Estorno", "estorno_pagamento": "Estorno de pagamento",
+    "expiracao_retencao": "Retenção expirada", "extensao_estadia": "Extensão de estadia",
+    "faturamento_conta": "Faturamento de conta", "faxina_concluida": "Faxina concluída",
+    "fechamento_caixa": "Fechamento de caixa", "reabertura_caixa": "Reabertura de caixa",
+    "gasto_sincronizacao_falha": "Falha ao sincronizar gasto",
+    "inspecao_reprovada": "Inspeção reprovada", "inventario_aplicado": "Inventário aplicado",
+    "lead_assumido": "Lead assumido", "lead_fechado_movido": "Lead fechado movido",
+    "no_show": "Não comparecimento", "no_show_desfeito": "Não comparecimento desfeito",
+    "oportunidade_convertida": "Oportunidade convertida", "oportunidade_perdida": "Oportunidade perdida",
+    "politica_cancelamento": "Política de cancelamento", "portal_novo_qr": "Novo QR do portal",
+    "publicar_escala": "Publicação da escala", "purga_trilha": "Limpeza da trilha",
+    "reabrir_ocorrencia": "Reabertura de ocorrência",
+    "restricao_dispensada": "Restrição de venda dispensada",
+    "transferencia_datas": "Transferência de datas", "transferencia_estoque": "Transferência de estoque",
+    "troca_quarto": "Troca de quarto",
+}
+
+GRAVIDADES = {"alta": "Alta", "media": "Média", "baixa": "Baixa"}
+
+
+def _frase_curta(codigo: str) -> str:
+    """Código desconhecido vira texto legível: sublinhado → espaço, inicial maiúscula."""
+    texto = (codigo or "").replace("_", " ").strip()
+    return texto[:1].upper() + texto[1:]
+
+
+def rotulo_acao(codigo: str) -> str:
+    return ACOES.get(codigo) or _frase_curta(codigo)
+
+
+def rotulo_alvo(nome_model: str) -> str:
+    """"SessaoCaixa" → "Caixa", "OrdemServico" → "Ordem de serviço"."""
+    nome = ALVOS.get(nome_model)
+    return (nome[:1].upper() + nome[1:]) if nome else (nome_model or "")
+
+
+def rotulo_gravidade(codigo: str) -> str:
+    return GRAVIDADES.get(codigo) or _frase_curta(codigo)
+
+
 # Verbos de movimento de caixa.
 _MOV = {
     "recebimento": "Recebeu", "reforco": "Reforço de",

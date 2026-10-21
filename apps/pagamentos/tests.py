@@ -824,3 +824,13 @@ class LinkVencidoTests(PagamentosBase):
             self.client.post(reverse("pagamentos:pagar_simular", args=[c.token]))
         self.assertEqual(EventoPagamento.objects.filter(
             cobranca=c, origem="cliente_informou").count(), 6)
+
+
+class ConciliacaoRotuloTests(PagamentosBase):
+    def test_resumo_traz_o_rotulo_do_status(self):
+        """A tabela de conciliação mostrava o código do status ("pendente")."""
+        from .models import Cobranca
+        self.cobranca()
+        linha = services.conciliacao()[0]
+        self.assertEqual(linha["rotulo"], dict(Cobranca.Status.choices)[linha["status"]])
+        self.assertTrue(linha["rotulo"][0].isupper())
