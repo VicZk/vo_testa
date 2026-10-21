@@ -27,6 +27,10 @@ tela prometer um conteúdo que não existe.{% endcomment %}
 <form method="post" class="est-mov" x-data="movEstoque()"
       @combo-mudou="if ($event.detail.campo === 'produto') produto = $event.detail.id">
   {% csrf_token %}
+  {% comment %}Chave do envio: se este formulário for enviado duas vezes (clique
+  duplo, F5 depois de a conexão cair), o motor reconhece a repetição e devolve o
+  movimento que já gravou, em vez de somar de novo.{% endcomment %}
+  {{ form.chave }}
   {% comment %}O catálogo entra uma vez só: o mesmo json_script alimenta o
   combobox (pelo include) e a prévia (pelo componente Alpine abaixo).{% endcomment %}
   {{ locais_json|json_script:"locais-data" }}

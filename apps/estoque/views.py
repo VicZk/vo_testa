@@ -8,6 +8,7 @@ view escreve movimento na mão — tudo passa por `registrar_entrada`,
 Regra de consulta desta tela: o número de consultas não cresce com o tamanho do
 catálogo. Posição = saldos agrupados + produtos + locais; o resto é Python.
 """
+import uuid
 from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 
@@ -27,6 +28,7 @@ from apps.nucleo.models import (
     Produto,
     ajustar,
     indicadores_estoque,
+    movimento_da_chave,
     posicao_estoque,
     registrar_entrada,
     registrar_saida,
@@ -387,23 +389,26 @@ OPERACOES = {
 
 
 def _executar(operacao, dados, usuario):
+    chave = dados.get("chave")
     if operacao == "entrada":
         registrar_entrada(
             dados["produto"], dados["local"], dados["quantidade"],
             dados["custo_unitario"], usuario, documento=dados["documento"],
             observacao=dados["observacao"], fornecedor=dados["fornecedor"],
+            chave=chave,
         )
         return "Entrada registrada — saldo e custo médio atualizados."
     if operacao == "saida":
         registrar_saida(
             dados["produto"], dados["local"], dados["quantidade"], usuario,
-            tipo=dados["tipo"], observacao=dados["observacao"],
+            tipo=dados["tipo"], observacao=dados["observacao"], chave=chave,
         )
         return "Saída registrada."
     if operacao == "transferencia":
         transferir(
             dados["produto"], dados["origem"], dados["destino"],
             dados["quantidade"], usuario, observacao=dados["observacao"],
+            chave=chave,
         )
         return "Transferência registrada nos dois locais."
     ajustar(
@@ -423,8 +428,14 @@ def _movimentar(request, operacao):
     if request.GET.get("local"):
         campo = "origem" if operacao == "transferencia" else "local"
         inicial[campo] = request.GET["local"]
+    # Chave nova a cada vez que a tela ABRE; no reenvio do mesmo formulário ela
+    # vem junto e o motor reconhece a repetição.
+    inicial["chave"] = uuid.uuid4()
     form = config["form"](request.POST or None, initial=inicial)
     if request.method == "POST" and form.is_valid():
+        if movimento_da_chave(form.cleaned_data.get("chave")):
+            messages.info(request, "Essa movimentação já tinha sido registrada.")
+            return redirect("estoque:posicao")
         try:
             sucesso = _executar(operacao, form.cleaned_data, request.user)
             messages.success(request, sucesso)
@@ -576,6 +587,28 @@ def inventario(request, pk):
     )
 
 
+# O campo do saldo é numeric(12,3): nove casas antes da vírgula, três depois.
+CONTAGEM_MAXIMA = Decimal("999999999.999")
+
+
+def _contagem_valida(bruto: str):
+    """O que foi digitado, se der para contar com isso — senão, None.
+
+    `Decimal("nan")` e `Decimal("Infinity")` ATRAVESSAM o construtor sem erro:
+    comparar NaN com zero levanta InvalidOperation (tela em 500) e "1e20" só
+    estoura lá na frente, no banco. A peneira é aqui.
+    """
+    try:
+        quantidade = Decimal(bruto.replace(",", "."))
+    except (InvalidOperation, ValueError):
+        return None
+    if not quantidade.is_finite():
+        return None
+    if quantidade < ZERO or quantidade > CONTAGEM_MAXIMA:
+        return None
+    return quantidade.quantize(Decimal("0.001"))
+
+
 def _salvar_contagem(request, inv):
     """Grava o que foi digitado. Campo vazio = ainda não contado (fica fora do
     ajuste); número inválido não vira saldo em silêncio.
@@ -594,12 +627,8 @@ def _salvar_contagem(request, inv):
                 item.contado = False
                 mudados.append(item)
             continue
-        try:
-            quantidade = Decimal(bruto.replace(",", "."))
-        except (InvalidOperation, ValueError):
-            invalidos.append(item.produto.nome)
-            continue
-        if quantidade < ZERO:
+        quantidade = _contagem_valida(bruto)
+        if quantidade is None:
             invalidos.append(item.produto.nome)
             continue
         item.quantidade_contada, item.contado = quantidade, True

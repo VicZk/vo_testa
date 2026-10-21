@@ -69,6 +69,18 @@ class LocalEstoqueForm(forms.ModelForm):
         self.fields["nome"].widget.attrs["placeholder"] = "Ex.: Depósito da Loja"
 
 
+class _ComChave(forms.Form):
+    """Chave de idempotência do envio (o mesmo papel da `Venda.chave` do PDV).
+
+    A tela gera um UUID ao abrir; se o mesmo formulário for enviado duas vezes
+    (clique duplo, F5 depois de a conexão cair), o motor devolve o movimento já
+    gravado em vez de somar — ou baixar — de novo. O ajuste fica de fora: ele é
+    absoluto («o saldo correto é 18»), então o reenvio dá diferença zero.
+    """
+
+    chave = forms.UUIDField(widget=forms.HiddenInput, required=False)
+
+
 class _ProdutoLocalBase(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -87,7 +99,7 @@ class _ProdutoLocalBase(forms.Form):
     )
 
 
-class EntradaForm(_ProdutoLocalBase):
+class EntradaForm(_ComChave, _ProdutoLocalBase):
     local = forms.ModelChoiceField(
         label="Entra em qual local", queryset=LocalEstoque.objects.none(),
         widget=forms.RadioSelect, empty_label=None,
@@ -108,7 +120,7 @@ class EntradaForm(_ProdutoLocalBase):
         self.fields["fornecedor"].queryset = fornecedores()
 
 
-class SaidaForm(_ProdutoLocalBase):
+class SaidaForm(_ComChave, _ProdutoLocalBase):
     TIPOS = [
         ("saida_venda", "Venda"),
         ("consumo_interno", "Consumo interno"),
@@ -125,7 +137,7 @@ class SaidaForm(_ProdutoLocalBase):
     observacao = forms.CharField(label="Observação", required=False)
 
 
-class TransferenciaForm(forms.Form):
+class TransferenciaForm(_ComChave):
     produto = forms.ModelChoiceField(
         label="Produto", queryset=Produto.objects.none(), widget=CAMPO_COMBO
     )

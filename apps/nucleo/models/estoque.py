@@ -15,7 +15,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import models, transaction
+from django.db import IntegrityError, models, transaction
 from django.db.models import Sum
 
 from .financeiro import NaturezaFiscal, centro_choices, registrar_auditoria
@@ -161,6 +161,10 @@ class MovimentoEstoque(models.Model):
     transferencia_par = models.ForeignKey(
         "self", on_delete=models.PROTECT, null=True, blank=True,
         related_name="par", verbose_name="par da transferência",
+    )
+    chave = models.UUIDField(
+        "chave do envio", null=True, blank=True, unique=True, editable=False,
+        help_text="Idempotência: o reenvio do mesmo formulário não grava de novo.",
     )
     criado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
@@ -330,6 +334,27 @@ def indicadores_estoque(linhas) -> dict:
 # ---------- Movimentações (interface pública do motor) ----------
 
 
+def movimento_da_chave(chave):
+    """O movimento já gravado com esta chave de envio, se existir.
+
+    A chave é o antídoto do clique duplo: mesma chave = mesmo movimento. Quem
+    chama sem chave (Loja, Restaurante, Lavanderia, Frigobar) não muda em nada.
+    """
+    if not chave:
+        return None
+    return MovimentoEstoque.objects.filter(chave=chave).first()
+
+
+def _repetido(chave, erro):
+    """Numa corrida, o segundo envio esbarra na unicidade da chave — pela
+    exceção do banco (IntegrityError) ou pelo `full_clean` (ValidationError).
+    Se o movimento daquela chave está lá, foi repetição; senão, o erro é real."""
+    existente = movimento_da_chave(chave)
+    if existente is None:
+        raise erro
+    return existente
+
+
 def _novo_movimento(produto, local, tipo, quantidade, usuario, **extra):
     mov = MovimentoEstoque(
         produto=produto, local=local, tipo=tipo,
@@ -339,12 +364,31 @@ def _novo_movimento(produto, local, tipo, quantidade, usuario, **extra):
     return mov
 
 
-@transaction.atomic
 def registrar_entrada(
     produto, local, quantidade, custo_unitario, usuario, documento="", observacao="",
-    fornecedor=None,
+    fornecedor=None, chave=None,
 ):
-    """Entrada por compra: soma ao saldo e recalcula o custo médio ponderado."""
+    """Entrada por compra: soma ao saldo e recalcula o custo médio ponderado.
+
+    Com `chave`, o reenvio do mesmo formulário devolve a entrada já gravada em
+    vez de somar de novo (e deslocar o custo médio)."""
+    existente = movimento_da_chave(chave)
+    if existente:
+        return existente
+    try:
+        return _registrar_entrada(
+            produto, local, quantidade, custo_unitario, usuario,
+            documento, observacao, fornecedor, chave,
+        )
+    except (IntegrityError, ValidationError) as erro:
+        return _repetido(chave, erro)
+
+
+@transaction.atomic
+def _registrar_entrada(
+    produto, local, quantidade, custo_unitario, usuario, documento, observacao,
+    fornecedor, chave,
+):
     quantidade = Decimal(quantidade)
     custo_unitario = Decimal(custo_unitario)
     if quantidade <= ZERO:
@@ -363,16 +407,31 @@ def registrar_entrada(
     return _novo_movimento(
         produto, local, MovimentoEstoque.Tipo.ENTRADA_COMPRA, quantidade, usuario,
         custo_unitario=custo_unitario, documento=documento, observacao=observacao,
-        fornecedor=fornecedor,
+        fornecedor=fornecedor, chave=chave,
     )
 
 
-@transaction.atomic
 def registrar_saida(
     produto, local, quantidade, usuario,
-    tipo=MovimentoEstoque.Tipo.SAIDA_VENDA, documento="", observacao="",
+    tipo=MovimentoEstoque.Tipo.SAIDA_VENDA, documento="", observacao="", chave=None,
 ):
-    """Saída (venda/consumo/perda): valida saldo e baixa pelo custo médio."""
+    """Saída (venda/consumo/perda): valida saldo e baixa pelo custo médio.
+
+    Com `chave`, o reenvio devolve a saída já gravada em vez de baixar duas vezes."""
+    existente = movimento_da_chave(chave)
+    if existente:
+        return existente
+    try:
+        return _registrar_saida(
+            produto, local, quantidade, usuario, tipo, documento, observacao, chave
+        )
+    except (IntegrityError, ValidationError) as erro:
+        return _repetido(chave, erro)
+
+
+@transaction.atomic
+def _registrar_saida(produto, local, quantidade, usuario, tipo, documento,
+                     observacao, chave):
     quantidade = Decimal(quantidade)
     if quantidade <= ZERO:
         raise ValidationError("A quantidade de saída deve ser positiva.")
@@ -389,12 +448,29 @@ def registrar_saida(
     return _novo_movimento(
         produto, local, tipo, -quantidade, usuario,
         custo_unitario=produto.custo_medio, documento=documento, observacao=observacao,
+        chave=chave,
     )
 
 
+def transferir(produto, origem, destino, quantidade, usuario, observacao="",
+               chave=None):
+    """Transferência entre locais — registrada dos dois lados (movimentos ligados).
+
+    A `chave` fica na perna de SAÍDA (uma transferência, um envio): o reenvio
+    devolve o par já gravado."""
+    existente = movimento_da_chave(chave)
+    if existente:
+        return existente, existente.transferencia_par
+    try:
+        return _transferir(produto, origem, destino, quantidade, usuario,
+                           observacao, chave)
+    except (IntegrityError, ValidationError) as erro:
+        saida = _repetido(chave, erro)
+        return saida, saida.transferencia_par
+
+
 @transaction.atomic
-def transferir(produto, origem, destino, quantidade, usuario, observacao=""):
-    """Transferência entre locais — registrada dos dois lados (movimentos ligados)."""
+def _transferir(produto, origem, destino, quantidade, usuario, observacao, chave):
     quantidade = Decimal(quantidade)
     if origem == destino:
         raise ValidationError("Origem e destino não podem ser o mesmo local.")
@@ -411,7 +487,7 @@ def transferir(produto, origem, destino, quantidade, usuario, observacao=""):
     custo = produto.custo_medio
     saida = _novo_movimento(
         produto, origem, MovimentoEstoque.Tipo.TRANSFERENCIA_SAIDA, -quantidade,
-        usuario, custo_unitario=custo,
+        usuario, custo_unitario=custo, chave=chave,
         observacao=observacao or f"Transferência para {destino}",
     )
     entrada = _novo_movimento(

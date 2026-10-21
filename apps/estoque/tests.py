@@ -598,3 +598,148 @@ class AcessoDasTelasTests(EstoqueBase):
         for nome in self.TELAS:
             with self.subTest(tela=nome):
                 self.assertEqual(self.client.get(reverse(nome)).status_code, 404)
+
+
+class ChaveDeEnvioTests(TelasBase):
+    """Clique duplo, F5 depois de erro de rede, conexão que repete o POST.
+
+    Sem chave, o mesmo formulário enviado duas vezes gravava o movimento duas
+    vezes: saldo dobrado e custo médio deslocado numa entrada, baixa em dobro
+    numa saída. Mesma regra da `Venda.chave` do PDV.
+    """
+
+    def _entrada(self, chave, quantidade="10", custo="5"):
+        return self.client.post(reverse("estoque:entrada"), {
+            "produto": self.produto.pk, "local": self.almox.pk,
+            "quantidade": quantidade, "custo_unitario": custo,
+            "fornecedor": "", "documento": "NF 1", "observacao": "", "chave": chave,
+        })
+
+    def test_entrada_reenviada_nao_dobra_saldo_nem_custo(self):
+        import uuid
+
+        chave = str(uuid.uuid4())
+        self._entrada(chave)
+        saldo_depois = saldo(self.produto, self.almox)
+        custo_depois = Produto.objects.get(pk=self.produto.pk).custo_medio
+        self._entrada(chave)                       # o mesmo envio, de novo
+        self.assertEqual(saldo(self.produto, self.almox), saldo_depois)
+        self.assertEqual(
+            Produto.objects.get(pk=self.produto.pk).custo_medio, custo_depois
+        )
+        self.assertEqual(
+            MovimentoEstoque.objects.filter(chave=chave).count(), 1
+        )
+
+    def test_reenvio_avisa_e_nao_erra(self):
+        import uuid
+
+        chave = str(uuid.uuid4())
+        self._entrada(chave)
+        resposta = self._entrada(chave, quantidade="999")   # até com outro valor
+        seguida = self.client.get(reverse("estoque:posicao"))
+        self.assertRedirects(resposta, reverse("estoque:posicao"))
+        self.assertTrue(any(
+            "já tinha sido registrada" in m.message
+            for m in seguida.context["messages"]
+        ))
+        self.assertEqual(MovimentoEstoque.objects.filter(chave=chave).count(), 1)
+        self.assertEqual(saldo(self.produto, self.almox), Decimal("50"))  # 40 + 10
+
+    def test_saida_reenviada_baixa_uma_vez_so(self):
+        import uuid
+
+        chave = str(uuid.uuid4())
+        dados = {
+            "produto": self.produto.pk, "local": self.almox.pk,
+            "quantidade": "6", "tipo": "consumo_interno", "observacao": "",
+            "chave": chave,
+        }
+        self.client.post(reverse("estoque:saida"), dados)
+        self.client.post(reverse("estoque:saida"), dados)
+        self.assertEqual(saldo(self.produto, self.almox), Decimal("34"))  # 40 − 6
+
+    def test_transferencia_reenviada_nao_duplica_o_par(self):
+        import uuid
+
+        chave = str(uuid.uuid4())
+        dados = {
+            "produto": self.produto.pk, "origem": self.almox.pk,
+            "destino": self.loja.pk, "quantidade": "8", "observacao": "",
+            "chave": chave,
+        }
+        self.client.post(reverse("estoque:transferencia"), dados)
+        self.client.post(reverse("estoque:transferencia"), dados)
+        self.assertEqual(saldo(self.produto, self.loja), Decimal("8"))
+        self.assertEqual(saldo(self.produto, self.almox), Decimal("32"))
+        self.assertEqual(MovimentoEstoque.objects.filter(chave=chave).count(), 1)
+
+    def test_motor_devolve_o_movimento_da_chave(self):
+        """Direto no motor, sem passar pela tela (é interface pública)."""
+        import uuid
+
+        chave = uuid.uuid4()
+        primeiro = registrar_entrada(
+            self.produto, self.almox, 5, Decimal("2.00"), self.user, chave=chave
+        )
+        segundo = registrar_entrada(
+            self.produto, self.almox, 5, Decimal("2.00"), self.user, chave=chave
+        )
+        self.assertEqual(primeiro.pk, segundo.pk)
+        saida, entrada = transferir(
+            self.produto, self.almox, self.loja, 2, self.user, chave=uuid.uuid4()
+        )
+        self.assertEqual(saida.transferencia_par, entrada)
+
+    def test_sem_chave_nada_muda_para_os_outros_modulos(self):
+        """Loja, Restaurante e Lavanderia chamam o motor sem chave."""
+        registrar_entrada(self.produto, self.almox, 3, Decimal("1.00"), self.user)
+        registrar_entrada(self.produto, self.almox, 3, Decimal("1.00"), self.user)
+        self.assertEqual(saldo(self.produto, self.almox), Decimal("46"))  # 40+3+3
+        self.assertEqual(
+            MovimentoEstoque.objects.filter(chave__isnull=True).count(),
+            MovimentoEstoque.objects.count(),
+        )
+
+    def test_tela_abre_com_chave_nova(self):
+        import re
+
+        html = self.client.get(reverse("estoque:entrada")).content.decode()
+        achado = re.search(r'name="chave"[^>]*value="([0-9a-f-]{36})"', html)
+        self.assertIsNotNone(achado, "a tela precisa nascer com uma chave")
+        outra = self.client.get(reverse("estoque:entrada")).content.decode()
+        self.assertNotIn(achado.group(1), outra)   # uma chave por abertura
+
+
+class ContagemInvalidaTests(TelasBase):
+    """`Decimal("nan")` passa no construtor e derrubava a tela no `< 0`."""
+
+    def _abrir(self):
+        self.client.post(reverse("estoque:inventarios"), {"local": self.almox.pk})
+        return Inventario.objects.latest("criado_em")
+
+    def test_nan_infinito_e_numero_grande_demais_sao_recusados(self):
+        inv = self._abrir()
+        item = inv.itens.get(produto=self.produto)
+        for bruto in ("nan", "Infinity", "-Infinity", "1e20", "-3", "trinta"):
+            with self.subTest(valor=bruto):
+                resposta = self.client.post(
+                    reverse("estoque:inventario", args=[inv.pk]),
+                    {f"item_{item.pk}": bruto}, follow=True,
+                )
+                self.assertEqual(resposta.status_code, 200)
+                item.refresh_from_db()
+                self.assertFalse(item.contado)
+                self.assertTrue(
+                    any("inválida" in m.message for m in resposta.context["messages"])
+                )
+
+    def test_numero_bom_entra_com_tres_casas(self):
+        inv = self._abrir()
+        item = inv.itens.get(produto=self.produto)
+        self.client.post(
+            reverse("estoque:inventario", args=[inv.pk]), {f"item_{item.pk}": "12,3456"}
+        )
+        item.refresh_from_db()
+        self.assertTrue(item.contado)
+        self.assertEqual(item.quantidade_contada, Decimal("12.346"))
