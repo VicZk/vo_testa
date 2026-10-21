@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from . import logbook_services
@@ -1338,6 +1338,7 @@ class EstruturaInicialTests(TestCase):
         self.assertEqual(UH.objects.filter(numero__startswith="Quarto ").count(), 24)
 
 
+@override_settings(ROTINAS_MONITOR={})   # a URL de um .env local nunca recebe aviso de teste
 class RotinasAgendadasTests(TestCase):
     """`rotinas` roda as tarefas de um grupo, isolando falhas."""
 
@@ -1389,6 +1390,78 @@ class RotinasAgendadasTests(TestCase):
         self.assertEqual(falso.call_args.args[0], "enviar_fnrh_pendentes")
         with self.assertRaises(CommandError):
             call_command("rotinas", "--so", "comando_que_nao_existe", stdout=StringIO())
+
+    # ── monitor ("dead man's switch") ──────────────────────────────────────────
+    URL_MONITOR = "https://hc-ping.com/abc-123"
+
+    def _rodar_com_monitor(self, *args, tarefa=None, abrir=None, monitor=None, pedidos=None):
+        """Roda `rotinas` com o urlopen trocado e anota [(url, corpo, método, timeout)] em
+        `pedidos` (passe a lista quando o comando for terminar com erro)."""
+        from io import StringIO
+        from unittest import mock
+
+        from django.core.management import call_command
+
+        from apps.nucleo.management.commands import rotinas
+
+        pedidos = [] if pedidos is None else pedidos
+
+        class Resposta:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+        def anotar(req, timeout):
+            pedidos.append((req.full_url, req.data.decode("utf-8"), req.get_method(), timeout))
+            return Resposta()
+
+        monitor = {"frequentes": self.URL_MONITOR} if monitor is None else monitor
+        with self.settings(ROTINAS_MONITOR=monitor), \
+                mock.patch.object(rotinas, "call_command", side_effect=tarefa), \
+                mock.patch.object(rotinas.urlrequest, "urlopen", side_effect=abrir or anotar):
+            call_command("rotinas", *args, stdout=StringIO())
+        return pedidos
+
+    def test_monitor_recebe_comeco_e_fim_da_mesma_execucao(self):
+        pedidos = self._rodar_com_monitor()
+        self.assertEqual(len(pedidos), 2)
+        (comeco, _, metodo, prazo), (fim, corpo, _, _) = pedidos
+        self.assertTrue(comeco.startswith(self.URL_MONITOR + "/start?rid="))
+        execucao = comeco.split("rid=")[1]
+        self.assertEqual(fim, f"{self.URL_MONITOR}?rid={execucao}")
+        self.assertEqual((metodo, prazo), ("POST", 10))
+        self.assertIn("expirar_reservas: ok em", corpo)
+
+    def test_falha_vai_ao_monitor_sem_a_mensagem_do_erro(self):
+        from django.core.management.base import CommandError
+
+        def tarefa(nome, **kwargs):
+            if nome == "expirar_reservas":
+                raise RuntimeError("Maria Silva, CPF 123")   # mensagem pode ter dado pessoal
+
+        pedidos = []
+        with self.assertLogs("apps.nucleo.management.commands.rotinas", "ERROR"), \
+                self.assertRaises(CommandError):     # o comando ainda termina com erro
+            self._rodar_com_monitor(tarefa=tarefa, pedidos=pedidos)
+        url, corpo, _, _ = pedidos[-1]
+        self.assertIn("/fail?rid=", url)
+        self.assertIn("expirar_reservas: FALHOU (RuntimeError)", corpo)
+        self.assertNotIn("Maria", corpo)
+
+    def test_monitor_fora_do_ar_nao_derruba_a_rotina(self):
+        def fora(req, timeout):
+            raise OSError("timeout")
+
+        with self.assertLogs("apps.nucleo.management.commands.rotinas", "WARNING") as logs:
+            self._rodar_com_monitor(abrir=fora)
+        self.assertTrue(any("Monitor das rotinas não respondeu" in m for m in logs.output))
+
+    def test_sem_url_ou_rodando_so_algumas_nao_avisa(self):
+        self.assertEqual(self._rodar_com_monitor(monitor={}), [])
+        self.assertEqual(self._rodar_com_monitor("--so", "expirar_reservas"), [])
+        self.assertEqual(self._rodar_com_monitor(monitor={"frequentes": "file:///etc/passwd"}), [])
 
 
 class HostsPermitidosTests(TestCase):

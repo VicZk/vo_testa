@@ -510,6 +510,15 @@ DEFAULT_FROM_EMAIL = os.environ.get(
 # URL pública do site (links em e-mail). Em produção: https://www.pousadavotesta.com.br
 SITE_PUBLIC_URL = os.environ.get("SITE_PUBLIC_URL", "http://127.0.0.1:8000").rstrip("/")
 
+# Monitor das rotinas ("dead man's switch"): URL de um check do Healthchecks.io (ou
+# compatível) por grupo do `rotinas`. O grupo avisa começo, fim e falha; se o cron parar
+# de rodar, travar ou falhar, o monitor manda o alerta (e-mail, Telegram…). O
+# Railway só marca a execução em vermelho. Vazio (padrão) = não avisa ninguém.
+ROTINAS_MONITOR = {
+    "frequentes": os.environ.get("ROTINAS_MONITOR_FREQUENTES", ""),
+    "diarias": os.environ.get("ROTINAS_MONITOR_DIARIAS", ""),
+}
+
 # Kit de contingência (reservas:kit): quem recebe a folha do dia por e-mail, para ter o
 # retrato no celular quando a internet da pousada cair. Vazio (padrão) = não envia nada.
 KIT_CONTINGENCIA_EMAILS = [
