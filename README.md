@@ -670,6 +670,7 @@ Railway em produção). As essenciais:
 | `KIT_CONTINGENCIA_EMAILS` | quem recebe a folha do dia por e-mail, separados por vírgula (vazio = ninguém) |
 | `ROTINAS_MONITOR_FREQUENTES`, `ROTINAS_MONITOR_DIARIAS` | URL de um check do Healthchecks.io por grupo de rotinas: avisa quando o cron para, trava ou falha (vazio = não avisa) |
 | `DB_JIT` | `1` religa o JIT do Postgres (desligado por padrão: deixava telas pequenas lentas) |
+| `URL_PREFIX` | roda o sistema sob um caminho (ex.: `votesta` para `https://viczk.cloud/votesta`): o nginx tira o prefixo e o Django o põe em todo link, estático e cookie. Vazio na produção |
 
 A lista completa, com padrões e efeitos, está em
 [`docs/ARQUITETURA.md` §7](docs/ARQUITETURA.md). Durante os testes a flag `TESTING`

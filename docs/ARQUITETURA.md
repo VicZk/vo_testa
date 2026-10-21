@@ -839,6 +839,7 @@ Tudo que varia por ambiente é lido em `config/settings.py` (`.env` em dev via
 | `RAILWAY_PRIVATE_DOMAIN` | `""` | Idem (rede interna). |
 | `CSRF_TRUSTED_ORIGINS` | `""` | Origens confiáveis (lista por vírgula). |
 | `DATABASE_URL` | `postgres://localhost/crm_vo_testa` | Lida por `dj_database_url.config(conn_max_age=600)`. |
+| `URL_PREFIX` | `""` | Roda o sistema sob um caminho (ex.: `votesta` → `https://viczk.cloud/votesta`, numa VPS que serve vários projetos por caminho). Liga `FORCE_SCRIPT_NAME`, põe o prefixo em `STATIC_URL`/`MEDIA_URL` (o storage guarda a URL base no primeiro uso, e o WhiteNoise o usa na subida, antes de qualquer requisição) e restringe os cookies de sessão e CSRF ao caminho. O nginx tira o prefixo (`proxy_pass http://…/;`). As LPs, que vêm de HTML externo, são reescritas na hora por `views_lp._no_prefixo()`. Nada de caminho fixo em template ou JS: `PrefixoDeUrlTests` barra. Vazio na produção: nada muda. |
 
 ### Segurança
 

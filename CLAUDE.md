@@ -180,6 +180,10 @@ e rode o comando — o teste `CssDasTelasPublicasTests` avisa quando o recorte f
   `static/js/copiar.js`): "Copiar" com plano B e "Enviar pelo WhatsApp" com mensagem
   pronta. Para quem mandar, `reservas.services.contato_da_reserva`. Nunca texto solto
   para a recepção selecionar com o mouse.
+- **Nada de caminho fixo** (`'/crm/…'`, `href="/…"`, `redirect("/…")`): sempre `{% url %}`,
+  `{% static %}`, `reverse()` ou `pattern_name=`. O sistema pode rodar sob um prefixo
+  (`URL_PREFIX`, ex.: viczk.cloud/votesta) e o teste `PrefixoDeUrlTests` barra o que
+  ignorar isso. Comparação de caminho usa `request.path_info` (sem o prefixo).
 - **Comentário de template de várias linhas é `{% comment %}`:** `{# … #}` é de UMA linha
   no Django; em duas, o texto aparece cru na tela (há teste de design barrando).
 - **Texto da tela com maiúscula:** rótulo, status, nota de KPI e opção de filtro começam

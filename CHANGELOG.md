@@ -9,6 +9,52 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 21/10/2026 — O sistema roda sob um prefixo de URL e o ambiente de teste vai para viczk.cloud/votesta (`c37ae9a`)
+
+Décimo quarto bloco, pequeno: para o ambiente de teste morar num caminho do domínio
+pessoal do dono (onde outros projetos vivem lado a lado), e não num endereço próprio.
+
+**O que melhorou**
+- **O sistema inteiro (site, CRM, portal, LPs) roda sob um caminho**, como
+  `https://viczk.cloud/votesta`, com a variável `URL_PREFIX`. Antes ele assumia a raiz
+  do domínio: link, CSS, formulário e redirecionamento apontariam para outro projeto.
+  Na produção (`URL_PREFIX` vazio) nada muda.
+- **Endereços escritos à mão viraram nomes de rota:** 5 atalhos da paleta de comandos
+  (⌘K), mover lead no funil, mover campanha no quadro do Marketing, os
+  redirecionamentos da captação para as LPs, o link de pagamento do gateway e o "voltar
+  ao site" do lab. A auditoria (autor de sistema por caminho) e o atalho de estáticos do
+  MFA olham o caminho sem o prefixo.
+- **LPs:** o HTML das landing pages vem pronto do design, com caminhos absolutos; sob um
+  prefixo, eles são reescritos na hora (fotos, vídeo, política de privacidade, envio do
+  lead), sem duplicar o que já vem certo.
+
+**O que foi modificado**
+- `config/settings.py`: `URL_PREFIX` → `FORCE_SCRIPT_NAME`, cookies de sessão e CSRF
+  restritos ao caminho e `STATIC_URL`/`MEDIA_URL` com o prefixo escrito (o storage dos
+  estáticos guarda a URL base no primeiro uso, e o WhiteNoise o usa na subida do
+  servidor).
+- `templates/base.html`, `comercial/funil.html`, `marketing/quadro.html`,
+  `site/lab.html`, `config/urls.py`, `pagamentos/gateways.py`, `comercial/views.py`,
+  `nucleo/audit.py`, `nucleo/security_headers.py` e `comercial/views_lp.py`
+  (`_no_prefixo()`).
+- README §8, `docs/ARQUITETURA.md` §7 e CLAUDE.md (regra: nada de caminho fixo).
+
+**Como foi testado**
+- Novo `PrefixoDeUrlTests` (6): nenhum caminho fixo em templates e JS; o CRM sob
+  `/votesta` gera links, estáticos e paleta com o prefixo; as três LPs apontam para
+  dentro dele sem duplicá-lo; o redirecionamento da captação fica no prefixo; a trilha
+  atribui o portal pelo caminho sem o prefixo; e sem prefixo nada muda. Sem as
+  correções, 4 dos 6 falham.
+- **Suíte completa no Windows:** 1.606 testes no `c37ae9a`. Além da falha conhecida
+  do ambiente (`test_webhook_audio_baixa_e_salva_arquivo`), 4 testes de navegador
+  estouraram o tempo nessa rodada — havia outro agente usando a máquina ao mesmo tempo;
+  rodados de novo sozinhos, os 12 de navegador passaram. Ruff zero,
+  `makemigrations --check` limpo.
+- Ambiente de teste conferido em `viczk.cloud/votesta`: site, CRM, LPs e estáticos
+  dentro do caminho, e os outros projetos do domínio sem mudança.
+
+---
+
 ## 21/10/2026 — A demonstração monta sozinha num banco novo e o ambiente de teste na VPS (`f93c241` a `d1eb308`)
 
 Décimo terceiro bloco, pequeno: o que apareceu ao montar um ambiente de teste do zero.
