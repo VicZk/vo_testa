@@ -173,7 +173,17 @@ def _montagem_texto(arr, extra: int) -> str:
 
 def quartos_para_lead(op) -> dict:
     """Painel completo para a conversa: quartos que servem, ocupados com
-    alternativa, atenção agregada e a composição consultada."""
+    alternativa, atenção agregada e a composição consultada.
+
+    Roda dentro de `precos_em_lote()` (Reservas): sem ele, cada quarto × noite
+    relia temporada, tarifas e configuração — 444 consultas por abertura do lead."""
+    from apps.reservas import services as reservas
+
+    with reservas.precos_em_lote():
+        return _quartos_para_lead(op)
+
+
+def _quartos_para_lead(op) -> dict:
     from apps.reservas import services as reservas
 
     adultos = op.adultos or 0
@@ -183,6 +193,9 @@ def quartos_para_lead(op) -> dict:
     tem_datas = bool(checkin and checkout and (checkout - checkin).days > 0)
 
     todas = list(_uhs_hospedagem())  # materializa uma vez (com prefetch)
+    reservas.precarregar_tarifas_unidade(todas)  # tarifas de todos numa consulta (lote)
+    if tem_datas:
+        reservas.precarregar_classificacoes(checkin, checkout)  # temporada das noites, idem
     # disponibilidade num único conjunto — evita uma consulta por quarto.
     disponiveis = None
     berco_disp = None

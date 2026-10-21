@@ -3330,3 +3330,91 @@ class LpsAutocontidasPedemConsentimentoTests(TestCase):
             r = self.client.get("/")
         self.assertIn(b'id="consentimento"', r.content)
 
+
+class DesempenhoDoFunilEDoLeadTests(TestCase):
+    """O lead abria com 444 consultas (o painel de quartos relia temporada, tarifas e
+    configuração por quarto × noite) e o funil fazia duas por card (próxima tarefa e
+    último contato). O número de consultas não pode crescer com quartos, noites ou
+    leads — e o card tem de continuar mostrando a tarefa e o contato certos."""
+
+    def setUp(self):
+        from datetime import timedelta
+
+        from apps.nucleo.models import TipoUH
+
+        self.user = Usuario.objects.create_superuser(username="perf", password="senha-forte-123")
+        self.client.force_login(self.user)
+        self.tipo = TipoUH.objects.create(nome="Padrão", tarifa_base=Decimal("300"), capacidade=4)
+        self.amanha = timezone.localdate() + timedelta(days=20)
+
+    def _uhs(self, n):
+        from apps.nucleo.models import UH
+        for i in range(n):
+            UH.objects.create(numero=f"Quarto {UH.objects.count() + 1:02d}", tipo=self.tipo)
+
+    def _lead(self, nome, noites=3):
+        from datetime import timedelta
+        pessoa = Pessoa.objects.create(nome=nome)
+        return services.criar_oportunidade(
+            usuario=self.user, pessoa=pessoa, titulo=nome, adultos=2,
+            checkin_previsto=self.amanha,
+            checkout_previsto=self.amanha + timedelta(days=noites))
+
+    def _contar(self, funcao):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+        with CaptureQueriesContext(connection) as ctx:
+            funcao()
+        return len(ctx.captured_queries)
+
+    def test_card_do_funil_mostra_a_tarefa_e_o_contato_certos(self):
+        from datetime import timedelta
+
+        from .models import AtividadeComercial
+        op = self._lead("Lead Card")
+        agora = timezone.now()
+        AtividadeComercial.objects.filter(oportunidade=op).delete()
+        cedo = AtividadeComercial.objects.create(
+            oportunidade=op, tipo=AtividadeComercial.Tipo.TAREFA, descricao="ligar amanhã",
+            quando=agora + timedelta(days=1), concluida=False, criado_por=self.user)
+        AtividadeComercial.objects.create(
+            oportunidade=op, tipo=AtividadeComercial.Tipo.TAREFA, descricao="depois",
+            quando=agora + timedelta(days=3), concluida=False, criado_por=self.user)
+        AtividadeComercial.objects.create(
+            oportunidade=op, tipo=AtividadeComercial.Tipo.NOTA, descricao="nota antiga",
+            quando=agora - timedelta(days=5), criado_por=self.user)
+        wpp = AtividadeComercial.objects.create(
+            oportunidade=op, tipo=AtividadeComercial.Tipo.WHATSAPP, descricao="respondeu",
+            quando=agora - timedelta(days=1), criado_por=self.user)
+        AtividadeComercial.objects.create(   # sistema não é contato
+            oportunidade=op, tipo=AtividadeComercial.Tipo.SISTEMA, descricao="automático",
+            quando=agora, criado_por=self.user)
+        card = next(o for col in services.dados_kanban() for o in col["itens"] if o.pk == op.pk)
+        self.assertEqual(card.proxima_tarefa, cedo)
+        self.assertEqual(card.ultimo_contato, wpp)
+        fresco = Oportunidade.objects.get(pk=op.pk)   # fora do funil: mesma resposta
+        self.assertEqual(fresco.proxima_tarefa, cedo)
+        self.assertEqual(fresco.ultimo_contato, wpp)
+
+    def test_funil_nao_consulta_por_card(self):
+        from django.urls import reverse
+        for i in range(2):
+            self._lead(f"Lead {i}")
+        url = reverse("comercial:funil")
+        self.client.get(url)
+        com_dois = self._contar(lambda: self.client.get(url))
+        for i in range(2, 8):
+            self._lead(f"Lead {i}")
+        self.assertEqual(self._contar(lambda: self.client.get(url)), com_dois)
+
+    def test_painel_de_quartos_do_lead_nao_consulta_por_quarto_nem_por_noite(self):
+        from . import quartos
+        self._uhs(3)
+        curto = self._lead("Curto", noites=2)
+        quartos.quartos_para_lead(curto)   # aquece o que é lido uma vez por processo
+        poucos = self._contar(lambda: quartos.quartos_para_lead(curto))
+        self._uhs(9)
+        longo = self._lead("Longo", noites=7)
+        quartos.quartos_para_lead(longo)
+        self.assertEqual(self._contar(lambda: quartos.quartos_para_lead(longo)), poucos)
+

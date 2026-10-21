@@ -210,8 +210,13 @@ class Oportunidade(models.Model):
                 return titulo[: -len(sufixo)].strip()
         return titulo
 
+    # O funil (`services.dados_kanban`) já traz os dois de todos os cards numa consulta
+    # só e os deixa em `_proxima_tarefa_pre`/`_ultimo_contato_pre`; fora dele, cada
+    # leitura consulta o banco, como sempre.
     @property
     def proxima_tarefa(self):
+        if "_proxima_tarefa_pre" in self.__dict__:
+            return self._proxima_tarefa_pre
         return self.atividades.filter(concluida=False).order_by("quando").first()
 
     @property
@@ -219,13 +224,10 @@ class Oportunidade(models.Model):
         """Última interação REAL com o lead (p/ o card do funil): ligação, WhatsApp,
         e-mail, reunião, nota ou cotação já concluída. Ignora atividades de sistema
         (automáticas) e tarefas ainda por fazer."""
+        if "_ultimo_contato_pre" in self.__dict__:
+            return self._ultimo_contato_pre
         return self.atividades.filter(
-            concluida=True,
-            tipo__in=[
-                AtividadeComercial.Tipo.LIGACAO, AtividadeComercial.Tipo.WHATSAPP,
-                AtividadeComercial.Tipo.EMAIL, AtividadeComercial.Tipo.REUNIAO,
-                AtividadeComercial.Tipo.NOTA, AtividadeComercial.Tipo.COTACAO,
-            ],
+            concluida=True, tipo__in=AtividadeComercial.TIPOS_CONTATO,
         ).order_by("-quando").first()
 
     @property
@@ -368,6 +370,10 @@ class AtividadeComercial(models.Model):
         TAREFA = "tarefa", "Tarefa"
         COTACAO = "cotacao", "Cotação"
         SISTEMA = "sistema", "Sistema"
+
+    # O que conta como CONTATO real com o lead (card do funil: "último contato").
+    TIPOS_CONTATO = (Tipo.LIGACAO, Tipo.WHATSAPP, Tipo.EMAIL, Tipo.REUNIAO,
+                     Tipo.NOTA, Tipo.COTACAO)
 
     oportunidade = models.ForeignKey(
         Oportunidade, on_delete=models.CASCADE,

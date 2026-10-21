@@ -20,6 +20,7 @@ from django.db.models import (
     ExpressionWrapper,
     F,
     OuterRef,
+    Q,
     Subquery,
     Sum,
 )
@@ -319,6 +320,29 @@ def _fechar_permanencia(oportunidade, quando=None):
         aberta.save(update_fields=["finalizado_em"])
 
 
+def _anotar_tarefa_e_contato(ops):
+    """Próxima tarefa e último contato de TODOS os cards numa consulta só (eram duas
+    por card: 45 consultas num funil de 25 leads). Deixa o resultado onde as
+    propriedades do model procuram (`_proxima_tarefa_pre`, `_ultimo_contato_pre`)."""
+    from .models import AtividadeComercial
+    if not ops:
+        return
+    ids = [op.pk for op in ops]
+    abertas, contatos = {}, {}
+    for a in (AtividadeComercial.objects
+              .filter(oportunidade_id__in=ids)
+              .filter(Q(concluida=False) | Q(concluida=True,
+                                               tipo__in=AtividadeComercial.TIPOS_CONTATO))
+              .order_by("quando")):
+        if not a.concluida:
+            abertas.setdefault(a.oportunidade_id, a)          # a mais cedo
+        else:
+            contatos[a.oportunidade_id] = a                   # a mais recente vence
+    for op in ops:
+        op._proxima_tarefa_pre = abertas.get(op.pk)
+        op._ultimo_contato_pre = contatos.get(op.pk)
+
+
 def dados_kanban(faturamento="", inicio=None, fim=None, todos=False):
     """Colunas do funil. As etapas abertas mostram os leads em aberto (sempre — o pipeline
     é "agora", não depende de período); as etapas terminais (Ganho/Perdido) mostram os
@@ -353,6 +377,8 @@ def dados_kanban(faturamento="", inicio=None, fim=None, todos=False):
         fechadas = fechadas.filter(faturamento=faturamento)
     for op in fechadas.order_by("-fechado_em"):
         por_etapa.setdefault(op.etapa_id, []).append(op)
+
+    _anotar_tarefa_e_contato([op for ops in por_etapa.values() for op in ops])
 
     colunas = []
     for etapa in etapas():
