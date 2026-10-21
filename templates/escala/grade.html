@@ -154,7 +154,12 @@
       p.addEventListener('dragstart', () => { dragged = { func: p.dataset.func, atribuicao: null }; document.body.classList.add('escala-dragging'); });
       p.addEventListener('dragend', () => document.body.classList.remove('escala-dragging'));
     });
+    // O roster (e a lixeira dentro dele) só existe quando há funcionário
+    // cadastrado. Sem a guarda, esta linha estourava e levava com ela o
+    // `bindConteudo()` da mesma instrução lá embaixo — a grade inteira ficava
+    // inerte, sem nada no console da recepção explicando.
     const trash = document.getElementById('escala-trash');
+    if (!trash) return;
     trash.addEventListener('dragover', e => { if (dragged && dragged.atribuicao) { e.preventDefault(); trash.classList.add('over'); } });
     trash.addEventListener('dragleave', () => trash.classList.remove('over'));
     trash.addEventListener('drop', e => {

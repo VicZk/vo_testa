@@ -3523,3 +3523,31 @@ class DesempenhoDoFunilEDoLeadTests(TestCase):
         quartos.quartos_para_lead(longo)
         self.assertEqual(self._contar(lambda: quartos.quartos_para_lead(longo)), poucos)
 
+
+
+class CampoDeDataPrePreenchidoTests(TestCase):
+    """O Comercial tinha a sua própria cópia do widget de data, sem o formato ISO
+    que o `<input type="date">` exige: reabrir uma oportunidade com período
+    previsto trazia as datas EM BRANCO."""
+
+    def test_periodo_previsto_volta_preenchido(self):
+        from datetime import date
+
+        from apps.nucleo.models import Pessoa
+
+        from .forms import OportunidadeForm
+        from .models import EtapaFunil, Oportunidade
+
+        dono = Usuario.objects.create_superuser(username="dat", password="senha-forte-123")
+        etapa = EtapaFunil.objects.first() or EtapaFunil.objects.create(nome="Novo", ordem=1)
+        op = Oportunidade.objects.create(
+            pessoa=Pessoa.objects.create(nome="Lead Teste"), etapa=etapa, criado_por=dono,
+            checkin_previsto=date(2026, 11, 9), checkout_previsto=date(2026, 11, 12),
+        )
+        html = str(OportunidadeForm(instance=op)["checkin_previsto"])
+        self.assertIn('value="2026-11-09"', html)
+
+    def test_data_hora_do_agendamento_sai_em_iso(self):
+        from .forms import DataHoraInput
+
+        self.assertEqual(DataHoraInput().format, "%Y-%m-%dT%H:%M")

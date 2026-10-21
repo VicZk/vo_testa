@@ -386,6 +386,9 @@ class Reserva(models.Model):
 
     # Estados que seguram a UH (entram na constraint antioverbooking)
     STATUS_ATIVOS = [Status.PRE_RESERVA, Status.CONFIRMADA, Status.HOSPEDADA]
+    #: Ainda cabe cobrar sinal (o quarto não está garantido). Usado pelo
+    #: `services.pendentes_de_sinal` e pelo atalho «Gerar cobrança» do detalhe.
+    STATUS_SINAL = [Status.ORCAMENTO, Status.PRE_RESERVA]
 
     class Canal(models.TextChoices):
         BALCAO = "balcao", "Balcão/telefone"
@@ -552,6 +555,10 @@ class Reserva(models.Model):
     def pagador(self):
         """Quem paga: o titular do faturamento ou, se particular, o próprio hóspede."""
         return self.titular or self.hospede
+
+    @property
+    def pode_receber_sinal(self) -> bool:
+        return self.status in self.STATUS_SINAL
 
     @property
     def total_hospedes(self) -> int:

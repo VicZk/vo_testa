@@ -46,15 +46,39 @@ def painel(request):
         cobranca.telefone_destino = (
             cobranca.pagador.telefone if cobranca.pagador else ""
         )
+    reservas = _reservas_para_sinal(request)
     return render(request, "pagamentos/painel.html", {
         "cobrancas": cobrancas,
         "pagadores": pessoas_agrupadas(),
         "metodos": Cobranca.Metodo.choices,
         "finalidades": Cobranca.Finalidade.choices,
-        "reservas": _reservas_para_sinal(request),
+        "reservas": reservas,
+        "pre": _nova_cobranca_pronta(request, reservas),
         "conciliacao": services.conciliacao(),
         "safrapay": status_credenciais(),
     })
+
+
+def _nova_cobranca_pronta(request, reservas) -> dict:
+    """«Gerar cobrança» vindo do detalhe da reserva (`?reserva=<id>`).
+
+    O caminho era: ler o número da reserva, abrir Pagamentos, escolher a
+    finalidade, procurar a reserva na lista e escrever a descrição à mão. Agora o
+    formulário já abre apontado para ela. Reserva que não pode receber sinal (não
+    está na lista) é ignorada — o formulário abre em branco, como sempre.
+    """
+    try:
+        alvo = int(request.GET.get("reserva") or 0)
+    except ValueError:
+        return {}
+    escolhida = next((r for r in reservas if r["id"] == alvo), None)
+    if not escolhida:
+        return {}
+    return {
+        "reserva_id": alvo,
+        "finalidade": Cobranca.Finalidade.SINAL,
+        "descricao": f"Sinal reserva #{alvo}",
+    }
 
 
 @never_cache

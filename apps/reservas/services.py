@@ -1108,9 +1108,7 @@ def pendentes_de_sinal():
     """Reservas que ainda podem receber sinal (orçamento/pré-reserva) — para o
     módulo Pagamentos vincular a cobrança. Retorna [{id, rotulo}]."""
     qs = (
-        Reserva.objects.filter(
-            status__in=[Reserva.Status.ORCAMENTO, Reserva.Status.PRE_RESERVA]
-        )
+        Reserva.objects.filter(status__in=Reserva.STATUS_SINAL)
         .select_related("uh", "hospede")
         .order_by("checkin")
     )

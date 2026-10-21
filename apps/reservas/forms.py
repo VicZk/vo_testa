@@ -3,7 +3,7 @@ from decimal import Decimal
 from django import forms
 from django.db.models import Case, IntegerField, Value, When
 
-from apps.nucleo.forms import ReaisInput
+from apps.nucleo.forms import DataInput, ReaisInput
 from apps.nucleo.models import UH, FormaPagamento, Pessoa, TipoUH
 
 from .models import (
@@ -14,10 +14,6 @@ from .models import (
     Reserva,
     RestricaoVenda,
 )
-
-
-class DataInput(forms.DateInput):
-    input_type = "date"
 
 
 class ReservaForm(forms.ModelForm):

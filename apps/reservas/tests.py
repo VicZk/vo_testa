@@ -2640,3 +2640,55 @@ class LinkDePagamentoNaReservaTests(ReservasTestsBase):
         link = "http://testserver" + reverse("pagamentos:pagar", args=[cobranca.token])
         self.assertIn(f'data-copiar="{link}"', html)
         self.assertIn("https://wa.me/5549999648702?text=", html)
+
+
+class CampoDeDataPrePreenchidoTests(ReservasTestsBase):
+    """`<input type="date">` só mostra o valor em ISO. Reservas e Comercial tinham
+    cada um a sua cópia do widget SEM o formato — então reabrir qualquer ficha com
+    data (FNRH, restrição, grupo, oportunidade) trazia o campo EM BRANCO, e salvar
+    de novo pedia a data outra vez. O widget do núcleo (um só) já resolvia isso."""
+
+    def test_data_da_reserva_sai_em_iso(self):
+        from .forms import ReservaForm
+
+        html = str(ReservaForm(None, initial={"checkin": HOJE})["checkin"])
+        self.assertIn(f'value="{HOJE.isoformat()}"', html)
+
+    def test_nascimento_da_ficha_fnrh_volta_preenchido(self):
+        from datetime import date
+
+        from .forms import FichaFNRHForm
+        from .models import FichaFNRH
+
+        r = self.reserva()
+        ficha = FichaFNRH.objects.create(reserva=r, nome="Maria Teste", titular=True,
+                                         nascimento=date(1990, 5, 17))
+        self.assertIn('value="1990-05-17"', str(FichaFNRHForm(instance=ficha)["nascimento"]))
+
+    def test_restricao_volta_com_o_periodo_preenchido(self):
+        from .forms import RestricaoVendaForm
+        from .models import RestricaoVenda
+
+        rest = RestricaoVenda.objects.create(
+            descricao="Réveillon", inicio=HOJE, fim=HOJE + timedelta(days=3),
+            min_noites=3, criado_por=self.usuario,
+        )
+        html = str(RestricaoVendaForm(instance=rest)["inicio"])
+        self.assertIn(f'value="{HOJE.isoformat()}"', html)
+
+    def test_balcao_abre_com_hoje_e_amanha(self):
+        """Walk-in e telefone são a maioria: o calendário do navegador abre no mês
+        certo em vez de em branco. Quem vem do mapa manda as datas da célula."""
+        self.client.force_login(self.usuario)
+        html = self.client.get(reverse("reservas:nova")).content.decode()
+        self.assertIn(f'name="checkin" value="{HOJE.isoformat()}"', html)
+        self.assertIn(
+            f'name="checkout" value="{(HOJE + timedelta(days=1)).isoformat()}"', html)
+
+    def test_datas_do_mapa_mandam_na_sugestao(self):
+        self.client.force_login(self.usuario)
+        alvo = (HOJE + timedelta(days=20)).isoformat()
+        html = self.client.get(
+            reverse("reservas:nova"), {"checkin": alvo, "checkout": alvo}
+        ).content.decode()
+        self.assertIn(f'name="checkin" value="{alvo}"', html)

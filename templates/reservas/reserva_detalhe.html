@@ -74,6 +74,17 @@ uma ficha: cada dado com o seu rótulo, lido de relance.{% endcomment %}
   {% elif 'pagamentos'|modulo_ativo %}
   <p class="subtitulo">Nenhuma cobrança (Pix/cartão) gerada para esta reserva.</p>
   {% endif %}
+  {% comment %}«Nenhuma cobrança gerada» era um beco sem saída: para mandar um Pix
+  ao hóspede a recepção decorava o número da reserva, abria Pagamentos, escolhia a
+  finalidade e procurava a reserva na lista. O atalho já abre o formulário
+  apontado para ela.{% endcomment %}
+  {% if 'pagamentos'|modulo_ativo and reserva.pode_receber_sinal %}
+    <p class="bloco-respiro-curto">
+      <a href="{% url 'pagamentos:painel' %}?reserva={{ reserva.pk }}#nova-cobranca" class="botao-neutro">
+        Gerar cobrança (Pix, cartão ou link)
+      </a>
+    </p>
+  {% endif %}
 </div>
 {% endif %}
 

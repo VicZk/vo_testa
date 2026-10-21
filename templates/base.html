@@ -899,11 +899,13 @@
         if (restr) restr.innerHTML = ''; return;
       }
       hint.classList.toggle('tarifa-hint-alta', d.feriado_ou_alta);
-      let linha = 'Diária <strong>R$ ' + d.diaria + '</strong> · ' + d.noites
-        + ' noite' + (d.noites > 1 ? 's' : '') + ' = hospedagem <strong>R$ ' + d.hospedagem + '</strong>';
-      if (Number(d.iss) > 0) linha += ' · ISS ' + d.iss_aliquota + '% R$ ' + d.iss;
-      if (Number(d.taxa_turismo) > 0) linha += ' · turismo R$ ' + d.taxa_turismo;
-      linha += ' · <strong>Total R$ ' + d.total + '</strong>';
+      // Valores já escritos em pt-BR pelo servidor (formatador único da casa):
+      // os campos sem `_br` são os crus, só para as comparações abaixo.
+      let linha = 'Diária <strong>' + d.diaria_br + '</strong> · ' + d.noites
+        + ' noite' + (d.noites > 1 ? 's' : '') + ' = hospedagem <strong>' + d.hospedagem_br + '</strong>';
+      if (Number(d.iss) > 0) linha += ' · ISS ' + d.iss_aliquota + '% ' + d.iss_br;
+      if (Number(d.taxa_turismo) > 0) linha += ' · turismo ' + d.taxa_turismo_br;
+      linha += ' · <strong>Total ' + d.total_br + '</strong>';
       hint.innerHTML = linha;
       // Enquanto o atendente não mexer, refletimos a sugestão nos campos.
       if (!arranjoTocado && d.arranjo && ca && so) {

@@ -267,6 +267,13 @@ def nova(request):
     for campo in ("uh", "checkin", "checkout"):
         if request.GET.get(campo):
             inicial[campo] = request.GET[campo]
+    # Datas já preenchidas com hoje → amanhã. É o caso da esmagadora maioria no
+    # balcão (quem chega e quem liga para esta semana), e o calendário do
+    # navegador abre no mês certo em vez de em branco. Quem vem do mapa traz as
+    # datas da célula clicada (acima) e manda nestas.
+    hoje = timezone.localdate()
+    inicial.setdefault("checkin", hoje)
+    inicial.setdefault("checkout", hoje + timedelta(days=1))
 
     form = ReservaForm(request.POST or None, initial=inicial)
     contexto = {
@@ -467,6 +474,12 @@ def tarifa_preview(request):
         colchoes_status = "ok"
         colchoes_msg = "Arranjo dentro da base do quarto (não usa colchão extra)."
 
+    # Os valores saem prontos para ler, pelo formatador único da casa: o aviso ao
+    # vivo escrevia "R$ 940.00" e "R$ 1200.00" — ponto decimal e sem separador de
+    # milhar, justamente no número que a recepção lê em voz alta ao telefone. Os
+    # campos crus seguem (o JS compara `> 0` com eles).
+    from apps.nucleo.templatetags.moeda import intcomma_brl
+
     return JsonResponse(
         {
             "diaria": f"{diaria:.2f}",
@@ -474,9 +487,14 @@ def tarifa_preview(request):
             "noites": noites,
             "hospedagem": f"{cot['hospedagem']:.2f}",
             "iss": f"{cot['iss']:.2f}",
-            "iss_aliquota": f"{cot['iss_aliquota']:.1f}",
+            "iss_aliquota": pct_br(cot["iss_aliquota"]),
             "taxa_turismo": f"{cot['taxa_turismo']:.2f}",
             "total": f"{cot['total']:.2f}",
+            "diaria_br": intcomma_brl(diaria),
+            "hospedagem_br": intcomma_brl(cot["hospedagem"]),
+            "iss_br": intcomma_brl(cot["iss"]),
+            "taxa_turismo_br": intcomma_brl(cot["taxa_turismo"]),
+            "total_br": intcomma_brl(cot["total"]),
             "feriado_ou_alta": bool(temporadas),
             "arranjo": {"casais": casais, "solteiros": solteiros, "sofa": usa_sofa},
             "colchoes_extra": conf["extra"],
@@ -714,15 +732,21 @@ def cancelar(request, pk):
 
 
 def _nota_politica(resumo) -> str:
-    """Frase da política p/ o motivo/auditoria/mensagem (retém × devolve)."""
-    devolver = resumo["devolver"]
+    """Frase da política p/ o motivo/auditoria/mensagem (retém × devolve).
+
+    O valor sai pelo formatador único: esta frase vira o aviso que a recepção lê
+    ao cancelar e o motivo gravado na reserva, e dizia "Devolver R$ 1200.50".
+    """
+    from apps.nucleo.templatetags.moeda import intcomma_brl
+
+    devolver = intcomma_brl(resumo["devolver"])
     if resumo["cenario"] == "em_hospedagem":
         return (f"Saída antecipada: cobrar {resumo['dias_consumidos']} diária(s) usada(s) "
-                f"+ {pct_br(resumo['retencao_pct'])}% de retenção. Devolver R$ {devolver}.")
+                f"+ {pct_br(resumo['retencao_pct'])}% de retenção. Devolver {devolver}.")
     if resumo["dentro_arrependimento"]:
-        return f"Dentro do prazo de arrependimento — devolver 100% (R$ {devolver})."
+        return f"Dentro do prazo de arrependimento — devolver 100% ({devolver})."
     return (f"Fora do prazo: reter {pct_br(resumo['retencao_pct'])}% "
-            f"(R$ {resumo['retencao_valor']}). Devolver R$ {devolver}.")
+            f"({intcomma_brl(resumo['retencao_valor'])}). Devolver {devolver}.")
 
 
 @requer_modulo(Modulo.RESERVAS)

@@ -2014,14 +2014,19 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 }
 .boh-hero-pct { font-size: .45em; opacity: .8; margin-left: .1em; }
 .boh-hero-sub { font-size: .8rem; color: rgba(243, 239, 226, .75); }
-.boh-mini { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+/* Decide pelo ESPAÇO que sobrou, não pela janela: em 821px com o menu aberto o
+   `@media` não dispara, os três cartões ficavam com 64px de texto útil e
+   "PERMANÊNCIA MÉDIA" era cortada no meio da palavra, sem reticências. Com piso
+   de 150px o terceiro cartão desce de linha sozinho, em qualquer largura. */
+.boh-mini {
+  display: grid; gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
+}
 .boh-mini .cartao { display: flex; flex-direction: column; justify-content: center; }
 .boh-mini small { font-size: .6em; color: var(--tinta-suave); font-weight: 400; }
 @media (max-width: 720px) {
   .boh-resumo { grid-template-columns: 1fr; }
-  /* Três cartões de 87px não comportam "R$ 1.234,56": abaixo disto eles
-     se reacomodam sozinhos em vez de empurrar a página. */
-  .boh-mini { grid-template-columns: repeat(auto-fit, minmax(min(110px, 100%), 1fr)); gap: .6rem; }
+  .boh-mini { gap: .6rem; }
 }
 
 /* Alinha à direita as colunas numéricas dos quadros */

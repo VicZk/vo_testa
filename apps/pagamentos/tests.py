@@ -875,3 +875,51 @@ class BotoesDeCopiarTests(PagamentosBase):
         services.confirmar_pagamento(c, self.op)
         html = self.client.get(reverse("pagamentos:painel")).content.decode()
         self.assertNotIn(f'data-copiar="{self.link(c)}"', html)
+
+
+class AtalhoGerarCobrancaTests(PagamentosBase):
+    """Vindo do detalhe da reserva, o formulário já abre apontado para ela — antes
+    era decorar o número, escolher a finalidade e procurar na lista."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.op)
+        tipo = TipoUH.objects.create(nome="Std", tarifa_base=Decimal("200"))
+        self.uh = UH.objects.create(numero="Quarto 90", tipo=tipo)
+        self.hospede = Pessoa.objects.create(nome="Bruno Teste")
+
+    def _reserva(self, status="pre_reserva"):
+        from apps.reservas.models import Reserva
+        hoje = timezone.localdate()
+        return Reserva.objects.create(
+            uh=self.uh, hospede=self.hospede, checkin=hoje, checkout=hoje + timedelta(days=2),
+            status=status, valor_diaria=Decimal("200"), criado_por=self.op,
+        )
+
+    def test_painel_abre_apontado_para_a_reserva(self):
+        r = self._reserva()
+        html = self.client.get(reverse("pagamentos:painel"), {"reserva": r.pk}).content.decode()
+        self.assertIn("fin: 'sinal_reserva'", html)
+        self.assertIn(f'value="Sinal reserva #{r.pk}"', html)
+        self.assertIn(f'<option value="{r.pk}" selected>', html)
+
+    def test_reserva_que_nao_recebe_mais_sinal_e_ignorada(self):
+        """Hospedada já não é sinal: o formulário abre em branco em vez de mentir."""
+        r = self._reserva(status="hospedada")
+        html = self.client.get(reverse("pagamentos:painel"), {"reserva": r.pk}).content.decode()
+        self.assertIn("fin: 'avulso'", html)
+        self.assertNotIn('value="Sinal reserva #', html)   # o placeholder fica
+
+    def test_parametro_lixo_nao_estoura(self):
+        html = self.client.get(reverse("pagamentos:painel"), {"reserva": "abc"}).content.decode()
+        self.assertIn("fin: 'avulso'", html)
+
+    def test_detalhe_da_reserva_tem_o_atalho(self):
+        r = self._reserva()
+        html = self.client.get(reverse("reservas:detalhe", args=[r.pk])).content.decode()
+        self.assertIn(f"{reverse('pagamentos:painel')}?reserva={r.pk}#nova-cobranca", html)
+
+    def test_reserva_hospedada_nao_oferece_o_atalho(self):
+        r = self._reserva(status="hospedada")
+        html = self.client.get(reverse("reservas:detalhe", args=[r.pk])).content.decode()
+        self.assertNotIn("#nova-cobranca", html)
