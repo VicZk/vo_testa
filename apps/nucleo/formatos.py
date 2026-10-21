@@ -12,3 +12,8 @@ def pct_br(valor) -> str:
     política de cancelamento ("retemos 1E+1% do valor total") e o que ficava gravado no
     motivo do cancelamento ("reter 1E+1%")."""
     return format(Decimal(valor).normalize(), "f").replace(".", ",")
+
+
+def qtd_br(valor) -> str:
+    """Quantidade como se lê no balcão: 2.000 → "2", 0.500 → "0,5", 1.250 → "1,25"."""
+    return pct_br(valor)

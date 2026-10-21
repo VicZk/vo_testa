@@ -126,6 +126,38 @@ def venda(request, pk):
     })
 
 
+@requer_modulo(Modulo.LOJA)
+def cupom(request, pk):
+    """A venda no cupom de 80 mm (impressora térmica). `?imprimir=1` abre a impressão."""
+    from django.utils.timezone import localtime
+
+    from apps.nucleo.formatos import qtd_br
+
+    v = get_object_or_404(
+        Venda.objects.select_related("cliente", "forma_pagamento", "criado_por"), pk=pk
+    )
+    if v.destino == Venda.Destino.CONTA:
+        pagamento = f"Lançado na conta: {v.conta_ref}"
+    else:
+        pagamento = f"Pago com {v.forma_pagamento.nome}" if v.forma_pagamento else ""
+    if v.status == Venda.Status.CANCELADA:
+        pagamento = "VENDA CANCELADA"
+    cupom = {
+        "titulo": f"Venda #{v.pk}", "origem": "Loja",
+        "meta": [("Data", f"{localtime(v.criado_em):%d/%m/%Y %H:%M}"),
+                 ("Cliente", v.cliente.nome if v.cliente else "avulso"),
+                 ("Operador", v.criado_por.get_username())],
+        "itens": [{"qtd": qtd_br(i.quantidade), "descricao": i.descricao,
+                   "unitario": i.preco_unitario, "subtotal": i.subtotal}
+                  for i in v.itens.all()],
+        "subtotal": v.subtotal, "desconto": v.desconto, "total": v.total,
+        "pagamento": pagamento,
+        "voltar": reverse("loja:venda", args=[v.pk]),
+    }
+    return render(request, "componentes/cupom.html",
+                  {"cupom": cupom, "imprimir": request.GET.get("imprimir") == "1"})
+
+
 @requer_gerencia
 def cancelar(request, pk):
     v = get_object_or_404(Venda, pk=pk)

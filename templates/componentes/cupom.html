@@ -1,0 +1,86 @@
+{% load static moeda %}<!doctype html>
+{% comment %}
+Cupom de 80 mm (impressora térmica pelo navegador). Página própria, sem o app-shell:
+o desenho mora no app.css (bloco "Cupom 80 mm"), com página nomeada `cupom` — a
+impressão do resto do sistema continua em A4. Cada módulo monta o `cupom` (dict):
+titulo, origem, meta [(rótulo, valor)], itens [{qtd, descricao, unitario, subtotal}],
+subtotal, desconto, total, pagamento, aviso, voltar. `?imprimir=1` abre a impressão.
+Não é documento fiscal: a NFC-e sai pelo módulo Fiscal.
+{% endcomment %}
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ cupom.titulo }} — Pousada Vô Testa</title>
+<link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body class="cupom-pagina">
+  <nav class="cupom-acoes" aria-label="Ações do cupom">
+    <button type="button" class="botao-primario" onclick="window.print()">Imprimir</button>
+    <a href="{{ cupom.voltar }}" class="botao-neutro">Voltar</a>
+  </nav>
+
+  <article class="cupom">
+    <header class="cupom-topo">
+      <strong class="cupom-marca">Pousada Vô Testa</strong>
+      <span>Itá · Santa Catarina</span>
+    </header>
+
+    <p class="cupom-titulo">{{ cupom.titulo }}<span>{{ cupom.origem }}</span></p>
+    <dl class="cupom-meta">
+      {% for rotulo, valor in cupom.meta %}<div><dt>{{ rotulo }}</dt><dd>{{ valor }}</dd></div>{% endfor %}
+    </dl>
+
+    <table class="cupom-itens">
+      <thead><tr><th>Item</th><th class="num">Valor</th></tr></thead>
+      <tbody>
+        {% for i in cupom.itens %}
+          <tr>
+            <td>{{ i.qtd }} × {{ i.descricao }}{% if i.qtd != "1" %}<small>{{ i.unitario|intcomma_brl|cut:"R$ " }} cada</small>{% endif %}</td>
+            <td class="num">{{ i.subtotal|intcomma_brl|cut:"R$ " }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="2">Sem itens.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <dl class="cupom-soma">
+      {% if cupom.desconto %}
+        <div><dt>Subtotal</dt><dd class="num">{{ cupom.subtotal|intcomma_brl|cut:"R$ " }}</dd></div>
+        <div><dt>Desconto</dt><dd class="num">−{{ cupom.desconto|intcomma_brl|cut:"R$ " }}</dd></div>
+      {% endif %}
+      <div class="cupom-total"><dt>Total</dt><dd class="num">{{ cupom.total|intcomma_brl }}</dd></div>
+    </dl>
+    {% if cupom.pagamento %}<p class="cupom-pagamento">{{ cupom.pagamento }}</p>{% endif %}
+
+    <footer class="cupom-rodape">
+      <strong>{{ cupom.aviso|default:"Não é documento fiscal" }}</strong>
+      <span>Obrigado pela visita!</span>
+    </footer>
+  </article>
+  <script>
+    // Página do tamanho do cupom: 80 mm × a altura dele. A térmica corta logo depois do
+    // rodapé, sem puxar papel em branco (a regra fixa do app.css é só o plano B).
+    (function () {
+      function ajustar() {
+        var cupom = document.querySelector('.cupom');
+        var mm = Math.ceil(cupom.getBoundingClientRect().height * 25.4 / 96) + 2;
+        var regra = document.getElementById('cupom-tamanho');
+        if (!regra) {
+          regra = document.createElement('style');
+          regra.id = 'cupom-tamanho';
+          document.head.appendChild(regra);
+        }
+        regra.textContent = '@page cupom { size: 80mm ' + mm + 'mm; margin: 0; }';
+      }
+      ajustar();
+      addEventListener('beforeprint', ajustar);
+      addEventListener('load', function () {
+        ajustar();
+        {% if imprimir %}window.print();{% endif %}
+      });
+    })();
+  </script>
+</body>
+</html>

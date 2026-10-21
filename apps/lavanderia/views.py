@@ -4,6 +4,7 @@ from decimal import Decimal
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.cache import never_cache
 
 from apps.nucleo.models import FormaPagamento, Pessoa
@@ -86,6 +87,47 @@ def _contexto_ordem(request, ordem):
 def ordem(request, pk):
     o = get_object_or_404(OrdemLavanderia.objects.select_related("cliente"), pk=pk)
     return render(request, "lavanderia/ordem.html", _contexto_ordem(request, o))
+
+
+@requer_modulo(Modulo.LAVANDERIA)
+def cupom(request, pk):
+    """A ordem no cupom de 80 mm: na recepção da roupa, o comprovante que fica com o
+    hóspede (o que entrou e quando fica pronto); na entrega, o recibo."""
+    from django.utils.timezone import localtime
+
+    from apps.nucleo.formatos import qtd_br
+
+    o = get_object_or_404(
+        OrdemLavanderia.objects.select_related("cliente", "forma_pagamento", "criado_por"),
+        pk=pk,
+    )
+    itens = list(o.itens.all())
+    subtotal = sum((i.subtotal for i in itens), Decimal("0.00"))
+    meta = [("Recebida", f"{localtime(o.recebida_em):%d/%m/%Y %H:%M}")]
+    if o.prazo and o.status != OrdemLavanderia.Status.ENTREGUE:
+        meta.append(("Pronta em", f"{o.prazo:%d/%m/%Y}"))
+    if o.entregue_em:
+        meta.append(("Entregue", f"{localtime(o.entregue_em):%d/%m/%Y %H:%M}"))
+    meta.append(("Atendente", o.criado_por.get_username()))
+    pagamento, aviso = "", "Não é documento fiscal"
+    if o.status == OrdemLavanderia.Status.CANCELADA:
+        pagamento = "ORDEM CANCELADA"
+    elif o.status != OrdemLavanderia.Status.ENTREGUE:
+        aviso = "Comprovante de recebimento — não é documento fiscal"
+    elif o.destino == OrdemLavanderia.Destino.CONTA:
+        pagamento = f"Lançado na conta: {o.conta_ref}"
+    elif o.forma_pagamento:
+        pagamento = f"Pago com {o.forma_pagamento.nome}"
+    cupom = {
+        "titulo": o.titulo, "origem": f"Lavanderia #{o.pk}", "meta": meta,
+        "itens": [{"qtd": qtd_br(i.quantidade), "descricao": i.descricao,
+                   "unitario": i.preco_unitario, "subtotal": i.subtotal} for i in itens],
+        "subtotal": subtotal, "desconto": o.desconto, "total": subtotal - o.desconto,
+        "pagamento": pagamento, "aviso": aviso,
+        "voltar": reverse("lavanderia:ordem", args=[o.pk]),
+    }
+    return render(request, "componentes/cupom.html",
+                  {"cupom": cupom, "imprimir": request.GET.get("imprimir") == "1"})
 
 
 @requer_modulo(Modulo.LAVANDERIA)

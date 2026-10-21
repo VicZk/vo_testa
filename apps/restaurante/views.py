@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.cache import never_cache
 
 from apps.nucleo.models import (
@@ -95,6 +96,45 @@ def comanda(request, pk):
         Comanda.objects.select_related("mesa", "cliente", "local"), pk=pk
     )
     return render(request, "restaurante/comanda.html", _contexto_comanda(request, c))
+
+
+@requer_modulo(Modulo.RESTAURANTE)
+def cupom(request, pk):
+    """A comanda no cupom de 80 mm: aberta, é a conferência da conta que vai à mesa;
+    fechada, o recibo. `?imprimir=1` abre a impressão."""
+    from django.utils.timezone import localtime
+
+    from apps.nucleo.formatos import qtd_br
+
+    c = get_object_or_404(
+        Comanda.objects.select_related("mesa", "cliente", "forma_pagamento", "criado_por"),
+        pk=pk,
+    )
+    itens = list(c.itens.all())
+    subtotal = sum((i.subtotal for i in itens), Decimal("0.00"))
+    meta = [("Aberta", f"{localtime(c.aberta_em):%d/%m/%Y %H:%M}")]
+    if c.fechada_em:
+        meta.append(("Fechada", f"{localtime(c.fechada_em):%d/%m/%Y %H:%M}"))
+    meta.append(("Atendente", c.criado_por.get_username()))
+    pagamento, aviso = "", "Não é documento fiscal"
+    if c.status == Comanda.Status.ABERTA:
+        aviso = "Conferência de conta — não é documento fiscal"
+    elif c.status == Comanda.Status.CANCELADA:
+        pagamento = "COMANDA CANCELADA"
+    elif c.destino == Comanda.Destino.CONTA:
+        pagamento = f"Lançado na conta: {c.conta_ref}"
+    elif c.forma_pagamento:
+        pagamento = f"Pago com {c.forma_pagamento.nome}"
+    cupom = {
+        "titulo": c.titulo, "origem": f"Comanda #{c.pk}", "meta": meta,
+        "itens": [{"qtd": qtd_br(i.quantidade), "descricao": i.descricao,
+                   "unitario": i.preco_unitario, "subtotal": i.subtotal} for i in itens],
+        "subtotal": subtotal, "desconto": c.desconto, "total": subtotal - c.desconto,
+        "pagamento": pagamento, "aviso": aviso,
+        "voltar": reverse("restaurante:comanda", args=[c.pk]),
+    }
+    return render(request, "componentes/cupom.html",
+                  {"cupom": cupom, "imprimir": request.GET.get("imprimir") == "1"})
 
 
 @requer_modulo(Modulo.RESTAURANTE)

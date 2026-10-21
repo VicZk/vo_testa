@@ -13,6 +13,7 @@ urlpatterns = [
     path("rouparia/item/", views.rouparia_item, name="rouparia_item"),
     path("rouparia/mover/", views.rouparia_mover, name="rouparia_mover"),
     path("<int:pk>/", views.ordem, name="ordem"),
+    path("<int:pk>/cupom/", views.cupom, name="cupom"),
     path("<int:pk>/item/", views.add_item, name="add_item"),
     path("<int:pk>/item/<int:item_pk>/remover/", views.remover_item, name="remover_item"),
     path("<int:pk>/avancar/", views.avancar, name="avancar"),

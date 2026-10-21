@@ -11,6 +11,7 @@
 <div class="pagina-cabecalho">
   <h1>Venda #{{ venda.pk }}</h1>
   <span class="selo {% if venda.status == 'cancelada' %}selo-alerta{% else %}selo-ok{% endif %}">{{ venda.get_status_display }}</span>
+  <a href="{% url 'loja:cupom' venda.pk %}?imprimir=1" target="_blank" rel="noopener" class="botao-neutro">Imprimir cupom</a>
 </div>
 <p class="subtitulo">
   {{ venda.criado_em|date:"d/m/Y H:i" }} · operador {{ venda.criado_por }} ·

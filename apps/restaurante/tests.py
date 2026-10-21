@@ -204,3 +204,29 @@ class ComandaConcorrenciaTests(RestauranteBase):
         with self.assertRaises(ValidationError):
             services.adicionar_item(tela_do_garcom, self.cerveja, 1, self.op)
         self.assertFalse(c.itens.exists())
+
+
+class CupomTests(RestauranteBase):
+    """Cupom de 80 mm da comanda: aberta, conferência da conta; fechada, o recibo."""
+
+    def test_conferencia_com_a_comanda_aberta_e_recibo_depois_de_fechar(self):
+        c = self.comanda()
+        services.adicionar_item(c, self.cerveja, 2, self.op)
+        self.client.force_login(self.op)
+        url = reverse("restaurante:cupom", args=[c.pk])
+        r = self.client.get(url)
+        self.assertContains(r, "Conferência de conta")
+        self.assertContains(r, f"{timezone.localtime(c.aberta_em):%d/%m/%Y %H:%M}")  # Brasília
+        self.assertContains(r, "2 × Cerveja")
+        self.assertContains(r, "R$ 24,00")
+        self.assertContains(self.client.get(reverse("restaurante:comanda", args=[c.pk])),
+                            "Imprimir conferência")
+        self.abrir_caixa()
+        services.fechar_comanda(c, self.op, "caixa", forma=self.dinheiro)
+        r = self.client.get(url)
+        self.assertNotContains(r, "Conferência de conta")
+        self.assertContains(r, f"Pago com {self.dinheiro.nome}")
+        self.assertContains(r, "Não é documento fiscal")
+        self.assertContains(self.client.get(reverse("restaurante:comanda", args=[c.pk])),
+                            "Imprimir cupom")
+

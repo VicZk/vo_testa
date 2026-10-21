@@ -1170,3 +1170,22 @@ class SemEmojiNoCrmTests(TestCase):
             if emojis:
                 achados.append(f"{rel}: {''.join(emojis[:6])}")
         self.assertEqual(achados, [], "emoji em tela do CRM")
+
+
+class CupomTermicoTests(TestCase):
+    """O cupom de 80 mm (componentes/cupom.html) tem página própria. Sem `size` na
+    `@page cupom`, valeria o A4 do `@page` geral (o do kit de contingência) e o driver da
+    térmica encolheria a folha A4 inteira para caber na bobina — cupom ilegível."""
+
+    def test_pagina_do_cupom_tem_tamanho_e_margem_proprios(self):
+        regra = re.search(r"@page cupom\s*\{([^}]*)\}", CSS.read_text(encoding="utf-8"))
+        self.assertIsNotNone(regra)
+        self.assertIn("size: 80mm", regra.group(1))
+        self.assertIn("margin: 0", regra.group(1))
+
+    def test_altura_da_pagina_vem_do_proprio_cupom(self):
+        modelo = (Path(settings.BASE_DIR) / "templates" / "componentes" / "cupom.html")
+        texto = modelo.read_text(encoding="utf-8")
+        self.assertIn("'@page cupom { size: 80mm ' + mm + 'mm; margin: 0; }'", texto)
+        self.assertIn("addEventListener('beforeprint', ajustar)", texto)
+

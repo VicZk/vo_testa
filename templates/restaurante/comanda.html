@@ -12,6 +12,7 @@
 <div class="pagina-cabecalho">
   <h1>Comanda #{{ comanda.pk }} — {{ comanda.titulo }}</h1>
   <span class="selo {% if comanda.status == 'cancelada' %}selo-alerta{% elif comanda.aberta %}selo-em_andamento{% else %}selo-limpa{% endif %}">{{ comanda.get_status_display }}</span>
+  <a href="{% url 'restaurante:cupom' comanda.pk %}?imprimir=1" target="_blank" rel="noopener" class="botao-neutro">{% if comanda.aberta %}Imprimir conferência{% else %}Imprimir cupom{% endif %}</a>
 </div>
 
 <div class="pdv" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>

@@ -5402,3 +5402,90 @@ body.escala-dragging .escala-drop { cursor: copy; }
   .kit-folha .kit-rodape { margin-top: .8rem; gap: .4rem 1.6rem; }
   .kit-folha .kit-total strong { font-size: 11pt; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   Cupom 80 mm (componentes/cupom.html) — conta, recibo e comprovante na
+   impressora térmica, pelo navegador. A bobina tem 80 mm e a cabeça imprime
+   72 mm: a coluna do cupom é essa. Térmica só imprime preto: nada de fundo,
+   sombra ou cinza claro (o driver vira pontilhado) — o texto é `--tinta`
+   (quase preto) e os fios são tracejados. A página nomeada `cupom` tem 80 mm de
+   largura e margem zero só aqui; o resto do sistema continua imprimindo em A4.
+   ═══════════════════════════════════════════════════════════════ */
+.cupom-pagina {
+  margin: 0;
+  padding: 1rem 1rem 2rem;
+  background: var(--canvas);
+  color: var(--tinta);
+  font-family: var(--fonte-ui);
+}
+.cupom-acoes {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem;
+  margin: 0 auto 1rem;
+}
+.cupom {
+  width: 72mm; max-width: 100%;
+  margin: 0 auto;
+  padding: 4mm 4mm 6mm;   /* igual na tela e no papel: o JS mede a altura daqui */
+  background: var(--superficie);
+  box-shadow: var(--sombra-cartao);
+  font-size: 12px; line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+}
+.cupom-topo { display: grid; justify-items: center; gap: .1rem; text-align: center; }
+.cupom-marca {
+  font-family: var(--fonte-titulo);
+  font-size: 16px; letter-spacing: -.01em;
+}
+.cupom-titulo {
+  display: flex; justify-content: space-between; gap: .5rem;
+  margin: .7rem 0 .35rem; padding-top: .55rem;
+  border-top: 1px dashed var(--tinta);
+  font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+}
+.cupom-titulo span { font-weight: 600; }
+.cupom-meta { margin: 0; }
+.cupom-meta div, .cupom-soma div { display: flex; justify-content: space-between; gap: .75rem; }
+.cupom-meta dt { font-weight: 600; }
+.cupom-meta dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+.cupom-itens {
+  width: 100%; margin: .5rem 0 0;
+  /* separate: com `collapse`, o tracejado da borda vira traço cheio onde as colunas se encontram */
+  border-collapse: separate; border-spacing: 0;
+  border-top: 1px dashed var(--tinta);
+}
+.cupom-itens th {
+  padding: .35rem 0 .2rem;
+  font-size: 10px; font-weight: 700; text-align: left;
+  text-transform: uppercase; letter-spacing: .08em;
+}
+.cupom-itens td { padding: .15rem 0; vertical-align: top; overflow-wrap: anywhere; }
+.cupom-itens .num, .cupom-soma .num { text-align: right; white-space: nowrap; padding-left: .5rem; }
+.cupom-itens small { display: block; padding-left: 1.1em; font-size: 10.5px; }
+.cupom-soma {
+  margin: .4rem 0 0; padding-top: .4rem;
+  border-top: 1px dashed var(--tinta);
+}
+.cupom-soma dd { margin: 0; }
+.cupom-total {
+  margin-top: .2rem;
+  font-size: 15px; font-weight: 700; letter-spacing: -.01em;
+}
+.cupom-pagamento { margin: .35rem 0 0; }
+.cupom-rodape {
+  display: grid; justify-items: center; gap: .1rem;
+  margin-top: .8rem; padding-top: .55rem;
+  border-top: 1px dashed var(--tinta);
+  text-align: center; text-transform: uppercase; letter-spacing: .06em;
+  font-size: 10.5px;
+}
+.cupom-rodape span { text-transform: none; letter-spacing: 0; font-size: 11px; }
+/* A altura da bobina é a do próprio cupom: o JS do componente mede e reescreve esta
+   regra antes de imprimir. Sem `size` aqui, valeria o A4 do `@page` geral (o kit) e o
+   driver da térmica encolheria a folha inteira para caber em 80 mm. */
+@page cupom { size: 80mm 297mm; margin: 0; }
+@media print {
+  .cupom-pagina { page: cupom; padding: 0; background: none; }
+  .cupom-acoes { display: none; }
+  /* Centrado: na bobina de 80 mm, os 72 mm do cupom caem na faixa que a cabeça imprime. */
+  .cupom { width: 72mm; margin: 0 auto; box-shadow: none; }
+}

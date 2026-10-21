@@ -157,3 +157,27 @@ class PermissaoTests(LavanderiaBase):
         Usuario.objects.create_user(username="x", password="senha-forte-123")
         self.client.login(username="x", password="senha-forte-123")
         self.assertEqual(self.client.get(reverse("lavanderia:painel")).status_code, 403)
+
+
+class CupomTests(LavanderiaBase):
+    """Cupom de 80 mm da ordem: comprovante na recepção da roupa, recibo na entrega."""
+
+    def test_comprovante_ao_receber_e_recibo_ao_entregar(self):
+        o = services.abrir_ordem(self.op, rotulo="Quarto 5")
+        services.adicionar_item(o, self.camisa, 3, self.op)
+        self.client.force_login(self.op)
+        url = reverse("lavanderia:cupom", args=[o.pk])
+        r = self.client.get(url)
+        self.assertContains(r, "Comprovante de recebimento")
+        self.assertContains(r, f"{timezone.localtime(o.recebida_em):%d/%m/%Y %H:%M}")  # Brasília
+        self.assertContains(r, "3 × Camisa")
+        self.assertContains(r, "8,00 cada")
+        self.assertContains(r, "R$ 24,00")
+        self.assertContains(self.client.get(reverse("lavanderia:ordem", args=[o.pk])),
+                            "Imprimir comprovante")
+        self.abrir_caixa()
+        services.entregar(o, self.op, "caixa", forma=self.dinheiro)
+        r = self.client.get(url)
+        self.assertNotContains(r, "Comprovante de recebimento")
+        self.assertContains(r, f"Pago com {self.dinheiro.nome}")
+

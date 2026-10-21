@@ -249,3 +249,37 @@ class VendaSemNFCeTests(LojaBase):
                 services.finalizar_venda(self.op, self.local, self.itens(1), "caixa",
                                          forma=self.dinheiro)
         services.finalizar_venda(self.op, self.local, self.itens(1), "caixa", forma=self.dinheiro)
+
+
+class CupomTests(LojaBase):
+    """Cupom de 80 mm da venda (impressora térmica pelo navegador)."""
+
+    def test_cupom_da_venda_paga_no_caixa(self):
+        self.abrir_caixa()
+        venda = services.finalizar_venda(
+            self.op, self.local, self.itens(2), "caixa", forma=self.dinheiro)
+        self.client.force_login(self.op)
+        url = reverse("loja:cupom", args=[venda.pk])
+        r = self.client.get(url)
+        self.assertContains(r, f"Venda #{venda.pk}")
+        self.assertContains(r, f"{timezone.localtime(venda.criado_em):%d/%m/%Y %H:%M}")  # Brasília
+        self.assertContains(r, "2 × Refri")
+        self.assertContains(r, "7,00 cada")
+        self.assertContains(r, "R$ 14,00")
+        self.assertContains(r, f"Pago com {self.dinheiro.nome}")
+        self.assertContains(r, "Não é documento fiscal")
+        self.assertNotContains(r, "window.print();")            # só imprime se pedir
+        self.assertContains(self.client.get(url + "?imprimir=1"), "window.print();")
+        self.assertContains(self.client.get(reverse("loja:venda", args=[venda.pk])),
+                            f"{url}?imprimir=1")
+
+    def test_cupom_da_venda_lancada_no_quarto(self):
+        conta = self.conta_aberta()
+        venda = services.finalizar_venda(
+            self.op, self.local, self.itens(1), "conta", conta_id=conta.pk)
+        self.client.force_login(self.op)
+        r = self.client.get(reverse("loja:cupom", args=[venda.pk]))
+        self.assertContains(r, "Lançado na conta:")
+        self.assertNotContains(r, "Pago com")
+        self.assertNotContains(r, "cada")                       # 1 unidade: sem preço unitário
+

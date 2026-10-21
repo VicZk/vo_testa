@@ -9,5 +9,6 @@ urlpatterns = [
     path("finalizar/", views.finalizar, name="finalizar"),
     path("vendas/", views.vendas, name="vendas"),
     path("vendas/<int:pk>/", views.venda, name="venda"),
+    path("vendas/<int:pk>/cupom/", views.cupom, name="cupom"),
     path("vendas/<int:pk>/cancelar/", views.cancelar, name="cancelar"),
 ]

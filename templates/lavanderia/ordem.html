@@ -11,6 +11,7 @@
 <div class="pagina-cabecalho">
   <h1>Ordem #{{ ordem.pk }} — {{ ordem.titulo }}</h1>
   <span class="selo {% if ordem.status == 'cancelada' %}selo-alerta{% elif ordem.status == 'entregue' %}selo-limpa{% else %}selo-em_andamento{% endif %}">{{ ordem.get_status_display }}</span>
+  <a href="{% url 'lavanderia:cupom' ordem.pk %}?imprimir=1" target="_blank" rel="noopener" class="botao-neutro">{% if ordem.status == 'entregue' %}Imprimir recibo{% else %}Imprimir comprovante{% endif %}</a>
 </div>
 {% if ordem.prazo %}<p class="subtitulo">Prometida para {{ ordem.prazo|date:"d/m/Y" }}.</p>{% endif %}
 
