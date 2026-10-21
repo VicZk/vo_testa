@@ -652,9 +652,15 @@ class BuscaSemConsultaPorQuartoTests(TestCase):
         from apps.nucleo.models import Temporada as TemporadaCRM
         from apps.nucleo.models import TipoUH
 
+        from apps.nucleo.feriados import eh_feriado
+
         self.tipo = TipoUH.objects.create(nome='Suíte', tarifa_base=Decimal('300.00'),
                                           capacidade=4)
+        # Fora de feriado: o feriado automático vence a temporada — "hoje + 30", rodado
+        # em 21/10, caía em 20/11 (Consciência Negra) e o selo saía "Feriado".
         self.ci = date.today() + timedelta(days=30)
+        while eh_feriado(self.ci) or eh_feriado(self.ci + timedelta(days=60)):
+            self.ci += timedelta(days=1)
         TemporadaCRM.objects.create(nome='Alta de verão', classificacao='alta',
                                     inicio=self.ci, fim=self.ci + timedelta(days=10))
         self._quartos(2)
