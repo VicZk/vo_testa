@@ -908,13 +908,18 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 
 /* Apoio de bloco — o que vivia escrito à mão em `style=` tela a tela.
    Título de seção tinha TRÊS medidas para o mesmo papel (1/1.4/1.6rem): o
-   padrão é a maior; as outras ficam como modificador até a normalização. */
+   padrão é a maior; as outras ficam como modificador até a normalização.
+
+   Os modificadores de ESPAÇO levam a classe dobrada de propósito: eles entram
+   em blocos que já trazem a própria margem (`.acoes`, `.bloco-ficha h4`,
+   `.fnrh-grupo`…) e precisam do mesmo peso que o `style=` tinha — sem recorrer
+   ao `!important`. */
 .secao-titulo { margin-top: 1.6rem; }
 .secao-titulo.respiro-medio { margin-top: 1.4rem; }
 .secao-titulo.respiro-curto { margin-top: 1rem; }
-.titulo-topo { margin-top: 0; }                 /* título que ABRE um bloco */
-.cartao.respiro, .bloco-respiro { margin-top: 1rem; }
-.bloco-fim { margin-bottom: 1.2rem; }
+.titulo-topo.titulo-topo { margin-top: 0; }                 /* título que ABRE um bloco */
+.cartao.respiro, .bloco-respiro.bloco-respiro { margin-top: 1rem; }
+.bloco-fim.bloco-fim { margin-bottom: 1.2rem; }
 .bloco-subtitulo { margin: 0 0 .6rem; font-size: .85rem; }
 .bloco-subtitulo.respiro { margin-bottom: .8rem; }
 .bloco-texto { margin: 0 0 1rem; color: var(--tinta-suave); font-size: .9rem; line-height: 1.55; }
@@ -929,13 +934,50 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 .texto-medio { font-size: .9rem; }
 .campo-empilhado { display: grid; gap: .3rem; }
 .filtro-linha { display: flex; gap: .6rem; align-items: flex-end; flex-wrap: wrap; margin: .9rem 0; }
-.bloco-colado { margin-top: .3rem; }
-.bloco-respiro-curto { margin-top: .6rem; }
-.bloco-respiro-largo { margin-top: 1.2rem; }
-.bloco-margem { margin: 1rem 0; }
+.bloco-colado.bloco-colado { margin-top: .3rem; }
+.bloco-respiro-curto.bloco-respiro-curto { margin-top: .6rem; }
+.bloco-respiro-largo.bloco-respiro-largo { margin-top: 1.2rem; }
+.bloco-respiro-medio.bloco-respiro-medio { margin-top: 1.1rem; }
+.bloco-plano.bloco-plano { margin: 0; }
+.linha-selos { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.linha-campos { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; }
+.clicavel { cursor: pointer; }
+/* Cartão estreito de tela de conta (MFA, confirmação): medida de leitura curta. */
+.cartao-estreito { max-width: 520px; }
+.cartao-estreito.mini { max-width: 420px; }
+.cartao-centrado { align-items: center; gap: 1rem; }
+.largura-cheia { align-self: stretch; }
+.nota-cartao { margin: .2rem 0 0; font-size: .9rem; color: var(--tinta-suave); }
+.nota-cartao.menor { font-size: .85rem; margin-top: .6rem; }
+.nota-cartao.alerta { color: var(--perigo); margin-top: .4rem; }
+.nota-centrada { margin: 0; font-size: .82rem; text-align: center; color: var(--tinta-suave); }
+.form-empilhado { display: flex; flex-direction: column; gap: .5rem; margin-top: 1rem; }
+.form-empilhado.solto { gap: .6rem; margin-top: 0; }
+.botao-inicio { align-self: flex-start; }
+/* Chave do MFA e códigos de backup: mono, legível a olho nu. */
+.qr-mfa { width: 220px; }
+.chave-mfa { font-size: .9rem; letter-spacing: .06em; }
+.func-bloco.func-bloco-fim { margin-bottom: 14px; }
+.codigos-backup {
+  display: grid; grid-template-columns: 1fr 1fr; gap: .5rem 1.2rem;
+  font-family: var(--fonte-mono); font-size: 1rem; letter-spacing: .06em;
+}
+.campo-codigo { letter-spacing: .2em; }
+/* Link que não quer parecer link (o bloco inteiro já é o alvo). */
+.link-limpo { text-decoration: none; color: inherit; }
+/* Volta para o site a partir das telas de entrada (fundo noturno). */
+.voltar-site {
+  display: inline-flex; align-items: center; gap: .4rem;
+  font-size: .85rem; color: var(--pergaminho); opacity: .7; text-decoration: none;
+}
+.nota-desafio { margin: .2rem 0 1rem; font-size: .9rem; color: var(--tinta-suave); }
+/* Linha de opção com caixa de marcar (o rótulo inteiro é o alvo). */
+.linha-opcao { display: flex; align-items: center; gap: .75rem; padding: 1rem 1.25rem; margin-bottom: 1.25rem; }
+.opcao-marcar { display: flex; align-items: center; gap: .6rem; margin: 0; cursor: pointer; }
+.bloco-margem.bloco-margem { margin: 1rem 0; }
 .linha-botoes { display: flex; gap: .5rem; }
 .conc-acao-painel { margin-top: .5rem; display: grid; gap: .4rem; min-width: 180px; }
-.subtitulo-colado { margin: .5rem 0 0; }
+.subtitulo-colado.subtitulo-colado { margin: .5rem 0 0; }
 .grade-graficos {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 1.2rem; margin-top: 1.2rem;
@@ -3994,14 +4036,14 @@ form.filtros:not(.subnav) select:focus {
 .op-nota.compacta { font-size: .72em; margin-bottom: .55rem; }
 .op-nota-fim { font-size: .78em; color: var(--tinta-suave); margin-top: .3rem; }
 .op-chips { display: flex; flex-wrap: wrap; gap: .4rem; }
-.op-obs-respiro { margin-top: .6rem; }
+.op-obs-respiro.op-obs-respiro { margin-top: .6rem; }
 .op-citacao { font-style: italic; }
 .op-linha { font-size: .9em; }
 .op-linha-sub { font-size: .82em; }
 .op-linha-sub.suave, .op-linha-mini { color: var(--tinta-suave); }
 .op-linha-mini { font-size: .8em; }
-.op-form-plano { margin: 0; }
-.op-form-respiro { margin-top: .4rem; }
+.op-form-plano.op-form-plano { margin: 0; }
+.op-form-respiro.op-form-respiro { margin-top: .4rem; }
 .op-botao-bloco { display: block; text-align: center; margin-top: .5rem; }
 
 .op-resumo { padding: 1.15rem 1.25rem; }
@@ -4550,7 +4592,7 @@ body.escala-dragging .escala-drop { cursor: copy; }
 .kpis-el { display: flex; gap: 1rem; flex-wrap: wrap; }
 /* Espaçamento dos blocos da tela elegante — era `style=` repetido tela a tela. */
 .kpis-el.respiro { margin: .5rem 0 1.4rem; }
-.quadro-lista { margin-top: 1.25rem; }
+.quadro-lista.quadro-lista { margin-top: 1.25rem; }
 .cartao-el.bloco-texto { padding: 1.1rem 1.3rem; margin-bottom: 1.2rem; }
 .cartao-el.centrado { text-align: center; }
 .detalhe-2col { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; align-items: start; }
@@ -4560,17 +4602,17 @@ body.escala-dragging .escala-drop { cursor: copy; }
 .eleg-intro.respiro { margin-top: .6rem; }
 .eleg-intro.mini { font-size: .85em; margin-top: .5rem; }
 .eleg-acoes.respiro { margin-top: 1rem; }
-.titulo-tabela { margin: 1.5rem 0 .6rem; }
+.titulo-tabela.titulo-tabela { margin: 1.5rem 0 .6rem; }
 /* Célula de texto longo: tom suave e medida de leitura. */
 .celula-texto { color: var(--tinta-suave); max-width: 520px; }
 .celula-texto.estreita { max-width: 420px; }
 .celula-suave { color: var(--tinta-suave); }
-.form-plano { margin: 0; }
-.botao-respiro { margin-top: .4rem; }
+.form-plano.form-plano { margin: 0; }
+.botao-respiro.botao-respiro { margin-top: .4rem; }
 /* Painel do Comercial: colunas e os títulos que vêm depois de uma tabela. */
-.com-painel-colunas { margin-top: 1.2rem; }
-.com-bloco-titulo { margin-top: 1.4rem; }
-.com-abas { margin: .6rem 0 1rem; }
+.com-painel-colunas.com-painel-colunas { margin-top: 1.2rem; }
+.com-bloco-titulo.com-bloco-titulo { margin-top: 1.4rem; }
+.com-abas.com-abas { margin: .6rem 0 1rem; }
 /* Formulário que ocupa a largura do bloco (a meta mora dentro de um painel). */
 .form-cartao.form-cartao-largo { max-width: none; }
 .subtitulo.subtitulo-mini { font-size: .8rem; }

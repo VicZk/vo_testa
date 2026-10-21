@@ -8,14 +8,14 @@
 <p class="subtitulo">Escaneie o QR no seu app autenticador (Google Authenticator, Authy,
 1Password…) e confirme com o código gerado.</p>
 
-<div class="cartao" style="max-width:520px;align-items:center;gap:1rem">
-  {% if erro %}<div class="mensagem error" style="align-self:stretch">{{ erro }}</div>{% endif %}
-  <div style="width:220px">{{ qr_svg|safe }}</div>
-  <p style="color:var(--tinta-suave);font-size:.82rem;text-align:center;margin:0">
+<div class="cartao cartao-estreito cartao-centrado">
+  {% if erro %}<div class="mensagem error largura-cheia">{{ erro }}</div>{% endif %}
+  <div class="qr-mfa">{{ qr_svg|safe }}</div>
+  <p class="nota-centrada">
     Não consegue escanear? Cadastre esta chave manualmente:<br>
-    <code class="mono-num" style="font-size:.9rem;letter-spacing:.06em">{{ secret }}</code>
+    <code class="mono-num chave-mfa">{{ secret }}</code>
   </p>
-  <form method="post" style="align-self:stretch;display:flex;flex-direction:column;gap:.6rem">
+  <form method="post" class="largura-cheia form-empilhado solto">
     {% csrf_token %}
     <label for="id_codigo">Código do app</label>
     <input type="text" name="codigo" id="id_codigo" inputmode="numeric"

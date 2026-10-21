@@ -320,7 +320,7 @@
     </nav>
 
     <div class="sidebar-rodape">
-      <a href="{% url 'mfa_config' %}" class="usuario-mini" style="text-decoration:none;color:inherit" title="Verificação em duas etapas (MFA)">
+      <a href="{% url 'mfa_config' %}" class="usuario-mini link-limpo" title="Verificação em duas etapas (MFA)">
         <span class="avatar">{{ user.get_full_name|default:user.username|slice:":1"|upper }}</span>
         <span class="usuario-nome">{{ user }}</span>
         {% if not user.mfa_ativo %}<span class="selo selo-alerta">MFA off</span>{% endif %}
