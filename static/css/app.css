@@ -5964,3 +5964,4 @@ body.escala-dragging .escala-drop { cursor: copy; }
 .est-form-inline { margin-top: .2rem; }
 .est-form-inline h3 { margin: 0 0 .8rem; color: var(--tinta-suave); }
 .est-form-inline .campo:last-of-type { margin-bottom: 1rem; }
+.est-nota-catalogo { margin: -1.2rem 0 1.8rem; font-size: .84rem; color: var(--tinta-suave); }

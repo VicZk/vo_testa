@@ -43,7 +43,7 @@ peneira a tabela; os números de cima continuam dizendo como está o depósito.{
       <svg viewBox="0 0 24 24" class="ico kpi-ico" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M6.5 17.5l11-11"/></svg>
     </div>
     <span class="kpi-valor">{{ indicadores.zerados }}</span>
-    <span class="kpi-nota">{% if local %}zerados neste local{% else %}zerados na pousada{% endif %}</span>
+    <span class="kpi-nota">{% if local %}acabaram neste depósito{% else %}zerados na pousada{% endif %}</span>
   </a>
 
   <div class="kpi">
@@ -65,7 +65,8 @@ quanto guarda e o que está no limite, em vez de um chip com o nome e mais nada.
     <span class="est-local-valor">{{ geral.valor|intcomma_brl }}</span>
     <span class="est-local-meta">
       <span class="rotulo-dado">A pousada inteira</span>
-      {% if geral.alertas %}<span class="selo est-abaixo">{{ geral.alertas }} para repor</span>{% endif %}
+      <span class="rotulo-dado">{{ geral.com_saldo }} {{ geral.com_saldo|pluralize:"item,itens" }}</span>
+      {% if alertas_geral %}<span class="selo est-abaixo">{{ alertas_geral }} para repor</span>{% endif %}
     </span>
   </a>
   {% for lo in resumo_locais %}
@@ -175,5 +176,17 @@ rolar dentro do cartão no celular, com a 1ª coluna e a de ação grudadas.{% e
     {% endfor %}
   </tbody>
 </table>
+{% if fora_do_local %}
+  <p class="est-nota-catalogo">
+    {{ fora_do_local }} {{ fora_do_local|pluralize:"produto do catálogo,produtos do catálogo" }}
+    nunca {{ fora_do_local|pluralize:"passou,passaram" }} por este depósito.
+    <a href="?local={{ local.pk }}&catalogo=1{% if filtros.q %}&q={{ filtros.q }}{% endif %}">Ver o catálogo inteiro aqui</a>.
+  </p>
+{% elif catalogo and local %}
+  <p class="est-nota-catalogo">
+    Mostrando o catálogo inteiro — inclusive o que nunca foi estocado aqui.
+    <a href="?local={{ local.pk }}">Ver só o que este depósito guarda</a>.
+  </p>
+{% endif %}
 {% include "componentes/paginacao.html" with pagina=pagina %}
 {% endblock %}

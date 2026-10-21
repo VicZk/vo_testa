@@ -91,11 +91,6 @@ def _produtos_json(saldos=None):
     return itens
 
 
-def _contexto_modulo():
-    """O que toda tela do módulo carrega (abas + locais)."""
-    return {"locais_menu": _locais_ativos()}
-
-
 # ---------- Posição de estoque (home do módulo) ----------
 
 
@@ -122,11 +117,22 @@ def posicao(request):
     # Uma leitura só do escopo (local escolhido): os indicadores falam do
     # escopo inteiro, e a tabela é esta mesma lista peneirada.
     linhas = posicao_estoque(local)
+    # Num depósito, o catálogo inteiro apareceria como "sem saldo" — 27 alarmes
+    # vermelhos para dizer que a Loja não guarda detergente. Quem nunca passou
+    # por ali sai da conta e da lista; o rodapé da tabela diz quantos são e
+    # leva ao catálogo completo (`?catalogo=1`).
+    catalogo = bool(request.GET.get("catalogo"))
+    fora_do_local = 0
+    if local and not catalogo:
+        fora_do_local = sum(1 for linha in linhas if linha["nunca_movimentou"])
+        linhas = [linha for linha in linhas if not linha["nunca_movimentou"]]
     indicadores = indicadores_estoque(linhas)
-    indicadores["movimentos7"] = MovimentoEstoque.objects.filter(
-        criado_em__gte=timezone.now() - timedelta(days=7),
-        **({"local": local} if local else {}),
-    ).count()
+    recentes = MovimentoEstoque.objects.filter(
+        criado_em__gte=timezone.now() - timedelta(days=7)
+    )
+    if local:
+        recentes = recentes.filter(local=local)
+    indicadores["movimentos7"] = recentes.count()
 
     if busca:
         alvo = busca.lower()
@@ -149,25 +155,26 @@ def posicao(request):
 
     pagina = paginar(request, linhas)
     resumo = resumo_locais()
+    # O cartão "Todos os locais" fala da pousada inteira mesmo quando a tela
+    # está olhando um depósito — senão repetiria o número do depósito escolhido.
+    geral = indicadores if local is None else indicadores_estoque(posicao_estoque())
     return render(
         request,
         "estoque/posicao.html",
         {
-            **_contexto_modulo(),
             "linhas": pagina,
             "pagina": pagina,
             "resumo_locais": resumo,
-            "geral": {
-                "itens": sum(lo["itens"] for lo in resumo),
-                "valor": indicadores["valor"],
-                "alertas": indicadores["abaixo"] + indicadores["zerados"],
-            },
+            "geral": geral,
+            "alertas_geral": geral["abaixo"] + geral["zerados"],
+            "fora_do_local": fora_do_local,
+            "catalogo": catalogo,
             "local": local,
             "indicadores": indicadores,
             "categorias": CategoriaProduto.objects.filter(ativo=True),
             "situacoes": SITUACOES,
             "filtros": {"q": busca, "categoria": categoria_id, "situacao": situacao},
-            "tem_filtro": bool(busca or categoria_id or situacao),
+            "tem_filtro": bool(busca or categoria_id or situacao or catalogo),
         },
     )
 
@@ -201,7 +208,6 @@ def produtos(request):
         request,
         "estoque/produtos.html",
         {
-            **_contexto_modulo(),
             "produtos": pagina,
             "pagina": pagina,
             "categorias": CategoriaProduto.objects.filter(ativo=True),
@@ -225,7 +231,6 @@ def produto_form(request, pk=None):
         request,
         "estoque/produto_form.html",
         {
-            **_contexto_modulo(),
             "form": form,
             "produto": produto,
             "saldos": _saldos_do_produto(produto) if produto else [],
@@ -278,7 +283,6 @@ def kardex(request, pk):
         request,
         "estoque/kardex.html",
         {
-            **_contexto_modulo(),
             "produto": produto,
             "linhas": linhas,
             "pagina": pagina,
@@ -338,7 +342,6 @@ def cadastros(request):
         request,
         "estoque/cadastros.html",
         {
-            **_contexto_modulo(),
             "categorias": CategoriaProduto.objects.annotate(
                 total=Count("produtos"),
                 ativos=Count("produtos", filter=Q(produtos__ativo=True)),
@@ -435,7 +438,6 @@ def _movimentar(request, operacao):
         request,
         "estoque/movimentar.html",
         {
-            **_contexto_modulo(),
             "form": form,
             "operacao": operacao,
             "config": config,
@@ -511,7 +513,6 @@ def inventarios(request):
         request,
         "estoque/inventarios.html",
         {
-            **_contexto_modulo(),
             "inventarios": pagina,
             "pagina": pagina,
             "form": form,
@@ -557,7 +558,6 @@ def inventario(request, pk):
         request,
         "estoque/inventario.html",
         {
-            **_contexto_modulo(),
             "inventario": inv,
             "itens": itens,
             "resumo": {

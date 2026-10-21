@@ -324,6 +324,39 @@ class PosicaoTests(TelasBase):
             self.client.get(url)
         self.assertEqual(len(muitos), len(poucos), "posição faz consulta por produto")
 
+    def test_deposito_mostra_so_o_que_ele_guarda(self):
+        """Sem isto, escolher um depósito pintava o catálogo inteiro de
+        "sem saldo" — 27 alarmes para dizer que a Loja não guarda detergente."""
+        Produto.objects.create(nome="Só no almoxarifado", categoria=self.cat)
+        resposta = self.client.get(reverse("estoque:posicao"), {"local": self.loja.pk})
+        nomes = [lin["produto"].nome for lin in resposta.context["linhas"]]
+        self.assertEqual(nomes, [])                       # nada passou pela loja
+        self.assertEqual(resposta.context["fora_do_local"], 2)
+        # O catálogo inteiro continua a um clique — e aí nada fica escondido.
+        com_tudo = self.client.get(
+            reverse("estoque:posicao"), {"local": self.loja.pk, "catalogo": "1"}
+        )
+        self.assertEqual(len(com_tudo.context["linhas"]), 2)
+        self.assertEqual(com_tudo.context["fora_do_local"], 0)
+
+    def test_cartao_de_todos_os_locais_fala_da_pousada(self):
+        """Olhando um depósito, o cartão "Todos os locais" mostrava o número
+        DELE — dois cartões lado a lado com o mesmo valor."""
+        transferir(self.produto, self.almox, self.loja, 10, self.user)
+        resposta = self.client.get(reverse("estoque:posicao"), {"local": self.loja.pk})
+        self.assertEqual(resposta.context["indicadores"]["valor"], Decimal("25.00"))
+        self.assertEqual(resposta.context["geral"]["valor"], Decimal("100.00"))
+
+    def test_o_que_acabou_no_deposito_continua_aparecendo(self):
+        transferir(self.produto, self.almox, self.loja, 5, self.user)
+        registrar_saida(self.produto, self.loja, 5, self.user)   # acabou ali
+        resposta = self.client.get(reverse("estoque:posicao"), {"local": self.loja.pk})
+        linhas = resposta.context["linhas"]
+        self.assertEqual([lin["produto"].nome for lin in linhas], ["Refri lata"])
+        self.assertTrue(linhas[0]["zerado"])
+        self.assertFalse(linhas[0]["nunca_movimentou"])
+        self.assertEqual(resposta.context["indicadores"]["zerados"], 1)
+
     def test_acao_rapida_leva_produto_e_local(self):
         html = self.client.get(
             reverse("estoque:posicao"), {"local": self.almox.pk}

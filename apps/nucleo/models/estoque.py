@@ -248,6 +248,10 @@ def posicao_estoque(local: LocalEstoque | None = None, produtos=None):
                 "abaixo": not zerado and atual <= minimo,
                 "situacao": "zerado" if zerado else ("abaixo" if atual <= minimo else "ok"),
                 "nivel": _nivel(atual, minimo),
+                # Saldo zero tem dois sentidos bem diferentes quando se olha UM
+                # depósito: "acabou aqui" (tem história) e "nunca foi estocado
+                # aqui" (o catálogo inteiro aparecendo como falta).
+                "nunca_movimentou": produto.pk not in saldos,
                 "valor": (atual * produto.custo_medio).quantize(Decimal("0.01")),
             }
         )
