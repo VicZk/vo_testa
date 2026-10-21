@@ -105,6 +105,15 @@
                   {% endif %}
                 </td>
               </tr>
+              {% if reserva.politica_aceita %}
+              <tr>
+                <td colspan="2" style="padding:18px 14px;border-top:1px solid #E8D9B8;vertical-align:top;">
+                  <p style="margin:0 0 4px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8A6A4A;font-family:Arial,Helvetica,sans-serif;">Política de cancelamento</p>
+                  <p style="margin:0;font-size:13px;line-height:1.5;color:#051C2C;">{{ reserva.politica_aceita }}</p>
+                  <p style="margin:8px 0 0;font-size:12px;color:#8A6A4A;font-family:Arial,Helvetica,sans-serif;">Aceita por você em {{ reserva.politica_aceita_em|date:"d/m/Y" }} às {{ reserva.politica_aceita_em|date:"H:i" }}.</p>
+                </td>
+              </tr>
+              {% endif %}
             </table>
           </td>
         </tr>

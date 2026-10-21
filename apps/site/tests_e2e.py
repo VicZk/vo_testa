@@ -119,6 +119,8 @@ class ReservaSiteE2ETests(_UnidadeVendavelMixin, _BaseE2E):
 
         # Passo 4 — resumo e confirmação.
         self.page.wait_for_selector("text=Confirmar Reserva", timeout=10000)
+        # Sem o aceite da política o navegador não deixa enviar (caixa obrigatória).
+        self.page.check("input[name=aceite_politica]")
         self.page.get_by_role("button", name="Confirmar Reserva").click()
 
         # Passo 5 — página de confirmação (URL com token /reserva/<uuid>/).

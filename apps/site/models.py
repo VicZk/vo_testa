@@ -377,6 +377,14 @@ class Reserva(models.Model):
     confirmacao_enviada_em = models.DateTimeField(
         'Confirmação enviada em', null=True, blank=True, editable=False)
 
+    # Aceite da política de cancelamento (venda pela internet — CDC art. 49): QUANDO
+    # o hóspede aceitou e QUAL texto estava na tela. O texto é guardado inteiro porque
+    # a política pode mudar depois; vale a que ele aceitou.
+    politica_aceita_em = models.DateTimeField(
+        'Política de cancelamento aceita em', null=True, blank=True, editable=False)
+    politica_aceita = models.TextField(
+        'Política de cancelamento aceita (texto)', blank=True, editable=False)
+
     criado_em = models.DateTimeField('Criado em', auto_now_add=True)
     atualizado_em = models.DateTimeField('Atualizado em', auto_now=True)
 

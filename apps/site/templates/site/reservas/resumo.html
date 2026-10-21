@@ -122,12 +122,17 @@
         </div>
     </div>
 
-    {% if politica %}
     <div class="bg-pergaminho/50 border border-madeira/10 rounded-xl p-4 mt-4 text-sm text-madeira/70">
+        {% if politica %}
         <p class="font-semibold text-madeira mb-1">Política de cancelamento</p>
         <p>{{ politica.resumo }}</p>
+        {% endif %}
+        {# Venda pela internet (CDC art. 49): o aceite é obrigatório e fica guardado na reserva — data e texto. #}
+        <label class="flex items-start gap-2 mt-3 text-madeira cursor-pointer">
+            <input type="checkbox" name="aceite_politica" value="1" form="form-finalizar" required class="accent-madeira mt-1 shrink-0">
+            <span>Li e aceito a política de cancelamento e os <a href="{% url 'core:termos_servico' %}#cancelamento" target="_blank" rel="noopener" class="font-semibold border-b border-madeira/30">termos de serviço</a>.</span>
+        </label>
     </div>
-    {% endif %}
 
     <div class="flex justify-between mt-8">
         <a href="{% if uh_id %}{% url 'core:selecionar_unidade' uh_id %}{% else %}{% url 'core:selecionar_quarto' quarto.id %}{% endif %}?checkin={{ busca.checkin|date:'Y-m-d' }}&checkout={{ busca.checkout|date:'Y-m-d' }}&hospedes={{ busca.hospedes }}&criancas_0_5={{ busca.criancas_0_5|default:0 }}&criancas_6_15={{ busca.criancas_6_15|default:0 }}"

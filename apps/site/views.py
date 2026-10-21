@@ -93,8 +93,13 @@ def politica_privacidade(request):
 
 
 def termos_servico(request):
-    """Termos de Serviço — URL pública usada pelo app Meta/WhatsApp."""
-    return render(request, 'site/legal/termos_servico.html')
+    """Termos de Serviço — URL pública usada pelo app Meta/WhatsApp.
+
+    Prazo e retenção do cancelamento vêm da MESMA fonte que o resumo da reserva e o
+    cálculo da devolução (`descricao_politica`, settings): o texto fixo dizia 90% de
+    devolução dentro dos 7 dias, enquanto o sistema devolve 100%."""
+    from apps.reservas.cancelamento import descricao_politica
+    return render(request, 'site/legal/termos_servico.html', {'politica': descricao_politica()})
 
 
 def exclusao_dados(request):
@@ -844,6 +849,12 @@ def finalizar_reserva(request):
         messages.error(request, 'Muitas reservas em pouco tempo. Tente novamente mais tarde.')
         return redirect('core:reservar')
 
+    # Venda pela internet (CDC art. 49): sem o aceite da política de cancelamento, não
+    # há reserva. O navegador já exige a caixa marcada; isto segura o POST forjado.
+    if request.POST.get('aceite_politica') != '1':
+        messages.error(request, 'Para concluir, confirme que leu e aceita a política de cancelamento.')
+        return redirect('core:reservar')
+
     # Venda por unidade: reserva um quarto específico (não "qualquer do tipo").
     if request.POST.get('uh_id'):
         return _finalizar_reserva_unidade(request)
@@ -931,9 +942,19 @@ def finalizar_reserva(request):
             metodo_pagamento=metodo,
             status='aguardando',
             crm_reserva_id=crm_reserva.pk,
+            **_aceite_da_politica(),
         )
     _cobranca_e_confirmacao(reserva, pessoa)
     return redirect('core:reserva_confirmada', token=reserva.token)
+
+
+def _aceite_da_politica():
+    """Quando e o QUE o hóspede aceitou: o resumo da política que a tela do passo 4
+    mostrou (a mesma fonte, `descricao_politica`)."""
+    from django.utils import timezone
+
+    from apps.reservas.cancelamento import descricao_politica
+    return {'politica_aceita_em': timezone.now(), 'politica_aceita': descricao_politica()['resumo']}
 
 
 def _cobranca_e_confirmacao(reserva, pessoa):
@@ -1033,6 +1054,7 @@ def _finalizar_reserva_unidade(request):
             data_checkin=checkin, data_checkout=checkout, num_hospedes=hospedes,
             preco_noite=preco_cheio, desconto_percentual=desconto,
             metodo_pagamento=metodo, status='aguardando', crm_reserva_id=crm_reserva.pk,
+            **_aceite_da_politica(),
         )
     _cobranca_e_confirmacao(reserva, pessoa)
     return redirect('core:reserva_confirmada', token=reserva.token)

@@ -106,7 +106,7 @@ class FluxoReservaViewTests(TestCase):
             'quarto_id': self.quarto.id, 'checkin': self.ci, 'checkout': self.co,
             'hospedes': 2, 'metodo_pagamento': 'pix', 'nome': 'Maria Teste',
             'email': 'maria@ex.com', 'telefone': '49999990000', 'cpf': CPF_VALIDO,
-            'observacoes': '',
+            'observacoes': '', 'aceite_politica': '1',
         }
         dados.update(over)
         return self.client.post(reverse('core:finalizar_reserva'), dados)
@@ -176,7 +176,7 @@ class FluxoReservaViewTests(TestCase):
             'uh_id': self.uh.id, 'checkin': self.ci, 'checkout': self.co,
             'hospedes': 2, 'metodo_pagamento': 'pix', 'nome': 'João Teste',
             'email': 'joao@ex.com', 'telefone': '49999990000', 'cpf': CPF_VALIDO,
-            'observacoes': '',
+            'observacoes': '', 'aceite_politica': '1',
         })
         self.assertEqual(resp.status_code, 302)
         reserva = Reserva.objects.get()
@@ -373,12 +373,70 @@ class FluxoReservaViewTests(TestCase):
             'quarto_id': quarto.id, 'checkin': ci, 'checkout': co,
             'hospedes': 2, 'modalidade': 'day_use', 'metodo_pagamento': 'pix',
             'nome': 'Day User', 'email': 'day@ex.com', 'telefone': '49999990000',
-            'cpf': CPF_VALIDO, 'observacoes': '',
+            'cpf': CPF_VALIDO, 'observacoes': '', 'aceite_politica': '1',
         })
         self.assertEqual(resp.status_code, 302)
         reserva = Reserva.objects.latest('id')
         crm = CrmReserva.objects.get(pk=reserva.crm_reserva_id)
         self.assertEqual(crm.uh.tipo.modalidade, 'day_use')
+
+    # ── Aceite da política de cancelamento (venda pela internet, CDC art. 49) ──
+
+    def test_sem_aceite_da_politica_nao_ha_reserva(self):
+        """O navegador exige a caixa marcada; o POST forjado sem ela também não passa:
+        nem recibo do site, nem pré-reserva no CRM."""
+        from apps.reservas.models import Reserva as CrmReserva
+        for aceite in ('', '0'):
+            resp = self._post_finalizar(aceite_politica=aceite)
+            self.assertRedirects(resp, reverse('core:reservar'), fetch_redirect_response=False)
+        resp = self.client.post(reverse('core:finalizar_reserva'), {
+            'uh_id': self.uh.id, 'checkin': self.ci, 'checkout': self.co,
+            'hospedes': 2, 'metodo_pagamento': 'pix', 'nome': 'João Teste',
+            'email': 'joao@ex.com', 'telefone': '49999990000', 'cpf': CPF_VALIDO,
+            'observacoes': '',
+        })
+        self.assertEqual(resp.status_code, 302)
+        self.assertFalse(Reserva.objects.exists())
+        self.assertFalse(CrmReserva.objects.exists())
+
+    def test_aceite_fica_gravado_com_o_texto_que_estava_na_tela(self):
+        from apps.reservas.cancelamento import descricao_politica
+        antes = timezone.now()
+        self._post_finalizar()
+        reserva = Reserva.objects.get()
+        self.assertEqual(reserva.politica_aceita, descricao_politica()['resumo'])
+        self.assertGreaterEqual(reserva.politica_aceita_em, antes)
+        self.assertLessEqual(reserva.politica_aceita_em, timezone.now())
+
+    def test_por_unidade_tambem_grava_o_aceite(self):
+        self.client.post(reverse('core:finalizar_reserva'), {
+            'uh_id': self.uh.id, 'checkin': self.ci, 'checkout': self.co,
+            'hospedes': 2, 'metodo_pagamento': 'pix', 'nome': 'João Teste',
+            'email': 'joao@ex.com', 'telefone': '49999990000', 'cpf': CPF_VALIDO,
+            'observacoes': '', 'aceite_politica': '1',
+        })
+        self.assertIsNotNone(Reserva.objects.get().politica_aceita_em)
+
+    def test_resumo_pede_o_aceite_antes_de_confirmar(self):
+        resp = self.client.post(reverse('core:resumo_reserva'), {
+            'quarto_id': self.quarto.id, 'checkin': self.ci, 'checkout': self.co,
+            'hospedes': 2, 'metodo_pagamento': 'pix', 'nome': 'Maria Teste',
+            'email': 'maria@ex.com', 'telefone': '49999990000',
+            'cpf': CPF_VALIDO, 'observacoes': '',
+        })
+        self.assertContains(resp, 'name="aceite_politica"')
+        self.assertContains(resp, 'form="form-finalizar" required')
+        self.assertContains(resp, reverse('core:termos_servico') + '#cancelamento')
+
+    def test_email_de_confirmacao_leva_a_politica_aceita(self):
+        from django.core import mail
+
+        from apps.reservas.cancelamento import descricao_politica
+        self._post_finalizar()
+        texto = descricao_politica()['resumo']
+        self.assertIn(texto, mail.outbox[0].body)
+        html = mail.outbox[0].alternatives[0][0]
+        self.assertIn('Aceita por você em', html)
 
 
 class EventosEHomeTests(TestCase):
@@ -550,6 +608,20 @@ class SeoTests(TestCase):
         with self.settings(GA_MEASUREMENT_ID="G-TESTE123"):
             html = self.client.get("/").content.decode()
             self.assertIn("G-TESTE123", html)
+
+
+class TermosSeguemAPoliticaTests(TestCase):
+    """O texto fixo dos termos dizia 90% de devolução dentro dos 7 dias, enquanto o
+    resumo da reserva e o cálculo da devolução usam 100% (settings). Uma fonte só."""
+
+    def test_termos_mostram_o_prazo_e_a_retencao_configurados(self):
+        from django.test import override_settings
+        with override_settings(CANCELAMENTO_ARREPENDIMENTO_DIAS=7, CANCELAMENTO_RETENCAO_PCT='15'):
+            resp = self.client.get(reverse('core:termos_servico'))
+        self.assertContains(resp, '7 dias corridos')
+        self.assertContains(resp, 'devolução <b>integral</b>')
+        self.assertContains(resp, '<b>15%</b>')
+        self.assertNotContains(resp, '90%')
 
 
 class PaginasLegaisTests(TestCase):

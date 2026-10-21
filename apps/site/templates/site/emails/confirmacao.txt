@@ -18,7 +18,10 @@ Endereço: {{ endereco }}
 {% endif %}
 Acompanhe{% if not pago %} e pague{% endif %} pelo link:
 {{ url_reserva }}
-
+{% if reserva.politica_aceita %}
+Política de cancelamento (aceita por você em {{ reserva.politica_aceita_em|date:"d/m/Y" }} às {{ reserva.politica_aceita_em|date:"H:i" }}):
+{{ reserva.politica_aceita }}
+{% endif %}
 Este endereço (naoresponda@) não aceita respostas.
 Contato: {{ email_contato }}{% if url_whatsapp %} | WhatsApp: {{ url_whatsapp }}{% endif %}
 

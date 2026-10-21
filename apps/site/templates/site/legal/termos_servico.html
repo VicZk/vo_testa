@@ -26,11 +26,18 @@ cartão e boleto. Não armazenamos o número completo do cartão. Descontos (ex.
 Pix) e parcelamento, quando disponíveis, são indicados no momento da cobrança.</p>
 
 <h2 id="cancelamento">5. Cancelamento e remarcação</h2>
-<p>Você pode cancelar em até <b>7 (sete) dias corridos</b> contados da confirmação da
-reserva com devolução de <b>90%</b> do valor pago (retenção de 10%). Sempre que possível,
-oferecemos primeiro a <b>remarcação</b> da data, sem custo adicional. Se a estadia já
-tiver começado e você optar por encerrar antes, são devidas as diárias utilizadas mais a
-retenção de 10%. Esta política observa o Código de Defesa do Consumidor.</p>
+{% with dias=politica.arrependimento_dias pct=politica.retencao_pct|floatformat:"-1" %}
+<p>Você pode cancelar <b>sem custo</b> em até <b>{{ dias }} dias corridos</b> contados da
+confirmação da reserva, com devolução <b>integral</b> do valor pago — é o direito de
+arrependimento das compras feitas pela internet (art. 49 do Código de Defesa do
+Consumidor). Depois desse prazo, retemos <b>{{ pct }}%</b> do valor total e devolvemos o
+restante. Sempre que possível, oferecemos primeiro a <b>remarcação</b> da data, sem custo
+adicional. Se a estadia já tiver começado e você optar por encerrar antes, são devidas as
+diárias utilizadas mais a retenção de {{ pct }}%.</p>
+<p>Ao concluir uma reserva pelo site, você confirma que leu e aceita esta política;
+guardamos a data do aceite e o texto que estava na tela, e enviamos os dois no e-mail de
+confirmação.</p>
+{% endwith %}
 
 <h2>6. Responsabilidades do hóspede</h2>
 <p>O hóspede concorda em fornecer informações verdadeiras, cumprir as regras da pousada e
