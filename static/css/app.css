@@ -1710,6 +1710,12 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 
 /* Alinha à direita as colunas numéricas dos quadros */
 .num { text-align: right; font-variant-numeric: tabular-nums; }
+/* O cabeçalho também: `.tabela th { text-align: left }` tem especificidade maior que
+   `.num` e vencia, então a coluna de número saía com o rótulo à esquerda e os valores
+   à direita (desalinhado em todo relatório e em ~30 telas). A regra da casa é `.num`
+   no <th> E no <td>; aqui ela passa a valer de fato. O `.quadro`/`.eleg` já tinha a
+   sua (mais abaixo) — esta é a mesma coisa para a `.tabela`. */
+.tabela th.num { text-align: right; }
 /* Subnav em forma de controle segmentado: dentro, o item ativo é um link
    (não um botão), então ele também marca `aria-current="page"`. */
 .seg-filtro a[aria-current="page"] {
