@@ -6,7 +6,7 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
 
-from apps.nucleo.audit import redigir_sensiveis
+from apps.nucleo.audit import redigir_credenciais, redigir_sensiveis
 from apps.nucleo.models import TrilhaAuditoria
 from apps.nucleo.modulos import Modulo
 from apps.nucleo.paginacao import paginar
@@ -62,6 +62,7 @@ def trilha(request):
         w = csv.writer(resp, delimiter=";")
         w.writerow(["quando", "usuario", "descricao", "acao", "alvo", "alvo_id", "detalhe"])
         for t in qs[:5000]:
+            t.detalhe = redigir_credenciais(t.detalhe)
             if ocultar_sensivel:
                 t.detalhe = redigir_sensiveis(t.detalhe)
             w.writerow([sanitizar_celula(x) for x in (
@@ -72,6 +73,8 @@ def trilha(request):
         return resp
     pagina = paginar(request, qs, 100)
     registros = list(pagina.object_list)
+    for t in registros:
+        t.detalhe = redigir_credenciais(t.detalhe)
     if ocultar_sensivel:
         for t in registros:
             t.detalhe = redigir_sensiveis(t.detalhe)

@@ -1,3 +1,5 @@
+import json
+
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
@@ -155,6 +157,14 @@ class TrilhaAuditoriaAdmin(admin.ModelAdmin):
 
     list_display = ["criado_em", "usuario", "acao", "alvo", "alvo_id"]
     list_filter = ["acao"]
+    exclude = ["detalhe"]
+    readonly_fields = ["detalhe_seguro"]
+
+    @admin.display(description="Detalhes")
+    def detalhe_seguro(self, obj):
+        from .audit import redigir_credenciais
+
+        return json.dumps(redigir_credenciais(obj.detalhe), ensure_ascii=False, indent=2)
 
     def has_add_permission(self, request):
         return False

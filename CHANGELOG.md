@@ -9,6 +9,16 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 22/10/2026: credenciais fora da trilha de auditoria
+
+- A ativação e as alterações de MFA continuam auditadas, sem copiar segredos ou
+  códigos de recuperação. A proteção também cobre detalhes explícitos e aninhados.
+- CSV, tela da auditoria, descrições e administração ocultam credenciais antigas
+  para todos os perfis. A migração 0052 saneia o conteúdo legado preservando os
+  eventos, sua autoria e suas datas.
+- Reteste do achado OP01 e testes de ativação real, perfis, administração,
+  registros explícitos e migração idempotente.
+
 ## 22/10/2026: mais espaço, botões simples e Conciliação alinhada
 
 **O que melhorou**

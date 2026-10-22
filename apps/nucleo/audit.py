@@ -30,6 +30,33 @@ CAMPOS_IGNORADOS = {
     "criado_em", "atualizado_em", "modificado_em", "last_login", "password",
 }
 
+# Credenciais nunca pertencem à trilha, nem para administradores. A mesma
+# proteção atende snapshots, detalhes explícitos e registros anteriores.
+CAMPOS_CREDENCIAIS = {
+    "password", "senha", "secret", "segredo", "mfa_secret", "mfa_backup_codes",
+    "backup_codes", "token", "access_token", "refresh_token", "api_key",
+    "client_secret", "authorization",
+}
+
+
+def campo_credencial(nome):
+    nome = str(nome).casefold().replace("-", "_")
+    return nome in CAMPOS_CREDENCIAIS or nome.endswith(
+        ("_secret", "_password", "_token", "_api_key")
+    )
+
+
+def redigir_credenciais(valor):
+    """Cópia recursiva sem material de autenticação, inclusive em listas/JSON."""
+    if isinstance(valor, dict):
+        return {
+            chave: "•••" if campo_credencial(chave) else redigir_credenciais(item)
+            for chave, item in valor.items()
+        }
+    if isinstance(valor, (list, tuple)):
+        return [redigir_credenciais(item) for item in valor]
+    return valor
+
 # Campos sensíveis: a mudança É auditada (quem/quando), mas o VALOR só aparece na
 # trilha para quem tem a área Remuneração — para os demais fica redigido ("•••").
 CAMPOS_SENSIVEIS = {"salario"}
@@ -169,7 +196,7 @@ def _snapshot(instance, campos=None) -> dict:
     """Valores dos campos concretos; com `campos` (update_fields), só esses."""
     dados = {}
     for campo in instance._meta.concrete_fields:
-        if campo.name in CAMPOS_IGNORADOS or campo.primary_key:
+        if campo.name in CAMPOS_IGNORADOS or campo_credencial(campo.name) or campo.primary_key:
             continue
         if campos is not None and campo.name not in campos and campo.attname not in campos:
             continue

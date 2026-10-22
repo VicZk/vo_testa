@@ -621,6 +621,12 @@ class TrilhaAuditoria(models.Model):
     def __str__(self):
         return f"{self.acao} — {self.alvo}#{self.alvo_id} por {self.usuario}"
 
+    def save(self, *args, **kwargs):
+        from apps.nucleo.audit import redigir_credenciais
+
+        self.detalhe = redigir_credenciais(self.detalhe)
+        return super().save(*args, **kwargs)
+
 
 def registrar_auditoria(usuario, acao: str, objeto, detalhe: dict | None = None, ip=None):
     """Registra uma ação na trilha. Se `usuario`/`ip` não vierem, usa o contexto da

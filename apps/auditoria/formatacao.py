@@ -101,7 +101,9 @@ def _rs(v):
 def frase(registro) -> str:
     acao = registro.acao
     alvo = registro.alvo
-    d = registro.detalhe or {}
+    from apps.nucleo.audit import redigir_credenciais
+
+    d = redigir_credenciais(registro.detalhe or {})
     valores = d.get("valores", {}) if isinstance(d, dict) else {}
     nome = ALVOS.get(alvo, alvo)
 
