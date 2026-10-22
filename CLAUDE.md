@@ -159,7 +159,8 @@ e rode o comando — o teste `CssDasTelasPublicasTests` avisa quando o recorte f
   `prefers-reduced-motion` (sem slide/spring — cross-fade). Duração e curva só pelos
   tokens de movimento (`--mov-toque/rapido/padrao/lento`, `--curva`, `--curva-entrada`,
   `--curva-pop`), que viram 1 ms sob reduced-motion; alvo de toque ≥ 44 px em ponteiro
-  grosso.
+  grosso. No toque, o modal é gaveta de baixo (`.modal-acoes` presas ao pé, altura em
+  `dvh`) e o toast fica no topo — modal novo herda isso do bloco de toque do app.css.
 - **Responsivo e menu (pedido do dono: "atenção nos menus colapsados, no que fica dentro
   e fora, fully responsive"):** conferir toda tela em 320, 390, 821 com o menu ABERTO e
   1440 px — nada de rolagem lateral, nada saindo do cartão, nada cortado sem reticências.
@@ -222,7 +223,9 @@ ativação/homologação externa; o que entrou depois está no [CHANGELOG](CHANG
   (`governanca:minha_fila`), com "Reportar problema" pela `manutencao.abrir_os`;
   "Distribuir a fila" entre quem está de turno (`escala.services.usuarios_de_turno`).
   `abrir_faxina` e `iniciar_tarefa` travam a linha e são seguros a toque duplo. Uso
-  principal em tablet e celular: desenhar a partir do toque. Quem só tem a Governança
+  principal em tablet e celular: desenhar a partir do toque. O toque na porta abre a
+  ficha do quarto (`governanca:quarto`, gaveta com HTMX); é para lá que o aviso de
+  check-in barrado pela limpeza aponta. Quem só tem a Governança
   entra direto na Minha fila (`APRESENTACAO["url_pessoal"]`, lido pelo dashboard).
 - **Estoque:** telas em cinco abas sobre o motor do núcleo; entrada, saída e
   transferência com `chave` de envio (idempotência, como a `Venda.chave`), fornecedor

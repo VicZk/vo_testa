@@ -55,6 +55,13 @@
     transition:background .12s, border-color .12s, transform .06s; }
   .botao-fantasma:hover{ background:var(--superficie-2); border-color:var(--fio-forte); }
   .botao-fantasma:active{ transform:scale(.98); }
+  {% comment %}No dedo, "Aplicar"/"Salvar como template" saíam com 41px e o
+  "Biblioteca" com 19 — os dois moram neste <style>, então a regra geral de
+  alvos do app.css não os alcança.{% endcomment %}
+  @media (pointer: coarse), (max-width: 820px){
+    .botao-fantasma, .em-tpl-link{
+      min-height:44px; display:inline-flex; align-items:center; justify-content:center; }
+  }
   .em-enviar{ width:100%; margin-top:.15rem; padding:.85rem 1rem; font-size:15px; }
   .em-enviar[disabled]{ opacity:.45; cursor:not-allowed; filter:grayscale(.3); }
 

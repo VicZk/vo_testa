@@ -1656,8 +1656,11 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
    celular ele cai onde o polegar já está (a gaveta encosta embaixo). */
 .qf-acoes { margin-top: 1.2rem; justify-content: stretch; }
 .qf-acoes form { flex: 1 1 12rem; display: flex; }
-.qf-acoes form .botao-primario, .qf-acoes form .botao-neutro,
-.qf-acoes > .botao-neutro { flex: 1; justify-content: center; }
+.qf-acoes form .botao-primario, .qf-acoes form .botao-neutro { flex: 1; justify-content: center; }
+/* O link solto ("Devolver para limpar") tem a mesma base dos formulários: com base
+   zero, ele ficava com a sobra ao lado de "Aprovar limpeza" e quebrava em três linhas
+   no celular. Assim os dois dividem a linha quando cabem e empilham quando não. */
+.qf-acoes > .botao-neutro { flex: 1 1 12rem; justify-content: center; }
 .qf-acoes .acao-pronta { flex: 1 1 100%; text-align: center; }
 /* O número do quarto na lista abre a ficha dele. */
 .col-quarto-link { font-weight: 700; color: inherit; text-decoration: none; }
@@ -6652,3 +6655,39 @@ body.escala-dragging .escala-drop { cursor: copy; }
     padding-bottom: 7px;
   }
 }
+
+/* ---- Ficha da campanha (Marketing) e o "×" dos carrinhos ----
+   Segunda varredura, agora abrindo a ficha como ela é usada (gaveta sobre o
+   quadro, ou a página de detalhe) e não pela URL do fragmento: os CAMPOS já
+   estavam certos — `.fx-in`, `.fx-sel` e `.fx-nota` herdam os 44px da regra do
+   `.conteudo`. O que ficou pequeno foram os BOTÕES do kit, que têm altura
+   própria: chip de canal 28px, "Adicionar"/"Salvar dados" 38 e 32, "Dispensar"
+   14, o ⧉/✕ do cabeçalho 32×32 e o ✕ da etapa 23×25. */
+@media (pointer: coarse), (max-width: 820px) {
+  .fx-chip, .fx-btn, .fx-btn-n, .fx-btn-n.baixo, .fx-dispensar {
+    min-height: 44px; display: inline-flex; align-items: center; justify-content: center;
+  }
+  .fx-x, .mkt-btn-ghost {
+    min-width: 44px; min-height: 44px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  /* A caixinha da etapa é um quadrado de 20px dentro de um cartão de linha: com
+     44px de lado ela dominaria a linha. O DESENHO fica, e a área de toque cresce
+     por um pseudo-elemento transparente (20 + 12 de cada lado = 44). As linhas
+     ficam a 67px uma da outra, então as áreas não se encostam. */
+  .fx-chk { position: relative; z-index: 1; }
+  .fx-chk::before { content: ""; position: absolute; inset: -13px; }
+
+  /* "×" de tirar item do carrinho — o mesmo botão no PDV da Loja, na comanda do
+     Restaurante e na ordem da Lavanderia. Tirar a linha errada custa caro. */
+  .pdv-x {
+    min-width: 44px; min-height: 44px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+}
+
+/* A barra de campanha do calendário do Marketing (`.cal-barra`) fica de fora de
+   propósito: a altura já é 44px (regra dos alvos de toque acima) e a LARGURA é o
+   dado — ela mede quantos dias a campanha dura sobre a grade do mês. Uma de um
+   dia só sai com 22px, e esticá-la para 44 faria a campanha mentir a duração e
+   desalinhar da coluna do dia. */
