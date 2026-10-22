@@ -20,7 +20,7 @@ from django.views.decorators.http import require_POST
 
 logger = logging.getLogger("csp")
 
-_POLITICA = "; ".join([
+_DIRETIVAS = [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net "
     "https://cdnjs.cloudflare.com https://www.googletagmanager.com https://connect.facebook.net",
@@ -33,10 +33,16 @@ _POLITICA = "; ".join([
     "base-uri 'self'",
     "frame-ancestors 'self'",           # anti-clickjacking (complementa X-Frame-Options)
     "form-action 'self'",
-    # O navegador manda cada violação para cá (também em report-only): é o que diz se
-    # dá para trocar para bloqueio sem quebrar tela.
-    "report-uri /csp/relatorio/",
-])
+    # O navegador manda cada violação para o `report-uri` (também em report-only): é o
+    # que diz se dá para trocar para bloqueio sem quebrar tela. Ver `politica_csp()`.
+]
+
+
+def politica_csp() -> str:
+    """A política, com o relatório DENTRO do prefixo (URL_PREFIX, ex.: /votesta): na
+    raiz do domínio mora outro projeto, e o navegador mandaria as violações para ele."""
+    relatorio = (settings.FORCE_SCRIPT_NAME or "").rstrip("/") + "/csp/relatorio/"
+    return "; ".join([*_DIRETIVAS, f"report-uri {relatorio}"])
 
 # Tokens na URL (portal do hóspede, link de pagamento) não vão para o log.
 _TOKEN = re.compile(r"[0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12}")
@@ -88,7 +94,7 @@ class CSPMiddleware:
         report_only = getattr(settings, "CSP_REPORT_ONLY", True)
         header = ("Content-Security-Policy-Report-Only" if report_only
                   else "Content-Security-Policy")
-        resposta.setdefault(header, _POLITICA)
+        resposta.setdefault(header, politica_csp())
         return resposta
 
 

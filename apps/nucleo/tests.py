@@ -1488,6 +1488,15 @@ class PrefixoDeUrlTests(TestCase):
             req = RequestFactory().get("/crm/", SCRIPT_NAME="/votesta")
             self.assertEqual(mw.process_request(req).status_code, 301)
 
+    def test_relatorio_de_csp_fica_no_prefixo(self):
+        """O navegador manda as violações para o report-uri; na raiz do domínio mora
+        outro projeto (na VPS dava 405 em viczk.cloud/csp/relatorio/)."""
+        from apps.nucleo.security_headers import politica_csp
+
+        with override_settings(FORCE_SCRIPT_NAME="/votesta"):
+            self.assertIn("report-uri /votesta/csp/relatorio/", politica_csp())
+        self.assertIn("report-uri /csp/relatorio/", politica_csp())
+
     def test_sem_prefixo_nada_muda(self):
         from django.conf import settings
 
