@@ -3,12 +3,19 @@
 {% block titulo %}Turnos | Escala{% endblock %}
 
 {% block conteudo %}
-<a href="{% url 'escala:grade' %}" class="voltar">
-  <svg viewBox="0 0 24 24" class="ico"><path d="M15 6l-6 6 6 6"/></svg> Escala
-</a>
 <p class="pagina-eyebrow letreiro">Equipe</p>
 <h1>Turnos</h1>
 <p class="subtitulo">Cadastre os horários de cada setor para organizar a escala.</p>
+{% include "escala/partials/nav.html" %}
+<details class="painel-bloco">
+  <summary>Regras de planejamento · descanso mínimo de {{ config.descanso_horas }} horas</summary>
+  <p class="subtitulo">Confira o intervalo aplicável com a gestão de pessoal. Turnos que atravessam a meia-noite contam até a saída do dia seguinte.</p>
+  {% if eh_gerente %}<form method="post" class="form-cartao">
+    {% csrf_token %}<input type="hidden" name="acao" value="descanso">
+    <div class="campo"><label for="descanso_horas">Descanso entre jornadas (horas)</label><input id="descanso_horas" type="number" min="1" max="48" name="descanso_horas" value="{{ config.descanso_horas }}" required></div>
+    <div class="acoes"><button class="botao-primario">Salvar regra</button></div>
+  </form>{% endif %}
+</details>
 
 <div class="colunas">
   <section>

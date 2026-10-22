@@ -15,14 +15,18 @@ Base: Produção  https://fnrh.turismo.serpro.gov.br/FNRH_API/rest/v2
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import logging
 import uuid
 from urllib import error as urlerror
 from urllib import request as urlrequest
+from urllib.parse import quote, urlencode
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
+
+from apps.nucleo.paises import codigo_pais
 
 logger = logging.getLogger(__name__)
 
@@ -31,21 +35,18 @@ logger = logging.getLogger(__name__)
 # não há de-para: o valor do campo é enviado direto. Ver apps/reservas/models.py.
 
 def _pais_iso(ficha) -> str:
-    """País de residência em ISO 3166-1 alpha-2. Hoje guardamos texto livre; até
-    termos o código no cadastro, assume BR quando não é estrangeiro."""
-    pais = (ficha.pais or "").strip().upper()
-    if pais in ("", "BRASIL", "BRAZIL", "BR"):
-        return "BR"
-    if len(pais) == 2:
-        return pais
-    return "BR"  # TODO: tabela nome→ISO quando o cadastro tiver o código
+    return codigo_pais(getattr(ficha, "pais_codigo", "") or ficha.pais)
+
+
+def _nacionalidade_iso(ficha) -> str:
+    return codigo_pais(getattr(ficha, "nacionalidade_codigo", "") or ficha.nacionalidade)
 
 
 def _tipo_documento(ficha) -> str:
     """CPF (nacional) ou PASSAPORTE (estrangeiro). Usa o tipo da ficha; se vazio,
     infere pelo país."""
     return ficha.documento_tipo or (
-        "PASSAPORTE" if _pais_iso(ficha) != "BR" else "CPF"
+        "PASSAPORTE" if _nacionalidade_iso(ficha) != "BR" else "CPF"
     )
 
 
@@ -67,10 +68,14 @@ def payload_pessoa(ficha) -> dict:
     """POST /pessoas (dados pessoais + documento)."""
     dados = {
         "nome": ficha.nome,
-        "PaisNacionalidade_id": _pais_iso(ficha),
+        "PaisNacionalidade_id": _nacionalidade_iso(ficha),
         "data_nascimento": ficha.nascimento.isoformat() if ficha.nascimento else None,
-        "numero_documento": ficha.documento_numero or ficha.cpf,
-        "tipo_documento_id": _tipo_documento(ficha),
+        "documento_id": {"numero_documento": ficha.documento_numero or ficha.cpf,
+                         "tipo_documento_id": _tipo_documento(ficha)},
+        "contato": {"PaisResidencia_id": _pais_iso(ficha),
+                    **{campo: getattr(ficha, campo, "") for campo in ("email", "telefone", "cep")},
+                    "logradouro": getattr(ficha, "endereco", ""),
+                    "estado_id": getattr(ficha, "uf", "")},
     }
     if ficha.sexo:
         dados["genero_id"] = ficha.sexo  # já é o id oficial (HOMEM/MULHER/…)
@@ -95,6 +100,7 @@ def payload_hospede(ficha, *, pessoa_id, situacao="PRECHECKIN_REALIZADO") -> dic
 class GatewaySimulado:
     """Sandbox: devolve UUIDs fake e não toca a rede."""
     nome = "simulado"
+    ambiente = "simulado"
 
     def criar_reserva(self, reserva) -> str:
         return str(uuid.uuid4())
@@ -105,13 +111,19 @@ class GatewaySimulado:
     def adicionar_hospede(self, reserva_fnrh_id, ficha, pessoa_id) -> str:
         return str(uuid.uuid4())
 
-    def checkin(self, reserva_fnrh_id) -> None:
+    def checkin(self, reserva_fnrh_id, data_hora=None) -> None:
         return None
 
-    def checkout(self, reserva_fnrh_id) -> None:
+    def checkout(self, reserva_fnrh_id, data_hora=None) -> None:
         return None
 
     def cancelar(self, reserva_fnrh_id) -> None:
+        return None
+
+    def noshow(self, reserva_fnrh_id) -> None:
+        return None
+
+    def atualizar_reserva(self, reserva) -> None:
         return None
 
 
@@ -121,6 +133,7 @@ class GatewaySerpro:
 
     def __init__(self):
         self.base = getattr(settings, "FNRH_API_URL", "").rstrip("/")
+        self.ambiente = "serpro:" + hashlib.sha256(self.base.encode()).hexdigest()
         user = getattr(settings, "FNRH_API_USER", "")
         senha = getattr(settings, "FNRH_API_SENHA", "")
         if not (self.base and user and senha):
@@ -130,52 +143,112 @@ class GatewaySerpro:
             )
         cred = base64.b64encode(f"{user}:{senha}".encode()).decode()
         self._auth = f"Basic {cred}"
+        self.cpf_solicitante = getattr(settings, "FNRH_CPF_SOLICITANTE", "")
+        if not self.cpf_solicitante:
+            raise ValidationError("Configure o CPF do solicitante autorizado da FNRH.")
 
-    def _req(self, metodo, caminho, corpo=None):
+    def _req(self, metodo, caminho, corpo=None, *, permitir_ausente=False, texto=False):
         url = f"{self.base}{caminho}"
-        data = json.dumps(corpo).encode() if corpo is not None else None
+        data = (str(corpo).encode() if texto else json.dumps(corpo).encode()) if corpo is not None else None
         req = urlrequest.Request(url, data=data, method=metodo)
         req.add_header("Authorization", self._auth)
-        req.add_header("Content-Type", "application/json")
+        req.add_header("Content-Type", "text/plain; charset=utf-8" if texto else "application/json")
         req.add_header("Accept", "application/json")
+        if caminho.startswith("/pessoas"):
+            req.add_header("cpf_solicitante", self.cpf_solicitante)
         try:
             with urlrequest.urlopen(req, timeout=20) as resp:
                 bruto = resp.read().decode("utf-8") or "{}"
-                return json.loads(bruto) if bruto.strip() else {}
+                dados = json.loads(bruto) if bruto.strip() else {}
+                if not isinstance(dados, dict):
+                    raise ValueError("Envelope inválido")
+                return dados
         except urlerror.HTTPError as e:
-            detalhe = e.read().decode("utf-8", "ignore")
-            raise ValidationError(f"FNRH {metodo} {caminho} → HTTP {e.code}: {detalhe}")
-        except urlerror.URLError as e:
-            raise ValidationError(f"FNRH indisponível ({caminho}): {e.reason}")
+            if permitir_ausente and e.code == 404:
+                return None
+            # O corpo pode conter documentos e dados pessoais: não vai ao log/tela.
+            raise ValidationError(f"FNRH: solicitação recusada (HTTP {e.code}). Confira o cadastro na plataforma oficial.")
+        except (urlerror.URLError, TimeoutError, OSError):
+            raise ValidationError("FNRH indisponível. A operação permanece pendente para conferência e reenvio.")
+        except (ValueError, UnicodeDecodeError):
+            raise ValidationError("Resposta inválida da FNRH. A sincronização não foi confirmada.")
+
+    @staticmethod
+    def _uuid(valor):
+        try:
+            return str(uuid.UUID(str(valor)))
+        except (ValueError, TypeError, AttributeError):
+            raise ValidationError("A FNRH não confirmou um identificador válido. Confira antes de reenviar.")
 
     def criar_reserva(self, reserva) -> str:
+        codigo = f"VT-{reserva.pk}"
+        # Reconcilia a confirmação perdida antes de repetir um POST.
+        lista = self._req("GET", "/reservas?" + urlencode({"page_number": 0, "codigo_reserva": codigo}))
+        for existente in lista.get("dados", []):
+            existente = existente.get("reserva", existente)
+            if existente.get("numero_reserva") == codigo:
+                return self._uuid(existente.get("reserva_id"))
         r = self._req("POST", "/reservas", payload_reserva(reserva))
-        return r.get("reserva", {}).get("reserva_id") or r.get("reserva_id")
+        return self._uuid(r.get("reserva", {}).get("reserva_id") or r.get("reserva_id"))
 
     def criar_pessoa(self, ficha) -> str:
-        r = self._req("POST", "/pessoas", payload_pessoa(ficha))
-        return r.get("pessoa", {}).get("pessoa_id") or r.get("id") or r.get("pessoa_id")
+        numero = quote(ficha.documento_numero or ficha.cpf, safe="")
+        tipo = quote(_tipo_documento(ficha), safe="")
+        existente = self._req("GET", f"/pessoas/documento/{tipo}/{numero}", permitir_ausente=True)
+        if existente:
+            pessoa = existente.get("pessoa", existente)
+            pessoa_id = pessoa.get("pessoa_id") or pessoa.get("id")
+            if pessoa_id:
+                return self._uuid(pessoa_id)
+        r = self._req("POST", "/pessoas", {"pessoa": payload_pessoa(ficha)})
+        return self._uuid(r.get("pessoa", {}).get("pessoa_id") or r.get("id") or r.get("pessoa_id"))
 
     def adicionar_hospede(self, reserva_fnrh_id, ficha, pessoa_id) -> str | None:
-        self._req(
-            "POST", f"/reservas/{reserva_fnrh_id}/hospedes",
-            payload_hospede(ficha, pessoa_id=pessoa_id),
-        )
-        # A API não devolve o hospede_id no POST — busca na listagem.
         lista = self._req("GET", f"/reservas/{reserva_fnrh_id}/hospedes")
         for item in lista.get("dados", []):
             if item.get("pessoa", {}).get("pessoa_id") == str(pessoa_id):
-                return item.get("hospede", {}).get("hospede_id")
-        return None
+                return self._uuid(item.get("hospede", {}).get("hospede_id"))
+        resposta = self._req(
+            "POST", f"/reservas/{reserva_fnrh_id}/hospedes",
+            payload_hospede(ficha, pessoa_id=pessoa_id),
+        )
+        if resposta.get("hospede_id"):
+            return self._uuid(resposta["hospede_id"])
+        # Compatibilidade com respostas antigas que exigem nova consulta.
+        lista = self._req("GET", f"/reservas/{reserva_fnrh_id}/hospedes")
+        for item in lista.get("dados", []):
+            if item.get("pessoa", {}).get("pessoa_id") == str(pessoa_id):
+                return self._uuid(item.get("hospede", {}).get("hospede_id"))
+        raise ValidationError("A FNRH não confirmou o vínculo do hóspede.")
 
-    def checkin(self, reserva_fnrh_id) -> None:
-        self._req("POST", f"/reservas/{reserva_fnrh_id}/checkin")
+    def atualizar_reserva(self, reserva):
+        dados = payload_reserva(reserva)
+        dados.pop("origem_reserva_id")
+        self._req("PUT", f"/reservas/{reserva.fnrh_reserva_id}", dados)
 
-    def checkout(self, reserva_fnrh_id) -> None:
-        self._req("POST", f"/reservas/{reserva_fnrh_id}/checkout")
+    def _transicao(self, reserva_id, acao, estado, data_hora=None):
+        atual = self._req("GET", f"/reservas/{reserva_id}").get("reserva", {})
+        if atual.get("situacao_reserva_id") == estado:
+            return
+        if data_hora:
+            self._req("POST", f"/reservas/{reserva_id}/{acao}", data_hora.isoformat(), texto=True)
+        else:
+            self._req("POST", f"/reservas/{reserva_id}/{acao}")
+        confirmado = self._req("GET", f"/reservas/{reserva_id}").get("reserva", {})
+        if confirmado.get("situacao_reserva_id") != estado:
+            raise ValidationError("A FNRH recebeu a solicitação, mas ainda não confirmou o estado esperado.")
+
+    def checkin(self, reserva_fnrh_id, data_hora=None) -> None:
+        self._transicao(reserva_fnrh_id, "checkin", "EM_ANDAMENTO", data_hora)
+
+    def checkout(self, reserva_fnrh_id, data_hora=None) -> None:
+        self._transicao(reserva_fnrh_id, "checkout", "CONCLUIDA", data_hora)
 
     def cancelar(self, reserva_fnrh_id) -> None:
-        self._req("POST", f"/reservas/{reserva_fnrh_id}/cancelar")
+        self._transicao(reserva_fnrh_id, "cancelar", "CANCELADA")
+
+    def noshow(self, reserva_fnrh_id):
+        self._transicao(reserva_fnrh_id, "noshow", "NOSHOW")
 
 
 _GATEWAYS = {

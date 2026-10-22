@@ -1,7 +1,8 @@
-{# Abas do módulo (pílula segmentada — vocabulário de navegação do CRM). `aba` = ativa. #}
-<div class="mkt-tabs">
-  <a href="{% url 'marketing:quadro' %}" class="mkt-tab {% if aba == 'quadro' %}on{% endif %}">Quadro</a>
-  <a href="{% url 'marketing:calendario' %}" class="mkt-tab {% if aba == 'calendario' %}on{% endif %}">Calendário</a>
-  <a href="{% url 'marketing:ocupacao' %}" class="mkt-tab {% if aba == 'ocupacao' %}on{% endif %}">Ocupação</a>
-  <a href="{% url 'marketing:relatorio' %}" class="mkt-tab {% if aba == 'relatorio' %}on{% endif %}">Relatório</a>
-</div>
+{% with atual=request.resolver_match.url_name %}
+<nav class="est-abas abas-secao" aria-label="Seções do Marketing">
+  <a href="{% url 'marketing:quadro' %}" class="est-aba"{% if atual == 'quadro' %} aria-current="page"{% endif %}>Quadro</a>
+  <a href="{% url 'marketing:calendario' %}" class="est-aba"{% if atual == 'calendario' %} aria-current="page"{% endif %}>Calendário</a>
+  <a href="{% url 'marketing:ocupacao' %}" class="est-aba"{% if atual == 'ocupacao' %} aria-current="page"{% endif %}>Ocupação</a>
+  <a href="{% url 'marketing:relatorio' %}" class="est-aba"{% if atual == 'relatorio' %} aria-current="page"{% endif %}>Relatório</a>
+</nav>
+{% endwith %}

@@ -163,10 +163,10 @@ class ConfiguracaoSiteAdmin(admin.ModelAdmin):
             'fields': ['texto_boas_vindas', 'frase_hero'],
         }),
         ('Números de Impacto', {
-            'fields': ['numero_viajantes', 'numero_quartos', 'numero_zonas', 'numero_avaliacoes'],
+            'fields': ['numero_viajantes', 'numero_quartos', 'numero_zonas', 'numero_avaliacoes', 'fonte_numeros', 'numeros_verificados'],
         }),
         ('Contato', {
-            'fields': ['telefone', 'whatsapp', 'email', 'endereco'],
+            'fields': ['telefone', 'whatsapp', 'email', 'endereco', 'contato_verificado'],
         }),
         ('Redes Sociais', {
             'fields': ['instagram_url', 'facebook_url', 'tiktok_url'],

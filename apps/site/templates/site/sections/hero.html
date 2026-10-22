@@ -50,25 +50,14 @@
       </div>
     </div>
 
-    <!-- Números de impacto (fluxo normal, no rodapé do hero — não sobrepõe) -->
+    {% if config.numeros_publicos %}
     <div class="relative z-10 bg-madeira/80 backdrop-blur-sm border-t border-lampiao/20">
-        <div class="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-6 grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 text-center">
-            <div>
-                <span class="font-display text-xl sm:text-3xl font-black text-lampiao">{{ config.numero_viajantes }}</span>
-                <p class="text-pergaminho/60 text-[10px] sm:text-xs mt-1">Hóspedes que já<br>passaram por aqui</p>
-            </div>
-            <div>
-                <span class="font-display text-xl sm:text-3xl font-black text-lampiao">{{ config.numero_quartos }}</span>
-                <p class="text-pergaminho/60 text-[10px] sm:text-xs mt-1">Quartos<br>temáticos</p>
-            </div>
-            <div>
-                <span class="font-display text-xl sm:text-3xl font-black text-lampiao">{{ config.numero_zonas }}</span>
-                <p class="text-pergaminho/60 text-[10px] sm:text-xs mt-1">Espaços para explorar<br>durante sua estadia</p>
-            </div>
-            <div>
-                <span class="font-display text-xl sm:text-3xl font-black text-lampiao">{{ config.numero_avaliacoes }}</span>
-                <p class="text-pergaminho/60 text-[10px] sm:text-xs mt-1">Avaliações positivas no<br>Booking e Reclame Aqui</p>
-            </div>
-        </div>
+      <div class="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-6 flex flex-wrap justify-center gap-6 text-center">
+        {% for valor, rotulo in config.numeros_publicos %}<div>
+          <span class="font-display text-xl sm:text-3xl font-black text-lampiao">{{ valor }}</span>
+          <p class="text-pergaminho/60 text-xs mt-1">{{ rotulo }}</p>
+        </div>{% endfor %}
+      </div>
     </div>
+    {% endif %}
 </section>

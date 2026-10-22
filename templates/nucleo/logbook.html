@@ -20,10 +20,10 @@
   </div>
 </form>
 
-<nav class="lb-tabs">
-  <a href="?filtro=abertas" class="lb-tab {% if filtro == 'abertas' %}on{% endif %}">Abertas <span class="n">{{ contagens.abertas }}</span></a>
-  <a href="?filtro=todas" class="lb-tab {% if filtro == 'todas' %}on{% endif %}">Todas <span class="n">{{ contagens.todas }}</span></a>
-  <a href="?filtro=importantes" class="lb-tab {% if filtro == 'importantes' %}on{% endif %}">Importantes <span class="n">{{ contagens.importantes }}</span></a>
+<nav class="est-abas abas-secao" aria-label="Ocorrências do turno">
+  <a href="?filtro=abertas" class="est-aba" {% if filtro == 'abertas' %}aria-current="page"{% endif %}>Abertas <span class="n">{{ contagens.abertas }}</span></a>
+  <a href="?filtro=todas" class="est-aba" {% if filtro == 'todas' %}aria-current="page"{% endif %}>Todas <span class="n">{{ contagens.todas }}</span></a>
+  <a href="?filtro=importantes" class="est-aba" {% if filtro == 'importantes' %}aria-current="page"{% endif %}>Importantes <span class="n">{{ contagens.importantes }}</span></a>
 </nav>
 
 <h2 class="lb-seclabel">

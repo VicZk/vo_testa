@@ -1,0 +1,10 @@
+{% with atual=request.resolver_match.url_name %}
+<nav class="est-abas abas-secao" aria-label="Seções da Escala">
+  <a href="{% url 'escala:grade' %}" class="est-aba"{% if atual == 'grade' %} aria-current="page"{% endif %}>Grade</a>
+  <a href="{% url 'escala:minha' %}" class="est-aba"{% if atual == 'minha' %} aria-current="page"{% endif %}>Minha escala</a>
+  <a href="{% url 'escala:turnos' %}" class="est-aba"{% if atual == 'turnos' %} aria-current="page"{% endif %}>Turnos</a>
+  <a href="{% url 'escala:ausencias' %}" class="est-aba"{% if atual == 'ausencias' %} aria-current="page"{% endif %}>Ausências</a>
+  <a href="{% url 'escala:trocas' %}" class="est-aba"{% if atual == 'trocas' %} aria-current="page"{% endif %}>Trocas</a>
+  <a href="{% url 'escala:relatorio' %}" class="est-aba"{% if atual == 'relatorio' %} aria-current="page"{% endif %}>Relatório</a>
+</nav>
+{% endwith %}

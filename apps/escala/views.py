@@ -2,7 +2,7 @@ import json
 from datetime import datetime, timedelta
 
 from django.contrib import messages
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -112,8 +112,8 @@ def escala_editar(request):
                 func, turno, data, ignora_pk=atrib.pk if atrib else None
             ):
                 return JsonResponse(
-                    {"confirmar": f"{func.pessoa.nome} ficaria com menos de 11h de descanso "
-                                  "(interjornada). Escalar mesmo assim?"}, status=409,
+                    {"confirmar": f"{func.pessoa.nome} teria horários sobrepostos ou menos de "
+                                  f"{services.descanso_minimo()}h de descanso. Incluir para revisão?"}, status=409,
                 )
             if acao == "add":
                 services.atribuir(turno, func, data, request.user)
@@ -266,11 +266,30 @@ def minha_escala(request):
 
 @requer_modulo(Modulo.ESCALA)
 def turnos(request):
+    from .models import ConfiguracaoEscala
+    config = ConfiguracaoEscala.atual()
     if request.method == "POST":
+        if not eh_gerente(request.user):
+            raise PermissionDenied
+        if request.POST.get("acao") == "descanso":
+            from apps.nucleo.models import registrar_auditoria
+            from apps.nucleo.validadores import decimal_valido
+            try:
+                horas = int(decimal_valido(request.POST.get("descanso_horas"), nome="Descanso", minimo=1, maximo=48, casas=0))
+                anterior = config.descanso_horas
+                config.descanso_horas = horas
+                config.full_clean()
+                config.save(update_fields=["descanso_horas"])
+                registrar_auditoria(request.user, "configurar_descanso_escala", config,
+                                    {"anterior": anterior, "horas": horas})
+                messages.success(request, "Parâmetro de descanso atualizado.")
+            except ValidationError as erro:
+                messages.error(request, " ".join(erro.messages))
+            return redirect("escala:turnos")
         nome = request.POST.get("nome", "").strip()
-        inicio = request.POST.get("inicio")
-        fim = request.POST.get("fim")
-        if nome and inicio and fim:
+        inicio = _hora(request.POST.get("inicio"))
+        fim = _hora(request.POST.get("fim"))
+        if nome and len(nome) <= 40 and inicio and fim and inicio != fim and request.POST.get("setor", "geral") in Turno.Setor.values:
             Turno.objects.create(
                 nome=nome, setor=request.POST.get("setor") or "geral",
                 inicio=inicio, fim=fim,
@@ -282,6 +301,7 @@ def turnos(request):
     return render(request, "escala/turnos.html", {
         "turnos": Turno.objects.all(),
         "setores": Turno.Setor.choices,
+        "config": config, "eh_gerente": eh_gerente(request.user),
     })
 
 

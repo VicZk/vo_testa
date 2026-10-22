@@ -1,10 +1,6 @@
 # Integração com a API FNRH Digital (Embratur/Serpro)
 
-**Estado do código em 21/10/2026:** gateways `simulado` e `serpro` escritos,
-com integração do check-in e reenvio de pendências. Credenciais, dados exigidos,
-contrato vigente da API e homologação precisam ser conferidos no ambiente.
-A documentação externa abaixo é a referência de origem do adapter, não uma nova
-verificação de disponibilidade do serviço. Veja [Estado atual](ESTADO_ATUAL.md).
+**Revisado em 22/10/2026:** adapter implementado contra o [contrato oficial REST v2](https://fnrh.turismo.serpro.gov.br/FNRH_API/rest/v2/swagger.json), com criação, entrada, saída, cancelamento, no-show e reenvio de pendências. Os testes de contrato usam transporte substituído; a homologação com credenciais do estabelecimento continua necessária.
 
 Fonte: [Documentação da API FNRH v2 (gov.br, 09/03/2026)](https://www.gov.br/turismo/pt-br/acesso-a-informacao/acoes-e-programas/programas-projetos-acoes-obras-e-atividades/ficha-nacional-de-registro-de-hospedes/modulo-meio-de-hospedagem/meios-de-hospedagem-com-pms/documentacao-api-v2-20260309.pdf)
 
@@ -27,7 +23,9 @@ Fonte: [Documentação da API FNRH v2 (gov.br, 09/03/2026)](https://www.gov.br/t
 
 - `apps/reservas/fnrh_gateway.py` — `simulado` + `serpro` (HTTP real via urllib) + de-para.
 - `services.enviar_fnrh(reserva)` — orquestra, idempotente, best-effort.
-- Gatilho: check-in marca `pendente`; a view empurra na hora; cron reprocessa.
+- Gatilhos: entrada, saída, cancelamento, no-show e alterações da reserva marcam pendência; o cron reprocessa.
+- Os identificadores de reserva, pessoa e vínculo são persistidos a cada etapa. Uma trava temporária impede envio simultâneo. Confirmações perdidas são conciliadas por consulta antes de repetir criação.
+- Entrada e saída enviam os horários reais registrados, como `text/plain`, e confirmam o estado remoto por consulta. Alterações da reserva usam `PUT /reservas/{id}`. O contrato não oferece atualização de pessoa: correções pessoais já enviadas precisam de conciliação na plataforma oficial.
 - Campos de sincronização em `Reserva` e `FichaFNRH`.
 - Cron: `manage.py enviar_fnrh_pendentes` (rodar a cada poucos minutos).
 - UI: status + botão "Reenviar" no detalhe da reserva.
@@ -42,14 +40,20 @@ Fonte: [Documentação da API FNRH v2 (gov.br, 09/03/2026)](https://www.gov.br/t
    FNRH_API_URL=https://hom-lowcode.serpro.gov.br/FNRH_API/rest/v2
    FNRH_API_USER=...
    FNRH_API_SENHA=...
+   FNRH_CPF_SOLICITANTE=...
    ```
-3. **Fechar as lacunas de dados** (hoje mapeadas com fallback):
-   - **País** em ISO 3166-1 alpha-2 no cadastro (guardamos texto livre → assume `BR`).
-   - **Cidade** em código IBGE (guardamos texto).
-   - Campos opcionais que não coletamos: raça/etnia, deficiência, nome social.
+3. **Conferir os cadastros:** nacionalidade e país de residência usam códigos ISO separados; país desconhecido gera pendência, sem assumir Brasil. Cidade brasileira exige código IBGE. O CPF do solicitante deve estar autorizado para o estabelecimento.
 4. **Virar a chave** para produção (`FNRH_API_URL` de produção) após validar em HML.
 
 ## Checklist de campos por hóspede (mínimo aceito)
 
 nome · data_nascimento · tipo+número de documento (CPF nacional / PASSAPORTE estrangeiro)
 · país (ISO) · motivo da viagem · meio de transporte · is_principal (titular).
+
+## Ambientes e conciliação
+
+O CRM distingue simulação, homologação e produção. Ao sair de uma origem reconhecidamente simulada, descarta os identificadores sintéticos. Identificadores antigos sem origem ou de outra base bloqueiam o envio até conciliação.
+
+`manage.py conciliar_fnrh_legado --reserva ID --origem simulado` mostra a proposta sem alteração. Para origem `serpro`, consulta e confere o código remoto `VT-ID`. Somente `--aplicar` registra a origem. Não classifique identificadores reais como simulados.
+
+Antes de ativar, ensaie brasileiro residente no exterior, estrangeiro residente no Brasil, titular e acompanhantes; repetição do envio, horários de entrada/saída, cancelamento, no-show e retomada após interrupção. Confira os resultados na plataforma oficial. Os testes automatizados não enviam dados ao governo.

@@ -6,12 +6,32 @@
 <div class="pt-card">
   <p class="letreiro">Sua opinião</p>
   <h2>Como foi sua estadia?</h2>
-  <p class="subtitulo">
-    A avaliação pelo portal ainda não está disponível. Conte à recepção como foi sua experiência.
-    Sua opinião ajuda a gente a melhorar o aconchego do Vô Testa.
-  </p>
-  <div class="pt-acoes pt-acoes-rodape">
-    <a href="{% url 'portal:home' token %}" class="botao-neutro">Voltar</a>
-  </div>
+  {% if aguardando_checkout %}
+    <p>Sua avaliação ficará disponível aqui após o check-out. Durante a estadia, fale com a recepção sempre que precisar.</p>
+    <a href="{% url 'portal:home' token %}" class="botao-neutro">Voltar à estadia</a>
+  {% elif resposta %}
+    <p role="status">Obrigado! Sua avaliação foi registrada.</p>
+    <p class="pt-saldo">{{ resposta.nota }}<small>/10</small></p>
+    {% if resposta.comentario %}<p>{{ resposta.comentario|linebreaksbr }}</p>{% endif %}
+    <p class="ajuda">Recebida em {{ resposta.criado_em|date:'d/m/Y H:i' }}. Nossa equipe acompanha as avaliações para melhorar sua próxima visita.</p>
+    {{ form.non_field_errors }}
+  {% else %}
+    <p>De 0 a 10, quanto você recomendaria a Pousada Vô Testa a um amigo ou familiar?</p>
+    <form method="post" class="pt-pesquisa">{% csrf_token %}
+      {{ form.non_field_errors }}
+      <fieldset><legend>Escolha sua nota</legend>
+        <div class="pt-nps-escala">{% for opcao in form.nota %}
+          <label class="pt-nps-escolha">{{ opcao.tag }}<span>{{ opcao.choice_label }}</span></label>
+        {% endfor %}</div>
+        {{ form.nota.errors }}
+        <p class="ajuda">0 · Não recomendaria &nbsp; 10 · Com certeza recomendaria</p>
+      </fieldset>
+      <label for="{{ form.comentario.id_for_label }}">{{ form.comentario.label }}</label>
+      {{ form.comentario }}{{ form.comentario.errors }}
+      <label class="pt-consentimento">{{ form.consentimento }}<span>{{ form.consentimento.label }}</span></label>
+      {{ form.consentimento.errors }}
+      <button class="botao-primario" type="submit">Enviar minha avaliação</button>
+    </form>
+  {% endif %}
 </div>
 {% endblock %}

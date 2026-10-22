@@ -12,6 +12,7 @@ from apps.nucleo.modulos import Modulo
 from apps.nucleo.paginacao import paginar
 from apps.nucleo.permissoes import eh_gerente, requer_gerencia, requer_modulo
 from apps.nucleo.seletores import pessoas_agrupadas
+from apps.nucleo.validadores import decimal_valido, identificador_valido
 
 from . import services
 from .models import (
@@ -58,8 +59,8 @@ def abrir(request):
         return redirect("lavanderia:painel")
     if request.POST.get("conta") and not request.user.pode_acessar(Modulo.RESERVAS):
         raise PermissionDenied
-    cliente = Pessoa.objects.filter(pk=request.POST.get("cliente") or None).first()
     try:
+        cliente = Pessoa.objects.filter(pk=identificador_valido(request.POST.get("cliente"), opcional=True)).first()
         ordem = services.abrir_ordem(
             request.user, cliente=cliente,
             rotulo=request.POST.get("rotulo", ""),
@@ -153,9 +154,11 @@ def cupom(request, pk):
 def add_item(request, pk):
     o = get_object_or_404(OrdemLavanderia, pk=pk)
     if request.method == "POST":
-        servico = ServicoLavanderia.objects.filter(pk=request.POST.get("servico_id") or None).first()
         try:
-            services.adicionar_item(o, servico, request.POST.get("quantidade") or 1, request.user)
+            servico = ServicoLavanderia.objects.filter(pk=identificador_valido(request.POST.get("servico_id")), ativo=True).first()
+            if not servico:
+                raise ValidationError("Serviço inválido.")
+            services.adicionar_item(o, servico, request.POST.get("quantidade", 1), request.user)
         except (ValidationError, AttributeError) as erro:
             msg = " ".join(erro.messages) if isinstance(erro, ValidationError) else "Serviço inválido."
             return render(request, "lavanderia/partials/itens.html", {"ordem": o, "erro": msg})
@@ -191,12 +194,14 @@ def entregar(request, pk):
     o = get_object_or_404(OrdemLavanderia, pk=pk)
     if request.method != "POST":
         return redirect("lavanderia:ordem", pk=pk)
-    forma = FormaPagamento.objects.filter(pk=request.POST.get("forma") or None).first()
     try:
+        if request.POST.get("destino") == OrdemLavanderia.Destino.CONTA and not request.user.pode_acessar(Modulo.RESERVAS):
+            raise PermissionDenied
+        forma = FormaPagamento.objects.filter(pk=identificador_valido(request.POST.get("forma"), opcional=True), ativo=True).first()
         services.entregar(
             o, request.user, request.POST.get("destino"),
             forma=forma, conta_id=request.POST.get("conta_id") or None,
-            desconto=Decimal(request.POST.get("desconto") or 0),
+            desconto=decimal_valido(request.POST.get("desconto") or 0, nome="Desconto"),
         )
         messages.success(request, f"Lavanderia #{o.pk} entregue.")
         return redirect("lavanderia:painel")

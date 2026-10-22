@@ -2,10 +2,10 @@
 Regras da Escala. Interface pública para as views (e futura integração:
 Governança/Manutenção poderão atribuir tarefas a quem está de turno).
 """
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from .models import Atribuicao, Ausencia, TrocaTurno
@@ -66,7 +66,10 @@ def resumo_funcionario(funcionario, inicio, fim):
     }
 
 
+@transaction.atomic
 def atribuir(turno, funcionario, data, operador):
+    from apps.nucleo.sistema import travar
+    travar(funcionario)
     if data is None:
         raise ValidationError("Informe uma data válida para a escala.")
     if ausencia_no_dia(funcionario, data):
@@ -85,9 +88,15 @@ def desatribuir(atribuicao):
     atribuicao.delete()
 
 
+@transaction.atomic
 def mover(atribuicao, novo_turno, nova_data, operador=None):
     """Move uma atribuição para outro turno/dia (arrasto na grade). Bloqueia
     ausência e duplicata (o mesmo funcionário no mesmo turno×dia)."""
+    from apps.nucleo.sistema import travar
+    travar(atribuicao.funcionario)
+    travar(atribuicao)
+    if nova_data is None:
+        raise ValidationError("Informe uma data válida para a escala.")
     if ausencia_no_dia(atribuicao.funcionario, nova_data):
         raise ValidationError(
             f"{atribuicao.funcionario.pessoa.nome} está ausente em {nova_data:%d/%m}."
@@ -313,6 +322,20 @@ INTERJORNADA_MIN_H = 11   # CLT: 11h entre o fim de um turno e o início do pró
 MAX_DIAS_SEMANA = 6       # DSR: ao menos 1 folga a cada 6 dias
 
 
+def descanso_minimo():
+    from .models import ConfiguracaoEscala
+    return ConfiguracaoEscala.atual().descanso_horas
+
+
+def intervalo(data, inicio, fim):
+    """Representa a saída noturna na data em que ela realmente acontece."""
+    entrada = datetime.combine(data, inicio)
+    saida = datetime.combine(data, fim)
+    if saida <= entrada:
+        saida += timedelta(days=1)
+    return entrada, saida
+
+
 def funcionarios_do_setor(setor_code):
     from django.db.models import Q
 
@@ -349,14 +372,11 @@ def _viola_interjornada(ultimo, dia, turno):
     tarde termina 22h e manhã começa 7h no dia seguinte = 9h)."""
     if not ultimo:
         return False
-    from datetime import datetime
-    ult_data, ult_fim = ultimo
-    if (dia - ult_data).days != 1:
-        return False
-    gap = (datetime.combine(dia, turno.inicio) - datetime.combine(ult_data, ult_fim))
-    return gap.total_seconds() / 3600 < INTERJORNADA_MIN_H
+    gap = datetime.combine(dia, turno.inicio) - ultimo
+    return gap.total_seconds() / 3600 < descanso_minimo()
 
 
+@transaction.atomic
 def gerar_semana(inicio, operador, setor=None, limpar=True):
     """Monta a semana automaticamente respeitando: cobertura mínima por turno,
     domingo por sexo, interjornada 11h, DSR (máx 6 dias) e ausências/férias.
@@ -372,6 +392,8 @@ def gerar_semana(inicio, operador, setor=None, limpar=True):
     turnos = list(turnos.order_by("inicio"))
     setores = sorted({t.setor for t in turnos})
 
+    from apps.nucleo.models import Funcionario
+    list(Funcionario.objects.select_for_update().order_by("pk"))
     if limpar:
         Atribuicao.objects.filter(
             data__range=(dias[0], dias[-1]), turno__setor__in=setores
@@ -393,6 +415,7 @@ def gerar_semana(inicio, operador, setor=None, limpar=True):
                     and dias_trab[f.pk] < MAX_DIAS_SEMANA
                     and not ausencia_no_dia(f, dia)
                     and not _viola_interjornada(ultimo[f.pk], dia, t)
+                    and not conflito_interjornada(f, t, dia)
                 ]
                 # Cobertura vem primeiro: quem "deveria folgar" no domingo (regra
                 # por sexo) vai para o fim da fila e só entra se faltar gente.
@@ -405,7 +428,7 @@ def gerar_semana(inicio, operador, setor=None, limpar=True):
                         turno=t, funcionario=f, data=dia, criado_por=operador
                     )
                     dias_trab[f.pk] += 1
-                    ultimo[f.pk] = (dia, t.fim)
+                    ultimo[f.pk] = intervalo(dia, t.inicio, t.fim)[1]
                     ocupado_no_dia.add((f.pk, dia))
                     criadas += 1
     return criadas
@@ -414,18 +437,20 @@ def gerar_semana(inicio, operador, setor=None, limpar=True):
 def conflito_interjornada(funcionario, turno, data, ignora_pk=None):
     """A escala de `funcionario` no `turno`/`data` deixa <11h de descanso em
     relação ao dia anterior ou seguinte? (usado no drop, para pedir confirmação)."""
-    from datetime import datetime
+    if data is None:
+        raise ValidationError("Informe uma data válida para a escala.")
+    entrada, saida = intervalo(data, turno.inicio, turno.fim)
     viz = Atribuicao.objects.filter(
-        funcionario=funcionario, data__in=[data - timedelta(days=1), data + timedelta(days=1)]
+        funcionario=funcionario, data__range=(data - timedelta(days=2), data + timedelta(days=2))
     ).select_related("turno")
     if ignora_pk:
         viz = viz.exclude(pk=ignora_pk)
     for a in viz:
-        if a.data < data:
-            gap = datetime.combine(data, turno.inicio) - datetime.combine(a.data, a.turno.fim)
-        else:
-            gap = datetime.combine(a.data, a.turno.inicio) - datetime.combine(data, turno.fim)
-        if gap.total_seconds() / 3600 < INTERJORNADA_MIN_H:
+        inicio_a, fim_a = intervalo(a.data, a.turno.inicio, a.turno.fim)
+        if entrada < fim_a and inicio_a < saida:
+            return True
+        gap = entrada - fim_a if fim_a <= entrada else inicio_a - saida
+        if a.data != data and gap.total_seconds() / 3600 < descanso_minimo():
             return True
     return False
 
@@ -435,9 +460,8 @@ def analisar_semana(inicio, setor=None):
       alertas    — lista para o painel ({nivel, texto})
       violacoes  — {atribuicao_id: [{nivel, texto}]} para o selo em cada chip
       bloqueios  — violações de nível legal (barram a publicação)."""
-    from datetime import datetime
-
     from .models import Feriado, Turno
+    descanso = descanso_minimo()
 
     dias = [inicio + timedelta(days=n) for n in range(7)]
     domingo = dias[6]
@@ -447,14 +471,18 @@ def analisar_semana(inicio, setor=None):
     turnos = list(turnos)
     setores = sorted({t.setor for t in turnos})
 
-    # Semana + 1 dia de borda (interjornada na virada domingo↔segunda).
+    # Descanso acompanha a pessoa, inclusive quando trabalha em outro setor.
+    funcionarios_alvo = Atribuicao.objects.filter(
+        turno__in=turnos, data__range=(dias[0], dias[-1])).values_list("funcionario_id", flat=True)
+    # Dois dias de borda cobrem jornadas que terminam depois da meia-noite.
     borda = list(
         Atribuicao.objects.filter(
-            data__range=(dias[0] - timedelta(days=1), dias[-1] + timedelta(days=1)),
-            turno__in=turnos,
+            data__range=(dias[0] - timedelta(days=2), dias[-1] + timedelta(days=2)),
+            funcionario_id__in=funcionarios_alvo,
         ).select_related("funcionario__pessoa", "turno")
     )
-    atribs = [a for a in borda if dias[0] <= a.data <= dias[-1]]
+    turnos_ids = {t.pk for t in turnos}
+    atribs = [a for a in borda if dias[0] <= a.data <= dias[-1] and a.turno_id in turnos_ids]
 
     violacoes, alertas, bloqueios = {}, [], []
 
@@ -490,27 +518,35 @@ def analisar_semana(inicio, setor=None):
 
     spans, atribs_por_dia, nomes_func = {}, {}, {}
     for a in borda:
-        spans.setdefault((a.funcionario_id, a.data), []).append((a.turno.inicio, a.turno.fim))
+        spans.setdefault((a.funcionario_id, a.data), []).append(intervalo(a.data, a.turno.inicio, a.turno.fim))
         atribs_por_dia.setdefault((a.funcionario_id, a.data), []).append(a)
         nomes_func[a.funcionario_id] = a.funcionario.pessoa.nome
     for he in he_borda:
-        spans.setdefault((he.funcionario_id, he.data), []).append((he.inicio, he.fim))
+        spans.setdefault((he.funcionario_id, he.data), []).append(intervalo(he.data, he.inicio, he.fim))
         nomes_func[he.funcionario_id] = he.funcionario.pessoa.nome
 
-    inter_nomes, dsr_nomes = [], []
+    inter_nomes, dsr_nomes, sobrepostos = [], [], []
     for fid in {f for (f, _d) in spans}:
         nome = nomes_func.get(fid, "")
         for d in dias:
             hoje = spans.get((fid, d), [])
             ontem = spans.get((fid, d - timedelta(days=1)), [])
+            juntos = sorted(ontem + hoje)
+            fim_anterior = None
+            for entrada, saida in juntos:
+                if fim_anterior and entrada < fim_anterior and (entrada.date() == d or saida.date() >= d):
+                    if nome not in sobrepostos:
+                        sobrepostos.append(nome)
+                    for a in atribs_por_dia.get((fid, d), []):
+                        marca(a.pk, "perigo", "Horários sobrepostos")
+                fim_anterior = max(fim_anterior, saida) if fim_anterior else saida
             if hoje and ontem:
-                gap = (datetime.combine(d, min(s[0] for s in hoje))
-                       - datetime.combine(d - timedelta(days=1), max(s[1] for s in ontem)))
-                if gap.total_seconds() / 3600 < INTERJORNADA_MIN_H:
+                gap = min(s[0] for s in hoje) - max(s[1] for s in ontem)
+                if gap.total_seconds() / 3600 < descanso:
                     if nome not in inter_nomes:
                         inter_nomes.append(nome)
                     for a in atribs_por_dia.get((fid, d), []):
-                        marca(a.pk, "perigo", "Interjornada <11h")
+                        marca(a.pk, "perigo", f"Interjornada <{descanso}h")
         dias_trab = {d for d in dias if spans.get((fid, d))}
         if len(dias_trab) >= 7:
             dsr_nomes.append(nome)
@@ -518,13 +554,16 @@ def analisar_semana(inicio, setor=None):
                 for a in atribs_por_dia.get((fid, d), []):
                     marca(a.pk, "perigo", "Sem folga na semana (DSR)")
     if inter_nomes:
-        alertas.append({"nivel": "perigo", "texto": "Interjornada <11h: " + ", ".join(inter_nomes) + "."})
-        bloqueios.append("interjornada <11h")
+        alertas.append({"nivel": "perigo", "texto": f"Interjornada <{descanso}h: " + ", ".join(inter_nomes) + "."})
+        bloqueios.append(f"interjornada <{descanso}h")
+    if sobrepostos:
+        alertas.append({"nivel": "perigo", "texto": "Horários sobrepostos: " + ", ".join(sobrepostos) + "."})
+        bloqueios.append("horários sobrepostos")
     if dsr_nomes:
         alertas.append({"nivel": "perigo", "texto": "Sem folga na semana (DSR): " + ", ".join(dsr_nomes) + "."})
         bloqueios.append("DSR (sem folga)")
-    if not inter_nomes and not dsr_nomes:
-        alertas.append({"nivel": "ok", "texto": "Interjornada de 11h respeitada e DSR ok (todos com folga)."})
+    if not inter_nomes and not dsr_nomes and not sobrepostos:
+        alertas.append({"nivel": "ok", "texto": f"Descanso de {descanso}h respeitado, sem sobreposição e todos com folga."})
 
     # Total de horas extras da semana (prévia do relatório mensal)
     he_sem = [he for he in he_borda if dias[0] <= he.data <= dias[-1]]
@@ -585,14 +624,18 @@ def validar_semana(inicio, setor=None):
     return analisar_semana(inicio, setor)["alertas"]
 
 
+@transaction.atomic
 def publicar_semana(inicio, setor, operador, justificativa=""):
     """Publica a semana. Barra se houver violação legal em aberto, salvo se a
     gerência justificar (força). Registra na auditoria."""
+    from apps.nucleo.models import Funcionario
     from apps.nucleo.models.financeiro import registrar_auditoria
 
     from .models import SemanaPublicada
-
+    list(Funcionario.objects.select_for_update().order_by("pk"))
     bloqueios = analisar_semana(inicio, setor)["bloqueios"]
+    if "horários sobrepostos" in bloqueios:
+        raise ValidationError("Corrija os horários sobrepostos antes de publicar a escala.")
     if bloqueios and not (justificativa or "").strip():
         raise ValidationError(
             "Há violação legal em aberto (" + ", ".join(bloqueios) + "). "

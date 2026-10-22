@@ -19,14 +19,9 @@ descrição → abas → faixa → verba → quadro. Papel vem de request.user (
 
 {% comment %}Navegação e filtro nos componentes da casa: eram cinco cápsulas
 desenhadas à mão, indistinguíveis dos chips de dado do quadro.{% endcomment %}
+{% include "marketing/_tabs.html" %}
 <div class="mkt-barra">
   <a href="{% url 'marketing:nova_campanha' %}" hx-get="{% url 'marketing:nova_campanha' %}" hx-target="#modal-conteudo" class="botao-primario">Nova campanha</a>
-  <nav class="seg-filtro" aria-label="Seções do marketing">
-    <a href="{% url 'marketing:quadro' %}" class="ativo" aria-current="page">Quadro</a>
-    <a href="{% url 'marketing:calendario' %}">Calendário</a>
-    <a href="{% url 'marketing:ocupacao' %}">Ocupação</a>
-    <a href="{% url 'marketing:relatorio' %}">Relatório</a>
-  </nav>
   <a href="?{% if not so_meus %}meus=1{% endif %}" class="filtro-chip"{% if so_meus %} aria-current="page"{% endif %}>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ico"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Só os meus
     <span class="n">{{ meus_label }}</span>

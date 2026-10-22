@@ -8,12 +8,12 @@
 <div class="pagina-cabecalho">
   <h1>Mapa de quartos</h1>
   <div class="acoes bloco-plano">
-    <a href="{% url 'reservas:mapa' %}" class="botao-neutro">Mapa de reservas</a>
     <a href="{% url 'reservas:kit' %}" class="botao-neutro">Kit de contingência</a>
     <button type="button" class="botao-primario" hx-get="{% url 'reservas:nova' %}" hx-target="#modal-conteudo">Nova reserva</button>
   </div>
 </div>
 <p class="subtitulo">Veja a situação de cada quarto. Para trocar um hóspede de quarto, arraste o ocupado até um quarto livre.</p>
+{% include "reservas/partials/nav.html" %}
 
 <div class="quartos corredor-hero" x-data="{ tipos: [], sits: [] }">
   <div class="quartos-filtros">

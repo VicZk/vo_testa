@@ -7,14 +7,9 @@
 <p class="pagina-eyebrow letreiro">Vendas & Estoque</p>
 <div class="pagina-cabecalho">
   <h1>Restaurante Piscina</h1>
-  <div class="pagina-acoes">
-    <a href="{% url 'restaurante:cozinha' %}" class="botao-neutro">Cozinha</a>
-    {% if user.is_staff or user.is_superuser %}<a href="{% url 'restaurante:cardapio_config' %}" class="botao-neutro">Cardápio e adicionais</a>{% endif %}
-    <a href="{% url 'restaurante:historico' %}" class="botao-neutro">Histórico</a>
-    <a href="{% url 'restaurante:mesas' %}" class="botao-neutro">Pontos</a>
-  </div>
 </div>
 <p class="subtitulo">Comandas abertas por ponto (mesa, guarda-sol, bar), hóspede ou avulso. O consumo baixa o estoque e fecha no caixa ou na conta do quarto.</p>
+{% include "restaurante/partials/nav.html" %}
 
 {% if not tem_local %}
   <p class="bloco-vazio">Cadastre um depósito do Restaurante em Estoque → Locais para começar.</p>

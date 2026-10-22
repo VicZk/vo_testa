@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load nucleo_extras %}
 
 {% block titulo %}Opinião dos hóspedes | CRM Vô Testa{% endblock %}
 
@@ -7,13 +8,49 @@
   <p class="pagina-eyebrow letreiro">Relacionamento</p>
   <div class="pagina-cabecalho">
     <h1>Opinião dos hóspedes</h1>
-    <span class="selo">Em preparação</span>
+    <span class="selo">Pesquisa pós-estadia</span>
   </div>
   <p class="subtitulo">Acompanhe como foi a experiência de quem se hospedou na pousada.</p>
+  <form method="get" class="filtros">
+    <div class="campo"><label for="nps-de">De</label><input id="nps-de" type="date" name="de" value="{{ inicio|date:'Y-m-d' }}"></div>
+    <div class="campo"><label for="nps-ate">Até</label><input id="nps-ate" type="date" name="ate" value="{{ fim|date:'Y-m-d' }}"></div>
+    <button class="botao-neutro">Filtrar</button>
+  </form>
+  <div class="cartoes">
+    <div class="cartao"><span class="indicador-rotulo">NPS do período</span><strong class="indicador-valor">{{ resumo.score|default_if_none:'—' }}</strong><span class="ajuda">Escala de −100 a +100</span></div>
+    <div class="cartao"><span class="indicador-rotulo">Respostas</span><strong class="indicador-valor">{{ resumo.total }}</strong></div>
+    <div class="cartao"><span class="indicador-rotulo">Promotores · notas 9–10</span><strong class="indicador-valor">{{ resumo.promotores }}</strong></div>
+    <div class="cartao"><span class="indicador-rotulo">Passivos · notas 7–8</span><strong class="indicador-valor">{{ resumo.passivos }}</strong></div>
+    <div class="cartao"><span class="indicador-rotulo">Detratores · notas 0–6</span><strong class="indicador-valor">{{ resumo.detratores }}</strong></div>
+  </div>
   <section class="cartao-el respiro">
-    <h2 class="titulo-topo">A pesquisa ainda não está disponível</h2>
-    <p>As avaliações pelo portal ainda não são coletadas nem salvas. Por enquanto, peça ao hóspede que compartilhe sua opinião com a recepção.</p>
-    <p class="ajuda">Quando esta função estiver pronta, as notas e os comentários poderão ser acompanhados aqui.</p>
+    <h2 class="titulo-topo">Avaliações recebidas</h2>
+    <table class="tabela"><thead><tr><th>Hóspede e estadia</th><th>Nota</th><th>Comentário e acompanhamento</th><th>Recebida em</th></tr></thead><tbody>
+    {% for r in pagina %}<tr>
+      <td>{{ r.hospede.nome }}<br><span class="ajuda">Reserva #{{ r.reserva_id }}</span></td>
+      <td><strong>{{ r.nota }}/10</strong><br>{{ r.faixa }}</td>
+      <td><p>{{ r.comentario|default:'Sem comentário.'|linebreaksbr }}</p>
+        <details><summary>{% if r.tratada_em %}Ver acompanhamento{% else %}Registrar acompanhamento{% endif %}</summary>
+          {% if r.tratada_em %}<p class="ajuda">{{ r.tratada_por }} · {{ r.tratada_em|date:'d/m/Y H:i' }}</p>{% endif %}
+          <form method="post" action="{% url 'nps:tratar' r.pk %}">{% csrf_token %}
+            <label for="tratativa-{{ r.pk }}">Contato realizado e providências</label>
+            <textarea id="tratativa-{{ r.pk }}" name="tratativa" maxlength="2000" rows="3" required>{{ r.tratativa }}</textarea>
+            <button class="botao-neutro">Salvar acompanhamento</button>
+          </form>
+        </details>
+      </td><td>{{ r.criado_em|date:'d/m/Y H:i' }}<br><span class="ajuda">{{ r.get_canal_display }}</span></td>
+    </tr>{% empty %}<tr><td colspan="4">Ainda não há avaliações neste período.</td></tr>{% endfor %}
+    </tbody></table>
+    {% include "componentes/paginacao.html" %}
+  </section>
+  <section class="cartao-el respiro">
+    <h2 class="titulo-topo">Estadias encerradas sem avaliação</h2>
+    <p class="ajuda">O link fica disponível por 90 dias após o check-out. Compartilhe com o hóspede para que ele registre a própria opinião.</p>
+    <table class="tabela"><thead><tr><th>Hóspede</th><th>Saída</th><th>Pesquisa</th></tr></thead><tbody>
+      {% for r in pendentes %}<tr><td>{{ r.hospede.nome }} · #{{ r.pk }}</td><td>{{ r.checkout_real|date:'d/m/Y' }}</td><td>
+        <form method="post" action="{% url 'nps:convite' r.pk %}">{% csrf_token %}<button class="botao-mini">Obter link da pesquisa</button></form>
+      </td></tr>{% empty %}<tr><td colspan="3">Nenhuma pesquisa pendente.</td></tr>{% endfor %}
+    </tbody></table>
   </section>
 </div>
 {% endblock %}

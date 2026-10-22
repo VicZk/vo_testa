@@ -28,6 +28,12 @@ def _estadia_ou_404(token):
 
 @never_cache
 def home(request, token):
+    from apps.nps.services import reserva_por_token
+    if reserva_por_token(token):
+        from apps.nucleo.models import modulo_ativo
+        if not modulo_ativo(Modulo.APPSITE):
+            raise Http404()
+        return redirect("portal:nps", token=token)
     estadia = _estadia_ou_404(token)
     return _home(request, token, estadia)
 
@@ -50,9 +56,14 @@ def _home(request, token, estadia, *, dados=None):
 
 @never_cache
 def nps(request, token):
-    """Atalho NPS no portal — coleta real na fase CRM do Hóspede."""
-    estadia = _estadia_ou_404(token)
-    return render(request, "portal/nps.html", {"token": token, "e": estadia})
+    from apps.nps.views import pesquisa
+    from apps.nucleo.models import modulo_ativo
+    if not modulo_ativo(Modulo.APPSITE):
+        raise Http404()
+    estadia = services.resolver(token)
+    if estadia and request.method == "GET":
+        return render(request, "portal/nps.html", {"token": token, "aguardando_checkout": True})
+    return pesquisa(request, token)
 
 
 @never_cache

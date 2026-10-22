@@ -35,6 +35,99 @@ if _PLAYWRIGHT_OK:
 class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
     LOCALE = "pt-BR"
 
+    def test_pesquisa_pos_estadia_recebe_opiniao_e_equipe_registra_acompanhamento(self):
+        from apps.nps.models import RespostaNPS
+        from apps.reservas.models import Reserva
+
+        Reserva.objects.filter(pk=self.hospedagem.pk).update(
+            status=Reserva.Status.CHECKOUT, checkout_real=timezone.now())
+        p = self.page
+        p.goto(self.url(reverse("portal:nps", args=[self.acesso.token])))
+        for largura in (320, 390, 1440):
+            p.set_viewport_size({"width": largura, "height": 900})
+            self.assertLessEqual(p.evaluate("document.documentElement.scrollWidth"), largura+1)
+            alvos = p.locator(".pt-nps-escolha").evaluate_all("els => els.map(e=>e.getBoundingClientRect().height)")
+            self.assertEqual(len(alvos), 11)
+            self.assertTrue(all(h >= 44 for h in alvos))
+            self._foto(f"pesquisa-nps-{largura}.png")
+        p.locator('input[name="nota"][value="9"]').check()
+        p.locator('[name="comentario"]').fill("Atendimento da recepção muito bom.")
+        p.locator('[name="consentimento"]').check()
+        p.get_by_role("button", name="Enviar minha avaliação").click()
+        expect(p.get_by_text("Obrigado! Sua avaliação foi registrada.", exact=True)).to_be_visible()
+        self.assertEqual(RespostaNPS.objects.get(reserva=self.hospedagem).nota, 9)
+        p.goto(self.url(reverse("nps:painel")))
+        expect(p.get_by_text("Atendimento da recepção muito bom.", exact=True)).to_be_visible()
+        p.get_by_text("Registrar acompanhamento", exact=True).click()
+        p.locator('[name="tratativa"]').fill("Agradecimento registrado pela equipe.")
+        p.get_by_role("button", name="Salvar acompanhamento").click()
+        self.assertEqual(RespostaNPS.objects.get(reserva=self.hospedagem).tratativa,
+                         "Agradecimento registrado pela equipe.")
+        self._foto("nps-painel-acompanhamento.png")
+
+    def test_governanca_avisa_fila_nova_e_respeita_preferencia_do_hospede(self):
+        from apps.governanca import services
+        from apps.governanca.models import TarefaGovernanca
+        from apps.reservas.models import Reserva
+
+        Reserva.objects.filter(pk=self.hospedagem.pk).update(checkin_real=timezone.now()-timedelta(days=1))
+        p = self.page
+        p.clock.install()
+        p.set_viewport_size({"width": 390, "height": 900})
+        p.goto(self.url(reverse("governanca:quartos")), wait_until="networkidle")
+        self.assertEqual(services.gerar_arrumacoes_do_dia(), 1)
+        tarefa = TarefaGovernanca.objects.get(uh=self.hospedagem.uh)
+        services.atribuir_tarefa(tarefa, self.op.pk, self.op)
+        p.clock.fast_forward(61000)
+        expect(p.locator('[data-governanca-atualizacao]')).to_be_visible()
+        p.get_by_role("link", name="Atualizar esta página").click()
+        p.goto(self.url(reverse("governanca:quarto", args=[self.hospedagem.uh_id])))
+        p.get_by_text("Preferência de limpeza do hóspede", exact=True).click()
+        p.locator('[name="tipo"]').select_option("dispensa")
+        p.get_by_role("button", name="Salvar preferência").click()
+        expect(p.get_by_role("button", name="Iniciar limpeza", exact=True)).to_have_count(0)
+        p.goto(self.url(reverse("governanca:minha_fila")))
+        expect(p.get_by_text("Limpeza dispensada hoje", exact=True)).to_be_visible()
+        self._foto("governanca-preferencia-390.png")
+
+    def test_menu_mantem_centro_e_transicao_sem_deslocamento(self):
+        p = self.page
+        p.set_viewport_size({"width": 1440, "height": 900})
+        p.emulate_media(reduced_motion="no-preference")
+        p.goto(self.url(reverse("estoque:posicao")), wait_until="networkidle")
+        p.evaluate("""() => {
+            window.framesNavegacao=[];
+            document.addEventListener('htmx:beforeSwap',()=>{
+                const fim=performance.now()+600;
+                function medir() {
+                    const main=document.querySelector('.main').getBoundingClientRect();
+                    const c=document.querySelector('.conteudo').getBoundingClientRect();
+                    const deformacoes=document.getAnimations().flatMap(a=>{
+                        const pseudo=a.effect?.pseudoElement || '';
+                        if(!pseudo.includes('conteudo'))return [];
+                        return a.effect.getKeyframes().filter(f=>f.transform && f.transform!=='none');
+                    });
+                    window.framesNavegacao.push({delta:c.x+c.width/2-main.x-main.width/2,
+                                                transform:getComputedStyle(document.querySelector('.conteudo')).transform,
+                                                deformacoes:deformacoes.length});
+                    if(performance.now()<fim)requestAnimationFrame(medir);
+                }
+                requestAnimationFrame(medir);
+            });
+        }""")
+        for rota in ("governanca:painel", "marketing:quadro", "escala:grade", "estoque:posicao"):
+            p.locator(f'#menu-principal a[href="{reverse(rota)}"]').click()
+            p.wait_for_url("**"+reverse(rota))
+            p.wait_for_function("!document.querySelector('.htmx-request')")
+            p.evaluate("async () => { if(document.activeViewTransition)await document.activeViewTransition.finished; }")
+        medidas = p.evaluate("window.framesNavegacao")
+        self.assertGreater(len(medidas), 5)
+        self.assertTrue(all(abs(m["delta"]) <= 1 and m["transform"] == "none" and not m["deformacoes"] for m in medidas), medidas)
+        abas = p.locator('.est-abas .est-aba')
+        self.assertGreaterEqual(abas.count(), 4)
+        self.assertEqual(p.locator('.est-abas [aria-current="page"]').count(), 1)
+        self.assertEqual(p.locator('.est-abas [aria-current="page"]').evaluate("e=>getComputedStyle(e).borderBottomWidth"), "2px")
+
     def test_arrastar_reserva_entre_linhas_muda_quarto_e_preserva_conta(self):
         from apps.nucleo.models import UH
 

@@ -199,7 +199,7 @@ class FNRHPortalTests(TestCase):
 
 @override_settings(FNRH_BLOQUEAR_CHECKIN=False)
 class TokenPosCheckoutTests(PortalBase):
-    """TM-003: o token do portal deixa de dar acesso após o check-out."""
+    """Após o check-out só a pesquisa fica disponível; operações da estadia fecham."""
 
     def _checkout(self):
         from apps.nucleo.models import FormaPagamento, SessaoCaixa
@@ -212,12 +212,14 @@ class TokenPosCheckoutTests(PortalBase):
             rsv.receber_pagamento(conta, self.op, dinheiro, conta.saldo())
         self.reserva.fazer_checkout(self.op)
 
-    def test_home_404_apos_checkout(self):
+    def test_home_vai_para_nps_e_pedidos_fecham_apos_checkout(self):
         token = services.get_acesso(self.reserva.pk).token
         self.assertEqual(self.client.get(reverse("portal:home", args=[token]),
                                          SERVER_NAME="localhost").status_code, 200)
         self._checkout()
-        self.assertEqual(self.client.get(reverse("portal:home", args=[token]),
+        self.assertRedirects(self.client.get(reverse("portal:home", args=[token]), SERVER_NAME="localhost"),
+                             reverse("portal:nps", args=[token]))
+        self.assertEqual(self.client.post(reverse("portal:pedir", args=[token]),
                                          SERVER_NAME="localhost").status_code, 404)
 
     def test_fnrh_checkin_404_apos_checkout(self):

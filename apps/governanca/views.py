@@ -2,15 +2,20 @@ import json
 
 from django.contrib import messages
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.cache import never_cache
+from django.views.decorators.http import require_POST
 
 from apps.nucleo.models import UH
 from apps.nucleo.modulos import Modulo
-from apps.nucleo.permissoes import requer_modulo
+from apps.nucleo.permissoes import requer_gerencia, requer_modulo
+from apps.nucleo.validadores import identificador_valido
 
 from . import services
-from .forms import ReportarProblemaForm
-from .models import ConferenciaOcupacao, StatusLimpeza, TarefaGovernanca
+from .forms import ConfiguracaoGovernancaForm, ReportarProblemaForm, RestricaoLimpezaForm
+from .models import ConferenciaOcupacao, ConfiguracaoGovernanca, StatusLimpeza, TarefaGovernanca
 
 Usuario = get_user_model()
 
@@ -129,8 +134,53 @@ def painel(request):
     chegadas que dependem de quarto pronto e o que pede ação agora. É a porta de
     entrada do módulo — a lista operacional fica em `quartos`."""
     contexto = services.visao_geral()
+    contexto["config_governanca"] = ConfiguracaoGovernanca.get()
     contexto["desfazer"] = _desfazer_pendente(request)
     return render(request, "governanca/visao.html", contexto)
+
+
+@never_cache
+@requer_modulo(Modulo.GOVERNANCA)
+@requer_gerencia
+def configuracao(request):
+    config = ConfiguracaoGovernanca.get()
+    form = ConfiguracaoGovernancaForm(request.POST or None, instance=config)
+    if request.method == "POST" and form.is_valid():
+        from apps.nucleo.models import registrar_auditoria
+        form.save()
+        registrar_auditoria(request.user, "governanca_configuracao", config,
+            {"ativa": config.ativa, "horario": str(config.horario), "distribuir": config.distribuir})
+        messages.success(request, "Rotina da governança atualizada.")
+        return redirect("governanca:configuracao")
+    return render(request, "governanca/configuracao.html", {"form": form, "config": config})
+
+
+@requer_modulo(Modulo.GOVERNANCA)
+@require_POST
+def restricao(request, pk):
+    uh = get_object_or_404(UH, pk=pk)
+    form = RestricaoLimpezaForm(request.POST)
+    if form.is_valid():
+        try:
+            services.registrar_restricao(uh, request.user, **form.cleaned_data)
+            messages.success(request, "Preferência de atendimento registrada.")
+        except ValidationError as erro:
+            messages.error(request, " ".join(erro.messages))
+    else:
+        messages.error(request, "Confira o horário e a preferência de limpeza.")
+    return redirect("governanca:quarto", pk=pk)
+
+
+@never_cache
+@requer_modulo(Modulo.GOVERNANCA)
+def atualizacoes(request):
+    from django.db.models import Count, Max, Q
+    dados = TarefaGovernanca.objects.aggregate(
+        ultima=Max("atualizada_em"), total=Count("pk"),
+        pendentes=Count("pk", filter=Q(status=TarefaGovernanca.Status.PENDENTE)),
+        em_andamento=Count("pk", filter=Q(status=TarefaGovernanca.Status.EM_ANDAMENTO)))
+    dados["quartos_atualizados_em"] = StatusLimpeza.objects.aggregate(ultima=Max("atualizado_em"))["ultima"]
+    return JsonResponse(dados)
 
 
 @requer_modulo(Modulo.GOVERNANCA)
@@ -175,6 +225,7 @@ def quarto(request, pk):
     voltar = request.GET.get("voltar", "")
     return render(request, gabarito, {
         "ln": linha, "uh": uh,
+        "restricao_form": RestricaoLimpezaForm(),
         "voltar": voltar if voltar in ("painel", "quartos") else "",
     })
 
@@ -228,7 +279,11 @@ def reportar(request, pk):
 def nova_tarefa(request):
     if request.method != "POST":
         return redirect("governanca:quartos")
-    uh = get_object_or_404(UH, pk=request.POST.get("uh"))
+    try:
+        uh_id = identificador_valido(request.POST.get("uh"), nome="Quarto")
+    except ValidationError as erro:
+        return _resposta_acao(request, " ".join(erro.messages), tipo="error")
+    uh = get_object_or_404(UH, pk=uh_id)
     tipo = request.POST.get("tipo") or TarefaGovernanca.Tipo.FAXINA
     if tipo not in TarefaGovernanca.Tipo.values:   # não confia no POST
         tipo = TarefaGovernanca.Tipo.FAXINA
@@ -238,7 +293,10 @@ def nova_tarefa(request):
     # só para quem está com o pano na mão — dois botões seguidos ("abrir" e depois
     # "iniciar") era o que mais confundia quem pegava o sistema pela primeira vez.
     if request.POST.get("iniciar"):
-        services.iniciar_tarefa(tarefa, request.user)
+        try:
+            services.iniciar_tarefa(tarefa, request.user)
+        except ValidationError as erro:
+            return _resposta_acao(request, " ".join(erro.messages), tipo="error")
         return _resposta_acao(request, f"Limpeza do {uh.numero} começou.")
     return _resposta_acao(request, f"{uh.numero} entrou na fila de limpeza.")
 
@@ -251,20 +309,23 @@ def tarefa_acao(request, pk):
     acao = request.POST.get("acao")
     aviso = ""
     if acao == "atribuir":
-        tarefa.camareira = Usuario.objects.filter(
-            pk=request.POST.get("camareira")
-        ).first()
-        tarefa.save()
+        try:
+            services.atribuir_tarefa(tarefa, request.POST.get("camareira"), request.user)
+        except ValidationError as erro:
+            return _resposta_acao(request, " ".join(erro.messages), tipo="error")
         aviso = (
             f"{tarefa.uh.numero} com {tarefa.camareira.get_full_name() or tarefa.camareira.username}."
             if tarefa.camareira else f"{tarefa.uh.numero} sem camareira."
         )
     elif acao == "iniciar":
-        services.iniciar_tarefa(tarefa, request.user)
+        try:
+            services.iniciar_tarefa(tarefa, request.user)
+        except ValidationError as erro:
+            return _resposta_acao(request, " ".join(erro.messages), tipo="error")
         aviso = f"Faxina do {tarefa.uh.numero} iniciada."
     elif acao == "concluir":
         services.concluir_tarefa(tarefa, request.user)
-        aviso = f"{tarefa.uh.numero} limpo. Boa!"
+        aviso = f"Limpeza do {tarefa.uh.numero} concluída. Aguardando inspeção."
     return _resposta_acao(request, aviso)
 
 
@@ -312,7 +373,10 @@ def status_marcar(request, pk):
         services.reprovar_inspecao(uh, request.user, request.POST.get("motivo", ""))
         aviso = f"{uh.numero} reprovado. Voltou para a fila de limpeza."
     elif situacao == StatusLimpeza.Situacao.INSPECIONADA:
-        services.inspecionar(uh, request.user)
+        try:
+            services.inspecionar(uh, request.user)
+        except ValidationError as erro:
+            return _resposta_acao(request, " ".join(erro.messages), tipo="error")
         # Liberar o quarto para a recepção é o gesto mais caro da tela: em vez de
         # perguntar antes, a próxima tela traz o "Desfazer" à mão. E sem aviso em
         # cima: a barra já diz o que aconteceu — duas mensagens para o mesmo

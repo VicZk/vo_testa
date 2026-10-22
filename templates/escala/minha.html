@@ -3,12 +3,10 @@
 {% block titulo %}Minha escala{% endblock %}
 
 {% block conteudo %}
-<a href="{% url 'escala:grade' %}" class="voltar">
-  <svg viewBox="0 0 24 24" class="ico"><path d="M15 6l-6 6 6 6"/></svg> Escala
-</a>
 <p class="pagina-eyebrow letreiro">Equipe</p>
 <h1>Minha escala</h1>
 <p class="subtitulo">Seus próximos turnos (30 dias).</p>
+{% include "escala/partials/nav.html" %}
 
 {% if not tem_funcionario %}
   <div class="cartao cartao-aviso">

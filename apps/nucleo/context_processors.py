@@ -29,10 +29,14 @@ def menu_modulos(request):
         )
 
     grupos: dict[str, list] = {}
+    governanca_pendentes = None
     for codigo in modulos_ativos():
         if permitidos is not None and codigo not in permitidos:
             continue
         apres = APRESENTACAO.get(codigo, {})
+        if codigo == Modulo.GOVERNANCA:
+            from apps.governanca.models import TarefaGovernanca
+            governanca_pendentes = TarefaGovernanca.objects.filter(status="pendente").count()
         grupos.setdefault(apres.get("grupo", "Outros"), []).append(
             {
                 "codigo": codigo,
@@ -45,4 +49,5 @@ def menu_modulos(request):
             {"titulo": titulo, "itens": itens} for titulo, itens in grupos.items()
         ],
         "eh_gerente": eh_gerente(request.user),
+        "governanca_pendentes": governanca_pendentes,
     }

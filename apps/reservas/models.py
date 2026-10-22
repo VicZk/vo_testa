@@ -440,9 +440,9 @@ class Reserva(models.Model):
     criancas_6_15 = models.PositiveSmallIntegerField("crianças de 6 a 15 anos", default=0)
     cobra_iss = models.BooleanField("cobrar ISS", default=True)
     cobra_taxa_turismo = models.BooleanField("cobrar taxa de turismo", default=True)
-    # Tarifa não-reembolsável: desconto pré-pago (ConfiguracaoReservas), sem direito a
-    # cancelamento. O desconto já entra na diária acordada ao criar a reserva.
-    nao_reembolsavel = models.BooleanField("tarifa não-reembolsável", default=False)
+    # Nome interno legado; o desconto segue a política única de cancelamento.
+    nao_reembolsavel = models.BooleanField("aplicar desconto comercial", default=False,
+                                          help_text="Usa o desconto configurado e mantém a política normal de cancelamento.")
     # Berço (grátis, recurso global limitado — não conta como pessoa/cama/colchão).
     usa_berco = models.BooleanField("usa berço", default=False)
     # Arranjo de camas (estoque de colchões — docs/Reservas/PLANO_ESTOQUE_COLCHOES.md).
@@ -495,6 +495,10 @@ class Reserva(models.Model):
     )
     fnrh_sincronizada_em = models.DateTimeField("sincronizada com a FNRH em", null=True, blank=True)
     fnrh_erro = models.TextField("último erro FNRH", blank=True)
+    fnrh_etapa = models.CharField("estado confirmado na FNRH", max_length=12, blank=True)
+    fnrh_hash = models.CharField("versão da reserva na FNRH", max_length=64, blank=True)
+    fnrh_ambiente = models.CharField("origem dos identificadores FNRH", max_length=80, blank=True)
+    fnrh_em_processamento_ate = models.DateTimeField(null=True, blank=True)
     criado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
         related_name="reservas_criadas", verbose_name="criada por",
@@ -667,6 +671,17 @@ class Reserva(models.Model):
         if self.faturamento == self.Faturamento.PARTICULAR:
             # Particular: o hóspede é o pagador; não guardamos titular separado.
             self.titular = None
+
+    def save(self, *args, **kwargs):
+        campos = {"status", "checkin", "checkout", "adultos", "criancas", "canal", "checkin_real", "checkout_real"}
+        updates = kwargs.get("update_fields")
+        if self.pk and self.fnrh_reserva_id and (updates is None or campos.intersection(updates)):
+            anterior = type(self).objects.filter(pk=self.pk).values(*campos).first()
+            if anterior and any(anterior[c] != getattr(self, c) for c in campos):
+                self.fnrh_status = self.SincFNRH.PENDENTE
+                if updates is not None:
+                    kwargs["update_fields"] = set(updates) | {"fnrh_status"}
+        super().save(*args, **kwargs)
 
     # ---- Transições de estado ----
 
@@ -1085,6 +1100,7 @@ class FichaFNRH(models.Model):
     nacionalidade = models.CharField(
         "nacionalidade", max_length=60, blank=True, default="Brasileira"
     )
+    nacionalidade_codigo = models.CharField("país de nacionalidade (ISO)", max_length=2, blank=True)
     profissao = models.CharField("profissão", max_length=80, blank=True)
 
     # Documento
@@ -1098,6 +1114,7 @@ class FichaFNRH(models.Model):
 
     # Endereço residencial
     pais = models.CharField("país", max_length=40, blank=True, default="Brasil")
+    pais_codigo = models.CharField("país de residência (ISO)", max_length=2, blank=True)
     cep = models.CharField("CEP", max_length=9, blank=True)
     endereco = models.CharField("endereço", max_length=200, blank=True)
     cidade = models.CharField("cidade", max_length=80, blank=True)

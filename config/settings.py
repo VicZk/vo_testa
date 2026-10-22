@@ -82,7 +82,7 @@ INSTALLED_APPS = [
     "apps.escala",
     "apps.pagamentos",
     "apps.portal",
-    "apps.nps",  # proposta NPS + API stub (fase CRM do Hóspede)
+    "apps.nps",  # pesquisa pós-estadia e acompanhamento
     "apps.site",  # site público (label 'core'), servido em "/"
     "apps.fiscal",
     "apps.auditoria",
@@ -433,6 +433,7 @@ FNRH_API_URL = os.environ.get(
 )
 FNRH_API_USER = os.environ.get("FNRH_API_USER", "")
 FNRH_API_SENHA = os.environ.get("FNRH_API_SENHA", "")
+FNRH_CPF_SOLICITANTE = os.environ.get("FNRH_CPF_SOLICITANTE", "")
 
 # Fiscal — gateway plugável: "simulado" (sandbox), "focus" (Focus NFe) ou "governo".
 # Ver docs/Implementar_fiscal.md. Focus/Governo são stubs até ter credenciais/certificado.

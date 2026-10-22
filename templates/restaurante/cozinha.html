@@ -2,7 +2,8 @@
 {% block titulo %}Cozinha | Restaurante{% endblock %}
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Restaurante Piscina</p>
-<div class="pagina-cabecalho"><h1>Cozinha</h1><a class="botao-neutro" href="{% url 'restaurante:comandas' %}">Ver comandas</a></div>
+<div class="pagina-cabecalho"><h1>Cozinha</h1></div>
 <p class="subtitulo">Confira as escolhas e observações antes de iniciar. Pedidos pagos continuam aqui até a entrega.</p>
+{% include "restaurante/partials/nav.html" %}
 {% include "restaurante/partials/cozinha.html" %}
 {% endblock %}

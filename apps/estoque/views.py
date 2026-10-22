@@ -41,6 +41,7 @@ from apps.nucleo.modulos import Modulo
 from apps.nucleo.paginacao import paginar
 from apps.nucleo.permissoes import requer_modulo
 from apps.nucleo.seletores import pessoas_agrupadas
+from apps.nucleo.validadores import filtro_identificador
 
 from .formato import sigla
 from .forms import (
@@ -109,9 +110,9 @@ SITUACOES = [
 def posicao(request):
     local = None
     if request.GET.get("local"):
-        local = get_object_or_404(LocalEstoque, pk=request.GET["local"])
+        local = get_object_or_404(LocalEstoque, pk=filtro_identificador(request.GET["local"]))
     busca = request.GET.get("q", "").strip()
-    categoria_id = request.GET.get("categoria", "")
+    categoria_id = str(filtro_identificador(request.GET.get("categoria")) or "")
     situacao = request.GET.get("situacao", "")
     # Compatibilidade: o painel e a Auditoria linkam `?alerta=1` há meses.
     if request.GET.get("alerta") and not situacao:
@@ -188,7 +189,7 @@ def posicao(request):
 @requer_modulo(Modulo.ESTOQUE)
 def produtos(request):
     busca = request.GET.get("q", "").strip()
-    categoria_id = request.GET.get("categoria", "")
+    categoria_id = str(filtro_identificador(request.GET.get("categoria")) or "")
     lista = Produto.objects.select_related("categoria")
     if busca:
         lista = lista.filter(
@@ -262,7 +263,7 @@ def kardex(request, pk):
     produto = get_object_or_404(Produto.objects.select_related("categoria"), pk=pk)
     movimentos = produto.movimentos.select_related("local", "criado_por", "fornecedor")
 
-    local_id = request.GET.get("local", "")
+    local_id = str(filtro_identificador(request.GET.get("local")) or "")
     if local_id:
         movimentos = movimentos.filter(local_id=local_id)
     tipo = request.GET.get("tipo", "")

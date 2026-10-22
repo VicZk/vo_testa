@@ -1,71 +1,43 @@
-# Proposta NPS — Portal do Hóspede + API
+# NPS pós-estadia — Portal do Hóspede e CRM
 
-> **Status confirmado no código revisado em 21/10/2026:** permanece proposta com
-> API stub, sem persistência de respostas. Veja [Estado atual](ESTADO_ATUAL.md).
-> Recursos descritos como próximos passos abaixo continuam evolução.
+A coleta está implementada em `apps/nps`, com resposta persistida por estadia,
+painel por período, cálculo de NPS e registro de acompanhamento pela equipe.
+A janela padrão é de 90 dias depois do check-out efetivo (`NPS_JANELA_DIAS`).
 
-**Status:** proposta registrada (não implementada)  
-**Fase prevista:** CRM do Hóspede (fase 2, ESPECIFICACAO §8)  
-**Código:** `apps/nps/` · painel `/crm/nps/` · API stub `/api/nps/v1/` · UI hóspede `/hospede/<token>/nps/`
+O envio exige consentimento explícito e voluntário para uso da avaliação pela equipe e contato sobre o relato. A versão do texto aceito e a data da resposta ficam registradas. A API exige `consentimento: true`, inclusive em lançamentos pela recepção. Isso não concede opt-in de marketing.
 
-## Objetivo
+## Fluxo operacional
 
-Coletar **Net Promoter Score (0–10)** após a estadia, a partir do portal compartilhado com o hóspede (e depois e-mail/WhatsApp), e consolidar no CRM para relacionamento e melhoria operacional.
+1. A equipe abre Relacionamento → NPS e obtém o link de uma estadia encerrada.
+2. O hóspede abre `/hospede/<token>/nps/`, informa nota de 0 a 10 e comentário opcional.
+3. A primeira opinião fica preservada. Repetir o mesmo envio é idempotente;
+   tentar substituir a opinião retorna conflito.
+4. A equipe filtra o período e registra o contato e as providências no acompanhamento.
 
-## O que já existe nesta entrega (esqueleto)
+O portal da estadia encerrada direciona à pesquisa. Pedidos e outros serviços da
+estadia continuam indisponíveis após o check-out. Tokens rotacionados, inexistentes
+ou fora da janela não concedem acesso. O link não é publicado nem enviado automaticamente.
 
-| Superfície | Onde | Comportamento atual |
+## Contrato da API
+
+| Método e endereço | Autenticação | Resultado |
 |---|---|---|
-| Sidebar CRM | Relacionamento → **NPS** | Página da proposta (sem dados reais) |
-| Portal do hóspede | Ícone estrela **NPS** na home | Tela “em breve” com escala visual |
-| API | `POST/GET /api/nps/v1/…` | **HTTP 501** + JSON com o contrato |
+| `POST /api/nps/v1/respostas/` | `token` opaco no JSON ou sessão da equipe com CSRF e área NPS | 201 criada; 200 repetição igual; 409 tentativa de alteração |
+| `GET /api/nps/v1/respostas/<reserva_id>/` | Sessão CRM com área NPS | Resposta da estadia ou 404 |
+| `GET /api/nps/v1/resumo/?de=YYYY-MM-DD&ate=YYYY-MM-DD` | Sessão CRM com área NPS | Contagens e score do período |
 
-Fonte programática do contrato: `apps/nps/proposta.py` (`PROPOSTA`).
+Corpo de criação: `token` (ou `reserva_id` para equipe), `nota`, `comentario`
+opcional e `canal` (`portal`, `email`, `whatsapp`, `equipe`). O canal `equipe`
+exige sessão interna. A API rejeita JSON que não seja objeto, corpos acima de
+16 KiB, notas fracionárias, valores fora de 0–10 e comentários acima de 2.000
+caracteres. Dados inválidos retornam 400; estadias inelegíveis retornam 404.
+As superfícies públicas exigem o módulo Portal ativo. Há limite de tentativas,
+CSRF no formulário público e proteção de cache nas respostas.
 
-## API (contrato)
+## Cálculo e integridade
 
-Base: `/api/nps/v1/`
-
-### `POST /api/nps/v1/respostas/`
-
-Registrar nota. Autenticação do hóspede via `token` do portal.
-
-```json
-{
-  "token": "<uuid AcessoPortal>",
-  "nota": 9,
-  "comentario": "opcional",
-  "canal": "portal"
-}
-```
-
-Regras previstas: nota 0–10; **uma resposta por reserva** (idempotente ou 409); 404 se estadia inválida.
-
-### `GET /api/nps/v1/respostas/<reserva_id>/`
-
-Leitura pela equipe (sessão CRM).
-
-### `GET /api/nps/v1/resumo/?de=&ate=`
-
-Score NPS + contagem detratores (0–6) / passivos (7–8) / promotores (9–10).
-
-## Modelo previsto
-
-`RespostaNPS`: reserva (unique), hóspede, nota, faixa, comentário, canal, criado_em.  
-App definitivo pode migrar para `apps/crm_hospede` quando o módulo completo for construído.
-
-## Integrações futuras
-
-- Portal → `POST` na API  
-- Sinal pós check-out (Reservas) → link/convite  
-- Ficha do hóspede no CRM do Hóspede  
-- Série em Relatórios  
-
-## Fora do escopo desta fase
-
-Persistência, cálculo real do score, campanhas por faixa, Django REST Framework (stub usa `JsonResponse`).
-
-## Comercial
-
-Plano de evolução registrado em `docs/Plano_Comercial.md` (ondas P0–P3).
-Implementação sob comando explícito por onda — não misturar com a coleta real de NPS.
+`NPS = 100 × (promotores − detratores) / total`. Promotores: 9–10; passivos:
+7–8; detratores: 0–6. Sem respostas, o score é nulo, exibido como traço.
+A reserva é travada durante o registro, e a relação única impede duplicidade.
+Acompanhamento registra texto, data e operador, preservando a opinião do hóspede.
+O envio automático de convites e campanhas por faixa são evoluções separadas.

@@ -8,17 +8,18 @@ porta do corredor guardava na dica está escrito aqui.
   <span class="selo selo-{{ ln.situacao }}">{{ ln.situacao_label }}</span>
 </p>
 <p class="qf-porque">{{ ln.explicacao }}</p>
+{% if ln.restricao %}<p class="aviso aviso-info"><strong>{{ ln.restricao }}</strong>{% if ln.status.nao_perturbe_ate %} até {{ ln.status.nao_perturbe_ate|date:"d/m H:i" }}{% endif %}{% if ln.status.restricao_observacao %} · {{ ln.status.restricao_observacao }}{% endif %}</p>{% endif %}
 
 <dl class="qf-dados">
   {% if ln.ocupacao.rotulo %}
-    <dt>Quem está no quarto</dt>
+    <dt>Ocupação</dt>
     <dd>{{ ln.ocupacao.rotulo }}{% if ln.ocupacao.hospede %} · {{ ln.ocupacao.hospede }}{% endif %}
       {% if ln.ocupacao.cod == 'sai_hoje' and ln.ocupacao.chegada %} · chega outro hoje{% endif %}</dd>
   {% endif %}
   <dt>Tipo do quarto</dt>
   <dd>{{ ln.uh.tipo.nome }}</dd>
   {% if ln.tarefa and ln.tarefa.camareira %}
-    <dt>Quem limpa</dt>
+    <dt>Responsável</dt>
     <dd>{{ ln.tarefa.camareira.get_full_name|default:ln.tarefa.camareira.username }}</dd>
   {% endif %}
   {% if ln.tarefa %}
@@ -30,10 +31,21 @@ porta do corredor guardava na dica está escrito aqui.
     <dd>{{ ln.conferencia.get_visto_display }} · {{ ln.conferencia.registrado_em|date:"H:i" }}</dd>
   {% endif %}
 </dl>
+{% if ln.ocupacao.cod == 'ocupado' or ln.ocupacao.cod == 'sai_hoje' %}
+<details class="gov-ajuda">
+  <summary>Preferência de limpeza do hóspede</summary>
+  <form method="post" action="{% url 'governanca:restricao' uh.pk %}" class="gov-preferencia" hx-boost="false">
+    {% csrf_token %}
+    {{ restricao_form.as_p }}
+    <p class="ajuda">A dispensa vale até o fim do dia. “Não perturbe” impede o início da limpeza até o horário informado.</p>
+    <button type="submit" class="botao-neutro">Salvar preferência</button>
+  </form>
+</details>
+{% endif %}
 
 {% if ln.divergente %}
   <p class="qf-divergencia"><span class="selo selo-{{ ln.divergencia }}">{{ ln.divergencia_rotulo }}</span>
-    O que a ronda viu não bate com o sistema.</p>
+    Há divergência entre a ronda e o registro de ocupação.</p>
 {% endif %}
 {% if ln.tarefa.observacoes %}
   <p class="qf-recado"><strong>Refazer:</strong> {{ ln.tarefa.observacoes }}</p>

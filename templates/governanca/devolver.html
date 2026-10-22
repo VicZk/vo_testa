@@ -17,7 +17,7 @@ JavaScript (o botão da linha é um link de verdade).{% endcomment %}
       action="{% url 'governanca:status_marcar' uh.pk %}">
   {% include "governanca/partials/devolver_campos.html" %}
   <div class="acoes">
-    <button type="submit" class="botao-primario">Devolver para limpar</button>
+    <button type="submit" class="botao-primario">Solicitar nova limpeza</button>
     <a href="{% url 'governanca:quartos' %}" class="botao-neutro">Cancelar</a>
   </div>
 </form>

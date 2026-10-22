@@ -8,10 +8,10 @@
   <h1>Tarefas do dia</h1>
   <a href="{% url 'comercial:funil' %}" class="botao-mini">Voltar ao funil</a>
 </div>
-<div class="pdv-seg com-abas">
-  <a href="?" class="{% if minhas %}ativo{% endif %}">Minhas</a>
-  <a href="?todas=1" class="{% if not minhas %}ativo{% endif %}">Da equipe</a>
-</div>
+<nav class="est-abas abas-secao" aria-label="Tarefas comerciais">
+  <a href="?" class="est-aba" {% if minhas %}aria-current="page"{% endif %}>Minhas</a>
+  <a href="?todas=1" class="est-aba" {% if not minhas %}aria-current="page"{% endif %}>Da equipe</a>
+</nav>
 
 <table class="tabela">
   <thead><tr><th>Quando</th><th>Oportunidade</th><th>Lead</th><th>Tarefa</th><th>Responsável</th><th></th></tr></thead>

@@ -4,11 +4,11 @@ Grupos:
 - frequentes (a cada 10 min): expira pré-reservas e recibos do site vencidos, reenvia à
   FNRH o que ficou pendente, dispara as campanhas de e-mail agendadas e reenvia as
   confirmações do site e os e-mails do Comercial que não saíram, e reprocessa os
-  webhooks do WhatsApp que falharam;
+  webhooks do WhatsApp que falharam; gera arrumações após o horário local configurado;
 - diarias (madrugada): o no-show automático (se ligado na Tabela de Preços) e o
   fechamento do dia, conversões de mídia pendentes, gasto das campanhas, o backup do
   banco para fora do Railway (se R2_* ou BACKUP_DIR estiverem definidos), a purga da
-  trilha, as arrumações do dia e a cópia do Kit de contingência por e-mail (se
+  trilha e a cópia do Kit de contingência por e-mail (se
   KIT_CONTINGENCIA_EMAILS estiver definido).
 
 Cada tarefa roda isolada: se uma falha, o erro vai para o log e as outras seguem. Ao fim,
@@ -40,6 +40,7 @@ GRUPOS = {
         "expirar_reservas",
         "expirar_recibos_site",
         "enviar_fnrh_pendentes",
+        "gerar_arrumacoes",  # respeita o horário local e a configuração da governança
         "enviar_campanhas_email",
         "reenviar_confirmacoes_site",
         "reenviar_emails_pendentes",
@@ -52,7 +53,6 @@ GRUPOS = {
         "sincronizar_gastos_midia",
         "backup_banco",
         "purgar_trilha",
-        "gerar_arrumacoes",
         "enviar_kit_contingencia",  # a folha do dia no celular de quem decide
     ],
 }

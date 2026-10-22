@@ -100,7 +100,7 @@ class MapaIntegracaoTests(GovernancaBase):
         services.definir_status(self.uh, StatusLimpeza.Situacao.SUJA, self.user)
         self.client.login(username="governanta", password="senha-forte-123")
         r = self.client.get(reverse("reservas:mapa_quartos"))
-        self.assertContains(r, "A limpar")
+        self.assertContains(r, "Limpeza pendente")
 
 
 class PermissaoTests(GovernancaBase):
@@ -193,9 +193,9 @@ class BancoNovoTests(TestCase):
         self.assertEqual(dados["contagem"][StatusLimpeza.Situacao.LIMPA], 0)
 
     def test_a_tela_nao_finge_que_a_supervisora_conferiu(self):
-        """"Pronto" sem ninguém no `atualizado_por` não vira carimbo de inspeção."""
+        """"Liberado" sem ninguém no `atualizado_por` não vira carimbo de inspeção."""
         linha = services.painel_limpeza()["linhas"][0]
-        self.assertEqual(linha["situacao_label"], "Pronto")
+        self.assertEqual(linha["situacao_label"], "Liberado")
         self.assertIn("Sem faxina registrada ainda", linha["explicacao"])
         self.assertNotIn("Conferido", linha["explicacao"])
 
@@ -234,7 +234,7 @@ class PainelHtmxTests(GovernancaBase):
         self.assertIn("tabela-limpeza", corpo)       # veio o quadro
         self.assertNotIn("<html", corpo)             # e só o quadro
         # Já com o próximo passo da linha, no nome do que vai acontecer.
-        self.assertIn("Terminei a limpeza", corpo)
+        self.assertIn("Concluir limpeza", corpo)
         self.assertIn("HX-Trigger", r.headers)       # aviso vira toast
         self.assertIn("iniciada", r.headers["HX-Trigger"])
 
@@ -258,7 +258,7 @@ class PainelHtmxTests(GovernancaBase):
 
     def test_filtro_sem_quarto_explica_em_vez_de_tabela_vazia(self):
         r = self.client.get(reverse("governanca:quartos"))
-        # O único quarto está "limpa" por padrão; "a limpar" fica sem ninguém.
+        # O único quarto está "limpa" por padrão; "limpeza pendente" fica sem ninguém.
         self.assertContains(r, "Nenhum quarto")
 
 
@@ -301,6 +301,12 @@ class ArrumacaoDiariaTests(GovernancaBase):
         from django.core.management import call_command
         self._hospedar(self.uh, sai_em_dias=2)
         saida = StringIO()
+        from datetime import time
+
+        from .models import ConfiguracaoGovernanca
+        config = ConfiguracaoGovernanca.get()
+        config.horario = time(0)
+        config.save()
         call_command("gerar_arrumacoes", stdout=saida)
         self.assertIn("1 arrumação", saida.getvalue())
 
@@ -688,12 +694,12 @@ class InspecaoTests(GovernancaBase):
 
     def test_quarto_limpo_oferece_aprovar_e_devolver(self):
         """Quarto limpo tem UMA ação principal ("Aprovar limpeza") e uma saída
-        secundária ("Devolver para limpar"), que leva ao formulário do motivo."""
+        secundária ("Solicitar nova limpeza"), que leva ao formulário do motivo."""
         self._faxina_entregue()
         self.client.login(username="governanta", password="senha-forte-123")
         corpo = self.client.get(reverse("governanca:quartos")).content.decode()
         self.assertIn("Aprovar limpeza", corpo)
-        self.assertIn("Devolver para limpar", corpo)
+        self.assertIn("Solicitar nova limpeza", corpo)
         self.assertIn(reverse("governanca:devolver", args=[self.uh.pk]), corpo)
 
     def test_reprovar_pela_view(self):
@@ -803,7 +809,7 @@ class FluxoDidaticoTests(GovernancaBase):
         corpo = self._painel()
         posicoes = [corpo.index(e["rotulo"]) for e in services.CICLO]
         self.assertEqual(posicoes, sorted(posicoes), "o ciclo saiu fora de ordem")
-        self.assertIn("Como funciona a limpeza dos quartos", corpo)
+        self.assertIn("Fluxo de limpeza e inspeção", corpo)
 
     def test_glossario_explica_os_termos_de_hotelaria(self):
         corpo = self._painel()
@@ -813,22 +819,22 @@ class FluxoDidaticoTests(GovernancaBase):
     def test_quarto_sujo_tem_uma_acao_e_ela_diz_o_que_acontece(self):
         services.abrir_faxina(self.uh, usuario=self.user)
         corpo = self._painel()
-        self.assertIn("Começar limpeza", corpo)
-        self.assertNotIn("Iniciar limpeza", corpo)     # jargão antigo saiu
+        self.assertIn("Iniciar limpeza", corpo)
+        self.assertNotIn("Começar limpeza", corpo)     # jargão antigo saiu
         self.assertEqual(corpo.count("botao-primario"), 1)   # uma só ação principal
 
     def test_quarto_em_limpeza_pede_terminei(self):
         tarefa = services.abrir_faxina(self.uh, usuario=self.user)
         services.iniciar_tarefa(tarefa, self.user)
         corpo = self._painel()
-        self.assertIn("Terminei a limpeza", corpo)
+        self.assertIn("Concluir limpeza", corpo)
         self.assertNotIn("Marcar limpo", corpo)
 
     def test_quarto_pronto_nao_tem_acao_principal(self):
         services.inspecionar(self.uh, self.user)
         corpo = self._painel()
         self.assertIn("Pronto para receber o hóspede", corpo)
-        self.assertIn("Pedir nova limpeza", corpo)
+        self.assertIn("Solicitar limpeza", corpo)
         self.assertNotIn("botao-primario", corpo)
 
     def test_cada_estado_vem_com_a_frase_que_o_explica(self):
@@ -846,13 +852,13 @@ class FluxoDidaticoTests(GovernancaBase):
         services.abrir_faxina(self.uh, usuario=self.user, origem="arrumacao_diaria")
         self.assertIn("Arrumação do dia, com o hóspede ainda no quarto.", self._painel())
 
-    def test_estado_usa_a_palavra_simples_e_nao_o_termo_do_model(self):
-        """O model diz "Inspecionado"; a tela diz "Pronto" (o termo de hotelaria
+    def test_estado_apresenta_termo_operacional_de_liberacao(self):
+        """O model diz "Inspecionado"; a tela diz "Liberado" (o termo de hotelaria
         fica explicado no «Como funciona»)."""
         services.inspecionar(self.uh, self.user)
         dados = services.painel_limpeza()
         linha = next(ln for ln in dados["linhas"] if ln["uh"] == self.uh)
-        self.assertEqual(linha["situacao_label"], "Pronto")
+        self.assertEqual(linha["situacao_label"], "Liberado")
 
 
 class ComecarLimpezaNumToqueTests(GovernancaBase):
@@ -884,7 +890,7 @@ class ComecarLimpezaNumToqueTests(GovernancaBase):
 
     def test_toque_duplo_nao_devolve_o_quarto_para_a_limpar(self):
         """O segundo POST achava a faxina já em andamento, mas antes marcava o quarto
-        como sujo: ficava «A limpar» com alguém limpando, e o botão da linha
+        como sujo: ficava «Limpeza pendente» com alguém limpando, e o botão da linha
         («Começar limpeza» → iniciar) não o tirava mais de lá."""
         for _ in range(2):
             self.client.post(reverse("governanca:nova_tarefa"),
@@ -894,7 +900,7 @@ class ComecarLimpezaNumToqueTests(GovernancaBase):
         self.assertEqual(services.situacao_uh(self.uh).situacao, "em_limpeza")
 
     def test_quarto_preso_em_a_limpar_se_acerta_no_botao_da_linha(self):
-        """Quem já ficou preso (faxina em andamento, quarto «A limpar») sai pelo
+        """Quem já ficou preso (faxina em andamento, quarto «Limpeza pendente») sai pelo
         próprio botão principal da linha."""
         tarefa = services.abrir_faxina(self.uh, usuario=self.user)
         services.iniciar_tarefa(tarefa, self.user)
@@ -1011,7 +1017,7 @@ class VisaoGeralTests(GovernancaBase):
         r = self.client.get(reverse("governanca:painel"))
         self.assertEqual(r.status_code, 200)
         self.assertTemplateUsed(r, "governanca/visao.html")
-        self.assertContains(r, "Como está a casa")
+        self.assertContains(r, "Visão geral da governança")
         self.assertContains(r, "corredor-gov")       # a casa em blocos
 
     def test_uma_porta_por_quarto_abrindo_a_ficha_dele(self):
@@ -1031,7 +1037,7 @@ class VisaoGeralTests(GovernancaBase):
         dados = services.visao_geral()
         self.assertEqual((dados["prontos"], dados["total"]), (1, 3))
         self.assertEqual(dados["falta_para_pronto"], 2)
-        self.assertContains(self.client.get(reverse("governanca:painel")), "de 3 prontos")
+        self.assertContains(self.client.get(reverse("governanca:painel")), "de 3 liberados")
 
     def test_a_porta_ganha_a_cor_do_estado(self):
         services.abrir_faxina(self.uh, usuario=self.user)
@@ -1060,7 +1066,7 @@ class VisaoGeralTests(GovernancaBase):
     def test_atencao_cobra_camareira_para_o_que_esta_sujo(self):
         services.abrir_faxina(self.uh, usuario=self.user)
         achados = {a["rotulo"] for a in services.visao_geral()["atencao"]}
-        self.assertTrue(any("sem camareira" in a for a in achados), achados)
+        self.assertTrue(any("sem responsável" in a for a in achados), achados)
 
     def test_sem_nada_pendente_a_tela_diz_isso(self):
         for uh in (self.uh, self.uh2, self.uh3):
@@ -1144,11 +1150,11 @@ class VisaoGeralComReservasTests(RondaBase):
     def test_a_tela_mostra_o_horario_de_entrada_do_hospede(self):
         """O prazo do dia aparece com a casa pronta e com a casa atrasada."""
         self.assertContains(self.client.get(reverse("governanca:painel")),
-                            "O primeiro hóspede pode entrar")
+                            "Horário de check-in:")
         services.abrir_faxina(self.uh, usuario=self.user)
         r = self.client.get(reverse("governanca:painel"))
-        self.assertContains(r, "O primeiro hóspede pode entrar")
-        self.assertContains(r, "para a casa toda ficar pronta")
+        self.assertContains(r, "Horário de check-in:")
+        self.assertContains(r, "com limpeza ou inspeção pendente")
 
     def test_o_bloco_de_chegadas_lista_quarto_e_hospede(self):
         self._chegada_hoje(self.uh, nome="Ana Chegando")
@@ -1274,7 +1280,7 @@ class OcupacaoNoQuadroTests(RondaBase):
         self.assertEqual(resumo.get("ocupado"), 1)
         self.assertNotIn("chega_hoje", resumo)                # zero não vira linha
         r = self.client.get(reverse("governanca:painel"))
-        self.assertContains(r, "A casa hoje")
+        self.assertContains(r, "Ocupação dos quartos")
         self.assertContains(r, "corredor-ocupacao")
 
     def test_ocupacao_na_porta_da_visao_geral(self):
@@ -1338,7 +1344,7 @@ class BlocoDoQuartoTests(RondaBase):
         services.abrir_faxina(self.uh, usuario=self.user)
         corpo = self._corpo()
         self.assertIn('class="porta-estado"', corpo)
-        self.assertIn("A limpar", corpo)
+        self.assertIn("Limpeza pendente", corpo)
 
     def test_o_tipo_do_quarto_sai_do_bloco_e_vai_para_a_ficha(self):
         """Dado secundário. Na dica ele seria invisível no tablet — foi para a
@@ -1380,7 +1386,7 @@ class BlocoDoQuartoTests(RondaBase):
 
 
 class QuartoOcupadoNaoDizProntoTests(RondaBase):
-    """"Pronto" quer dizer «pode receber hóspede» — e o quarto já tem um.
+    """"Liberado" quer dizer «pode receber hóspede» — e o quarto já tem um.
 
     Com a casa cheia a tela mostrava 21 blocos anunciando "pode receber hóspede"
     sobre quartos ocupados. Com gente dentro, limpo e conferido é ARRUMADO: o
@@ -1394,7 +1400,7 @@ class QuartoOcupadoNaoDizProntoTests(RondaBase):
     def test_quarto_vago_e_conferido_continua_pronto(self):
         services.inspecionar(self.uh, self.user)
         linha = self._linha(self.uh)
-        self.assertEqual(linha["situacao_label"], "Pronto")
+        self.assertEqual(linha["situacao_label"], "Liberado")
         self.assertIn("Pode receber hóspede", linha["explicacao"])
 
     def test_quarto_ocupado_e_conferido_diz_arrumado(self):
@@ -1430,7 +1436,7 @@ class QuartoOcupadoNaoDizProntoTests(RondaBase):
         self._hospedar(self.uh, sai_em_dias=3)
         services.abrir_faxina(self.uh, tipo=TarefaGovernanca.Tipo.ARRUMACAO,
                               usuario=self.user, origem="arrumacao_diaria")
-        self.assertEqual(self._linha(self.uh)["situacao_label"], "A limpar")
+        self.assertEqual(self._linha(self.uh)["situacao_label"], "Limpeza pendente")
 
 
 class PlanoDoDiaTests(RondaBase):
@@ -1541,7 +1547,7 @@ class PlanoDoDiaTests(RondaBase):
         self.assertContains(r, "Plano do dia")
         self.assertContains(r, "Chegadas de hoje")
         self.assertContains(r, "Saídas de hoje")
-        self.assertContains(r, "não pedem nada agora")
+        self.assertContains(r, "sem serviço pendente")
 
     def test_a_lista_abre_na_ordem_do_plano(self):
         """A camareira não precisa cruzar a lista com o mapa de reservas."""
@@ -1827,14 +1833,14 @@ class MinhaFilaTests(RondaBase):
         self.assertTemplateUsed(r, "governanca/fila.html")
         corpo = r.content.decode()
         self.assertIn("Começar", corpo)
-        self.assertNotIn("Terminei", corpo)
+        self.assertNotIn("Concluir", corpo)
 
     def test_comecar_e_terminar_pela_fila_sem_sair_dela(self):
         tarefa = self._para(self.uh, self.maria)
         r = self.client.post(reverse("governanca:tarefa_acao", args=[tarefa.pk]),
                              {"acao": "iniciar", "fila": "1"}, HTTP_HX_REQUEST="true")
         self.assertTemplateUsed(r, "governanca/partials/fila.html")
-        self.assertIn("Terminei", r.content.decode())
+        self.assertIn("Concluir", r.content.decode())
         r = self.client.post(reverse("governanca:tarefa_acao", args=[tarefa.pk]),
                              {"acao": "concluir", "fila": "1"}, HTTP_HX_REQUEST="true")
         tarefa.refresh_from_db()
@@ -1994,7 +2000,7 @@ class QuartoBloqueadoTests(RondaBase):
 
     def test_a_frase_diz_tambem_como_esta_a_limpeza(self):
         services.abrir_faxina(self.uh, usuario=self.user)
-        self.assertIn("a limpar", self._linha()["explicacao"])
+        self.assertIn("limpeza pendente", self._linha()["explicacao"])
 
     def test_a_linha_nao_oferece_proximo_passo_de_limpeza(self):
         services.inspecionar(self.uh, self.user)
@@ -2003,7 +2009,7 @@ class QuartoBloqueadoTests(RondaBase):
         linha = linha[:linha.index("</tr>")]
         self.assertIn("Em manutenção (fora de operação)", linha)
         self.assertNotIn("pronto para o hóspede", linha)
-        self.assertNotIn("Pedir nova limpeza", linha)
+        self.assertNotIn("Solicitar limpeza", linha)
 
 
 class EscaladaSemLoginTests(GovernancaBase):
@@ -2077,18 +2083,18 @@ class FichaDoQuartoTests(RondaBase):
         r = self._ficha()
         self.assertEqual(r.status_code, 200)
         self.assertContains(r, self.uh.numero)
-        self.assertContains(r, "A limpar")
+        self.assertContains(r, "Limpeza pendente")
         self.assertContains(r, self.tipo.nome)            # tipo do quarto
         self.assertContains(r, "Ana Lima")                # quem está no quarto
         self.assertContains(r, "O hóspede fez check-out")  # o porquê
 
     def test_a_ficha_traz_o_proximo_passo_do_quarto(self):
         services.abrir_faxina(self.uh, usuario=self.user)
-        self.assertContains(self._ficha(), "Começar limpeza")
+        self.assertContains(self._ficha(), "Iniciar limpeza")
         services.definir_status(self.uh, StatusLimpeza.Situacao.LIMPA, self.user)
         r = self._ficha()
         self.assertContains(r, "Aprovar limpeza")
-        self.assertContains(r, "Devolver para limpar")
+        self.assertContains(r, "Solicitar nova limpeza")
 
     def test_com_htmx_abre_a_gaveta_e_sem_js_a_pagina(self):
         r = self._ficha(htmx=True)
@@ -2140,7 +2146,7 @@ class FichaDoQuartoTests(RondaBase):
         self.uh.save(update_fields=["status"])
         r = self._ficha()
         self.assertContains(r, "Em manutenção (fora de operação)")
-        self.assertNotContains(r, "Começar limpeza")
+        self.assertNotContains(r, "Iniciar limpeza")
 
 
 class SemHoverTests(RondaBase):
@@ -2324,7 +2330,7 @@ class AvisoDeCheckinSujoTests(GovernancaBase):
         r = self.client.get(self._detalhe().context["aviso_checkin"]["url"])
         self.assertEqual(r.status_code, 200)
         self.assertContains(r, self.uh.numero)
-        self.assertContains(r, "Começar limpeza")
+        self.assertContains(r, "Iniciar limpeza")
 
     def test_quarto_pronto_nao_barra_nada(self):
         services.inspecionar(self.uh, self.user)

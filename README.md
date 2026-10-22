@@ -274,7 +274,7 @@ Detalhes em [§9](#9-testes-e-qualidade).
 | `conciliacao` | — (área Financeiro) | Conciliação bancária (OFX) e de cartão (NSU) |
 | `relatorios` | `relatorios` | Relatórios por período com exportação |
 | `auditoria` | `auditoria` | Varredura de pendências + leitura da trilha de auditoria |
-| `nps` | — (área NPS) | Proposta de NPS e API stub |
+| `nps` | — (área NPS) | NPS pós-estadia, painel e acompanhamento |
 
 Cada app segue a mesma forma: `models.py`, `services.py` (a interface pública do módulo),
 `views.py`, `urls.py`, `forms.py`, `admin.py`, `tests.py`, `migrations/` e, quando há,

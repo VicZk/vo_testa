@@ -4,5 +4,6 @@
 <p class="pagina-eyebrow letreiro">Restaurante Piscina</p>
 <div class="pagina-cabecalho"><h1>Cardápio e adicionais</h1><a class="botao-neutro" href="{% url 'restaurante:comandas' %}">Comandas</a></div>
 <p class="subtitulo">Configure o ponto da carne, acompanhamentos e adicionais. Observações livres estão disponíveis em qualquer pedido.</p>
+{% include "restaurante/partials/nav.html" %}
 <div class="comandas-grid">{% for produto in produtos %}<a class="comanda-card" href="{% url 'restaurante:cardapio_produto' produto.pk %}"><strong>{{ produto.nome }}</strong><span>{{ produto.preco_venda|intcomma_brl }}</span><small>{{ produto.total_grupos }} grupo(s) de escolhas · Configurar</small></a>{% empty %}<p class="estado-vazio">Cadastre produtos e preços no Estoque para montar o cardápio.</p>{% endfor %}</div>
 {% endblock %}

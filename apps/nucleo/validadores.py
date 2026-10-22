@@ -30,6 +30,15 @@ def identificador_valido(valor, *, nome="Registro", opcional=False):
         raise ValidationError(f"{nome}: selecione um registro válido.")
     return int(texto)
 
+
+def filtro_identificador(valor):
+    """Filtros GET inválidos recebem 400 antes de alcançar o ORM."""
+    from django.core.exceptions import BadRequest
+    try:
+        return identificador_valido(valor, opcional=True)
+    except ValidationError:
+        raise BadRequest("Filtro inválido: selecione um registro da lista.")
+
 # DDDs válidos no Brasil (há buracos — ex.: 20, 23, 25, 26, 29, 30, 36, 39, 40...).
 DDDS_VALIDOS = frozenset({
     11, 12, 13, 14, 15, 16, 17, 18, 19,

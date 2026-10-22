@@ -78,7 +78,7 @@
             <span class="letreiro">Taxas (inclusas no total)</span>
             <label class="check-inline">{{ form.cobra_iss }} {{ form.cobra_iss.label }}</label>
             <label class="check-inline">{{ form.cobra_taxa_turismo }} {{ form.cobra_taxa_turismo.label }}</label>
-            <label class="check-inline">{{ form.nao_reembolsavel }} {{ form.nao_reembolsavel.label }} <small>(−12%, sem cancelamento)</small></label>
+            <label class="check-inline">{{ form.nao_reembolsavel }} {{ form.nao_reembolsavel.label }} <small>Desconto da tabela; mantém a política de cancelamento.</small></label>
           </div>
           {% include "reservas/partials/campo.html" with campo=form.observacoes classe="col-2" %}
         </div>

@@ -1169,6 +1169,8 @@ def boh(request):
     except (TypeError, ValueError):
         ano, mes = hoje.year, hoje.month
     mes = min(12, max(1, mes))
+    if not 2 <= ano <= 9998:
+        ano = hoje.year
     dados = services.boh_mensal(ano, mes)
 
     if request.GET.get("formato") == "csv":

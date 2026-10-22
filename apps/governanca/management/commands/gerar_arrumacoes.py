@@ -1,6 +1,6 @@
 """Rotina da manhã: uma arrumação para cada quarto ocupado em que o hóspede continua.
 
-Roda no grupo diário do `rotinas` (cron do Railway, de manhã). Idempotente: rodar de
+Roda no grupo frequente do `rotinas`, respeitando o horário local configurado. Idempotente: rodar de
 novo no mesmo dia não duplica tarefa.
 """
 from django.core.management.base import BaseCommand
@@ -16,7 +16,7 @@ class Command(BaseCommand):
         if not modulo_ativo(Modulo.GOVERNANCA):
             self.stdout.write("Governança inativa: nada a gerar.")
             return
-        from apps.governanca.services import gerar_arrumacoes_do_dia
+        from apps.governanca.services import executar_rotina_diaria
 
-        criadas = gerar_arrumacoes_do_dia()
-        self.stdout.write(f"{criadas} arrumação(ões) gerada(s).")
+        resultado = executar_rotina_diaria()
+        self.stdout.write(f"{resultado['geradas']} arrumação(ões) gerada(s); {resultado['atribuidas']} atribuída(s).")

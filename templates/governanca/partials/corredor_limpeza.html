@@ -29,6 +29,7 @@ dica; o rodapé só existe quando tem o que dizer, em vez de uma metade vazia.
       {% comment %}O estado é o que mais se lê depois do número: texto grande, na
       cor do próprio estado (contraste AA sobre o painel escuro).{% endcomment %}
       <span class="porta-estado">{{ p.rotulo }}</span>
+      {% if p.restricao %}<span class="porta-flag">{{ p.restricao }}</span>{% endif %}
       {% if p.ocupacao %}
         <span class="porta-ocupacao">{{ p.ocupacao }}{% if p.hospede %} · {{ p.hospede }}{% endif %}</span>
       {% endif %}
@@ -52,7 +53,7 @@ quem está dentro é dado, e o estado da limpeza (que pede ação) já tem os ch
 acima.{% endcomment %}
 {% if ocupacao %}
 <p class="corredor-ocupacao">
-  <span class="letreiro">A casa hoje</span>
+  <span class="letreiro">Ocupação dos quartos</span>
   {% for o in ocupacao %}<span class="rotulo-dado dica" data-dica="{{ o.ajuda }}">{{ o.rotulo }} <b>{{ o.n }}</b></span>{% endfor %}
 </p>
 {% endif %}

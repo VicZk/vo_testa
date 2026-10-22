@@ -11,6 +11,7 @@ from django.db.models import Sum
 from django.utils import timezone
 
 from apps.nucleo.models import NaturezaFiscal, receber_no_caixa, registrar_auditoria
+from apps.nucleo.validadores import decimal_valido
 
 from .models import (
     ItemEnxoval,
@@ -47,17 +48,19 @@ def adicionar_item(ordem, servico, quantidade, operador):
     travar(ordem)
     if not ordem.em_producao:
         raise ValidationError("Só é possível lançar itens antes da entrega.")
-    quantidade = Decimal(str(quantidade))
-    if quantidade <= 0:
-        raise ValidationError("Quantidade inválida.")
+    quantidade = decimal_valido(quantidade, nome="Quantidade", minimo=Decimal("0.001"), maximo=Decimal("999999999.999"), casas=3)
     existente = ordem.itens.filter(servico=servico).first()
+    total_quantidade = quantidade + (existente.quantidade if existente else 0)
+    decimal_valido(total_quantidade, nome="Quantidade", minimo=Decimal("0.001"), maximo=Decimal("999999999.999"), casas=3)
+    preco = decimal_valido(existente.preco_unitario if existente else servico.preco, nome="Preço do serviço")
+    decimal_valido((total_quantidade * preco).quantize(Decimal("0.01")), nome="Total do item")
     if existente:
         existente.quantidade += quantidade
         existente.save(update_fields=["quantidade"])
         return existente
     return ItemOrdemLavanderia.objects.create(
         ordem=ordem, servico=servico, descricao=servico.nome,
-        quantidade=quantidade, preco_unitario=servico.preco,
+        quantidade=quantidade, preco_unitario=preco,
         natureza=NaturezaFiscal.SERVICO,
     )
 
@@ -102,7 +105,7 @@ def entregar(ordem, operador, destino, forma=None, conta_id=None, desconto=ZERO)
         raise ValidationError("Esta ordem já foi encerrada.")
     if not ordem.itens.exists():
         raise ValidationError("A ordem está vazia.")
-    desconto = Decimal(desconto or 0)
+    desconto = decimal_valido(desconto or 0, nome="Desconto")
     if desconto < 0 or desconto > ordem.subtotal():
         raise ValidationError("Desconto inválido.")
     ordem.desconto = desconto

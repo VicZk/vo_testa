@@ -11,7 +11,7 @@ view redireciona para a fila quando o pedido não vem do HTMX.
 {% endcomment %}
 <p class="subtitulo gov-orientacao" role="status" aria-live="polite">
   {% if fazendo %}
-    Você está no <strong>{{ fazendo.uh.numero }}</strong>. Quando acabar a limpeza, toque em «Terminei».
+    Você está no <strong>{{ fazendo.uh.numero }}</strong>. Quando acabar a limpeza, toque em «Concluir».
   {% elif fila %}
     <strong>{{ fila|length }} quarto{{ fila|pluralize }}</strong> na sua fila.
     Toque em «Começar» no quarto que vai limpar agora.
@@ -41,13 +41,15 @@ view redireciona para a fila quando o pedido não vem do HTMX.
           <p class="gov-fila-recado"><strong>Refazer:</strong> {{ q.observacoes }}</p>
         {% endif %}
         <div class="gov-fila-acoes">
-          {% if q.fazendo %}
+          {% if q.restricao and not q.fazendo %}
+            <span class="aviso aviso-info">{{ q.restricao }}</span>
+          {% elif q.fazendo %}
             <form method="post" action="{% url 'governanca:tarefa_acao' q.tarefa.pk %}"
                   hx-post="{% url 'governanca:tarefa_acao' q.tarefa.pk %}" hx-disabled-elt="find button">
               {% csrf_token %}
               <input type="hidden" name="acao" value="concluir">
               <input type="hidden" name="fila" value="1">
-              <button type="submit" class="botao-primario gov-fila-botao">Terminei</button>
+              <button type="submit" class="botao-primario gov-fila-botao">Concluir</button>
             </form>
           {% else %}
             <form method="post" action="{% url 'governanca:tarefa_acao' q.tarefa.pk %}"

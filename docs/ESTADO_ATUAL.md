@@ -50,7 +50,7 @@ unidades de day use ativas. Os cadastros efetivos da instalação determinam a o
 | Decisão comercial | Simulador determinístico e adapter JEV | Contrato e disponibilidade do serviço externo precisam ser validados |
 | R2, backup e monitor | Implementações opcionais por configuração | O código não comprova ativação nem restauração bem-sucedida de backup |
 
-NPS é uma proposta com endpoints stub, sem coleta persistida de respostas.
+NPS possui coleta persistida pós-estadia, API autenticada por token/sessão, cálculo por período e acompanhamento no CRM. Veja `Proposta_NPS.md`.
 CRM do Hóspede e Canais/OTAs são evolução de catálogo. Telefonia/WebRTC continua
 planejada. Frigobar foi removido do catálogo e não possui app ativo.
 

@@ -4,7 +4,20 @@ setor; escala funcionário × dia × turno; folgas/férias (ausências); troca d
 com aprovação da gerência. Depende só do Núcleo (usa Funcionario).
 """
 from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+
+
+class ConfiguracaoEscala(models.Model):
+    descanso_horas = models.PositiveSmallIntegerField(
+        "descanso entre jornadas (horas)", default=11,
+        validators=[MinValueValidator(1), MaxValueValidator(48)],
+        help_text="Parâmetro de planejamento a conferir com a gestão de pessoal.",
+    )
+
+    @classmethod
+    def atual(cls):
+        return cls.objects.get_or_create(pk=1)[0]
 
 
 class Turno(models.Model):

@@ -41,7 +41,7 @@ def pecas_atrasadas():
 
 
 # ── Verba mensal (Passo 3): teto por mês; travada e gasta = soma das campanhas ──
-from decimal import Decimal, InvalidOperation  # noqa: E402
+from decimal import Decimal  # noqa: E402
 
 from django.db.models import Sum  # noqa: E402
 
@@ -99,9 +99,10 @@ def parse_moeda(valor) -> Decimal:
     s = str(valor or "0").strip().replace("R$", "").replace(" ", "")
     if "," in s:
         s = s.replace(".", "").replace(",", ".")
+    from apps.nucleo.validadores import decimal_valido
     try:
-        return Decimal(s or "0")
-    except (InvalidOperation, ValueError):
+        return decimal_valido(s or "0", nome="Valor monetário")
+    except ValidationError:
         raise ValueError("Valor monetário inválido.")
 
 
@@ -109,6 +110,9 @@ def parse_moeda(valor) -> Decimal:
 def definir_teto(mes: str, valor) -> VerbaMarketing:
     """Gestor cadastra/edita o teto do mês (a única fonte do número)."""
     try:
+        from datetime import datetime
+        if len(mes) != 7 or datetime.strptime(mes, "%Y-%m").strftime("%Y-%m") != mes:
+            raise ValueError
         dec = parse_moeda(valor)
     except ValueError:
         raise ValueError("Valor de teto inválido.")

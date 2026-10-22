@@ -4,12 +4,10 @@
 {% block titulo %}Histórico | Lavanderia{% endblock %}
 
 {% block conteudo %}
-<a href="{% url 'lavanderia:painel' %}" class="voltar">
-  <svg viewBox="0 0 24 24" class="ico"><path d="M15 6l-6 6 6 6"/></svg> Lavanderia
-</a>
 <p class="pagina-eyebrow letreiro">Lavanderia</p>
 <h1>Histórico de ordens</h1>
 <p class="subtitulo">Ordens entregues e canceladas.</p>
+{% include "lavanderia/partials/nav.html" %}
 
 <table class="tabela">
   <thead>

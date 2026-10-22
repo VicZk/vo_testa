@@ -8,7 +8,7 @@ As quatro movimentações (entrada, saída, transferência, ajuste) moram DENTRO
 «Movimentar», no segmentado da própria tela; categorias e locais, em «Cadastros».
 {% endcomment %}
 {% with atual=request.resolver_match.url_name %}
-<nav class="est-abas" aria-label="Seções do Estoque">
+<nav class="est-abas abas-secao" aria-label="Seções do Estoque">
   <a href="{% url 'estoque:posicao' %}" class="est-aba"{% if atual == 'posicao' %} aria-current="page"{% endif %}>
     <svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
     <span>Posição</span>

@@ -37,11 +37,11 @@
     </button>
   </form>
 
-  <a href="https://wa.me/{{ config.whatsapp }}?text=Ol%C3%A1%21%20Perdi%20o%20c%C3%B3digo%20da%20minha%20reserva%20na%20Pousada%20V%C3%B4%20Testa." target="_blank" rel="noopener"
+  {% if config.whatsapp_publico %}<a href="https://wa.me/{{ config.whatsapp_publico }}?text=Ol%C3%A1%21%20Perdi%20o%20c%C3%B3digo%20da%20minha%20reserva%20na%20Pousada%20V%C3%B4%20Testa." target="_blank" rel="noopener"
      class="mt-5 flex items-center gap-2 bg-noturno/[.04] border border-madeira/15 rounded-lg px-4 py-3 text-sm text-madeira/80 hover:border-lampiao/50 transition">
     <svg class="w-4 h-4 shrink-0 text-madeira/60" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
     <span>Perdeu o código? <strong class="text-madeira font-semibold">Receber por WhatsApp</strong></span>
-  </a>
+  </a>{% endif %}
 
 </div>
 

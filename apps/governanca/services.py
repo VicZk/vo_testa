@@ -6,7 +6,13 @@ from django.utils import timezone
 
 from apps.nucleo.models import registrar_auditoria
 
-from .models import ConferenciaOcupacao, StatusLimpeza, TarefaGovernanca
+from .models import (
+    ConferenciaOcupacao,
+    ConfiguracaoGovernanca,
+    RotinaLimpezaDiaria,
+    StatusLimpeza,
+    TarefaGovernanca,
+)
 
 
 def situacao_uh(uh) -> StatusLimpeza:
@@ -14,7 +20,7 @@ def situacao_uh(uh) -> StatusLimpeza:
 
 
 def uh_pronta_para_checkin(uh) -> bool:
-    """Limpa ou inspecionada. Interface pública para Reservas (guard de entrada)."""
+    """Inspecionada e sem serviços pendentes. Interface pública para Reservas."""
     return situacao_uh(uh).pronta and not TarefaGovernanca.objects.filter(
         uh=uh, status__in=[TarefaGovernanca.Status.PENDENTE, TarefaGovernanca.Status.EM_ANDAMENTO]
     ).exists()
@@ -39,7 +45,13 @@ def definir_status(uh, situacao, usuario=None):
 
 def sujar_apos_ocupacao(uh, usuario=None):
     """A indisponibilidade é persistida antes da geração best-effort da faxina."""
-    return definir_status(uh, StatusLimpeza.Situacao.SUJA, usuario)
+    with transaction.atomic():
+        status = definir_status(uh, StatusLimpeza.Situacao.SUJA, usuario)
+        status.nao_perturbe_ate = None
+        status.dispensa_dia = None
+        status.restricao_observacao = ""
+        status.save(update_fields=["nao_perturbe_ate", "dispensa_dia", "restricao_observacao"])
+        return status
 
 
 def abrir_faxina(uh, tipo=TarefaGovernanca.Tipo.FAXINA, usuario=None, origem="manual"):
@@ -75,24 +87,75 @@ def gerar_arrumacoes_do_dia(usuario=None) -> int:
     """Uma arrumação para cada quarto ocupado em que o hóspede continua (rotina da
     manhã). Não duplica: quarto com arrumação pendente ou em andamento fica como está.
     Sem o módulo Reservas não há como saber quem está em casa — nada a fazer."""
-    from apps.nucleo.models import modulo_ativo
+    from apps.nucleo.models import UH, TipoUH, modulo_ativo
     from apps.nucleo.modulos import Modulo
-
     if not modulo_ativo(Modulo.RESERVAS):
         return 0
     from apps.reservas.services import uhs_em_permanencia
 
-    criadas = 0
-    for uh in uhs_em_permanencia():
-        ja_tem = TarefaGovernanca.objects.filter(
-            uh=uh, tipo=TarefaGovernanca.Tipo.ARRUMACAO,
-            status__in=[TarefaGovernanca.Status.PENDENTE, TarefaGovernanca.Status.EM_ANDAMENTO],
-        ).exists()
-        if not ja_tem:
-            abrir_faxina(uh, tipo=TarefaGovernanca.Tipo.ARRUMACAO, usuario=usuario,
-                         origem="arrumacao_diaria")
-            criadas += 1
+    criadas, dia = 0, timezone.localdate()
+    bloqueados = bloqueios_do_dia(dia)
+    candidatos = uhs_em_permanencia(dia).exclude(status__in=[UH.Status.INATIVA, UH.Status.BLOQUEADA]).exclude(
+        tipo__modalidade=TipoUH.Modalidade.DAY_USE).exclude(pk__in=bloqueados)
+    for uh in candidatos.order_by("pk"):
+        with transaction.atomic():
+            # A rotina não segura outra âncora: pode aguardar a UH para que duas
+            # execuções simultâneas encontrem a mesma decisão diária.
+            uh = UH.objects.select_for_update().get(pk=uh.pk)
+            if (RotinaLimpezaDiaria.objects.filter(uh=uh, dia=dia).exists()
+                    or uh.status in (UH.Status.INATIVA, UH.Status.BLOQUEADA)
+                    or not uhs_em_permanencia(dia).filter(pk=uh.pk).exists()):
+                continue
+            tarefa = TarefaGovernanca.objects.filter(uh=uh).exclude(
+                status=TarefaGovernanca.Status.CONCLUIDA).order_by("pk").first()
+            if not tarefa:
+                tarefa = TarefaGovernanca.objects.filter(uh=uh, concluida_em__date=dia).order_by("-concluida_em").first()
+            if not tarefa:
+                tarefa = abrir_faxina(uh, tipo=TarefaGovernanca.Tipo.ARRUMACAO, usuario=usuario,
+                                     origem="arrumacao_diaria")
+                criadas += 1
+            RotinaLimpezaDiaria.objects.create(uh=uh, dia=dia, tarefa=tarefa)
     return criadas
+
+
+def executar_rotina_diaria(usuario=None, agora=None):
+    from apps.nucleo.models import modulo_ativo
+    from apps.nucleo.modulos import Modulo
+
+    config = ConfiguracaoGovernanca.get()
+    agora = timezone.localtime(agora or timezone.now())
+    if not config.ativa or agora.time() < config.horario or not modulo_ativo(Modulo.GOVERNANCA):
+        return {"geradas": 0, "atribuidas": 0}
+    geradas = gerar_arrumacoes_do_dia(usuario)
+    distribuicao = distribuir_fila(usuario) if config.distribuir else {"atribuidas": 0}
+    ConfiguracaoGovernanca.objects.filter(pk=1).update(ultima_execucao=agora)
+    return {"geradas": geradas, "atribuidas": distribuicao["atribuidas"]}
+
+
+@transaction.atomic
+def registrar_restricao(uh, usuario, *, tipo, ate=None, observacao=""):
+    from datetime import timedelta
+
+    from apps.nucleo.sistema import travar_quartos
+    from apps.reservas.services import uh_ocupada
+
+    travar_quartos(uh)
+    if not uh_ocupada(uh):
+        raise ValidationError("A preferência de limpeza só se aplica a quartos ocupados.")
+    if tipo not in ("nao_perturbe", "dispensa", "liberar"):
+        raise ValidationError("Preferência de limpeza inválida.")
+    if len(observacao) > 200:
+        raise ValidationError("Use até 200 caracteres na observação.")
+    if tipo == "nao_perturbe" and (ate is None or not timezone.now() < ate <= timezone.now() + timedelta(days=7)):
+        raise ValidationError("Informe um horário futuro, dentro dos próximos 7 dias.")
+    status = situacao_uh(uh)
+    status.nao_perturbe_ate = ate if tipo == "nao_perturbe" else None
+    status.dispensa_dia = timezone.localdate() if tipo == "dispensa" else None
+    status.restricao_observacao = observacao.strip() if tipo != "liberar" else ""
+    status.atualizado_por = usuario
+    status.save()
+    registrar_auditoria(usuario, "governanca_preferencia", status, {"tipo": tipo, "quarto": uh.numero})
+    return status
 
 
 def iniciar_tarefa(tarefa, usuario=None):
@@ -101,7 +164,12 @@ def iniciar_tarefa(tarefa, usuario=None):
     from apps.nucleo.sistema import travar
 
     with transaction.atomic():
+        from apps.nucleo.sistema import travar_quartos
+        travar_quartos(tarefa.uh)
         travar(tarefa)
+        restricao = situacao_uh(tarefa.uh).restricao_ativa
+        if restricao:
+            raise ValidationError(f"{restricao}. Confirme a liberação com o hóspede antes de iniciar.")
         if tarefa.status == TarefaGovernanca.Status.EM_ANDAMENTO:
             # Já começou (toque duplo, outra aba). Se o quarto ficou «A limpar» com
             # a limpeza em andamento, acerta: é o que ele está.
@@ -119,8 +187,9 @@ def iniciar_tarefa(tarefa, usuario=None):
 
 @transaction.atomic
 def concluir_tarefa(tarefa, usuario=None):
-    from apps.nucleo.sistema import travar
+    from apps.nucleo.sistema import travar, travar_quartos
 
+    travar_quartos(tarefa.uh)
     travar(tarefa)
     if tarefa.status == TarefaGovernanca.Status.CONCLUIDA:
         return tarefa  # idempotente — não re-dispara o sinal nem re-audita
@@ -162,9 +231,16 @@ def _faxina_a_julgar(uh):
     return tarefa
 
 
+@transaction.atomic
 def inspecionar(uh, usuario=None):
     """Supervisora aprovou: o quarto fica pronto e a faxina leva o carimbo de quem
     inspecionou (o relatório de inspecionados × reprovados sai daqui)."""
+    from apps.nucleo.sistema import travar_quartos
+
+    travar_quartos(uh)
+    if (situacao_uh(uh).situacao not in (StatusLimpeza.Situacao.LIMPA, StatusLimpeza.Situacao.INSPECIONADA)
+            or tarefas_ativas().filter(uh=uh).exists()):
+        raise ValidationError("Conclua os serviços pendentes antes de aprovar a inspeção.")
     tarefa = _faxina_a_julgar(uh)
     if tarefa:
         tarefa.inspecionada_em = timezone.now()
@@ -187,6 +263,7 @@ def frase_de_aprovacao(uh, dia=None) -> str:
     return "aprovado e liberado para a recepção."
 
 
+@transaction.atomic
 def desfazer_inspecao(uh, usuario=None):
     """Tira o carimbo de aprovação: o quarto volta para «Limpo», esperando a
     supervisora. É o «Desfazer» de um toque errado em «Aprovar limpeza».
@@ -197,6 +274,9 @@ def desfazer_inspecao(uh, usuario=None):
     movimento é um livro-razão (não se apaga). O caminho de volta de lá é
     «Devolver para limpar», que é o gesto certo e já existe.
     """
+    from apps.nucleo.sistema import travar_quartos
+
+    travar_quartos(uh)
     status = situacao_uh(uh)
     if status.situacao != StatusLimpeza.Situacao.INSPECIONADA:
         return status   # idempotente: já saiu do aprovado (ou nunca esteve)
@@ -213,9 +293,13 @@ def desfazer_inspecao(uh, usuario=None):
     return definir_status(uh, StatusLimpeza.Situacao.LIMPA, usuario)
 
 
+@transaction.atomic
 def reprovar_inspecao(uh, usuario=None, motivo=""):
     """Supervisora reprovou: o quarto volta para a fila (nova faxina, origem
     "reprovada") e fica registrado quem reprovou, quando e por quê."""
+    from apps.nucleo.sistema import travar_quartos
+
+    travar_quartos(uh)
     tarefa = _faxina_a_julgar(uh)
     if tarefa:
         tarefa.reprovada_em = timezone.now()
@@ -239,6 +323,27 @@ def tarefas_ativas():
     )
 
 
+@transaction.atomic
+def atribuir_tarefa(tarefa, camareira_id, usuario=None):
+    from django.contrib.auth import get_user_model
+
+    from apps.nucleo.modulos import Modulo
+    from apps.nucleo.sistema import travar, travar_quartos
+    from apps.nucleo.validadores import identificador_valido
+
+    identificador = identificador_valido(camareira_id, nome="Responsável", opcional=True)
+    camareira = get_user_model().objects.filter(pk=identificador, is_active=True).first() if identificador else None
+    if identificador and (not camareira or not camareira.pode_acessar(Modulo.GOVERNANCA)):
+        raise ValidationError("Selecione um responsável ativo com acesso à Governança.")
+    travar_quartos(tarefa.uh)
+    travar(tarefa)
+    if not tarefa.ativa:
+        raise ValidationError("Este serviço já foi concluído; a atribuição não foi alterada.")
+    tarefa.camareira = camareira
+    tarefa.save(update_fields=["camareira", "atualizada_em"])
+    return tarefa
+
+
 # Urgência: o que precisa de ação sobe. (a limpar → em limpeza → limpa → inspecionada)
 _ORDEM_LIMPEZA = {
     StatusLimpeza.Situacao.SUJA: 0,
@@ -256,7 +361,7 @@ _ORDEM_LIMPEZA = {
 CICLO = [
     {
         "cod": StatusLimpeza.Situacao.SUJA,
-        "rotulo": "A limpar",
+        "rotulo": "Limpeza pendente",
         "resumo": "O quarto precisa de limpeza.",
         "quem": "Camareira",
         "ajuda": "Entra aqui sozinho quando o hóspede faz check-out, quando a "
@@ -265,14 +370,14 @@ CICLO = [
     {
         "cod": StatusLimpeza.Situacao.EM_LIMPEZA,
         "rotulo": "Em limpeza",
-        "resumo": "Alguém está limpando agora.",
+        "resumo": "Limpeza em andamento.",
         "quem": "Camareira",
-        "ajuda": "A camareira tocou em «Começar limpeza». O relógio da faxina "
+        "ajuda": "O serviço foi registrado em «Iniciar limpeza». O tempo de limpeza "
                  "começa a contar aqui.",
     },
     {
         "cod": StatusLimpeza.Situacao.LIMPA,
-        "rotulo": "Limpo",
+        "rotulo": "Aguardando inspeção",
         "resumo": "A limpeza acabou e falta a supervisora conferir.",
         "quem": "Supervisora",
         "ajuda": "Quarto limpo ainda NÃO está liberado: a supervisora passa, "
@@ -280,7 +385,7 @@ CICLO = [
     },
     {
         "cod": StatusLimpeza.Situacao.INSPECIONADA,
-        "rotulo": "Pronto",
+        "rotulo": "Liberado",
         "resumo": "Conferido pela supervisora. Vago, pode receber hóspede; "
                   "ocupado, já está arrumado.",
         "quem": "—",
@@ -303,7 +408,7 @@ SITUACAO_SIMPLES = {e["cod"]: e["rotulo"] for e in CICLO}
 
 OCUPACAO = {
     "vago": ("Vago", "Quarto livre, sem hóspede."),
-    "ocupado": ("Ocupado", "Hóspede em casa, continua amanhã."),
+    "ocupado": ("Ocupado", "Hóspede em permanência."),
     "sai_hoje": ("Sai hoje", "O hóspede vai embora hoje: o quarto suja na saída."),
     "chega_hoje": ("Chega hoje", "Chega hóspede: tem de estar pronto antes."),
     "bloqueado": ("Bloqueado", "Em manutenção, fora de operação."),
@@ -346,7 +451,7 @@ _MOTIVO_DA_FAXINA = {
     "arrumacao_diaria": "Arrumação do dia, com o hóspede ainda no quarto.",
     "reprovada": "A supervisora devolveu o quarto para limpar de novo.",
     "portal": "O próprio hóspede pediu limpeza pelo celular.",
-    "manual": "Alguém marcou o quarto como sujo.",
+    "manual": "Limpeza solicitada pela equipe.",
 }
 
 
@@ -394,7 +499,7 @@ def explicar_estado(situacao, tarefa, status, ocupacao=None, *, com_fila=True) -
         if not com_fila:
             return motivo.strip()
         fila = (f" Na fila de {_quem(tarefa.camareira)}." if tarefa and tarefa.camareira
-                else " Ninguém começou ainda.")
+                else " Aguardando início do serviço.")
         return (motivo + fila).strip()
     if situacao == StatusLimpeza.Situacao.EM_LIMPEZA:
         if tarefa and tarefa.iniciada_em:
@@ -481,6 +586,7 @@ def _estado_dos_quartos(dia=None) -> dict:
             # O registro cru vai junto: quem quiser outra frase sobre o MESMO
             # estado (a fila da camareira monta a dela) não refaz a consulta.
             "status": status,
+            "restricao": status.restricao_ativa,
             "tarefa": tarefa,
             "atualizado_em": status.atualizado_em,
             "conferencia": conf,
@@ -609,7 +715,7 @@ PLANO = [
     },
     {
         "cod": "resto", "nivel": "info",
-        "rotulo": "O resto da casa",
+        "rotulo": "Demais quartos",
         "resumo": "Sem hóspede chegando nem saindo hoje: ainda pedem limpeza ou a "
                   "conferência da supervisora.",
     },
@@ -798,10 +904,12 @@ def distribuir_fila(operador, dia=None) -> dict:
     atribuidas, primeira = [], None
     with transaction.atomic():
         for ln in pendentes:
+            tarefa = TarefaGovernanca.objects.select_for_update().get(pk=ln["tarefa"].pk)
+            if tarefa.camareira_id or not tarefa.ativa:
+                continue
             alvo = min(equipe, key=lambda u: (carga[u.pk], u.pk))
-            tarefa = ln["tarefa"]
             tarefa.camareira = alvo
-            tarefa.save(update_fields=["camareira"])
+            tarefa.save(update_fields=["camareira", "atualizada_em"])
             carga[alvo.pk] += 1
             atribuidas.append((ln["uh"].numero, _quem(alvo)))
             primeira = primeira or tarefa
@@ -847,6 +955,7 @@ def minha_fila(usuario, dia=None) -> dict:
             "fazendo": tarefa.status == TarefaGovernanca.Status.EM_ANDAMENTO,
             "tipo": tarefa.get_tipo_display(),
             "observacoes": tarefa.observacoes,
+            "restricao": linha["restricao"],
             "grupo": prioridade_do_quarto(linha),
         })
     fila.sort(key=lambda q: (_ORDEM_PLANO.get(q["grupo"], 9),
@@ -954,6 +1063,7 @@ def visao_geral(dia=None) -> dict:
             "cor": "limp-bloqueada" if ln["bloqueado"] else _COR_DA_PORTA.get(ln["situacao"], ""),
             "situacao": ln["situacao"],
             "rotulo": ln["situacao_label"],
+            "restricao": ln["restricao"],
             "explicacao": ln["explicacao"],
             "camareira": (_quem(ln["tarefa"].camareira) if ln["tarefa"] else ""),
             # Ocupação na própria porta: "Sai hoje · Ana Lima" responde o que a
@@ -1015,7 +1125,7 @@ def visao_geral(dia=None) -> dict:
         atencao.append({
             "nivel": "alerta",
             "rotulo": f"{n} divergência{s(n)} na ronda",
-            "detalhe": "O que a camareira viu não bate com o sistema.",
+            "detalhe": "Divergência entre a ronda e o registro de ocupação.",
             "url": reverse("governanca:discrepancias"),
         })
     sem_camareira = sum(
@@ -1026,8 +1136,8 @@ def visao_geral(dia=None) -> dict:
     if sem_camareira:
         atencao.append({
             "nivel": "aviso",
-            "rotulo": f"{sem_camareira} quarto{s(sem_camareira)} a limpar sem camareira",
-            "detalhe": "Ninguém na fila: escolha quem limpa.",
+            "rotulo": f"{sem_camareira} quarto{s(sem_camareira)} com limpeza pendente e sem responsável",
+            "detalhe": "Atribua os serviços pendentes à equipe.",
             "url": f"{url_quartos}?estado={StatusLimpeza.Situacao.SUJA}",
         })
     # Só os quartos que o PMS diz OCUPADOS: a ronda existe para achar o hóspede que

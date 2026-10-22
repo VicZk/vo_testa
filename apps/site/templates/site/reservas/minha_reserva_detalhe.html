@@ -54,10 +54,10 @@
       Pagamento confirmado. Até breve na pousada!
     </div>
   {% else %}
-    <a href="https://wa.me/{{ config.whatsapp }}?text=Ol%C3%A1%21%20Sobre%20a%20reserva%20{{ reserva.codigo }}" target="_blank" rel="noopener"
+    {% if config.whatsapp_publico %}<a href="https://wa.me/{{ config.whatsapp_publico }}?text=Ol%C3%A1%21%20Sobre%20a%20reserva%20{{ reserva.codigo }}" target="_blank" rel="noopener"
        class="block w-full text-center bg-lampiao text-noturno font-bold px-6 py-3 rounded-lg hover:bg-lampiao/90 transition">
       Falar no WhatsApp
-    </a>
+    </a>{% endif %}
   {% endif %}
 
   <div class="flex items-center justify-center gap-4 mt-5 text-xs text-madeira/50">

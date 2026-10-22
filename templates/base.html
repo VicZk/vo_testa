@@ -23,6 +23,7 @@
   <script src="{% static 'js/dicas.js' %}" defer></script>
   {# Botão "Copiar" de qualquer `data-copiar` (componentes/copiar.html). #}
   <script src="{% static 'js/copiar.js' %}" defer></script>
+  <script src="{% static 'js/governanca-avisos.js' %}" defer></script>
   {% comment %}Movimento na navegação: a View Transition vale só para a troca de
   página (o hx-boost do menu leva `transition:true`; a navegação comum, o
   `@view-transition` do app.css). As trocas parciais do HTMX (item na comanda,
@@ -231,6 +232,7 @@
               <a href="{{ m.url }}" class="nav-item {% if request.resolver_match.namespace == m.codigo %}ativo{% endif %}" title="{{ m.nome }}">
                 {% include "componentes/icone_modulo.html" with codigo=m.codigo %}
                 <span class="rotulo">{{ m.nome }}</span>
+                {% if m.codigo == 'governanca' %}<span class="nav-badge" data-governanca-avisos="{% url 'governanca:atualizacoes' %}" title="Serviços de limpeza pendentes"{% if not governanca_pendentes %} hidden{% endif %}>{{ governanca_pendentes|default:0 }}</span>{% endif %}
                 {% if m.codigo == 'comercial' and wpp_nao_lidas_total %}<span class="nav-badge" title="{{ wpp_nao_lidas_total }} conversa(s) de WhatsApp aguardando resposta">{{ wpp_nao_lidas_total }}</span>{% endif %}
               </a>
               {% if m.codigo == 'comercial' %}

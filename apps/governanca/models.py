@@ -6,8 +6,29 @@ sleeper. Depende de Reservas (ouve o sinal `quarto_liberado`, pergunta a ocupaç
 por service). Alimenta o Mapa de quartos com o estado real de limpeza.
 """
 
+from datetime import time
+
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
+
+
+class ConfiguracaoGovernanca(models.Model):
+    ativa = models.BooleanField("gerar fila diária automaticamente", default=True)
+    horario = models.TimeField("horário da fila diária", default=time(6, 0))
+    distribuir = models.BooleanField("distribuir entre a equipe escalada", default=True)
+    ultima_execucao = models.DateTimeField(null=True, blank=True, editable=False)
+
+    @classmethod
+    def get(cls):
+        return cls.objects.get_or_create(pk=1)[0]
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    class Meta:
+        verbose_name = "configuração da governança"
 
 
 class StatusLimpeza(models.Model):
@@ -44,6 +65,9 @@ class StatusLimpeza(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="+", verbose_name="atualizado por",
     )
+    nao_perturbe_ate = models.DateTimeField("não perturbe até", null=True, blank=True)
+    dispensa_dia = models.DateField("limpeza dispensada pelo hóspede em", null=True, blank=True)
+    restricao_observacao = models.CharField("observação de atendimento", max_length=200, blank=True)
 
     class Meta:
         verbose_name = "status de limpeza"
@@ -54,7 +78,15 @@ class StatusLimpeza(models.Model):
 
     @property
     def pronta(self) -> bool:
-        return self.situacao in (self.Situacao.LIMPA, self.Situacao.INSPECIONADA)
+        return self.situacao == self.Situacao.INSPECIONADA
+
+    @property
+    def restricao_ativa(self):
+        if self.nao_perturbe_ate and self.nao_perturbe_ate > timezone.now():
+            return "Não perturbe"
+        if self.dispensa_dia == timezone.localdate():
+            return "Limpeza dispensada hoje"
+        return ""
 
 
 class TarefaGovernanca(models.Model):
@@ -88,6 +120,7 @@ class TarefaGovernanca(models.Model):
     origem = models.CharField("origem", max_length=20, default="manual")
     observacoes = models.TextField("observações", blank=True)
     gerada_em = models.DateTimeField("gerada em", auto_now_add=True)
+    atualizada_em = models.DateTimeField("atualizada em", auto_now=True)
     iniciada_em = models.DateTimeField("iniciada em", null=True, blank=True)
     concluida_em = models.DateTimeField("concluída em", null=True, blank=True)
 
@@ -121,6 +154,17 @@ class TarefaGovernanca(models.Model):
         if self.iniciada_em and self.concluida_em:
             return self.concluida_em - self.iniciada_em
         return None
+
+
+class RotinaLimpezaDiaria(models.Model):
+    """Uma decisão por quarto e dia, inclusive se a limpeza já estava concluída."""
+    uh = models.ForeignKey("nucleo.UH", on_delete=models.CASCADE)
+    dia = models.DateField()
+    tarefa = models.ForeignKey(TarefaGovernanca, on_delete=models.SET_NULL, null=True)
+    gerada_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["uh", "dia"], name="gov_rotina_unica_quarto_dia")]
 
 
 class ConferenciaOcupacao(models.Model):

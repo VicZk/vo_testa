@@ -1,0 +1,9 @@
+{% with atual=request.resolver_match.url_name %}
+<nav class="est-abas abas-secao" aria-label="Seções do Restaurante">
+  <a href="{% url 'restaurante:comandas' %}" class="est-aba"{% if atual == 'comandas' or atual == 'comanda' %} aria-current="page"{% endif %}>Comandas</a>
+  <a href="{% url 'restaurante:cozinha' %}" class="est-aba"{% if atual == 'cozinha' %} aria-current="page"{% endif %}>Cozinha</a>
+  {% if eh_gerente %}<a href="{% url 'restaurante:cardapio_config' %}" class="est-aba"{% if atual == 'cardapio_config' or atual == 'cardapio_produto' %} aria-current="page"{% endif %}>Cardápio</a>{% endif %}
+  <a href="{% url 'restaurante:mesas' %}" class="est-aba"{% if atual == 'mesas' %} aria-current="page"{% endif %}>Pontos</a>
+  <a href="{% url 'restaurante:historico' %}" class="est-aba"{% if atual == 'historico' %} aria-current="page"{% endif %}>Histórico</a>
+</nav>
+{% endwith %}

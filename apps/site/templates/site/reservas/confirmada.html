@@ -55,10 +55,10 @@
            class="bg-madeira text-pergaminho font-bold px-6 py-3 rounded-xl hover:bg-madeira/90 transition shadow-lg shadow-madeira/20">
             Pagar R$ {{ cobranca.valor|floatformat:2 }} agora
         </a>
-        <a href="https://wa.me/{{ config.whatsapp }}?text=Olá!%20Quero%20confirmar%20a%20reserva%20{{ reserva.codigo }}"
+        {% if config.whatsapp_publico %}<a href="https://wa.me/{{ config.whatsapp_publico }}?text=Olá!%20Quero%20confirmar%20a%20reserva%20{{ reserva.codigo }}"
            class="text-madeira border border-madeira/20 px-6 py-3 rounded-xl hover:bg-madeira hover:text-pergaminho transition font-semibold">
             Falar no WhatsApp
-        </a>
+        </a>{% endif %}
     </div>
     {% elif cobranca and cobranca.paga or reserva.status == 'confirmada' %}
     <p class="text-musgo text-sm mb-5 font-semibold">Pagamento confirmado. Até breve na pousada!</p>
@@ -70,13 +70,13 @@
     </div>
     {% else %}
     <p class="text-madeira/50 text-sm mb-5">
-        Para confirmar, fale conosco pelo WhatsApp informando seu código.
+        {% if config.whatsapp_publico %}Para confirmar, fale conosco pelo WhatsApp informando seu código.{% else %}Sua solicitação foi registrada. Guarde o código para acompanhar a confirmação nesta página.{% endif %}
     </p>
     <div class="flex flex-col sm:flex-row gap-3 justify-center">
-        <a href="https://wa.me/{{ config.whatsapp }}?text=Olá!%20Quero%20confirmar%20a%20reserva%20{{ reserva.codigo }}"
+        {% if config.whatsapp_publico %}<a href="https://wa.me/{{ config.whatsapp_publico }}?text=Olá!%20Quero%20confirmar%20a%20reserva%20{{ reserva.codigo }}"
            class="bg-madeira text-pergaminho font-bold px-6 py-3 rounded-xl hover:bg-madeira/90 transition shadow-lg shadow-madeira/20">
             Confirmar pelo WhatsApp
-        </a>
+        </a>{% endif %}
         <a href="{% url 'core:home' %}"
            class="text-madeira border border-madeira/20 px-6 py-3 rounded-xl hover:bg-madeira hover:text-pergaminho transition font-semibold">
             Voltar ao início

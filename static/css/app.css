@@ -279,6 +279,9 @@
 * { box-sizing: border-box; }
 
 html, body { height: 100%; }
+/* Mantém o centro da área útil ao alternar telas curtas e longas. */
+html { scrollbar-gutter: stable; }
+@supports not (scrollbar-gutter: stable) { html { overflow-y: scroll; } }
 
 body {
   margin: 0;
@@ -1571,7 +1574,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 /* Pouca largura (celular, menu aberto no tablet): o progresso e o que pede ação
    sobem para antes da casa em blocos — eram oito fileiras de porta antes deles — e
    a porta encolhe para as três linhas que tem. */
-.gov-visao { container: gov-visao / inline-size; display: flex; flex-direction: column; gap: 1.4rem; }
+.gov-visao { container: gov-visao / inline-size; display: flex; flex-direction: column; gap: 1.5rem; }
 .gov-visao > .corredor-hero, .gov-visao > .gov-progresso,
 .gov-visao > .atencao-secao, .gov-visao > .gov-colunas { margin: 0; }
 @container gov-visao (max-width: 600px) {
@@ -2905,11 +2908,13 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
    onde não tem, este par de classes faz o cross-fade.
    ═══════════════════════════════════════════════════════════════ */
 .htmx-swapping { opacity: .35; transition: opacity var(--mov-rapido) var(--curva); }
-.htmx-settling { animation: materializa var(--mov-padrao) var(--curva); }
+.htmx-settling { animation: materializa var(--mov-rapido) var(--curva); }
 @keyframes materializa {
-  from { opacity: 0; transform: translateY(var(--desloca)); }
-  to { opacity: 1; transform: none; }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
+body.htmx-swapping { opacity: 1; }
+body.htmx-settling { animation: none; }
 /* Troca de página: só o conteúdo se mexe. O menu e a barra do topo têm nome
    próprio na transição e trocam de estalo — são iguais nas duas páginas. Antes a
    transição pegava a página inteira como um bloco só: menu e topo esmaeciam e
@@ -2927,11 +2932,13 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 ::view-transition-group(topo), ::view-transition-old(topo), ::view-transition-new(topo) {
   animation: none;
 }
-/* A página velha sai no tempo do toque: some antes de a nova chegar, sem fantasma. */
-::view-transition-old(conteudo) { animation: ct-sai var(--mov-toque) var(--curva) both; }
-::view-transition-new(conteudo) { animation: ct-entra var(--mov-padrao) var(--curva) both; }
+/* O navegador interpolava posição e tamanho entre contêineres diferentes,
+   causando movimentos diagonais. Toda página agora usa o mesmo cross-fade. */
+::view-transition-group(conteudo) { animation: none; }
+::view-transition-old(conteudo) { animation: ct-sai var(--mov-rapido) var(--curva) both; }
+::view-transition-new(conteudo) { animation: ct-entra var(--mov-rapido) var(--curva) both; }
 @keyframes ct-sai { to { opacity: 0; } }
-@keyframes ct-entra { from { opacity: 0; transform: translateY(var(--desloca)); } }
+@keyframes ct-entra { from { opacity: 0; } }
 
 /* Esqueleto para a espera que passa de meio segundo (mapa, grade de escala,
    ficha do funcionário): um bloco cinza que respira diz "está vindo", e uma
@@ -6292,6 +6299,7 @@ body.escala-dragging .escala-drop { cursor: copy; }
   border-bottom-color: var(--lampiao);
 }
 .est-aba[aria-current="page"] .ico { color: var(--lampiao); }
+.est-aba.ativo { color: var(--noturno); border-bottom-color: var(--lampiao); }
 
 /* ---------- Indicadores e títulos de seção ---------- */
 .est-kpis { margin: 1.3rem 0 1.6rem; }
@@ -6908,3 +6916,58 @@ body.escala-dragging .escala-drop { cursor: copy; }
 .cardapio-config :is(input[type=checkbox], input[type=radio]) { width:18px; min-height:18px; }
 @media (max-width:800px) { .cozinha-quadro, .cardapio-config { grid-template-columns:1fr; } }
 @media (max-width:480px) { .cardapio-campos, .cardapio-opcao { grid-template-columns:1fr; } .pedido-form { padding:.75rem; } }
+
+/* Navegação e filtros compartilham as abas sublinhadas do Estoque. */
+.abas-secao { width:100%; min-width:0; align-items:stretch; }
+.est-aba { min-height:44px; justify-content:center; border-radius:0; }
+.est-aba:focus-visible { outline:2px solid var(--lampiao); outline-offset:2px; }
+.est-aba .n { font-variant-numeric:tabular-nums; color:var(--tinta-suave); }
+.est-aba[aria-current="page"], .est-aba.ativo { background:transparent; box-shadow:none; }
+.seg-filtro, .segmentado, .est-seg, .pdv-seg, .func-abas {
+  border:0; border-bottom:1px solid var(--fio); border-radius:0;
+  padding:0; background:transparent; gap:.15rem;
+}
+:is(.filtro-chip, .chip-limpeza, .seg-filtro a, .segmentado .chip, .est-seg a,
+    .pdv-seg button, .pdv-seg a, .pdv-seg label, .func-aba, .mk-pil, .pq-chip) {
+  min-height:44px; border:0; border-bottom:2px solid transparent; border-radius:0;
+  background:transparent; box-shadow:none; padding:.55rem .8rem;
+  transition:color var(--mov-rapido) var(--curva), border-color var(--mov-rapido) var(--curva);
+}
+:is(.filtro-chip, .chip-limpeza, .seg-filtro a, .segmentado .chip, .est-seg a,
+    .pdv-seg button, .pdv-seg a, .pdv-seg label, .func-aba, .mk-pil, .pq-chip):is(
+    [aria-pressed="true"], [aria-current="page"], .ativo, .on, .chip-ativo),
+.pdv-categorias .filtro-chip[aria-pressed="true"] {
+  color:var(--noturno); border-bottom-color:var(--lampiao); background:transparent; box-shadow:none;
+}
+:is(.filtro-chip, .chip-limpeza, .seg-filtro a, .segmentado .chip):active { transform:none; }
+.gov-atualizacao:not([hidden]) { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:1rem; }
+.gov-atualizacao[hidden], .nav-badge[hidden] { display:none; }
+.gov-preferencia { padding:1rem; display:grid; gap:.8rem; }
+.gov-preferencia p { margin:0; }
+.gov-preferencia label { display:block; margin-bottom:.3rem; }
+.gov-rotina-status { margin:0 0 1rem; line-height:1.5; }
+.gov-chegadas { gap:0; }
+.gov-chegadas li { margin:0; }
+.gov-chegada-quarto { min-height:52px; padding-block:.75rem; }
+.gov-carga { gap:0; }
+.gov-carga li { padding-block:.75rem; gap:.4rem; border-bottom:1px solid var(--fio); }
+.gov-carga li:last-child { border-bottom:0; }
+.gov-plano-grupo { margin-top:1.25rem; padding-top:1.25rem; }
+.gov-bloco .bloco-subtitulo { margin:0 0 1rem; }
+.lb-occ.htmx-settling { animation:materializa var(--mov-rapido) var(--curva); }
+@media (prefers-reduced-motion:reduce) {
+  ::view-transition-old(conteudo), ::view-transition-new(conteudo), .htmx-settling, .lb-occ.htmx-settling { animation:none; }
+}
+@media print { .abas-secao, .gov-atualizacao { display:none; } }
+.chip-legenda-link {
+  border:0; border-bottom:2px solid transparent; border-radius:0;
+  background:transparent; box-shadow:none; padding:.55rem .65rem; min-height:44px;
+}
+.chip-legenda-link:hover { border-bottom-color:var(--lampiao); background:transparent; }
+.corredor-gov { grid-auto-rows:1fr; }
+.gov-bloco { gap:.75rem; }
+.gov-bloco :is(.secao-cabecalho, .bloco-subtitulo, .gov-carga, .gov-carga-legenda) { margin:0; }
+.gov-bloco .gov-plano-grupo { margin:0; padding-top:.75rem; }
+.gov-bloco .bloco-subtitulo + .gov-plano-grupo { border-top:0; padding-top:0; }
+.gov-bloco .gov-plano-sobra { margin:0; padding-top:.75rem; }
+.gov-visao .estado-vazio { padding:1rem; }

@@ -1112,7 +1112,9 @@ def uhs_em_permanencia(dia=None):
     Quem sai no dia fica de fora — a faxina dele nasce no check-out. Interface pública
     (Governança)."""
     dia = dia or timezone.localdate()
+    from django.db.models import Q
     ids = (Reserva.objects.filter(status=Reserva.Status.HOSPEDADA, checkout__gt=dia)
+           .filter(Q(checkin_real__date__lt=dia) | Q(checkin_real__isnull=True, checkin__lt=dia))
            .values_list("uh_id", flat=True))
     return UH.objects.filter(pk__in=ids)
 
@@ -1899,7 +1901,7 @@ def estender_estadia(reserva, nova_saida, usuario) -> Decimal:
     total = cot["hospedagem"]
     if cot["desconto_nao_reembolsavel"] > 0:
         lancar_na_conta(acomodacao, LancamentoConta.Tipo.DESCONTO, NaturezaFiscal.SERVICO,
-                        f"Tarifa não reembolsável. Noites estendidas, {numero}",
+                        f"Desconto comercial. Noites estendidas, {numero}",
                         cot["desconto_nao_reembolsavel"], usuario)
     if getattr(settings, "PRECO_TAXAS_ATIVAS", True):
         noites = len(cot["diarias"])
@@ -2603,7 +2605,7 @@ SITUACOES_QUARTO = {
     "livre": "Livre",
     "ocupada": "Ocupada",
     "chegada": "Chegada hoje",
-    "a_limpar": "A limpar",
+    "a_limpar": "Limpeza pendente",
     "em_limpeza": "Em limpeza",
     "bloqueada": "Bloqueada",
     "inativa": "Inativa",
@@ -3170,57 +3172,13 @@ def boh_mensal(ano: int, mes: int) -> dict:
 # ───────────────────────── Envio à FNRH Digital (push — estratégia B) ────────────
 
 def enviar_fnrh(reserva) -> bool:
-    """Empurra a reserva + fichas para a FNRH Digital via gateway. Idempotente
-    (reaproveita ids já obtidos) e best-effort: em falha, marca erro e NÃO levanta —
-    a recepção não trava. Retorna True se ficou 'enviada'."""
-    import logging
-
-    from . import fnrh_gateway
-
-    log = logging.getLogger(__name__)
-    if reserva.fnrh_status == Reserva.SincFNRH.ENVIADA:
-        return True
-    try:
-        gw = fnrh_gateway.get_gateway()
-        if not reserva.fnrh_reserva_id:
-            reserva.fnrh_reserva_id = gw.criar_reserva(reserva)
-        for ficha in reserva.fichas_fnrh.all():
-            if not ficha.completa:
-                continue
-            mudou = []
-            if not ficha.fnrh_pessoa_id:
-                ficha.fnrh_pessoa_id = gw.criar_pessoa(ficha)
-                mudou.append("fnrh_pessoa_id")
-            if not ficha.fnrh_hospede_id:
-                ficha.fnrh_hospede_id = gw.adicionar_hospede(
-                    reserva.fnrh_reserva_id, ficha, ficha.fnrh_pessoa_id
-                )
-                mudou.append("fnrh_hospede_id")
-            if mudou:
-                ficha.save(update_fields=mudou)
-        gw.checkin(reserva.fnrh_reserva_id)
-    except Exception as erro:  # best-effort: registra e segue
-        reserva.fnrh_status = Reserva.SincFNRH.ERRO
-        reserva.fnrh_erro = str(erro)[:500]
-        reserva.save(update_fields=["fnrh_reserva_id", "fnrh_status", "fnrh_erro"])
-        log.warning("Envio FNRH falhou (reserva %s): %s", reserva.pk, erro)
-        return False
-    reserva.fnrh_status = Reserva.SincFNRH.ENVIADA
-    reserva.fnrh_sincronizada_em = timezone.now()
-    reserva.fnrh_erro = ""
-    reserva.save(update_fields=[
-        "fnrh_reserva_id", "fnrh_status", "fnrh_sincronizada_em", "fnrh_erro",
-    ])
-    return True
+    from .fnrh_sync import enviar
+    return enviar(reserva)
 
 
 def fnrh_pendentes_qs():
-    """Reservas hospedadas/checkout que ainda não foram aceitas pela FNRH."""
-    return Reserva.objects.filter(
-        status__in=[Reserva.Status.HOSPEDADA, Reserva.Status.CHECKOUT],
-        fnrh_status__in=[Reserva.SincFNRH.PENDENTE, Reserva.SincFNRH.ERRO],
-    )
-
+    from .fnrh_sync import pendentes
+    return pendentes()
 
 def diarias_periodo(inicio, fim) -> Decimal:
     """Total de diárias das noites do período (sempre recebidas pela recepção), pela

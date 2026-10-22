@@ -4,12 +4,10 @@
 {% block titulo %}Histórico de comandas | Restaurante{% endblock %}
 
 {% block conteudo %}
-<a href="{% url 'restaurante:comandas' %}" class="voltar">
-  <svg viewBox="0 0 24 24" class="ico"><path d="M15 6l-6 6 6 6"/></svg> Comandas abertas
-</a>
 <p class="pagina-eyebrow letreiro">Restaurante Piscina</p>
 <h1>Histórico de comandas</h1>
 <p class="subtitulo">Comandas já fechadas e canceladas. Clique numa linha para ver os itens.</p>
+{% include "restaurante/partials/nav.html" %}
 
 <div class="filtros">
   {% for f in filtros %}

@@ -273,8 +273,9 @@ class ConfiguracaoSite(models.Model):
     frase_hero = models.CharField('Frase do hero', max_length=200, default='As engrenagens do tempo desaceleraram para você apreciar a beleza da natureza')
 
     # Contato
-    telefone = models.CharField('Telefone', max_length=20, default='+49 9 9999-9999')
-    whatsapp = models.CharField('WhatsApp (com DDI)', max_length=20, default='5549999999999')
+    telefone = models.CharField('Telefone', max_length=20, blank=True, default='')
+    whatsapp = models.CharField('WhatsApp (com DDI)', max_length=20, blank=True, default='')
+    contato_verificado = models.BooleanField('Contatos conferidos para publicação', default=False)
     email = models.EmailField('Email', default='contato@pousadavotesta.com.br')
     endereco = models.CharField('Endereço', max_length=200, default='Rodovia SC 117, KM 130, Lago Azul, 89760-000 Ita - SC')
 
@@ -284,10 +285,34 @@ class ConfiguracaoSite(models.Model):
     tiktok_url = models.URLField('TikTok', blank=True)
 
     # Números de impacto (hero)
-    numero_viajantes = models.CharField('Número de viajantes', max_length=20, default='+5 mil')
-    numero_quartos = models.CharField('Número de quartos', max_length=20, default='+30')
-    numero_zonas = models.CharField('Número de zonas', max_length=20, default='05')
-    numero_avaliacoes = models.CharField('Número de avaliações', max_length=20, default='19 mil')
+    numero_viajantes = models.CharField('Número de viajantes', max_length=20, blank=True, default='')
+    numero_quartos = models.CharField('Número de quartos', max_length=20, blank=True, default='')
+    numero_zonas = models.CharField('Número de zonas', max_length=20, blank=True, default='')
+    numero_avaliacoes = models.CharField('Número de avaliações', max_length=20, blank=True, default='')
+    numeros_verificados = models.BooleanField('Números de divulgação conferidos', default=False)
+    fonte_numeros = models.CharField('Fonte e data da conferência', max_length=240, blank=True)
+
+    @property
+    def whatsapp_publico(self):
+        import re
+        numero = re.sub(r"\D", "", self.whatsapp or "")
+        return numero if self.contato_verificado and re.fullmatch(r"[1-9][0-9]{7,14}", numero) and numero != "5549999999999" else ""
+
+    @property
+    def numeros_publicos(self):
+        if not self.numeros_verificados or not self.fonte_numeros.strip():
+            return []
+        return [(valor, rotulo) for valor, rotulo in (
+            (self.numero_viajantes, "Hóspedes recebidos"), (self.numero_quartos, "Quartos temáticos"),
+            (self.numero_zonas, "Espaços para explorar"), (self.numero_avaliacoes, "Avaliações recebidas")) if valor]
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        super().clean()
+        if self.numeros_verificados and not self.fonte_numeros.strip():
+            raise ValidationError({"fonte_numeros": "Informe a fonte e a data da conferência antes de publicar os números."})
+        if self.contato_verificado and self.whatsapp and not self.whatsapp_publico:
+            raise ValidationError({"whatsapp": "Informe um número oficial válido, com DDI; o número de exemplo não pode ser publicado."})
 
     # Desconto
     desconto_pix = models.PositiveSmallIntegerField('Desconto Pix (%)', default=5)

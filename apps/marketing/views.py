@@ -381,6 +381,8 @@ def calendario(request):
         ano, mes = hoje.year, hoje.month
     if not 1 <= mes <= 12:
         mes = hoje.month
+    if not 2 <= ano <= 9998:
+        ano = hoje.year
     if escala == "ano":
         prev, nxt = {"ano": ano - 1, "mes": mes}, {"ano": ano + 1, "mes": mes}
     else:

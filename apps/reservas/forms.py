@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django import forms
+from django.core.exceptions import ValidationError
 from django.db.models import Case, IntegerField, Value, When
 
 from apps.nucleo.forms import DataInput, ReaisInput
@@ -199,13 +200,16 @@ class AcompanhanteForm(forms.ModelForm):
 
 class FichaFNRHForm(forms.ModelForm):
     """Ficha Nacional de Registro de Hóspedes — uma por pessoa hospedada."""
+    from apps.nucleo.paises import PAISES_CHOICES
+    nacionalidade_codigo = forms.ChoiceField(label="País de nacionalidade", choices=[("", "Selecione")]+PAISES_CHOICES, required=False)
+    pais_codigo = forms.ChoiceField(label="País de residência", choices=[("", "Selecione")]+PAISES_CHOICES, required=False)
 
     class Meta:
         model = FichaFNRH
         fields = [
-            "nome", "nascimento", "sexo", "nacionalidade", "profissao",
+            "nome", "nascimento", "sexo", "nacionalidade", "nacionalidade_codigo", "profissao",
             "documento_tipo", "documento_numero", "documento_emissor", "cpf",
-            "pais", "cep", "endereco", "cidade", "uf", "telefone", "email",
+            "pais", "pais_codigo", "cep", "endereco", "cidade", "uf", "telefone", "email",
             "motivo_viagem", "meio_transporte", "procedencia", "proximo_destino",
             "acompanhamento_menor",
         ]
@@ -215,19 +219,41 @@ class FichaFNRHForm(forms.ModelForm):
 
     # Seções da ficha (agrupamento §16): título → campos.
     GRUPOS = [
-        ("Identificação", ["nome", "nascimento", "sexo", "nacionalidade", "profissao"]),
+        ("Identificação", ["nome", "nascimento", "sexo", "nacionalidade_codigo", "profissao"]),
         ("Documento", ["documento_tipo", "documento_numero", "documento_emissor", "cpf"]),
-        ("Endereço e contato", ["pais", "cep", "endereco", "cidade", "uf", "telefone", "email"]),
+        ("Endereço e contato", ["pais_codigo", "cep", "endereco", "cidade", "uf", "telefone", "email"]),
         ("Sobre a viagem", ["motivo_viagem", "meio_transporte", "procedencia", "proximo_destino"]),
         ("Menor de 18 anos", ["acompanhamento_menor", "autorizacao_conferida"]),
     ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        from apps.nucleo.paises import codigo_pais
+        for codigo, legado in (("nacionalidade_codigo", "nacionalidade"), ("pais_codigo", "pais")):
+            self.fields[legado].required = False
+            try:
+                self.initial[codigo] = getattr(self.instance, codigo) or codigo_pais(getattr(self.instance, legado))
+            except ValidationError:
+                self.initial[codigo] = ""
         # Campos mínimos exigidos pela FNRH (espelham CAMPOS_OBRIGATORIOS do model).
         for campo in FichaFNRH.CAMPOS_OBRIGATORIOS:
             if campo in self.fields:
                 self.fields[campo].required = True
+
+    def clean(self):
+        from apps.nucleo.paises import PAISES, codigo_pais
+        dados = super().clean()
+        for codigo, legado in (("nacionalidade_codigo", "nacionalidade"), ("pais_codigo", "pais")):
+            valor = dados.get(codigo)
+            # Aceita o contrato antigo dos formulários, sem inferir outro país.
+            if not valor and self.add_prefix(codigo) not in self.data:
+                valor = dados.get(legado) or getattr(self.instance, legado)
+            try:
+                dados[codigo] = codigo_pais(valor)
+                dados[legado] = PAISES[dados[codigo]]
+            except ValidationError as erro:
+                self.add_error(codigo, erro)
+        return dados
 
     def grupos(self):
         """Campos agrupados por seção, para renderizar a ficha em blocos (só os que o

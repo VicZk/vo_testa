@@ -67,9 +67,9 @@ def _ctx_confirmacao(reserva):
         ),
         "url_apple_maps": f"https://maps.apple.com/?q={maps_q}" if maps_q else "",
         "url_whatsapp": (
-            f"https://wa.me/{config.whatsapp}"
+            f"https://wa.me/{config.whatsapp_publico}"
             f"?text={quote_plus(f'Olá! Sobre a reserva {reserva.codigo}')}"
-            if config.whatsapp
+            if config.whatsapp_publico
             else ""
         ),
         "email_contato": config.email or "reservas@pousadavotesta.com.br",

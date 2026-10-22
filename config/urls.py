@@ -67,7 +67,7 @@ urlpatterns = [
     # Webhook do WhatsApp Cloud API (Meta) — público, sem login, fora do /crm.
     path("whatsapp/", include("apps.comercial.urls_whatsapp")),
 
-    # API NPS (stub 501 — proposta fase CRM do Hóspede). Ver docs/Proposta_NPS.md.
+    # API NPS pós-estadia. Contrato em docs/Proposta_NPS.md.
     path("api/nps/", include("apps.nps.api_urls")),
 
     # Sistema (equipe): todo o CRM sob /crm/.

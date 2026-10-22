@@ -10,15 +10,15 @@ lista operacional está a um toque, na aba Quartos.{% endcomment %}
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Hospedagem · Governança</p>
 <div class="pagina-cabecalho">
-  <h1>Como está a casa</h1>
+  <h1>Visão geral da governança</h1>
   <div class="acoes bloco-plano">
-    <a href="{% url 'governanca:quartos' %}" class="botao-primario">Ver a lista de quartos</a>
+    <a href="{% url 'governanca:quartos' %}" class="botao-primario">Ver quartos</a>
   </div>
 </div>
-<p class="subtitulo">O dia da governança em uma olhada: cada bloco é um quarto, pintado
-  pelo estado da limpeza. Clique em qualquer coisa desta tela para ir direto ao que fazer.</p>
+<p class="subtitulo">Acompanhe a limpeza, as inspeções e a distribuição de serviços. Selecione um quarto para consultar os detalhes e registrar o atendimento.</p>
 
 {% include "governanca/partials/abas.html" %}
+<p class="ajuda gov-rotina-status">{% if config_governanca.ativa %}Arrumações diárias geradas automaticamente a partir de {{ config_governanca.horario|time:"H:i" }}, no horário local.{% if config_governanca.distribuir %} Atribuição automática à equipe escalada.{% endif %}{% else %}Geração automática desativada.{% endif %} As saídas geram limpeza após o check-out.</p>
 {% include "governanca/partials/como_funciona.html" %}
 {% include "governanca/partials/desfazer.html" with destino="painel" %}
 
@@ -36,18 +36,18 @@ A barra mostra a casa inteira repartida pelos quatro estados.{% endcomment %}
   <div class="gov-progresso-topo">
     <div>
       <span class="kpi-rotulo letreiro">Progresso do dia</span>
-      <p class="gov-progresso-num"><strong>{{ prontos }}</strong> de {{ total }} prontos</p>
+      <p class="gov-progresso-num"><strong>{{ prontos }}</strong> de {{ total }} liberados</p>
     </div>
     {% comment %}A hora da entrada é o prazo do dia e aparece SEMPRE que Reservas
     diz qual é — antes ela sumia junto com o "faltam N quartos", e a casa pronta
     deixava de mostrar até quando ela precisa continuar pronta.{% endcomment %}
     <p class="gov-progresso-nota">
       {% if falta_para_pronto %}
-        Falta{{ falta_para_pronto|pluralize:"m" }} <strong>{{ falta_para_pronto }}</strong> quarto{{ falta_para_pronto|pluralize }} para a casa toda ficar pronta.
+        <strong>{{ falta_para_pronto }}</strong> quarto{{ falta_para_pronto|pluralize }} com limpeza ou inspeção pendente.
       {% else %}
-        Casa inteira pronta para receber hóspede.
+        Nenhum quarto em operação tem limpeza ou inspeção pendente.
       {% endif %}
-      {% if hora_checkin %}O primeiro hóspede pode entrar às {{ hora_checkin|time:"H:i" }}.{% endif %}
+      {% if hora_checkin %}Horário de check-in: {{ hora_checkin|time:"H:i" }}.{% endif %}
     </p>
   </div>
   <div class="gov-barra" role="img"
@@ -115,7 +115,7 @@ A barra mostra a casa inteira repartida pelos quatro estados.{% endcomment %}
           <strong>{{ plano.a_entregar }}</strong> quarto{{ plano.a_entregar|pluralize }} para entregar antes do primeiro hóspede{% if plano.hora_checkin %}, às {{ plano.hora_checkin|time:"H:i" }}{% endif %}{% if plano.falta_tempo %}. {{ plano.falta_tempo }}{% endif %}.
         {% endif %}
       {% elif plano.a_fazer %}
-        Nenhum hóspede esperando quarto: dá para seguir a casa com calma.
+        Nenhuma chegada depende de liberação de quarto no momento.
       {% else %}
         Nada na fila da governança agora.
       {% endif %}
@@ -141,16 +141,16 @@ A barra mostra a casa inteira repartida pelos quatro estados.{% endcomment %}
       </div>
     {% endfor %}
     {% if plano.tranquilos %}
-      <p class="ajuda gov-plano-sobra">Os outros <strong>{{ plano.tranquilos }}</strong> quarto{{ plano.tranquilos|pluralize }} não pedem nada agora.</p>
+      <p class="ajuda gov-plano-sobra"><strong>{{ plano.tranquilos }}</strong> quarto{{ plano.tranquilos|pluralize }} sem serviço pendente.</p>
     {% endif %}
   </section>
 
   <section class="cartao gov-bloco">
     <div class="secao-cabecalho">
-      <h2>Carga das camareiras</h2>
+      <h2>Distribuição da equipe</h2>
     </div>
     {% if carga %}
-      <p class="bloco-subtitulo">Na fila, limpando agora e já entregue hoje.</p>
+      <p class="bloco-subtitulo">Serviços pendentes, em andamento e concluídos hoje.</p>
       <ul class="gov-carga">
         {% for c in carga %}
           <li>
@@ -161,7 +161,7 @@ A barra mostra a casa inteira repartida pelos quatro estados.{% endcomment %}
               <i class="parte-fazendo" style="width: {{ c.barra_fazendo }}%"></i>
               <i class="parte-pendentes" style="width: {{ c.barra_pendentes }}%"></i>
             </span>
-            <span class="gov-carga-num"><b>{{ c.na_mao }}</b> na mão · {{ c.feitas }} feita{{ c.feitas|pluralize }}</span>
+            <span class="gov-carga-num"><b>{{ c.na_mao }}</b> em atendimento · {{ c.feitas }} concluído{{ c.feitas|pluralize }}</span>
           </li>
         {% endfor %}
       </ul>

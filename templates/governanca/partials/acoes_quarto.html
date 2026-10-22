@@ -1,7 +1,7 @@
 {% comment %}O PRÓXIMO PASSO de um quarto — fonte única.
 
-Uma ação principal, nomeada pelo que vai acontecer ("Começar limpeza",
-"Terminei a limpeza", "Aprovar limpeza"); as secundárias são discretas. Quem
+Uma ação principal, nomeada pelo que vai acontecer ("Iniciar limpeza",
+"Concluir limpeza", "Aprovar limpeza"); as secundárias são discretas. Quem
 nunca trabalhou em hotel não precisa escolher entre três botões parecidos.
 
 Parâmetros do include:
@@ -15,16 +15,18 @@ Sem JavaScript tudo continua funcionando: todo formulário tem `action` e
 `method`, e as views redirecionam quando o pedido não vem do HTMX.
 {% endcomment %}
 {% comment %}Quarto em reparo não tem próximo passo da governança: ele
-oferecia "Pedir nova limpeza" e dizia "pronto para o hóspede".{% endcomment %}
+oferecia "Solicitar limpeza" e dizia "pronto para o hóspede".{% endcomment %}
 {% if ln.bloqueado %}
   <span class="acao-pronta">Em manutenção (fora de operação)</span>
 
+{% elif ln.restricao and ln.situacao != 'em_limpeza' %}
+  <span class="acao-pronta">{{ ln.restricao }}</span>
 {% elif ln.situacao == 'suja' %}
   {% if ln.tarefa %}
     <form method="post" action="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}"{% if not sheet %} hx-post="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}"{% endif %}>
       {% csrf_token %}<input type="hidden" name="acao" value="iniciar">
       {% if sheet %}<input type="hidden" name="voltar" value="{{ voltar }}">{% endif %}
-      <button type="submit" class="botao-primario">Começar limpeza</button>
+      <button type="submit" class="botao-primario">Iniciar limpeza</button>
     </form>
   {% else %}
     {# Sem faxina na fila: abrir e começar é um gesto só. #}
@@ -33,7 +35,7 @@ oferecia "Pedir nova limpeza" e dizia "pronto para o hóspede".{% endcomment %}
       <input type="hidden" name="tipo" value="faxina_completa">
       <input type="hidden" name="iniciar" value="1">
       {% if sheet %}<input type="hidden" name="voltar" value="{{ voltar }}">{% endif %}
-      <button type="submit" class="botao-primario">Começar limpeza</button>
+      <button type="submit" class="botao-primario">Iniciar limpeza</button>
     </form>
   {% endif %}
 
@@ -42,13 +44,13 @@ oferecia "Pedir nova limpeza" e dizia "pronto para o hóspede".{% endcomment %}
     <form method="post" action="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}"{% if not sheet %} hx-post="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}"{% endif %}>
       {% csrf_token %}<input type="hidden" name="acao" value="concluir">
       {% if sheet %}<input type="hidden" name="voltar" value="{{ voltar }}">{% endif %}
-      <button type="submit" class="botao-primario">Terminei a limpeza</button>
+      <button type="submit" class="botao-primario">Concluir limpeza</button>
     </form>
   {% else %}
     <form method="post" action="{% url 'governanca:status_marcar' ln.uh.pk %}"{% if not sheet %} hx-post="{% url 'governanca:status_marcar' ln.uh.pk %}"{% endif %}>
       {% csrf_token %}<input type="hidden" name="situacao" value="limpa">
       {% if sheet %}<input type="hidden" name="voltar" value="{{ voltar }}">{% endif %}
-      <button type="submit" class="botao-primario">Terminei a limpeza</button>
+      <button type="submit" class="botao-primario">Concluir limpeza</button>
     </form>
   {% endif %}
 
@@ -60,7 +62,7 @@ oferecia "Pedir nova limpeza" e dizia "pronto para o hóspede".{% endcomment %}
   </form>
   {# Link de verdade: com JS abre o modal da casa; sem JS, abre a página. #}
   <a href="{% url 'governanca:devolver' ln.uh.pk %}" class="botao-neutro"
-     {% if not sheet %}hx-get="{% url 'governanca:devolver' ln.uh.pk %}" hx-target="#modal-conteudo"{% endif %}>Devolver para limpar</a>
+     {% if not sheet %}hx-get="{% url 'governanca:devolver' ln.uh.pk %}" hx-target="#modal-conteudo"{% endif %}>Solicitar nova limpeza</a>
 
 {% elif ln.situacao == 'inspecionada' %}
   <span class="acao-pronta">{% if ln.ocupacao.cod == 'ocupado' or ln.ocupacao.cod == 'sai_hoje' %}Arrumação do dia concluída{% else %}Pronto para receber o hóspede{% endif %}</span>
@@ -68,6 +70,6 @@ oferecia "Pedir nova limpeza" e dizia "pronto para o hóspede".{% endcomment %}
     {% csrf_token %}<input type="hidden" name="uh" value="{{ ln.uh.pk }}">
     <input type="hidden" name="tipo" value="faxina_completa">
     {% if sheet %}<input type="hidden" name="voltar" value="{{ voltar }}">{% endif %}
-    <button type="submit" class="botao-neutro">Pedir nova limpeza</button>
+    <button type="submit" class="botao-neutro">Solicitar limpeza</button>
   </form>
 {% endif %}

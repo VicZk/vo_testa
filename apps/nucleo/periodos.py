@@ -43,13 +43,15 @@ def _mes_ano(request, padrao=None):
         mes, ano = ref.month, ref.year
     if not 1 <= mes <= 12:
         mes = ref.month
+    if not 2 <= ano <= 9998:
+        ano = ref.year
     return mes, ano
 
 
 def periodo(request, padrao=None):
     """Período resolvido: MÊS/ANO (padrão) ou `de`+`ate`. Retorna (inicio, fim, rotulo)."""
     de, ate = _data(request.GET.get("de")), _data(request.GET.get("ate"))
-    if de and ate:
+    if de and ate and de <= ate and (ate - de).days <= 3660:
         return de, ate, "personalizado"
     mes, ano = _mes_ano(request, padrao)
     inicio = date(ano, mes, 1)

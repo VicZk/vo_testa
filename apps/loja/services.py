@@ -15,6 +15,7 @@ from apps.nucleo.models import (
     registrar_saida,
     saldo,
 )
+from apps.nucleo.validadores import decimal_valido, identificador_valido
 
 from .models import ItemVenda, Venda
 
@@ -50,9 +51,11 @@ def finalizar_venda(operador, local, itens, destino, forma=None, cliente=None,
 @transaction.atomic
 def _finalizar_venda(operador, local, itens, destino, forma, cliente, conta_id,
                      desconto, chave):
-    desconto = Decimal(desconto or 0)
-    if not itens:
+    desconto = decimal_valido(desconto or 0, nome="Desconto")
+    if not isinstance(itens, list) or not itens or len(itens) > 100:
         raise ValidationError("Adicione ao menos um item à venda.")
+    if destino not in Venda.Destino.values:
+        raise ValidationError("Escolha o destino da cobrança.")
     from apps.nucleo.fiscal_regras import conferir_venda_de_produto
     conferir_venda_de_produto()
 
@@ -60,19 +63,21 @@ def _finalizar_venda(operador, local, itens, destino, forma, cliente, conta_id,
     linhas = []
     subtotal = ZERO
     for item in itens:
-        produto = Produto.objects.filter(pk=item.get("produto_id"), ativo=True).first()
+        if not isinstance(item, dict):
+            raise ValidationError("Item da venda inválido.")
+        produto_id = identificador_valido(item.get("produto_id"), nome="Produto")
+        produto = Produto.objects.filter(pk=produto_id, ativo=True).first()
         if not produto:
             raise ValidationError("Produto inválido na venda.")
-        qtd = Decimal(str(item.get("quantidade") or 0))
-        if qtd <= 0:
-            raise ValidationError(f"Quantidade inválida para {produto.nome}.")
+        qtd = decimal_valido(item.get("quantidade"), nome="Quantidade", minimo=Decimal("0.001"), maximo=Decimal("999999999.999"), casas=3)
         if saldo(produto, local) < qtd:
             raise ValidationError(
                 f"Saldo insuficiente de {produto.nome} em {local.nome} "
                 f"(disponível: {saldo(produto, local)})."
             )
-        valor = (produto.preco_venda * qtd).quantize(Decimal("0.01"))
+        valor = decimal_valido((produto.preco_venda * qtd).quantize(Decimal("0.01")), nome="Total do item")
         subtotal += valor
+        decimal_valido(subtotal, nome="Total da venda")
         linhas.append((produto, qtd, valor))
 
     if desconto < 0 or desconto > subtotal:

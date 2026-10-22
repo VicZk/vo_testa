@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% load nucleo_extras %}
+{% block titulo %}Link da pesquisa | CRM Vô Testa{% endblock %}
+{% block conteudo_classe %}conteudo-compacto{% endblock %}
+{% block conteudo %}
+<a class="voltar" href="{% url 'nps:painel' %}">← Opinião dos hóspedes</a>
+<h1>Pesquisa da estadia #{{ reserva.pk }}</h1>
+<div class="cartao">
+  <p>Compartilhe este link somente com {{ reserva.hospede.nome }}. A pesquisa permite uma resposta por estadia.</p>
+  {% copiar link rotulo="Link da pesquisa" mostrar=True %}
+  <p class="ajuda">O link também abre pelo portal do hóspede após o check-out. Nenhuma mensagem é enviada automaticamente por esta tela.</p>
+</div>
+{% endblock %}

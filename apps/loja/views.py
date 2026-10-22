@@ -1,6 +1,5 @@
 import json
 import uuid
-from decimal import Decimal
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
@@ -19,13 +18,14 @@ from apps.nucleo.modulos import Modulo
 from apps.nucleo.paginacao import paginar
 from apps.nucleo.permissoes import eh_gerente, requer_gerencia, requer_modulo
 from apps.nucleo.seletores import pessoas_agrupadas
+from apps.nucleo.validadores import decimal_valido, filtro_identificador, identificador_valido
 
 from . import services
 from .models import Venda
 
 
 def _local_da_loja(request):
-    local_id = request.GET.get("local")
+    local_id = filtro_identificador(request.GET.get("local"))
     if local_id:
         return get_object_or_404(LocalEstoque, pk=local_id, ativo=True)
     return (
@@ -86,22 +86,21 @@ def finalizar(request):
         return JsonResponse({"erro": "Método não permitido."}, status=405)
     try:
         dados = json.loads(request.body)
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, UnicodeDecodeError):
         return JsonResponse({"erro": "Dados inválidos."}, status=400)
-
-    local = get_object_or_404(LocalEstoque, pk=dados.get("local_id"))
-    forma = None
-    if dados.get("forma_id"):
-        forma = FormaPagamento.objects.filter(pk=dados["forma_id"]).first()
-    cliente = None
-    if dados.get("cliente_id"):
-        cliente = Pessoa.objects.filter(pk=dados["cliente_id"]).first()
+    if not isinstance(dados, dict):
+        return JsonResponse({"erro": "Envie os campos da venda em um objeto."}, status=400)
     try:
+        local = get_object_or_404(LocalEstoque, pk=identificador_valido(dados.get("local_id"), nome="Local"), ativo=True)
+        forma_id = identificador_valido(dados.get("forma_id"), nome="Pagamento", opcional=True)
+        cliente_id = identificador_valido(dados.get("cliente_id"), nome="Cliente", opcional=True)
+        forma = FormaPagamento.objects.filter(pk=forma_id, ativo=True).first() if forma_id else None
+        cliente = Pessoa.objects.filter(pk=cliente_id).first() if cliente_id else None
         venda = services.finalizar_venda(
             operador=request.user, local=local, itens=dados.get("itens", []),
             destino=dados.get("destino"), forma=forma, cliente=cliente,
             conta_id=dados.get("conta_id"),
-            desconto=Decimal(str(dados.get("desconto") or 0)),
+            desconto=decimal_valido(dados.get("desconto") or 0, nome="Desconto"),
             chave=_chave_valida(dados.get("chave")),
         )
     except ValidationError as erro:

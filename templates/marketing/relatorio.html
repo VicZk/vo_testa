@@ -6,15 +6,9 @@
 {% load moeda %}
 {# Transcrição do protótipo. Seleção de período em pílulas (sem controle nativo). #}
 
-<div class="mk-topo">
-  <div class="mk-trilha">MARKETING<span aria-hidden="true">›</span><span class="mk-trilha-atual">CAMPANHAS</span></div>
-  <div class="mk-abas">
-    <a href="{% url 'marketing:quadro' %}" class="mk-aba">Quadro</a>
-    <a href="{% url 'marketing:calendario' %}" class="mk-aba">Calendário</a>
-    <a href="{% url 'marketing:ocupacao' %}" class="mk-aba">Ocupação</a>
-    <a href="{% url 'marketing:relatorio' %}" class="mk-aba on">Relatório</a>
-  </div>
-</div>
+<p class="pagina-eyebrow letreiro">Marketing</p>
+<div class="pagina-cabecalho"><h1>Resultados do marketing</h1></div>
+{% include "marketing/_tabs.html" %}
 
 <section class="mk-secao">
   {# filtro em pílulas #}

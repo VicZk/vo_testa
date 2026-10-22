@@ -5,7 +5,7 @@ contadores chegam certos sem recarregar a página. O `x-data` do filtro fica FOR
 daqui (painel.html), para a escolha sobreviver à troca.
 
 Regra desta tela: CADA QUARTO TEM UMA AÇÃO PRINCIPAL, com o nome do que vai
-acontecer ("Começar limpeza", "Terminei a limpeza", "Aprovar limpeza"). O resto é
+acontecer ("Iniciar limpeza", "Concluir limpeza", "Aprovar limpeza"). O resto é
 secundário e discreto. Quem nunca trabalhou em hotel não precisa escolher entre
 três botões parecidos.
 
@@ -39,7 +39,7 @@ explica em vez de espalhar faxina pela casa inteira.{% endcomment %}
 {% if sem_camareira %}
 <div class="gov-distribuir">
   <p class="ajuda">
-    <strong>{{ sem_camareira }}</strong> quarto{{ sem_camareira|pluralize }} na fila sem quem limpe.
+    <strong>{{ sem_camareira }}</strong> quarto{{ sem_camareira|pluralize }} com atribuição pendente.
     {% if tem_escala %}
       Dividir entre as {{ de_turno|length }} de turno hoje, equilibrando a carga.
     {% elif sem_login %}
@@ -74,8 +74,8 @@ aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% e
   <thead>
     <tr>
       <th>Quarto</th>
-      <th>Como está</th>
-      <th class="col-ronda">O que você viu</th>
+      <th>Situação</th>
+      <th class="col-ronda">Conferência de ocupação</th>
       <th class="col-camareira">Camareira</th>
       <th class="col-acao">Próximo passo</th>
     </tr>
@@ -86,7 +86,7 @@ aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% e
     <tr id="quarto-{{ ln.uh.pk }}"
         x-show="(f==='todas' || f==='{{ ln.situacao }}') && (!soMeus || {{ ln.minha|yesno:'true,false' }})"
         x-transition.opacity>
-      {% comment %}Quem está no quarto (ocupação, de Reservas) é o dado que a
+      {% comment %}Ocupação (ocupação, de Reservas) é o dado que a
       supervisora ia buscar no mapa ao lado: "Sai hoje · Ana Lima". O TIPO do
       quarto é dado secundário e foi para a dica — ocupava a linha de baixo e
       nunca mudava nada do que fazer agora.{% endcomment %}
@@ -149,7 +149,7 @@ aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% e
             alto: escolher numa lista com a casa inteira dentro — recepção,
             cozinha, quem está de folga — era adivinhação. Sem o módulo Escala o
             grupo não existe e a lista é a de sempre.{% endcomment %}
-            <select name="camareira" x-model="escolha" aria-label="Quem limpa o quarto {{ ln.uh.numero }}">
+            <select name="camareira" x-model="escolha" aria-label="Responsável o quarto {{ ln.uh.numero }}">
               <option value="">A definir</option>
               {% if de_turno %}
                 <optgroup label="De turno hoje">

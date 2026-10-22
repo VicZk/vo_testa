@@ -8,7 +8,7 @@
 <p>Você pode pedir a exclusão dos seus dados pessoais a qualquer momento, sem custo. É só
 falar com a gente por um destes canais, com a mensagem <i>"Quero excluir meus dados"</i>:</p>
 <ul>
-  <li><b>WhatsApp:</b> <a href="https://wa.me/554920550005">(49) 2055-0005</a>.</li>
+  {% if config.whatsapp_publico %}<li><b>WhatsApp:</b> <a href="https://wa.me/{{ config.whatsapp_publico }}">{{ config.telefone|default:config.whatsapp_publico }}</a>.</li>{% endif %}
   <li><b>E-mail:</b> <a href="mailto:comercial@pousadavotesta.com.br">comercial@pousadavotesta.com.br</a>
     (assunto <i>"Exclusão de dados"</i>).</li>
 </ul>

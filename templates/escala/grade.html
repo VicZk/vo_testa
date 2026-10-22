@@ -13,16 +13,9 @@
     ações embaixo, davam sete botões de mesmo peso num cabeçalho de 100px.
     Navegação virou subnav; botão continua sendo só para "Gerar" e
     "Publicar".{% endcomment %}
-    <nav class="seg-filtro" aria-label="Seções da escala">
-      <a href="{% url 'escala:grade' %}" class="ativo" aria-current="page">Grade</a>
-      <a href="{% url 'escala:minha' %}">Minha escala</a>
-      <a href="{% url 'escala:turnos' %}">Turnos</a>
-      <a href="{% url 'escala:ausencias' %}">Ausências</a>
-      <a href="{% url 'escala:trocas' %}">Trocas</a>
-      <a href="{% url 'escala:relatorio' %}">Relatório</a>
-    </nav>
   </div>
 
+  {% include "escala/partials/nav.html" %}
   <div class="escala-topo">
     <div class="escala-semana">
       <a href="?inicio={{ anterior|date:'Y-m-d' }}{% if setor %}&setor={{ setor }}{% endif %}" class="botao-neutro" aria-label="Semana anterior">‹</a>

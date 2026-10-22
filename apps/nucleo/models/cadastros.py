@@ -520,9 +520,9 @@ class ConfiguracaoReservas(models.Model):
         help_text="1 adulto paga esta fração do valor de 2 (0.70 = 70%).",
     )
     nao_reembolsavel_desconto = models.DecimalField(
-        "desconto não-reembolsável (fração)", max_digits=4, decimal_places=2,
+        "desconto comercial (fração)", max_digits=4, decimal_places=2,
         default=Decimal("0.12"),
-        help_text="Desconto da tarifa não-reembolsável (0.12 = −12%).",
+        help_text="Desconto comercial sobre a hospedagem; não altera a política de cancelamento (0.12 = 12%).",
     )
     iss_aliquota = models.DecimalField(
         "ISS (%)", max_digits=5, decimal_places=2, default=Decimal("4.00"),

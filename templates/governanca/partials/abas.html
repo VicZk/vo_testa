@@ -1,14 +1,13 @@
-{% comment %}Abas da Governança. A limpeza é o dia a dia; a discrepância é a
-conferência da ronda contra o PMS — duas telas, um módulo.
-
-Sem contador aqui de propósito: estas abas ficam FORA do trecho que o HTMX troca,
-então um número aqui envelheceria a cada toque na ronda. Quem conta é o aviso dentro
-do quadro.{% endcomment %}
 {% with atual=request.resolver_match.url_name %}
-<div class="filtros subnav">
-  <a href="{% url 'governanca:painel' %}" class="filtro-chip"{% if atual == 'painel' %} aria-current="page"{% endif %}>Visão geral</a>
-  <a href="{% url 'governanca:quartos' %}" class="filtro-chip"{% if atual == 'quartos' %} aria-current="page"{% endif %}>Quartos</a>
-  <a href="{% url 'governanca:minha_fila' %}" class="filtro-chip"{% if atual == 'minha_fila' %} aria-current="page"{% endif %}>Minha fila</a>
-  <a href="{% url 'governanca:discrepancias' %}" class="filtro-chip"{% if atual == 'discrepancias' %} aria-current="page"{% endif %}>Discrepâncias</a>
-</div>
+<nav class="est-abas abas-secao" aria-label="Seções da Governança">
+  <a href="{% url 'governanca:painel' %}" class="est-aba"{% if atual == 'painel' %} aria-current="page"{% endif %}>Visão geral</a>
+  <a href="{% url 'governanca:quartos' %}" class="est-aba"{% if atual == 'quartos' or atual == 'quarto' %} aria-current="page"{% endif %}>Quartos</a>
+  <a href="{% url 'governanca:minha_fila' %}" class="est-aba"{% if atual == 'minha_fila' %} aria-current="page"{% endif %}>Minha fila</a>
+  <a href="{% url 'governanca:discrepancias' %}" class="est-aba"{% if atual == 'discrepancias' %} aria-current="page"{% endif %}>Discrepâncias</a>
+  {% if eh_gerente %}<a href="{% url 'governanca:configuracao' %}" class="est-aba"{% if atual == 'configuracao' %} aria-current="page"{% endif %}>Rotina diária</a>{% endif %}
+</nav>
 {% endwith %}
+<div class="aviso aviso-info gov-atualizacao" data-governanca-atualizacao hidden role="status">
+  <span>A fila de governança foi atualizada.</span>
+  <a href="{{ request.path }}" class="botao-mini">Atualizar esta página</a>
+</div>

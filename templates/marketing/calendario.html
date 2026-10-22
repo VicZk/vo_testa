@@ -7,15 +7,9 @@
 {% block conteudo %}
 {# Transcrição do protótipo (linha do tempo). Cores → tokens; terra → --madeira. #}
 
-<div class="mk-topo">
-  <div class="mk-trilha">MARKETING<span aria-hidden="true">›</span><span class="mk-trilha-atual">CAMPANHAS</span></div>
-  <div class="mk-abas">
-    <a href="{% url 'marketing:quadro' %}" class="mk-aba">Quadro</a>
-    <a href="{% url 'marketing:calendario' %}" class="mk-aba on">Calendário</a>
-    <a href="{% url 'marketing:ocupacao' %}" class="mk-aba">Ocupação</a>
-    <a href="{% url 'marketing:relatorio' %}" class="mk-aba">Relatório</a>
-  </div>
-</div>
+<p class="pagina-eyebrow letreiro">Marketing</p>
+<div class="pagina-cabecalho"><h1>Calendário de campanhas</h1></div>
+{% include "marketing/_tabs.html" %}
 
 <section class="mk-secao tom fim">
   <div class="mk-cal-cab">

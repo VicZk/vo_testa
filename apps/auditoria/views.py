@@ -12,6 +12,7 @@ from apps.nucleo.modulos import Modulo
 from apps.nucleo.paginacao import paginar
 from apps.nucleo.periodos import periodo, selecao_periodo
 from apps.nucleo.permissoes import eh_gerente, pode_ver_salario, requer_modulo
+from apps.nucleo.validadores import filtro_identificador
 
 from . import services
 from .formatacao import rotulo_acao
@@ -36,7 +37,7 @@ def _trilha_filtrada(request):
         criado_em__date__range=(inicio, fim)
     )
     acao = request.GET.get("acao")
-    usuario = request.GET.get("usuario")
+    usuario = filtro_identificador(request.GET.get("usuario"))
     if acao:
         qs = qs.filter(acao=acao)
     if usuario:

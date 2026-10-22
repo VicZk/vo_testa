@@ -4,12 +4,10 @@
 {% block titulo %}Tabela de preços | Lavanderia{% endblock %}
 
 {% block conteudo %}
-<a href="{% url 'lavanderia:painel' %}" class="voltar">
-  <svg viewBox="0 0 24 24" class="ico"><path d="M15 6l-6 6 6 6"/></svg> Lavanderia
-</a>
 <p class="pagina-eyebrow letreiro">Lavanderia</p>
 <h1>Tabela de preços</h1>
 <p class="subtitulo">Serviços cobrados do hóspede (natureza SERVIÇO).</p>
+{% include "lavanderia/partials/nav.html" %}
 
 <div class="colunas">
   <section>
