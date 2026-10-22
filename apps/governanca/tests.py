@@ -2263,3 +2263,50 @@ class DesfazerAprovacaoTests(GovernancaBase):
         self.assertEqual(
             self.client.post(reverse("governanca:desfazer_aprovacao",
                                      args=[self.uh.pk])).status_code, 404)
+
+
+class AvisoDeCheckinSujoTests(GovernancaBase):
+    """Check-in barrado pela limpeza leva ao QUARTO, não à casa inteira.
+
+    Quem está com o hóspede na frente não tem de caçar a linha dele numa lista
+    de 24 — menos ainda no tablet.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="governanta", password="senha-forte-123")
+        from apps.reservas.models import Reserva
+        self.reserva = Reserva.objects.create(
+            uh=self.uh, hospede=Pessoa.objects.create(nome="Quem chega"),
+            checkin=timezone.localdate(),
+            checkout=timezone.localdate() + timedelta(days=2),
+            status=Reserva.Status.CONFIRMADA, valor_diaria=Decimal("200"),
+            criado_por=self.user)
+
+    def _detalhe(self):
+        return self.client.get(reverse("reservas:detalhe", args=[self.reserva.pk]))
+
+    def test_quarto_sujo_barra_o_checkin_e_aponta_para_a_ficha_dele(self):
+        services.abrir_faxina(self.uh, usuario=self.user)
+        aviso = self._detalhe().context["aviso_checkin"]
+        self.assertIn(self.uh.numero, aviso["texto"])
+        self.assertEqual(aviso["url"],
+                         reverse("governanca:quarto", args=[self.uh.pk]))
+        self.assertNotEqual(aviso["url"], reverse("governanca:painel"))
+
+    def test_o_link_abre_o_quarto_com_o_proximo_passo(self):
+        """O caminho inteiro: o aviso leva a uma tela que resolve a limpeza."""
+        services.abrir_faxina(self.uh, usuario=self.user)
+        r = self.client.get(self._detalhe().context["aviso_checkin"]["url"])
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, self.uh.numero)
+        self.assertContains(r, "Começar limpeza")
+
+    def test_quarto_pronto_nao_barra_nada(self):
+        services.inspecionar(self.uh, self.user)
+        self.assertIsNone(self._detalhe().context["aviso_checkin"])
+
+    def test_sem_o_modulo_governanca_o_aviso_nao_existe(self):
+        services.abrir_faxina(self.uh, usuario=self.user)
+        ModuloContratado.objects.filter(codigo=Modulo.GOVERNANCA).update(ativo=False)
+        self.assertIsNone(self._detalhe().context["aviso_checkin"])
