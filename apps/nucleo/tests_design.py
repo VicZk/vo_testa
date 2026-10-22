@@ -1277,3 +1277,40 @@ class ComentarioQueNaoVazaTests(TestCase):
                     linha = texto[:achado.start()].count("\n") + 1
                     vazando.append(f"{arq.relative_to(raiz).as_posix()}:{linha}")
         self.assertEqual(vazando, [], "comentário {# #} em várias linhas vaza na tela")
+
+
+class AlvoDeToqueTests(TestCase):
+    """Controle pequeno que vive DENTRO de outra coisa (um chip, uma célula) não
+    aparecia na regra geral de 44px, e era onde o dedo mais errava: 56 alvos de
+    14–16px só na grade da Escala, medidos em 390×844 com toque emulado.
+
+    O contrato é a receita, não o número solto: a CAIXA DE TOQUE cresce e o
+    DESENHO fica. O "+" da hora extra é o caso-limite — 44px de caixa com o
+    círculo de 16px pintado só no conteúdo (`background-clip`)."""
+
+    def setUp(self):
+        self.css = CSS.read_text(encoding="utf-8").replace("\r\n", "\n")
+        self.coarse = "\n".join(
+            re.findall(r"@media \(pointer: coarse\), \(max-width: 820px\) \{([\s\S]*?)\n\}",
+                       self.css))
+
+    def test_controles_pequenos_entram_na_regra_de_toque(self):
+        for sel in (".escala-chip", ".chip-x", ".he-selo .he-x", ".pdv-seg a",
+                    ".lb-btn-ghost", ".mk-pil-acao", "a.est-produto-nome"):
+            self.assertIn(sel, self.coarse, f"{sel} ficou fora do alvo de toque")
+
+    def test_mais_da_hora_extra_cresce_a_caixa_sem_inchar_o_desenho(self):
+        bloco = re.search(r"\.escala-chip \.he-add \{([^}]*)\}", self.coarse)
+        self.assertIsNotNone(bloco, "o '+' da escala saiu da regra de toque")
+        corpo = bloco.group(1)
+        self.assertIn("width: 44px", corpo)
+        self.assertIn("padding", corpo)
+        self.assertIn("background-clip: content-box", corpo,
+                      "sem background-clip o círculo de 16px vira uma bola de 44px")
+
+    def test_botao_de_um_simbolo_so_tem_largura_de_alvo(self):
+        """Altura já vinha da regra de cima; o '‹' da semana da Escala tinha 35px
+        de largura porque `.escala-semana .botao-neutro` fixa 2.2rem e vence pela
+        especificidade — por isso a exceção é repetida com o mesmo peso."""
+        self.assertRegex(self.coarse, r"\.botao-mini, \.mk-pil \{ min-width: 44px; \}")
+        self.assertIn(".escala-semana .botao-neutro { min-width: 44px; }", self.coarse)
