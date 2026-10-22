@@ -429,7 +429,13 @@ def painel_limpeza(dia=None):
     contagem = {c: 0 for c, _ in StatusLimpeza.Situacao.choices}
     for ln in linhas:
         contagem[ln["situacao"]] += 1
-    linhas.sort(key=lambda ln: (_ORDEM_LIMPEZA.get(ln["situacao"], 9), ln["uh"].numero))
+    # Mesma ordem do plano do dia: chegada sem quarto pronto → saída de hoje →
+    # ocupado a arrumar → o resto; dentro de cada grupo, por urgência de limpeza.
+    # A lista é a ferramenta de quem está trabalhando: ela já abre na ordem de
+    # atacar, sem a camareira ter de cruzar com o mapa de reservas.
+    linhas.sort(key=lambda ln: (_ORDEM_PLANO.get(prioridade_do_quarto(ln), 9),
+                                _ORDEM_LIMPEZA.get(ln["situacao"], 9),
+                                ln["uh"].numero))
     return {
         "linhas": linhas,
         "contagem": contagem,
@@ -475,6 +481,137 @@ def _hora_do_checkin():
     from apps.reservas.services import configuracao_reservas
 
     return configuracao_reservas().hora_checkin
+
+
+# ─────────────────────── O plano do dia (a ordem de atacar) ───────────────────────
+#
+# A supervisora chega às 7h e a pergunta é uma só: por onde começar. A tela dava a
+# casa em estados de limpeza e deixava a conta com ela — qual quarto tem hóspede
+# chegando, qual vai sujar hoje, qual só precisa da arrumação. A ordem é sempre a
+# mesma, e é esta:
+#
+#   1. chegada de hoje com o quarto ainda não pronto  — tem hóspede na porta;
+#   2. saída de hoje                                   — vai sujar, planeje a tarde;
+#   3. ocupado pedindo arrumação                       — o serviço do dia;
+#   4. o resto                                         — o que sobra, por urgência.
+#
+# Quarto bloqueado pela Manutenção nunca entra nos três primeiros: não é trabalho
+# da governança enquanto o técnico não devolve.
+
+PLANO = [
+    {
+        "cod": "chegada", "nivel": "alerta",
+        "rotulo": "Chegadas de hoje",
+        "resumo": "O quarto tem de estar pronto antes de o hóspede chegar.",
+    },
+    {
+        "cod": "saida", "nivel": "aviso",
+        "rotulo": "Saídas de hoje",
+        "resumo": "Vão sujar: a faxina nasce quando a recepção lança o check-out.",
+    },
+    {
+        "cod": "arrumacao", "nivel": "aviso",
+        "rotulo": "Ocupados a arrumar",
+        "resumo": "Hóspede em casa — arrumação do dia, com as coisas dele dentro.",
+    },
+    {
+        "cod": "resto", "nivel": "info",
+        "rotulo": "O resto da casa",
+        "resumo": "Sem hóspede chegando nem saindo hoje: ainda pedem limpeza ou a "
+                  "conferência da supervisora.",
+    },
+]
+_ORDEM_PLANO = {etapa["cod"]: i for i, etapa in enumerate(PLANO)}
+
+
+def prioridade_do_quarto(linha) -> str:
+    """Em que grupo do plano do dia este quarto cai. Primeiro que casar vence."""
+    ocup = linha.get("ocupacao") or {}
+    if linha["bloqueado"]:
+        return "resto"
+    if ocup.get("chegada"):
+        return "chegada"
+    if ocup.get("cod") == "sai_hoje":
+        return "saida"
+    # Ocupado "a arrumar" é ocupado com a LIMPEZA pendente. Ocupado e já limpo só
+    # espera a supervisora: aparecia na fila da camareira dizendo "Limpo".
+    if ocup.get("cod") == "ocupado" and linha["situacao"] in (
+            StatusLimpeza.Situacao.SUJA, StatusLimpeza.Situacao.EM_LIMPEZA):
+        return "arrumacao"
+    return "resto"
+
+
+def _falta_fazer(linha) -> bool:
+    """O quarto ainda pede alguém? (bloqueado não é trabalho da governança)."""
+    return not linha["bloqueado"] and linha["situacao"] != StatusLimpeza.Situacao.INSPECIONADA
+
+
+def _tempo_ate(hora, dia) -> tuple:
+    """("faltam 3h20", atrasado) até o horário de entrada — a resposta de "dá
+    tempo?" sem conta nenhuma na cabeça de quem está lendo."""
+    if not hora or dia != timezone.localdate():
+        return "", False
+    from datetime import datetime
+
+    agora = timezone.localtime()
+    alvo = timezone.make_aware(datetime.combine(dia, hora), agora.tzinfo)
+    minutos = int((alvo - agora).total_seconds() // 60)
+    if minutos <= 0:
+        return "", True
+    if minutos < 60:
+        return f"faltam {minutos} min", False
+    return f"faltam {minutos // 60}h{minutos % 60:02d}", False
+
+
+def _quarto_no_plano(linha) -> dict:
+    """O que cada quarto mostra na lista do plano."""
+    tarefa = linha["tarefa"]
+    return {
+        "uh": linha["uh"],
+        "situacao": linha["situacao"],
+        "rotulo": linha["situacao_label"],
+        "ocupacao": linha["ocupacao"]["rotulo"],
+        "hospede": linha["ocupacao"]["hospede"],
+        "pronto": linha["situacao"] == StatusLimpeza.Situacao.INSPECIONADA,
+        "camareira": _quem(tarefa.camareira) if tarefa else "",
+        "falta": _falta_fazer(linha),
+    }
+
+
+def _montar_plano(linhas, hora_checkin, dia) -> dict:
+    """O plano do dia a partir das linhas que a tela já tem (nenhuma consulta nova)."""
+    grupos = {etapa["cod"]: [] for etapa in PLANO}
+    tranquilos = 0
+    for linha in sorted(linhas, key=lambda ln: (_ORDEM_LIMPEZA.get(ln["situacao"], 9),
+                                                ln["uh"].numero)):
+        cod = prioridade_do_quarto(linha)
+        # No "resto" só entra quarto que ainda pede alguém; o que está pronto é
+        # contado numa linha só — 15 quartos sem nada a fazer não são um plano.
+        if cod == "resto" and not _falta_fazer(linha):
+            tranquilos += 1
+            continue
+        grupos[cod].append(_quarto_no_plano(linha))
+    # Dentro das chegadas, quem ainda não está pronto vem primeiro.
+    grupos["chegada"].sort(key=lambda q: (q["pronto"], q["uh"].numero))
+    a_entregar = sum(1 for q in grupos["chegada"] if not q["pronto"])
+    falta_tempo, atrasado = _tempo_ate(hora_checkin, dia)
+    return {
+        "grupos": [{**etapa, "quartos": grupos[etapa["cod"]]}
+                   for etapa in PLANO if grupos[etapa["cod"]]],
+        "a_entregar": a_entregar,
+        "tranquilos": tranquilos,
+        "hora_checkin": hora_checkin,
+        "falta_tempo": falta_tempo,
+        "atrasado": atrasado,
+        "a_fazer": sum(1 for ln in linhas if _falta_fazer(ln)),
+    }
+
+
+def plano_do_dia(dia=None) -> dict:
+    """Interface pública do plano do dia (a visão geral monta o seu das mesmas
+    linhas, sem pagar as consultas duas vezes)."""
+    dados = _estado_dos_quartos(dia)
+    return _montar_plano(dados["linhas"], _hora_do_checkin(), dados["dia"])
 
 
 def carga_das_camareiras(dia=None) -> list:
@@ -587,6 +724,8 @@ def visao_geral(dia=None) -> dict:
 
     chegadas.sort(key=lambda c: (c["pronto"], c["uh"].numero))
     chegadas_atrasadas = [c for c in chegadas if not c["pronto"]]
+    hora_checkin = _hora_do_checkin()
+    plano = _montar_plano(linhas, hora_checkin, dia)
 
     # ── O que pede ação agora (mesma linguagem do bloco da Visão geral do CRM) ──
     url_quartos = reverse("governanca:quartos")
@@ -678,7 +817,9 @@ def visao_geral(dia=None) -> dict:
         "prontos": prontos,
         "pct_prontos": round(100 * prontos / total) if total else 0,
         "falta_para_pronto": total - prontos,
-        "hora_checkin": _hora_do_checkin(),
+        "hora_checkin": hora_checkin,
+        # A ordem de atacar o dia, montada das mesmas linhas (zero consulta nova).
+        "plano": plano,
         "chegadas": chegadas,
         "chegadas_atrasadas": len(chegadas_atrasadas),
         "carga": carga_das_camareiras(dia),

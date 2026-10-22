@@ -1154,7 +1154,7 @@ class VisaoGeralComReservasTests(RondaBase):
         self.assertIsNone(dados["hora_checkin"])
         r = self.client.get(reverse("governanca:painel"))
         self.assertEqual(r.status_code, 200)
-        self.assertContains(r, "não há como saber quem chega hoje")
+        self.assertContains(r, "não há como saber quem chega e quem sai hoje")
 
 
 class ListaFiltradaPelaVisaoTests(GovernancaBase):
@@ -1412,3 +1412,137 @@ class QuartoOcupadoNaoDizProntoTests(RondaBase):
         services.abrir_faxina(self.uh, tipo=TarefaGovernanca.Tipo.ARRUMACAO,
                               usuario=self.user, origem="arrumacao_diaria")
         self.assertEqual(self._linha(self.uh)["situacao_label"], "A limpar")
+
+
+class PlanoDoDiaTests(RondaBase):
+    """A ordem de atacar o dia, que a supervisora fazia de cabeça.
+
+    1. chegada de hoje com o quarto ainda não pronto; 2. saída de hoje (vai
+    sujar); 3. ocupado pedindo arrumação; 4. o resto.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.uh3 = UH.objects.create(numero="Quarto 03", tipo=self.tipo)
+        self.uh4 = UH.objects.create(numero="Quarto 04", tipo=self.tipo)
+        self.client.login(username="governanta", password="senha-forte-123")
+
+    def _chegada_hoje(self, uh, nome="Quem chega"):
+        from apps.reservas.models import Reserva
+        return Reserva.objects.create(
+            uh=uh, hospede=Pessoa.objects.create(nome=nome),
+            checkin=self.hoje, checkout=self.hoje + timedelta(days=2),
+            status=Reserva.Status.CONFIRMADA, valor_diaria=Decimal("200"),
+            criado_por=self.user)
+
+    def _grupos(self, plano=None):
+        plano = plano or services.plano_do_dia()
+        return {g["cod"]: [q["uh"].numero for q in g["quartos"]]
+                for g in plano["grupos"]}
+
+    def test_ocupado_ja_limpo_nao_entra_na_fila_de_arrumar(self):
+        """Limpo e ocupado só espera a supervisora — aparecia em "a arrumar"
+        dizendo "Limpo"."""
+        self._hospedar(self.uh, sai_em_dias=3)
+        services.definir_status(self.uh, StatusLimpeza.Situacao.LIMPA, self.user)
+        grupos = self._grupos()
+        self.assertNotIn("Quarto 01", grupos.get("arrumacao", []))
+        self.assertIn("Quarto 01", grupos["resto"])
+
+    def test_a_ordem_dos_grupos_e_sempre_a_mesma(self):
+        self._chegada_hoje(self.uh)
+        services.abrir_faxina(self.uh, usuario=self.user)
+        self._hospedar(self.uh2, sai_em_dias=0)                 # sai hoje
+        self._hospedar(self.uh3, sai_em_dias=3)                 # ocupado
+        services.abrir_faxina(self.uh3, usuario=self.user)      # a arrumar
+        services.abrir_faxina(self.uh4, usuario=self.user)      # vago sujo
+        plano = services.plano_do_dia()
+        self.assertEqual([g["cod"] for g in plano["grupos"]],
+                         ["chegada", "saida", "arrumacao", "resto"])
+        grupos = self._grupos(plano)
+        self.assertEqual(grupos["chegada"], ["Quarto 01"])
+        self.assertEqual(grupos["saida"], ["Quarto 02"])
+        self.assertEqual(grupos["arrumacao"], ["Quarto 03"])
+        self.assertEqual(grupos["resto"], ["Quarto 04"])
+
+    def test_chegada_vem_antes_mesmo_com_o_quarto_pronto(self):
+        """O grupo das chegadas lista todas, com as não prontas na frente."""
+        self._chegada_hoje(self.uh, nome="Pronta")
+        services.inspecionar(self.uh, self.user)
+        self._chegada_hoje(self.uh2, nome="Atrasada")
+        services.abrir_faxina(self.uh2, usuario=self.user)
+        chegada = next(g for g in services.plano_do_dia()["grupos"]
+                       if g["cod"] == "chegada")
+        self.assertEqual([q["uh"].numero for q in chegada["quartos"]],
+                         ["Quarto 02", "Quarto 01"])
+        self.assertFalse(chegada["quartos"][0]["pronto"])
+
+    def test_back_to_back_entra_nas_chegadas_e_nao_nas_saidas(self):
+        """Sai um e entra outro: quem manda na urgência é quem está chegando."""
+        self._hospedar(self.uh, sai_em_dias=0)
+        self._chegada_hoje(self.uh, nome="O próximo")
+        grupos = self._grupos()
+        self.assertIn("Quarto 01", grupos["chegada"])
+        self.assertNotIn("Quarto 01", grupos.get("saida", []))
+
+    def test_quarto_sem_nada_pendente_nao_vira_linha_do_plano(self):
+        """15 quartos prontos listados como "o resto" não são um plano."""
+        services.abrir_faxina(self.uh, usuario=self.user)
+        plano = services.plano_do_dia()
+        self.assertEqual(self._grupos(plano)["resto"], ["Quarto 01"])
+        self.assertEqual(plano["tranquilos"], 3)
+
+    def test_quarto_bloqueado_nao_entra_no_trabalho_do_dia(self):
+        self.uh.status = UH.Status.BLOQUEADA
+        self.uh.save(update_fields=["status"])
+        services.definir_status(self.uh, StatusLimpeza.Situacao.SUJA, self.user)
+        self._chegada_hoje(self.uh2)
+        services.abrir_faxina(self.uh2, usuario=self.user)
+        grupos = self._grupos()
+        self.assertNotIn("Quarto 01", grupos.get("chegada", []))
+        self.assertNotIn("Quarto 01", grupos.get("arrumacao", []))
+        self.assertNotIn("Quarto 01", grupos.get("resto", []))
+
+    def test_da_tempo_responde_com_quantos_e_quanto_falta(self):
+        self._chegada_hoje(self.uh)
+        services.abrir_faxina(self.uh, usuario=self.user)
+        plano = services.plano_do_dia()
+        self.assertEqual(plano["a_entregar"], 1)
+        self.assertIsNotNone(plano["hora_checkin"])
+        # Ou sobra tempo ("faltam 3h20"), ou o horário já passou — nunca os dois.
+        self.assertNotEqual(bool(plano["falta_tempo"]), plano["atrasado"])
+        self.assertContains(self.client.get(reverse("governanca:painel")),
+                            "quarto para entregar")
+
+    def test_a_tela_mostra_o_plano_com_os_grupos(self):
+        self._chegada_hoje(self.uh)
+        services.abrir_faxina(self.uh, usuario=self.user)
+        self._hospedar(self.uh2, sai_em_dias=0)
+        r = self.client.get(reverse("governanca:painel"))
+        self.assertContains(r, "Plano do dia")
+        self.assertContains(r, "Chegadas de hoje")
+        self.assertContains(r, "Saídas de hoje")
+        self.assertContains(r, "não pedem nada agora")
+
+    def test_a_lista_abre_na_ordem_do_plano(self):
+        """A camareira não precisa cruzar a lista com o mapa de reservas."""
+        services.abrir_faxina(self.uh4, usuario=self.user)      # vago sujo
+        self._chegada_hoje(self.uh3)
+        services.abrir_faxina(self.uh3, usuario=self.user)      # chegada atrasada
+        numeros = [ln["uh"].numero for ln in services.painel_limpeza()["linhas"]]
+        self.assertLess(numeros.index("Quarto 03"), numeros.index("Quarto 04"))
+
+    def test_sem_reservas_o_plano_vira_so_a_fila_de_limpeza(self):
+        ModuloContratado.objects.filter(codigo=Modulo.RESERVAS).update(ativo=False)
+        services.abrir_faxina(self.uh, usuario=self.user)
+        plano = services.plano_do_dia()
+        self.assertEqual([g["cod"] for g in plano["grupos"]], ["resto"])
+        self.assertEqual(plano["a_entregar"], 0)
+        self.assertEqual((plano["falta_tempo"], plano["atrasado"]), ("", False))
+        self.assertEqual(self.client.get(reverse("governanca:painel")).status_code, 200)
+
+    def test_o_plano_nao_custa_consulta_nenhuma_a_mais(self):
+        self._hospedar(self.uh)
+        services.visao_geral()          # aquece o singleton de configuração
+        with self.assertNumQueries(12):
+            services.visao_geral()
