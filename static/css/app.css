@@ -1480,9 +1480,17 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
    limpo é verde, pronto (inspecionado) é azul — para a tela não dizer duas coisas
    diferentes sobre o mesmo quarto. Os hexes são da paleta noturna do corredor: o
    painel é escuro e precisa do próprio contraste. */
-.corredor-gov .porta { background: linear-gradient(180deg, #1A3A4C, #122937); }
-.corredor-gov .porta.limp-suja,
-.corredor-gov .porta.limp-em_limpeza { background: linear-gradient(180deg, #4A2E22, #2E1A14); }
+/* O bloco da Governança é mais BAIXO que a porta da recepção: lá cabem nome,
+   período e saldo (proporção 4/5), aqui a metade de baixo ficava vazia. */
+.corredor-gov .porta {
+  background: linear-gradient(180deg, #1A3A4C, #122937);
+  aspect-ratio: auto; min-height: 94px; max-height: none; gap: 1px;
+}
+.corredor-gov .porta.limp-suja { background: linear-gradient(180deg, #4A2E22, #2E1A14); }
+/* "Em limpeza" tinha o MESMO fundo de "a limpar": dois estados diferentes com a
+   mesma cor de bloco, impossíveis de separar de longe (que é como esta tela é
+   lida). Ganhou o próprio tom de âmbar. */
+.corredor-gov .porta.limp-em_limpeza { background: linear-gradient(180deg, #4A3C1E, #2C2310); }
 .corredor-gov .porta.limp-limpa {
   background: linear-gradient(180deg, #1B3B33, #102722);
   box-shadow: inset 0 0 0 1px rgba(127, 201, 163, .22);
@@ -1491,17 +1499,47 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
   background: linear-gradient(180deg, #1C3A4E, #112636);
   box-shadow: inset 0 0 0 1px rgba(127, 180, 217, .22);
 }
-.corredor-gov .porta.limp-bloqueada { opacity: .45; filter: grayscale(.35); }
-/* O trinco é o pontinho de cor: o estado se lê mesmo de longe. */
-.corredor-gov .limp-suja .porta-fecho { background: #E8B07A; box-shadow: 0 0 8px rgba(232, 176, 122, .5); }
-.corredor-gov .limp-em_limpeza .porta-fecho { background: #D98A4A; box-shadow: 0 0 8px rgba(217, 138, 74, .5); }
-.corredor-gov .limp-limpa .porta-fecho { background: #7FC9A3; box-shadow: 0 0 8px rgba(127, 201, 163, .5); }
-.corredor-gov .limp-inspecionada .porta-fecho { background: #7FB4D9; box-shadow: 0 0 8px rgba(127, 180, 217, .5); }
-.corredor-gov .limp-bloqueada .porta-fecho { background: #6B808C; box-shadow: none; }
-.corredor-gov .limp-suja .porta-selo { color: #E8B07A; }
-.corredor-gov .limp-em_limpeza .porta-selo { color: #D98A4A; }
-.corredor-gov .limp-limpa .porta-selo { color: #7FC9A3; }
-.corredor-gov .limp-inspecionada .porta-selo { color: #7FB4D9; }
+/* Bloqueado era `opacity: .45` + `grayscale`: o bloco inteiro desbotava e o texto
+   parava de passar contraste (o quarto em reparo é informação, não enfeite).
+   Agora é um fundo de ardósia, sem transparência, e o texto segue legível. */
+.corredor-gov .porta.limp-bloqueada { background: linear-gradient(180deg, #2A343A, #1B2328); }
+/* O trinco é o pontinho de cor: o estado se lê mesmo de longe — e na MESMA cor do
+   texto do estado, para a porta não dar dois sinais diferentes. */
+.corredor-gov .limp-suja .porta-fecho { background: #F0C08E; box-shadow: 0 0 8px rgba(240, 192, 142, .5); }
+.corredor-gov .limp-em_limpeza .porta-fecho { background: #F2CE7E; box-shadow: 0 0 8px rgba(242, 206, 126, .5); }
+.corredor-gov .limp-limpa .porta-fecho { background: #9BDCBB; box-shadow: 0 0 8px rgba(155, 220, 187, .5); }
+.corredor-gov .limp-inspecionada .porta-fecho { background: #A8CFEB; box-shadow: 0 0 8px rgba(168, 207, 235, .5); }
+.corredor-gov .limp-bloqueada .porta-fecho { background: #C8D3D9; box-shadow: none; }
+
+/* ── O bloco do quarto: NÚMERO → ESTADO → quem está dentro → quem limpa ──
+   O estado saía num rótulo de 9 px em maiúsculas (quase invisível no painel
+   escuro, sobretudo o azul do "Pronto") e o maior texto do bloco era o TIPO do
+   quarto — dado que não muda nada do que fazer agora. Agora o estado é o segundo
+   texto mais forte e o rodapé só aparece quando tem o que dizer. Todas as cores
+   passam 4,5:1 sobre as duas pontas do gradiente (CorredorDaGovernancaTests). */
+.corredor-gov .porta-num { font-size: clamp(1rem, .92rem + .25vw, 1.2rem); color: #EEF4F7; }
+.porta-estado {
+  font-size: clamp(.8rem, .7rem + .3vw, .98rem);
+  font-weight: 700; line-height: 1.15; letter-spacing: -.01em;
+  overflow-wrap: break-word;
+}
+.corredor-gov .limp-suja .porta-estado { color: #F0C08E; }
+.corredor-gov .limp-em_limpeza .porta-estado { color: #F2CE7E; }
+.corredor-gov .limp-limpa .porta-estado { color: #9BDCBB; }
+.corredor-gov .limp-inspecionada .porta-estado { color: #A8CFEB; }
+.corredor-gov .limp-bloqueada .porta-estado { color: #C8D3D9; }
+/* Quem está no quarto: duas linhas antes de cortar (o nome do hóspede é o dado
+   que a supervisora ia buscar no mapa de reservas). */
+.porta-ocupacao {
+  font-size: clamp(.66rem, .6rem + .18vw, .76rem);
+  color: #B3C2CB; line-height: 1.25;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  overflow: hidden; overflow-wrap: anywhere;
+}
+.porta-quem {
+  font-size: .66rem; font-weight: 650; color: #DCE6EB;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
 /* "chega hóspede hoje" é o que muda a urgência da porta — e por isso é o único
    enfeite que ela ganha. */
 .porta-chegada {
@@ -1510,6 +1548,15 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
   background: color-mix(in srgb, var(--lampiao) 30%, transparent);
   color: var(--pergaminho);
 }
+/* A casa por ocupação, embaixo da legenda de limpeza: uma linha de texto, porque
+   quem está no quarto é DADO (o que pede ação são os estados de limpeza acima). */
+.corredor-ocupacao {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: .1rem .2rem;
+  margin: .7rem 0 0;
+}
+.corredor-ocupacao .letreiro { color: var(--tinta-suave); margin-right: .5rem; }
+.corredor-ocupacao b { color: var(--tinta); font-variant-numeric: tabular-nums; }
+
 /* A legenda do corredor também filtra a lista. */
 .chip-legenda-link { text-decoration: none; cursor: pointer; }
 .chip-legenda-link:hover { border-color: var(--fio-forte); }
@@ -1523,7 +1570,9 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 @container gov-visao (max-width: 600px) {
   .gov-visao > .gov-progresso { order: -2; }
   .gov-visao > .atencao-secao { order: -1; }
-  .corredor-gov .porta { aspect-ratio: auto; min-height: 0; }
+  /* No celular o bloco encolhe para o que tem dentro: 24 quartos em oito fileiras
+     de 94px empurravam o resto da tela para muito abaixo da dobra. */
+  .corredor-gov .porta { min-height: 0; }
 }
 .chip-legenda.limp-em_limpeza i { background: var(--andamento); }
 .chip-legenda.limp-limpa i { background: var(--sucesso); }
@@ -1558,11 +1607,32 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 .gov-colunas {
   display: grid; gap: 1rem; margin-top: 1.4rem;
   grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+  /* Cada cartão tem a altura do que tem dentro: o plano do dia pode ter quatro
+     grupos e a carga das camareiras, três linhas — esticada, a segunda virava
+     meio metro de cartão vazio ao lado. */
+  align-items: start;
 }
 .gov-colunas > * { min-width: 0; }
 .gov-bloco { margin: 0; }
 .gov-bloco .secao-cabecalho { margin-bottom: .5rem; }
 .gov-bloco .tabela { margin: .6rem 0 0; }
+/* Plano do dia: os grupos na ordem fixa de atacar. O título de cada grupo leva um
+   pontinho na cor do nível (o mesmo vocabulário de "Precisa de atenção": vermelho
+   = hóspede na porta, âmbar = precisa de alguém hoje, azul = bom saber) — sem
+   cápsula, que a tela já tem os selos de estado em cada linha. */
+.gov-plano-grupo { margin-top: 1rem; padding-top: .8rem; border-top: 1px solid var(--fio); }
+.gov-plano-grupo:first-of-type { border-top: none; padding-top: 0; }
+.gov-plano-titulo {
+  display: flex; align-items: center; gap: .5rem; margin: 0;
+  font-size: .9rem; font-weight: 650; color: var(--tinta);
+}
+.gov-plano-titulo b { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--tinta-suave); }
+.gov-plano-ponto { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; background: var(--info); }
+.gov-plano-alerta .gov-plano-ponto { background: var(--perigo); }
+.gov-plano-aviso .gov-plano-ponto { background: var(--alerta); }
+.gov-plano-grupo .ajuda { margin-top: .15rem; }
+.gov-plano-sobra { margin-top: 1rem; padding-top: .8rem; border-top: 1px solid var(--fio); }
+
 /* Chegadas de hoje: uma linha por chegada, quebrando sozinha quando aperta. */
 .gov-chegadas { list-style: none; margin: .6rem 0 0; padding: 0; display: grid; gap: .1rem; }
 .gov-chegadas li {
@@ -1655,6 +1725,63 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
   color: var(--tinta);
 }
 
+/* ───────── «Minha fila»: a tela da camareira, no celular dela ─────────
+   A lista de quartos é a mesa da supervisora (cinco colunas, três botões de
+   ronda, um seletor por linha). No corredor, de mão ocupada, a camareira precisa
+   de outra coisa: um cartão por quarto, na ordem de atacar, e um botão grande
+   que diz o que vai acontecer. Nasce em coluna única em qualquer largura — num
+   monitor grande ela continua sendo uma lista de leitura rápida, não uma grade. */
+.gov-fila {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; gap: .7rem; max-width: 46rem;
+}
+.gov-fila-item {
+  padding: .9rem 1rem;
+  background: var(--superficie); border: 1px solid var(--fio);
+  border-left: 3px solid var(--fio-forte);
+  border-radius: var(--raio); box-shadow: var(--sombra-1);
+}
+/* O quarto que ela já começou fica marcado: é onde ela está agora. */
+.gov-fila-item.fazendo { border-left-color: var(--andamento); background: var(--superficie-2); }
+.gov-fila-topo {
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
+  gap: .3rem .8rem;
+}
+.gov-fila-num { font-size: 1.1rem; font-weight: 700; letter-spacing: -.01em; }
+.gov-fila-porque { margin: .3rem 0 0; font-size: .86rem; color: var(--tinta-suave); }
+.gov-fila-dado { display: flex; flex-wrap: wrap; align-items: baseline; margin: .35rem 0 0; }
+.gov-fila-recado {
+  margin: .5rem 0 0; padding: .45rem .6rem;
+  font-size: .84rem; border-radius: var(--raio-p);
+  background: var(--alerta-bg); color: var(--alerta);
+}
+.gov-fila-acoes { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .8rem; }
+/* Quem divide o espaço é o `<form>` (o botão mora dentro de um): sem isto, o
+   "Começar" ficava do tamanho da palavra ao lado de um "Reportar problema" do
+   dobro da largura. Alvo de dedo em qualquer tela — ela toca isto com a outra
+   mão segurando o pano. */
+.gov-fila-acoes form { display: flex; margin: 0; }
+.gov-fila-acoes > form, .gov-fila-acoes > .gov-fila-botao { flex: 1 1 12rem; }
+.gov-fila-botao {
+  flex: 1; min-height: 48px;
+  display: inline-flex; align-items: center; justify-content: center; text-align: center;
+}
+.gov-fila-feitas { margin-top: 1.6rem; padding-top: 1rem; border-top: 1px solid var(--fio); }
+.gov-fila-feitas h2 { font-size: 1rem; margin: 0 0 .3rem; }
+.gov-fila-feitas b { font-variant-numeric: tabular-nums; color: var(--tinta-suave); }
+
+/* Distribuir a fila: a frase explica o que o botão vai fazer, e as duas coisas
+   ficam na mesma linha-base enquanto couberem. */
+.gov-distribuir {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: .5rem .9rem; margin: 0 0 1rem;
+  padding: .7rem .9rem;
+  background: var(--superficie-2); border: 1px solid var(--fio);
+  border-radius: var(--raio-p);
+}
+.gov-distribuir p { margin: 0; min-width: 0; }
+.gov-distribuir form { margin: 0; flex: none; }
+
 .filtro-limpeza { display: flex; flex-wrap: wrap; gap: 8px; margin: .2rem 0 1.1rem; }
 .chip-limpeza {
   display: inline-flex; align-items: center; gap: 7px;
@@ -1672,6 +1799,17 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 .chip-em_limpeza .ponto { background: var(--andamento); }
 .chip-limpa .ponto { background: var(--sucesso); }
 .chip-inspecionada .ponto { background: var(--info); }
+
+/* Ocupação na coluna do quarto: "SAI HOJE · ANA LIMA". Dois rótulos de DADO (o
+   ponto vem do `+ .rotulo-dado::before`) em vez de um texto só, para a dupla poder
+   quebrar entre as partes; o nome trunca com reticências em vez de empurrar a
+   coluna. O tipo do quarto saiu daqui para a dica — é dado secundário e nunca
+   muda o que fazer agora. */
+.gov-ocupacao {
+  display: flex; flex-wrap: wrap; align-items: baseline;
+  min-width: 0; margin-top: .2rem;
+}
+.gov-ocupacao-nome { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
 .tabela-limpeza td { padding-top: .55rem; padding-bottom: .55rem; }
 .tabela-limpeza .selo { min-width: 112px; }
@@ -1731,6 +1869,10 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
   /* O estado e a frase que o explica ocupam a linha inteira do cartão. */
   .tabela.tabela-cartoes td.col-estado { flex-wrap: wrap; }
   .tabela.tabela-cartoes td.col-estado .ajuda { flex: 1 1 100%; }
+  /* Quem está no quarto cai abaixo do número, na largura do cartão (o número fica
+     na linha do rótulo "QUARTO", como os outros dados). */
+  .tabela.tabela-cartoes td.col-quarto { flex-wrap: wrap; }
+  .tabela.tabela-cartoes td.col-quarto .gov-ocupacao { flex: 1 1 100%; margin-top: .1rem; }
   .tabela.tabela-cartoes .form-inline { margin: 0; flex: 1; justify-content: flex-end; }
   .tabela.tabela-cartoes .form-inline select { min-width: 0; flex: 1; }
   /* A ronda é o toque que a camareira dá no corredor, de celular: os três alvos
@@ -3042,6 +3184,15 @@ a.modulo-ativo:hover {
 
 /* Precisa de atenção */
 .atencao-secao { margin: 1.4rem 0 .2rem; }
+/* Visão geral de quem não tem nenhum bloco dela: os módulos dele, no cartão-atalho
+   dos Relatórios (a decisão é de views.dashboard). A grade divide pelo espaço. */
+.atalhos-modulos {
+  display: grid; gap: .85rem; margin: 1.2rem 0;
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+}
+.atalhos-modulos .atalho-titulo { display: block; }
+.atalhos-modulos .cartao-descricao { display: block; margin-top: .2rem; }
+.atalhos-modulos .cartao-atalho:active { transform: scale(.99); }
 .secao-cabecalho { display: flex; align-items: center; gap: .55rem; margin-bottom: .85rem; }
 .secao-cabecalho h2 { margin: 0; }
 .secao-contagem {
@@ -5527,7 +5678,9 @@ body.escala-dragging .escala-drop { cursor: copy; }
      regra geral acima) deixavam «Aprovar limpeza» mais baixo que «Devolver para
      limpar», lado a lado no tablet. */
   .botao-ronda, .acoes-quarto .botao-mini,
-  .acoes-quarto .botao-primario, .acoes-quarto .botao-neutro {
+  .acoes-quarto .botao-primario, .acoes-quarto .botao-neutro,
+  /* A legenda do corredor da Governança também filtra a lista: é botão, não enfeite. */
+  .chip-legenda-link {
     min-height: 44px;
   }
   /* O menu é o controle mais tocado do sistema no celular, e era o que tinha
@@ -6340,9 +6493,18 @@ body.escala-dragging .escala-drop { cursor: copy; }
    cartão de 130 px; no tablet de 1024 px, 66 px num de 169 px — 39% do cartão
    vazio, e os 24 quartos pedindo rolagem à toa. A recepção lê este mapa de pé,
    com o celular na mão: o que importa é quarto, hóspede, data e saldo juntos.
-   No mouse a proporção fica como está (o corredor é o herói da tela grande). */
+   No mouse a proporção fica como está (o corredor é o herói da tela grande).
+
+   `:not(.corredor-gov)`: o corredor da Governança usa as mesmas classes
+   (`<div class="corredor corredor-gov">`) e já resolveu isto à sua maneira, em
+   qualquer largura — `aspect-ratio: auto` com `min-height: 94px`, porque lá o
+   bloco mostra menos coisa. Sem a exceção, este bloco vem depois no arquivo e
+   zeraria aquele piso justamente no toque, que é onde a Governança vive. */
 @media (pointer: coarse), (max-width: 820px) {
-  .corredor .porta { aspect-ratio: auto; min-height: 0; }
-  /* Sem a proporção mandando na altura, o respiro volta pelo padding. */
-  .corredor .porta { padding-bottom: 7px; }
+  .corredor:not(.corredor-gov) .porta {
+    aspect-ratio: auto;
+    min-height: 0;
+    /* Sem a proporção mandando na altura, o respiro volta pelo padding. */
+    padding-bottom: 7px;
+  }
 }

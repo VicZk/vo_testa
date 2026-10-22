@@ -100,7 +100,10 @@ class PermissoesPorModuloTests(TestCase):
 
     def test_menu_filtra_por_permissao_do_usuario(self):
         self.client.login(username="loja", password="senha-forte-123")
-        resposta = self.client.get(reverse("dashboard"))
+        # Só com a Loja, a entrada já é o PDV (EntradaPorPerfilTests); o menu é o
+        # mesmo em qualquer tela.
+        resposta = self.client.get(reverse("dashboard"), follow=True)
+        self.assertRedirects(resposta, reverse("loja:pdv"))
         self.assertContains(resposta, "Loja")
         self.assertNotContains(resposta, "Governança")
 
@@ -1339,6 +1342,42 @@ class EstruturaInicialTests(TestCase):
         self.assertTrue(PosicaoCama.objects.filter(uh__numero="Quarto 16").exists())
         self.assertTrue(TarifaUnidade.objects.filter(uh__numero="Quarto 22").exists())
         self.assertEqual(UH.objects.filter(numero__startswith="Quarto ").count(), 24)
+
+
+class EntradaPorPerfilTests(TestCase):
+    """A "Visão geral" de quem não tem nenhum bloco dela não pode ser uma página vazia
+    (achado no ambiente de teste: a camareira entrava e via só o título)."""
+
+    def _usuario(self, *codigos):
+        from apps.nucleo.models import ModuloContratado
+
+        u = Usuario.objects.create_user(username="perfil", password="senha-forte-123")
+        u.modulos.set(ModuloContratado.objects.filter(codigo__in=codigos))
+        self.client.force_login(u)
+        return u
+
+    def test_quem_so_tem_a_governanca_entra_na_fila(self):
+        from apps.nucleo.modulos import Modulo
+
+        self._usuario(Modulo.GOVERNANCA)
+        r = self.client.get(reverse("dashboard"))
+        self.assertRedirects(r, reverse("governanca:minha_fila"), fetch_redirect_response=False)
+
+    def test_varios_modulos_sem_bloco_mostram_os_atalhos(self):
+        from apps.nucleo.modulos import Modulo
+
+        self._usuario(Modulo.LOJA, Modulo.RESTAURANTE)
+        r = self.client.get(reverse("dashboard"))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, 'class="atalhos-modulos"')
+        self.assertContains(r, f'href="{reverse("loja:pdv")}"')
+
+    def test_gerencia_continua_com_a_visao_geral(self):
+        u = Usuario.objects.create_superuser(username="chefe", password="senha-forte-123")
+        self.client.force_login(u)
+        r = self.client.get(reverse("dashboard"))
+        self.assertEqual(r.status_code, 200)
+        self.assertNotContains(r, 'class="atalhos-modulos"')
 
 
 @override_settings(FNRH_BLOQUEAR_CHECKIN=True)   # como na produção

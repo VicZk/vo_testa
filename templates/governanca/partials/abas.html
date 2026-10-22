@@ -8,6 +8,7 @@ do quadro.{% endcomment %}
 <div class="filtros subnav">
   <a href="{% url 'governanca:painel' %}" class="filtro-chip"{% if atual == 'painel' %} aria-current="page"{% endif %}>Visão geral</a>
   <a href="{% url 'governanca:quartos' %}" class="filtro-chip"{% if atual == 'quartos' %} aria-current="page"{% endif %}>Quartos</a>
+  <a href="{% url 'governanca:minha_fila' %}" class="filtro-chip"{% if atual == 'minha_fila' %} aria-current="page"{% endif %}>Minha fila</a>
   <a href="{% url 'governanca:discrepancias' %}" class="filtro-chip"{% if atual == 'discrepancias' %} aria-current="page"{% endif %}>Discrepâncias</a>
 </div>
 {% endwith %}

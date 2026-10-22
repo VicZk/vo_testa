@@ -9,6 +9,96 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 22/10/2026 — Cada um entra no que é seu: a camareira cai direto na fila dela (`b0630e0`)
+
+Achado testando o login da camareira na VPS: depois de entrar, ela via uma "Visão
+geral" vazia — só "Seu resumo do dia." e nada abaixo — e precisava abrir o menu e achar
+a Governança para começar.
+
+**O que melhorou**
+- **Quem tem um módulo só entra direto nele:** a camareira cai na "Minha fila"; a moça
+  da Loja, no PDV; o garçom, no Restaurante.
+- **Quem tem vários módulos e nenhum bloco da Visão geral** (Loja + Restaurante, por
+  exemplo) vê um cartão por módulo, com o nome e o que se faz nele, em vez da página
+  vazia.
+- O rótulo "Recepção · hoje" no alto da Visão geral vira "Hoje" para quem não é da
+  recepção.
+- Gerência e recepção não mudam: o painel continua o mesmo.
+
+**O que foi modificado**
+- `apps/nucleo/views.py` (`dashboard`): sem nenhum bloco do painel, redireciona para o
+  único módulo ou entrega os atalhos; `apps/nucleo/modulos.py`: a Governança ganhou
+  `url_pessoal` (a Minha fila); `templates/nucleo/dashboard.html` e `app.css`: os
+  atalhos reaproveitam o cartão-atalho dos Relatórios.
+
+**Como foi testado**
+- `EntradaPorPerfilTests`: só Governança, Loja + Restaurante e superusuário; o teste do
+  menu por permissão segue a nova entrada. `apps.nucleo`, `apps.governanca` e
+  `apps.loja` OK; ruff zero.
+- Navegador a 390 e 1440 px, sem rolagem lateral.
+
+---
+
+## 22/10/2026 — Governança para tablet e celular: quem está no quarto, o plano do dia e a fila da camareira (`1bd56a0` a `603a797`)
+
+Pedido do dono: "a governança, a maioria do uso vai ser por tablet/mobile, então tem
+que ficar uma parada bem intuitiva". Feito por um agente numa cópia separada do código,
+desenhado a partir do toque e revisado no navegador (celular e tablet com toque emulado)
+antes do merge.
+
+**O que melhorou**
+- **O bloco do quarto diz quem está nele**, não só como está a limpeza: vago, ocupado,
+  chega hoje, sai hoje ou bloqueado, com o hóspede. O número e o estado vêm na frente,
+  legíveis de longe (contraste de 7:1 em todos os estados); o tipo do quarto virou
+  detalhe. Com hóspede dentro, o quarto limpo e conferido aparece como "Arrumado" — não
+  mais "pode receber hóspede" —, e em manutenção também não anuncia que está livre.
+- **Plano do dia:** a ordem de atacar, sem conta de cabeça — chegadas de hoje com o
+  quarto ainda não pronto, saídas de hoje (vão sujar), ocupados a arrumar e o resto,
+  com a hora do check-in e se dá tempo. A lista de quartos abre na mesma ordem.
+- **Minha fila**, a tela da camareira no celular: um cartão por quarto, do mais urgente
+  ao resto, com "Começar" e "Terminei" grandes e "Reportar problema", que abre a ordem de
+  serviço na Manutenção sem sair do corredor. Quarto bloqueado não entra na fila.
+- **Escala:** quem está de turno hoje aparece primeiro no "quem limpa", e "Distribuir a
+  fila" divide num toque os quartos a limpar entre essas pessoas, equilibrado. Se a
+  camareira está escalada mas não tem login no sistema, a tela diz isso (e não "ninguém
+  de turno").
+- **Banco novo nasce certo:** quarto que nunca teve limpeza registrada aparece como
+  "Pronto" — antes, uma instalação nova dizia "Faltam 23 quartos" e enchia a fila de
+  conferência da supervisora sem ninguém ter entrado nos quartos.
+- A legenda do corredor, que também filtra a lista, ganhou alvo de toque de 44 px.
+
+**O que foi modificado**
+- `apps/governanca`: `plano_do_dia`, `minha_fila`, `distribuir_fila`,
+  `camareiras_do_dia` e a ocupação por quarto (`ocupacao_pms`, que lê `reservas.ocupacao_por_uh`) no quadro;
+  rotas `governanca:minha_fila`, `distribuir` e `reportar`; templates `fila.html`,
+  `partials/fila.html`, `reportar*.html`; migração `governanca.0004` (só o padrão do
+  campo: nenhuma linha existente muda).
+- `apps/escala/services.py`: `de_turno()` e `usuarios_de_turno()` — interface pública
+  para quem atribui trabalho a quem está de turno.
+- `app.css`: o bloco do quarto, o plano do dia, a fila e a legenda no toque.
+
+**Como foi testado**
+- Testes novos na Governança e na Escala (ocupação no bloco, prioridade do plano, banco
+  novo, distribuição equilibrada, fila da camareira, reportar problema, degradação sem
+  Reservas ou sem Escala, consultas constantes na visão geral); na árvore juntada,
+  governanca, escala, manutencao, reservas, nucleo.tests_design e PrefixoDeUrlTests —
+  719 testes OK.
+- Revisão no navegador com toque emulado em 390 × 844 e 768 × 1024, e no desktop a
+  1440: visão geral, lista e Minha fila, sem rolagem lateral; o fluxo da camareira
+  percorrido (Começar → Reportar problema → Terminei).
+- **Suíte completa no Windows:** 1.707 testes no `603a797`, só a falha conhecida do ambiente (`test_webhook_audio_baixa_e_salva_arquivo`).
+- `makemigrations --check` limpo; ruff zero.
+
+**Para a pousada decidir**
+- "Pronto" × "Arrumado": a palavra muda com a ocupação; o estado gravado e a trava de
+  check-in continuam os mesmos.
+- Quarto novo nasce "Pronto". Se preferirem que a casa comece "a conferir", é trocar o
+  padrão e aceitar a fila inicial de 24 inspeções.
+- Camareiras precisam de login para a fila e o "Distribuir": em Configurações → Equipe
+  & Acessos.
+
+---
+
 ## 22/10/2026 — A lista do combo cabe no painel no celular (`35c01ac`)
 
 **O que melhorou**

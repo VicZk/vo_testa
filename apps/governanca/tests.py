@@ -1,3 +1,4 @@
+import json
 from datetime import timedelta
 from decimal import Decimal
 
@@ -156,7 +157,60 @@ class PainelSemEscritaTests(TestCase):
         dados = painel_limpeza()
         self.assertEqual(StatusLimpeza.objects.count(), 0)
         self.assertEqual(len(dados["linhas"]), 3)
-        self.assertTrue(all(ln["situacao"] == StatusLimpeza.Situacao.LIMPA for ln in dados["linhas"]))
+        self.assertTrue(all(ln["situacao"] == StatusLimpeza.Situacao.INSPECIONADA
+                            for ln in dados["linhas"]))
+
+
+class BancoNovoTests(TestCase):
+    """Casa que acabou de entrar no sistema não tem fila de inspeção inventada.
+
+    O padrão era "Limpo", que na nossa tela significa "limpeza feita, falta a
+    supervisora conferir": num banco novo os 24 quartos entravam na fila da
+    supervisora e a visão geral dizia "Faltam 23 quartos" sem ninguém ter sujado
+    nada. Quarto sem registro de limpeza = disponível.
+    """
+
+    def setUp(self):
+        self.user = Usuario.objects.create_superuser(
+            username="nova", password="senha-forte-123")
+        self.tipo = TipoUH.objects.create(nome="Std", tarifa_base=Decimal("200"))
+        for n in range(1, 25):
+            UH.objects.create(numero=f"Quarto {n:02d}", tipo=self.tipo)
+        StatusLimpeza.objects.all().delete()   # é o que um banco novo tem: nada
+
+    def test_casa_inteira_pronta_sem_nenhum_registro(self):
+        dados = services.visao_geral()
+        self.assertEqual(dados["total"], 24)
+        self.assertEqual(dados["prontos"], 24)
+        self.assertEqual(dados["falta_para_pronto"], 0)
+        self.assertEqual(StatusLimpeza.objects.count(), 0)   # a tela não escreve
+
+    def test_casa_vazia_nao_cobra_ronda_de_quarto_nenhum(self):
+        """A ronda procura hóspede sem check-in e saída sem baixa: sem ninguém em
+        casa não há nada para conferir (antes: "24 quartos sem ronda hoje")."""
+        dados = services.visao_geral()
+        self.assertEqual(dados["atencao"], [])
+        self.assertEqual(dados["contagem"][StatusLimpeza.Situacao.LIMPA], 0)
+
+    def test_a_tela_nao_finge_que_a_supervisora_conferiu(self):
+        """"Pronto" sem ninguém no `atualizado_por` não vira carimbo de inspeção."""
+        linha = services.painel_limpeza()["linhas"][0]
+        self.assertEqual(linha["situacao_label"], "Pronto")
+        self.assertIn("Sem faxina registrada ainda", linha["explicacao"])
+        self.assertNotIn("Conferido", linha["explicacao"])
+
+    def test_inspecao_de_verdade_diz_que_foi_conferida(self):
+        uh = UH.objects.get(numero="Quarto 01")
+        services.inspecionar(uh, self.user)
+        linha = next(ln for ln in services.painel_limpeza()["linhas"]
+                     if ln["uh"].pk == uh.pk)
+        self.assertIn("Conferido e aprovado", linha["explicacao"])
+
+    def test_checkout_tira_o_quarto_do_pronto(self):
+        services.abrir_faxina(UH.objects.get(numero="Quarto 01"), usuario=self.user)
+        dados = services.visao_geral()
+        self.assertEqual(dados["prontos"], 23)
+        self.assertEqual(dados["falta_para_pronto"], 1)
 
 
 class PainelHtmxTests(GovernancaBase):
@@ -962,6 +1016,8 @@ class VisaoGeralTests(GovernancaBase):
 
     def test_progresso_do_dia_conta_os_prontos(self):
         services.inspecionar(self.uh, self.user)
+        for uh in (self.uh2, self.uh3):
+            services.abrir_faxina(uh, usuario=self.user)
         dados = services.visao_geral()
         self.assertEqual((dados["prontos"], dados["total"]), (1, 3))
         self.assertEqual(dados["falta_para_pronto"], 2)
@@ -970,6 +1026,7 @@ class VisaoGeralTests(GovernancaBase):
     def test_a_porta_ganha_a_cor_do_estado(self):
         services.abrir_faxina(self.uh, usuario=self.user)
         services.inspecionar(self.uh2, self.user)
+        services.definir_status(self.uh3, StatusLimpeza.Situacao.LIMPA, self.user)
         cores = {p["uh"].numero: p["cor"] for p in services.visao_geral()["portas"]}
         self.assertEqual(cores["Quarto 01"], "limp-suja")
         self.assertEqual(cores["Quarto 02"], "limp-inspecionada")   # pronto
@@ -983,6 +1040,7 @@ class VisaoGeralTests(GovernancaBase):
         self.assertTrue(porta["bloqueado"])
 
     def test_atencao_aponta_inspecao_esperando_e_leva_a_lista_filtrada(self):
+        services.definir_status(self.uh, StatusLimpeza.Situacao.LIMPA, self.user)
         dados = services.visao_geral()
         item = next(a for a in dados["atencao"] if "esperando inspeção" in a["rotulo"])
         self.assertEqual(item["nivel"], "aviso")
@@ -1074,8 +1132,13 @@ class VisaoGeralComReservasTests(RondaBase):
         self.assertEqual(dados["chegadas"][0]["hospede"], "Quem chega")
 
     def test_a_tela_mostra_o_horario_de_entrada_do_hospede(self):
+        """O prazo do dia aparece com a casa pronta e com a casa atrasada."""
         self.assertContains(self.client.get(reverse("governanca:painel")),
-                            "o primeiro hóspede pode entrar")
+                            "O primeiro hóspede pode entrar")
+        services.abrir_faxina(self.uh, usuario=self.user)
+        r = self.client.get(reverse("governanca:painel"))
+        self.assertContains(r, "O primeiro hóspede pode entrar")
+        self.assertContains(r, "para a casa toda ficar pronta")
 
     def test_o_bloco_de_chegadas_lista_quarto_e_hospede(self):
         self._chegada_hoje(self.uh, nome="Ana Chegando")
@@ -1092,7 +1155,7 @@ class VisaoGeralComReservasTests(RondaBase):
         self.assertIsNone(dados["hora_checkin"])
         r = self.client.get(reverse("governanca:painel"))
         self.assertEqual(r.status_code, 200)
-        self.assertContains(r, "não há como saber quem chega hoje")
+        self.assertContains(r, "não há como saber quem chega e quem sai hoje")
 
 
 class ListaFiltradaPelaVisaoTests(GovernancaBase):
@@ -1114,3 +1177,836 @@ class ListaFiltradaPelaVisaoTests(GovernancaBase):
     def test_cada_linha_tem_ancora_para_a_porta_da_visao(self):
         self.assertContains(self.client.get(reverse("governanca:quartos")),
                             f'id="quarto-{self.uh.pk}"')
+
+
+class OcupacaoNoQuadroTests(RondaBase):
+    """Ocupação × limpeza: a tela diz COMO está o quarto e QUEM está dentro.
+
+    Antes falava só de limpeza, e a supervisora abria o mapa de reservas ao lado
+    para saber se podia mandar alguém entrar. "Vago sujo" é faxina de saída;
+    "ocupado sujo" é arrumação com as coisas do hóspede dentro.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="governanta", password="senha-forte-123")
+
+    def _linha(self, uh, dia=None):
+        return next(ln for ln in services.painel_limpeza(dia)["linhas"]
+                    if ln["uh"].pk == uh.pk)
+
+    def _chegada_hoje(self, uh, nome="Quem chega"):
+        from apps.reservas.models import Reserva
+        return Reserva.objects.create(
+            uh=uh, hospede=Pessoa.objects.create(nome=nome),
+            checkin=self.hoje, checkout=self.hoje + timedelta(days=2),
+            status=Reserva.Status.CONFIRMADA, valor_diaria=Decimal("200"),
+            criado_por=self.user)
+
+    def test_quarto_sem_ninguem_e_vago(self):
+        self.assertEqual(self._linha(self.uh)["ocupacao"]["cod"], "vago")
+
+    def test_hospede_que_continua_e_ocupado_com_o_nome(self):
+        self._hospedar(self.uh, sai_em_dias=3, nome="Ana")
+        ocup = self._linha(self.uh)["ocupacao"]
+        self.assertEqual((ocup["cod"], ocup["rotulo"]), ("ocupado", "Ocupado"))
+        self.assertIn("Ana", ocup["hospede"])
+
+    def test_hospede_que_vai_embora_hoje_e_sai_hoje(self):
+        self._hospedar(self.uh, sai_em_dias=0)
+        ocup = self._linha(self.uh)["ocupacao"]
+        self.assertEqual((ocup["cod"], ocup["rotulo"]), ("sai_hoje", "Sai hoje"))
+
+    def test_quem_chega_hoje_e_chega_hoje(self):
+        self._chegada_hoje(self.uh)
+        ocup = self._linha(self.uh)["ocupacao"]
+        self.assertEqual((ocup["cod"], ocup["rotulo"]), ("chega_hoje", "Chega hoje"))
+        self.assertTrue(ocup["chegada"])
+
+    def test_back_to_back_sai_hoje_e_ainda_marca_a_chegada(self):
+        """O caso mais apertado do dia: o hóspede sai e outro chega no mesmo quarto."""
+        self._hospedar(self.uh, sai_em_dias=0)
+        self._chegada_hoje(self.uh, nome="Quem chega depois")
+        ocup = self._linha(self.uh)["ocupacao"]
+        self.assertEqual(ocup["cod"], "sai_hoje")
+        self.assertTrue(ocup["chegada"])
+        self.assertContains(self.client.get(reverse("governanca:quartos")),
+                            "Chega outro")
+
+    def test_quarto_bloqueado_e_bloqueado_nao_vago(self):
+        self.uh.status = UH.Status.BLOQUEADA
+        self.uh.save(update_fields=["status"])
+        self.assertEqual(self._linha(self.uh)["ocupacao"]["cod"], "bloqueado")
+
+    def test_a_lista_mostra_quem_esta_no_quarto(self):
+        self._hospedar(self.uh, nome="Ana Lima")
+        corpo = self.client.get(reverse("governanca:quartos")).content.decode()
+        self.assertIn("gov-ocupacao", corpo)
+        self.assertIn("Ocupado", corpo)
+        self.assertIn("Ana Lima", corpo)
+
+    def test_o_tipo_do_quarto_vira_dica_e_sai_da_linha(self):
+        """Dado secundário: ocupava a linha de baixo e não muda o que fazer agora."""
+        self._hospedar(self.uh)
+        corpo = self.client.get(reverse("governanca:quartos")).content.decode()
+        self.assertIn(f"- {self.uh.tipo.nome}", corpo)        # está na dica
+        self.assertNotIn(f'<small class="ajuda">{self.uh.tipo.nome}</small>', corpo)
+
+    def test_a_visao_geral_resume_a_casa_por_ocupacao(self):
+        self._hospedar(self.uh, sai_em_dias=0)                # sai hoje
+        self._hospedar(self.uh2, sai_em_dias=3)               # ocupado
+        resumo = {o["cod"]: o["n"] for o in services.visao_geral()["ocupacao"]}
+        self.assertEqual(resumo.get("sai_hoje"), 1)
+        self.assertEqual(resumo.get("ocupado"), 1)
+        self.assertNotIn("chega_hoje", resumo)                # zero não vira linha
+        r = self.client.get(reverse("governanca:painel"))
+        self.assertContains(r, "A casa hoje")
+        self.assertContains(r, "corredor-ocupacao")
+
+    def test_ocupacao_na_porta_da_visao_geral(self):
+        self._hospedar(self.uh, nome="Ana Lima")
+        porta = next(p for p in services.visao_geral()["portas"]
+                     if p["uh"].pk == self.uh.pk)
+        self.assertEqual(porta["ocupacao"], "Ocupado")
+        self.assertIn("Ana Lima", porta["hospede"])
+
+    def test_consultas_constantes_com_a_ocupacao(self):
+        """A ocupação sai do mesmo retrato do PMS — nenhuma consulta nova."""
+        self._hospedar(self.uh)
+        services.visao_geral()          # aquece o singleton de configuração
+        with self.assertNumQueries(12):
+            services.visao_geral()
+        for n in range(3, 11):
+            self._hospedar(UH.objects.create(numero=f"Quarto {n:02d}", tipo=self.tipo))
+        with self.assertNumQueries(12):
+            services.visao_geral()
+
+
+class OcupacaoSemReservasTests(RondaBase):
+    """Sem o módulo Reservas a Governança não afirma nada sobre ocupação."""
+
+    def setUp(self):
+        super().setUp()
+        ModuloContratado.objects.filter(codigo=Modulo.RESERVAS).update(ativo=False)
+        self.client.login(username="governanta", password="senha-forte-123")
+
+    def test_a_linha_nao_inventa_ocupacao(self):
+        ocup = services.painel_limpeza()["linhas"][0]["ocupacao"]
+        self.assertEqual(ocup["cod"], "")
+        self.assertEqual(ocup["rotulo"], "")
+
+    def test_a_visao_geral_abre_sem_o_resumo_de_ocupacao(self):
+        dados = services.visao_geral()
+        self.assertEqual(dados["ocupacao"], [])
+        self.assertEqual(self.client.get(reverse("governanca:painel")).status_code, 200)
+
+    def test_a_lista_volta_a_mostrar_o_tipo_do_quarto(self):
+        """Sem ocupação para contar, a linha não fica muda: mostra o tipo."""
+        self.assertContains(self.client.get(reverse("governanca:quartos")),
+                            f'<small class="ajuda">{self.uh.tipo.nome}</small>')
+
+
+class BlocoDoQuartoTests(RondaBase):
+    """O bloco da visão geral é lido de longe: número e ESTADO na frente.
+
+    O estado saía num rótulo de 9 px em maiúsculas, o maior texto do bloco era o
+    tipo do quarto e a metade de baixo ficava vazia.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="governanta", password="senha-forte-123")
+
+    def _corpo(self):
+        return self.client.get(reverse("governanca:painel")).content.decode()
+
+    def test_o_estado_tem_marcacao_propria_no_bloco(self):
+        services.abrir_faxina(self.uh, usuario=self.user)
+        corpo = self._corpo()
+        self.assertIn('class="porta-estado"', corpo)
+        self.assertIn("A limpar", corpo)
+
+    def test_o_tipo_do_quarto_sai_do_bloco_e_fica_na_dica(self):
+        corpo = self._corpo()
+        self.assertNotIn('class="porta-nome"', corpo)       # era o maior texto
+        self.assertIn(f"- {self.tipo.nome}", corpo)         # está na dica
+
+    def test_quem_esta_no_quarto_aparece_no_bloco(self):
+        self._hospedar(self.uh, nome="Ana Lima")
+        corpo = self._corpo()
+        self.assertIn('class="porta-ocupacao"', corpo)
+        self.assertIn("Ana Lima", corpo)
+
+    def test_a_camareira_aparece_no_rodape_do_bloco(self):
+        tarefa = services.abrir_faxina(self.uh, usuario=self.user)
+        maria = Usuario.objects.create_user(
+            username="maria", password="senha-forte-123", first_name="Maria")
+        tarefa.camareira = maria
+        tarefa.save(update_fields=["camareira"])
+        corpo = self._corpo()
+        self.assertIn('class="porta-quem"', corpo)
+        self.assertIn("Maria", corpo)
+
+    def test_bloco_sem_camareira_e_sem_divergencia_nao_tem_rodape_vazio(self):
+        """O rodapé é uma faixa com fio em cima: sem conteúdo, era metade do bloco
+        em branco."""
+        self.assertNotIn('class="porta-rodape"', self._corpo())
+
+    def test_quarto_bloqueado_diz_bloqueado_no_bloco(self):
+        self.uh.status = UH.Status.BLOQUEADA
+        self.uh.save(update_fields=["status"])
+        porta = next(p for p in services.visao_geral()["portas"]
+                     if p["uh"].pk == self.uh.pk)
+        self.assertEqual(porta["ocupacao"], "Bloqueado")
+        self.assertEqual(porta["cor"], "limp-bloqueada")
+
+
+class QuartoOcupadoNaoDizProntoTests(RondaBase):
+    """"Pronto" quer dizer «pode receber hóspede» — e o quarto já tem um.
+
+    Com a casa cheia a tela mostrava 21 blocos anunciando "pode receber hóspede"
+    sobre quartos ocupados. Com gente dentro, limpo e conferido é ARRUMADO: o
+    serviço do dia saiu, não é uma unidade vendável.
+    """
+
+    def _linha(self, uh):
+        return next(ln for ln in services.painel_limpeza()["linhas"]
+                    if ln["uh"].pk == uh.pk)
+
+    def test_quarto_vago_e_conferido_continua_pronto(self):
+        services.inspecionar(self.uh, self.user)
+        linha = self._linha(self.uh)
+        self.assertEqual(linha["situacao_label"], "Pronto")
+        self.assertIn("Pode receber hóspede", linha["explicacao"])
+
+    def test_quarto_ocupado_e_conferido_diz_arrumado(self):
+        self._hospedar(self.uh, sai_em_dias=3)
+        services.inspecionar(self.uh, self.user)
+        linha = self._linha(self.uh)
+        self.assertEqual(linha["situacao_label"], "Arrumado")
+        self.assertIn("O hóspede continua no quarto", linha["explicacao"])
+        self.assertNotIn("Pode receber hóspede", linha["explicacao"])
+
+    def test_quem_sai_hoje_lembra_que_a_faxina_vem_no_checkout(self):
+        self._hospedar(self.uh, sai_em_dias=0)
+        services.inspecionar(self.uh, self.user)
+        self.assertIn("sai hoje", self._linha(self.uh)["explicacao"])
+
+    def test_ocupado_sem_nenhum_registro_nao_finge_arrumacao(self):
+        self._hospedar(self.uh, sai_em_dias=3)
+        StatusLimpeza.objects.filter(uh=self.uh).delete()
+        linha = self._linha(self.uh)
+        self.assertEqual(linha["situacao_label"], "Arrumado")
+        self.assertEqual(linha["explicacao"], "Sem arrumação registrada hoje.")
+
+    def test_o_estado_do_banco_nao_muda_so_o_rotulo_da_tela(self):
+        """A palavra é da tela: o model, o filtro e o Mapa seguem em
+        `inspecionada`."""
+        self._hospedar(self.uh, sai_em_dias=3)
+        services.inspecionar(self.uh, self.user)
+        self.assertEqual(self._linha(self.uh)["situacao"],
+                         StatusLimpeza.Situacao.INSPECIONADA)
+        self.assertEqual(services.status_por_uh()[self.uh.pk], "inspecionada")
+
+    def test_quarto_sujo_ocupado_segue_a_limpar(self):
+        self._hospedar(self.uh, sai_em_dias=3)
+        services.abrir_faxina(self.uh, tipo=TarefaGovernanca.Tipo.ARRUMACAO,
+                              usuario=self.user, origem="arrumacao_diaria")
+        self.assertEqual(self._linha(self.uh)["situacao_label"], "A limpar")
+
+
+class PlanoDoDiaTests(RondaBase):
+    """A ordem de atacar o dia, que a supervisora fazia de cabeça.
+
+    1. chegada de hoje com o quarto ainda não pronto; 2. saída de hoje (vai
+    sujar); 3. ocupado pedindo arrumação; 4. o resto.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.uh3 = UH.objects.create(numero="Quarto 03", tipo=self.tipo)
+        self.uh4 = UH.objects.create(numero="Quarto 04", tipo=self.tipo)
+        self.client.login(username="governanta", password="senha-forte-123")
+
+    def _chegada_hoje(self, uh, nome="Quem chega"):
+        from apps.reservas.models import Reserva
+        return Reserva.objects.create(
+            uh=uh, hospede=Pessoa.objects.create(nome=nome),
+            checkin=self.hoje, checkout=self.hoje + timedelta(days=2),
+            status=Reserva.Status.CONFIRMADA, valor_diaria=Decimal("200"),
+            criado_por=self.user)
+
+    def _grupos(self, plano=None):
+        plano = plano or services.plano_do_dia()
+        return {g["cod"]: [q["uh"].numero for q in g["quartos"]]
+                for g in plano["grupos"]}
+
+    def test_ocupado_ja_limpo_nao_entra_na_fila_de_arrumar(self):
+        """Limpo e ocupado só espera a supervisora — aparecia em "a arrumar"
+        dizendo "Limpo"."""
+        self._hospedar(self.uh, sai_em_dias=3)
+        services.definir_status(self.uh, StatusLimpeza.Situacao.LIMPA, self.user)
+        grupos = self._grupos()
+        self.assertNotIn("Quarto 01", grupos.get("arrumacao", []))
+        self.assertIn("Quarto 01", grupos["resto"])
+
+    def test_a_ordem_dos_grupos_e_sempre_a_mesma(self):
+        self._chegada_hoje(self.uh)
+        services.abrir_faxina(self.uh, usuario=self.user)
+        self._hospedar(self.uh2, sai_em_dias=0)                 # sai hoje
+        self._hospedar(self.uh3, sai_em_dias=3)                 # ocupado
+        services.abrir_faxina(self.uh3, usuario=self.user)      # a arrumar
+        services.abrir_faxina(self.uh4, usuario=self.user)      # vago sujo
+        plano = services.plano_do_dia()
+        self.assertEqual([g["cod"] for g in plano["grupos"]],
+                         ["chegada", "saida", "arrumacao", "resto"])
+        grupos = self._grupos(plano)
+        self.assertEqual(grupos["chegada"], ["Quarto 01"])
+        self.assertEqual(grupos["saida"], ["Quarto 02"])
+        self.assertEqual(grupos["arrumacao"], ["Quarto 03"])
+        self.assertEqual(grupos["resto"], ["Quarto 04"])
+
+    def test_chegada_vem_antes_mesmo_com_o_quarto_pronto(self):
+        """O grupo das chegadas lista todas, com as não prontas na frente."""
+        self._chegada_hoje(self.uh, nome="Pronta")
+        services.inspecionar(self.uh, self.user)
+        self._chegada_hoje(self.uh2, nome="Atrasada")
+        services.abrir_faxina(self.uh2, usuario=self.user)
+        chegada = next(g for g in services.plano_do_dia()["grupos"]
+                       if g["cod"] == "chegada")
+        self.assertEqual([q["uh"].numero for q in chegada["quartos"]],
+                         ["Quarto 02", "Quarto 01"])
+        self.assertFalse(chegada["quartos"][0]["pronto"])
+
+    def test_back_to_back_entra_nas_chegadas_e_nao_nas_saidas(self):
+        """Sai um e entra outro: quem manda na urgência é quem está chegando."""
+        self._hospedar(self.uh, sai_em_dias=0)
+        self._chegada_hoje(self.uh, nome="O próximo")
+        grupos = self._grupos()
+        self.assertIn("Quarto 01", grupos["chegada"])
+        self.assertNotIn("Quarto 01", grupos.get("saida", []))
+
+    def test_quarto_sem_nada_pendente_nao_vira_linha_do_plano(self):
+        """15 quartos prontos listados como "o resto" não são um plano."""
+        services.abrir_faxina(self.uh, usuario=self.user)
+        plano = services.plano_do_dia()
+        self.assertEqual(self._grupos(plano)["resto"], ["Quarto 01"])
+        self.assertEqual(plano["tranquilos"], 3)
+
+    def test_quarto_bloqueado_nao_entra_no_trabalho_do_dia(self):
+        self.uh.status = UH.Status.BLOQUEADA
+        self.uh.save(update_fields=["status"])
+        services.definir_status(self.uh, StatusLimpeza.Situacao.SUJA, self.user)
+        self._chegada_hoje(self.uh2)
+        services.abrir_faxina(self.uh2, usuario=self.user)
+        grupos = self._grupos()
+        self.assertNotIn("Quarto 01", grupos.get("chegada", []))
+        self.assertNotIn("Quarto 01", grupos.get("arrumacao", []))
+        self.assertNotIn("Quarto 01", grupos.get("resto", []))
+
+    def test_da_tempo_responde_com_quantos_e_quanto_falta(self):
+        self._chegada_hoje(self.uh)
+        services.abrir_faxina(self.uh, usuario=self.user)
+        plano = services.plano_do_dia()
+        self.assertEqual(plano["a_entregar"], 1)
+        self.assertIsNotNone(plano["hora_checkin"])
+        # Ou sobra tempo ("faltam 3h20"), ou o horário já passou — nunca os dois.
+        self.assertNotEqual(bool(plano["falta_tempo"]), plano["atrasado"])
+        self.assertContains(self.client.get(reverse("governanca:painel")),
+                            "quarto para entregar")
+
+    def test_a_tela_mostra_o_plano_com_os_grupos(self):
+        self._chegada_hoje(self.uh)
+        services.abrir_faxina(self.uh, usuario=self.user)
+        self._hospedar(self.uh2, sai_em_dias=0)
+        r = self.client.get(reverse("governanca:painel"))
+        self.assertContains(r, "Plano do dia")
+        self.assertContains(r, "Chegadas de hoje")
+        self.assertContains(r, "Saídas de hoje")
+        self.assertContains(r, "não pedem nada agora")
+
+    def test_a_lista_abre_na_ordem_do_plano(self):
+        """A camareira não precisa cruzar a lista com o mapa de reservas."""
+        services.abrir_faxina(self.uh4, usuario=self.user)      # vago sujo
+        self._chegada_hoje(self.uh3)
+        services.abrir_faxina(self.uh3, usuario=self.user)      # chegada atrasada
+        numeros = [ln["uh"].numero for ln in services.painel_limpeza()["linhas"]]
+        self.assertLess(numeros.index("Quarto 03"), numeros.index("Quarto 04"))
+
+    def test_sem_reservas_o_plano_vira_so_a_fila_de_limpeza(self):
+        ModuloContratado.objects.filter(codigo=Modulo.RESERVAS).update(ativo=False)
+        services.abrir_faxina(self.uh, usuario=self.user)
+        plano = services.plano_do_dia()
+        self.assertEqual([g["cod"] for g in plano["grupos"]], ["resto"])
+        self.assertEqual(plano["a_entregar"], 0)
+        self.assertEqual((plano["falta_tempo"], plano["atrasado"]), ("", False))
+        self.assertEqual(self.client.get(reverse("governanca:painel")).status_code, 200)
+
+    def test_o_plano_nao_custa_consulta_nenhuma_a_mais(self):
+        self._hospedar(self.uh)
+        services.visao_geral()          # aquece o singleton de configuração
+        with self.assertNumQueries(12):
+            services.visao_geral()
+
+
+class QuemLimpaVemDaEscalaTests(GovernancaBase):
+    """Escolher a camareira numa lista com a casa inteira dentro era adivinhação.
+
+    A Escala é o único módulo que sabe quem trabalha hoje. Sem ela, a tela não
+    quebra: mostra todo mundo, como antes.
+    """
+
+    def setUp(self):
+        super().setUp()
+        from datetime import time
+
+        from apps.escala.models import Turno
+        from apps.escala.services import atribuir
+        from apps.nucleo.models import Funcionario
+
+        self.hoje = timezone.localdate()
+        self.turno = Turno.objects.create(nome="Manhã", setor="governanca",
+                                          inicio=time(7, 0), fim=time(15, 0))
+        self.maria = self._camareira("Maria", "maria")
+        self.joana = self._camareira("Joana", "joana")
+        self.recepcao = Usuario.objects.create_user(
+            username="recepcao", password="senha-forte-123", first_name="Recepção")
+        for func in Funcionario.objects.filter(usuario__in=[self.maria, self.joana]):
+            atribuir(self.turno, func, self.hoje, self.user)
+        self.client.login(username="governanta", password="senha-forte-123")
+
+    def _camareira(self, nome, username):
+        from apps.nucleo.models import Funcionario, Pessoa
+
+        usuario = Usuario.objects.create_user(
+            username=username, password="senha-forte-123", first_name=nome)
+        Funcionario.objects.create(pessoa=Pessoa.objects.create(nome=nome),
+                                   cargo="Camareira", usuario=usuario)
+        return usuario
+
+    def test_de_turno_hoje_vem_separado_das_outras(self):
+        quem = services.camareiras_do_dia()
+        self.assertEqual({u.pk for u in quem["de_turno"]},
+                         {self.maria.pk, self.joana.pk})
+        self.assertIn(self.recepcao.pk, {u.pk for u in quem["outras"]})
+        self.assertTrue(quem["tem_escala"])
+
+    def test_o_seletor_poe_as_de_turno_no_alto(self):
+        services.abrir_faxina(self.uh, usuario=self.user)
+        corpo = self.client.get(reverse("governanca:quartos")).content.decode()
+        self.assertIn("De turno hoje", corpo)
+        self.assertIn("Fora da escala de hoje", corpo)
+        self.assertLess(corpo.index("De turno hoje"), corpo.index("Fora da escala"))
+
+    def test_sem_o_modulo_escala_a_lista_e_a_de_sempre(self):
+        ModuloContratado.objects.filter(codigo=Modulo.ESCALA).update(ativo=False)
+        quem = services.camareiras_do_dia()
+        self.assertEqual(quem["de_turno"], [])
+        self.assertFalse(quem["tem_escala"])
+        self.assertIn(self.maria.pk, {u.pk for u in quem["outras"]})
+        services.abrir_faxina(self.uh, usuario=self.user)
+        corpo = self.client.get(reverse("governanca:quartos")).content.decode()
+        self.assertNotIn("De turno hoje", corpo)
+        self.assertIn("Maria", corpo)
+
+
+class DistribuirAFilaTests(QuemLimpaVemDaEscalaTests):
+    """Um toque no lugar de abrir um <select> por quarto — e equilibrado."""
+
+    def setUp(self):
+        super().setUp()
+        self.quartos = [self.uh] + [
+            UH.objects.create(numero=f"Quarto {n:02d}", tipo=self.tipo)
+            for n in range(2, 6)
+        ]
+
+    def _fila(self):
+        for uh in self.quartos:
+            services.abrir_faxina(uh, usuario=self.user)
+
+    def _por_camareira(self):
+        from collections import Counter
+        return Counter(
+            t.camareira_id for t in TarefaGovernanca.objects.exclude(
+                status=TarefaGovernanca.Status.CONCLUIDA)
+        )
+
+    def test_divide_os_quartos_entre_quem_esta_de_turno(self):
+        self._fila()
+        resultado = services.distribuir_fila(self.user)
+        self.assertEqual((resultado["atribuidas"], resultado["equipe"]), (5, 2))
+        carga = self._por_camareira()
+        self.assertIsNone(carga.get(None))
+        self.assertEqual(sorted(carga.values()), [2, 3])     # equilibrado
+
+    def test_quem_ja_tem_quarto_recebe_menos(self):
+        """Distribuir "do zero" jogava quatro em cima de quem já estava com seis."""
+        self._fila()
+        for tarefa in TarefaGovernanca.objects.all()[:3]:
+            tarefa.camareira = self.maria
+            tarefa.save(update_fields=["camareira"])
+        services.distribuir_fila(self.user)
+        carga = self._por_camareira()
+        self.assertEqual(carga[self.maria.pk], 3)   # não ganhou mais nenhum
+        self.assertEqual(carga[self.joana.pk], 2)
+
+    def test_o_mais_urgente_sai_primeiro(self):
+        """A ordem é a do plano do dia: chegada de hoje antes do resto."""
+        from apps.reservas.models import Reserva
+
+        Reserva.objects.create(
+            uh=self.quartos[4], hospede=Pessoa.objects.create(nome="Chega hoje"),
+            checkin=self.hoje, checkout=self.hoje + timedelta(days=2),
+            status=Reserva.Status.CONFIRMADA, valor_diaria=Decimal("200"),
+            criado_por=self.user)
+        self._fila()
+        resultado = services.distribuir_fila(self.user)
+        self.assertEqual(resultado["detalhe"][0][0], self.quartos[4].numero)
+
+    def test_quarto_que_ja_tem_camareira_nao_e_mexido(self):
+        self._fila()
+        tarefa = TarefaGovernanca.objects.first()
+        tarefa.camareira = self.recepcao     # alguém de fora cobrindo
+        tarefa.save(update_fields=["camareira"])
+        services.distribuir_fila(self.user)
+        tarefa.refresh_from_db()
+        self.assertEqual(tarefa.camareira_id, self.recepcao.pk)
+
+    def test_rodar_de_novo_nao_embaralha(self):
+        self._fila()
+        services.distribuir_fila(self.user)
+        antes = {t.pk: t.camareira_id for t in TarefaGovernanca.objects.all()}
+        resultado = services.distribuir_fila(self.user)
+        self.assertEqual(resultado["atribuidas"], 0)
+        self.assertEqual({t.pk: t.camareira_id for t in TarefaGovernanca.objects.all()},
+                         antes)
+
+    def test_quarto_bloqueado_fica_fora_da_divisao(self):
+        self._fila()
+        bloqueado = self.quartos[0]
+        bloqueado.status = UH.Status.BLOQUEADA
+        bloqueado.save(update_fields=["status"])
+        services.distribuir_fila(self.user)
+        tarefa = TarefaGovernanca.objects.get(uh=bloqueado)
+        self.assertIsNone(tarefa.camareira_id)
+
+    def test_sem_ninguem_de_turno_a_tela_explica_em_vez_de_espalhar(self):
+        from apps.escala.models import Atribuicao
+
+        Atribuicao.objects.all().delete()
+        self._fila()
+        resultado = services.distribuir_fila(self.user)
+        self.assertEqual((resultado["atribuidas"], resultado["motivo"]),
+                         (0, "sem_turno"))
+        r = self.client.post(reverse("governanca:distribuir"), HTTP_HX_REQUEST="true")
+        aviso = json.loads(r["HX-Trigger"])["aviso"]
+        self.assertIn("Ninguém de turno hoje", aviso["texto"])
+        self.assertEqual(aviso["tipo"], "warning")
+
+    def test_o_botao_so_aparece_com_quarto_sem_camareira(self):
+        corpo = self.client.get(reverse("governanca:quartos")).content.decode()
+        self.assertNotIn("Distribuir a fila", corpo)
+        self._fila()
+        corpo = self.client.get(reverse("governanca:quartos")).content.decode()
+        self.assertIn("Distribuir a fila", corpo)
+        self.assertIn("de turno hoje, equilibrando a carga", corpo)
+
+    def test_pela_view_com_htmx_devolve_o_quadro_e_avisa(self):
+        self._fila()
+        r = self.client.post(reverse("governanca:distribuir"), HTTP_HX_REQUEST="true")
+        self.assertEqual(r.status_code, 200)
+        self.assertTemplateUsed(r, "governanca/partials/quadro.html")
+        self.assertIn("divididos entre", r["HX-Trigger"])
+
+    def test_get_nao_distribui(self):
+        self._fila()
+        self.client.get(reverse("governanca:distribuir"))
+        self.assertEqual(self._por_camareira()[None], 5)
+
+    def test_a_divisao_fica_na_trilha_com_quem_mandou(self):
+        self._fila()
+        services.distribuir_fila(self.user)
+        trilha = TrilhaAuditoria.objects.filter(acao="fila_distribuida").first()
+        self.assertIsNotNone(trilha)
+        self.assertEqual(trilha.usuario_id, self.user.pk)
+        self.assertEqual(trilha.detalhe["quartos"], 5)
+
+
+class MinhaFilaTests(RondaBase):
+    """A fila da camareira, no celular dela: os quartos DELA, na ordem de atacar,
+    um botão grande por quarto."""
+
+    def setUp(self):
+        super().setUp()
+        self.uh3 = UH.objects.create(numero="Quarto 03", tipo=self.tipo)
+        self.maria = self._camareira("Maria", "maria")
+        self.joana = self._camareira("Joana", "joana")
+        self.client.login(username="maria", password="senha-forte-123")
+
+    def _camareira(self, nome, username):
+        """Camareira de verdade: login com o módulo Governança, não superusuária."""
+        usuario = Usuario.objects.create_user(
+            username=username, password="senha-forte-123", first_name=nome)
+        usuario.modulos.set(ModuloContratado.objects.filter(codigo=Modulo.GOVERNANCA))
+        return usuario
+
+    def _para(self, uh, camareira, **kw):
+        tarefa = services.abrir_faxina(uh, usuario=self.user, **kw)
+        tarefa.camareira = camareira
+        tarefa.save(update_fields=["camareira"])
+        return tarefa
+
+    def _chegada_hoje(self, uh, nome="Quem chega"):
+        from apps.reservas.models import Reserva
+        return Reserva.objects.create(
+            uh=uh, hospede=Pessoa.objects.create(nome=nome),
+            checkin=self.hoje, checkout=self.hoje + timedelta(days=2),
+            status=Reserva.Status.CONFIRMADA, valor_diaria=Decimal("200"),
+            criado_por=self.user)
+
+    def test_so_os_quartos_dela(self):
+        self._para(self.uh, self.maria)
+        self._para(self.uh2, self.joana)
+        fila = services.minha_fila(self.maria)["fila"]
+        self.assertEqual([q["uh"].numero for q in fila], ["Quarto 01"])
+
+    def test_a_ordem_e_a_do_plano_do_dia(self):
+        """Chegada de hoje antes do quarto que ninguém espera."""
+        self._para(self.uh2, self.maria)            # vago sujo
+        self._chegada_hoje(self.uh3)
+        self._para(self.uh3, self.maria)            # chegada hoje
+        fila = services.minha_fila(self.maria)["fila"]
+        self.assertEqual([q["uh"].numero for q in fila], ["Quarto 03", "Quarto 02"])
+
+    def test_o_que_ela_ja_comecou_fica_no_alto(self):
+        self._para(self.uh, self.maria)
+        comecada = self._para(self.uh2, self.maria)
+        services.iniciar_tarefa(comecada, self.maria)
+        dados = services.minha_fila(self.maria)
+        self.assertEqual(dados["fila"][0]["uh"].numero, "Quarto 02")
+        self.assertTrue(dados["fila"][0]["fazendo"])
+        self.assertEqual(dados["fazendo"]["uh"].numero, "Quarto 02")
+
+    def test_quarto_bloqueado_nao_entra_na_fila(self):
+        """Enquanto o técnico não devolve, a faxina não acontece — mandar a
+        camareira bater numa porta fechada é pior que não mostrar."""
+        self._para(self.uh, self.maria)
+        self.uh.status = UH.Status.BLOQUEADA
+        self.uh.save(update_fields=["status"])
+        self.assertEqual(services.minha_fila(self.maria)["fila"], [])
+
+    def test_o_que_ela_entregou_hoje_aparece_como_recibo(self):
+        tarefa = self._para(self.uh, self.maria)
+        services.concluir_tarefa(tarefa, self.maria)
+        dados = services.minha_fila(self.maria)
+        self.assertEqual(dados["fila"], [])
+        self.assertEqual([t.uh.numero for t in dados["feitas"]], ["Quarto 01"])
+
+    def test_a_tela_abre_com_um_botao_por_quarto(self):
+        self._para(self.uh, self.maria)
+        r = self.client.get(reverse("governanca:minha_fila"))
+        self.assertEqual(r.status_code, 200)
+        self.assertTemplateUsed(r, "governanca/fila.html")
+        corpo = r.content.decode()
+        self.assertIn("Começar", corpo)
+        self.assertNotIn("Terminei", corpo)
+
+    def test_comecar_e_terminar_pela_fila_sem_sair_dela(self):
+        tarefa = self._para(self.uh, self.maria)
+        r = self.client.post(reverse("governanca:tarefa_acao", args=[tarefa.pk]),
+                             {"acao": "iniciar", "fila": "1"}, HTTP_HX_REQUEST="true")
+        self.assertTemplateUsed(r, "governanca/partials/fila.html")
+        self.assertIn("Terminei", r.content.decode())
+        r = self.client.post(reverse("governanca:tarefa_acao", args=[tarefa.pk]),
+                             {"acao": "concluir", "fila": "1"}, HTTP_HX_REQUEST="true")
+        tarefa.refresh_from_db()
+        self.assertEqual(tarefa.status, TarefaGovernanca.Status.CONCLUIDA)
+        self.assertIn("Já entreguei hoje", r.content.decode())
+
+    def test_sem_javascript_volta_para_a_fila_e_nao_para_a_lista(self):
+        tarefa = self._para(self.uh, self.maria)
+        r = self.client.post(reverse("governanca:tarefa_acao", args=[tarefa.pk]),
+                             {"acao": "iniciar", "fila": "1"})
+        self.assertRedirects(r, reverse("governanca:minha_fila"))
+
+    def test_a_acao_da_supervisora_continua_voltando_para_a_lista(self):
+        tarefa = self._para(self.uh, self.maria)
+        r = self.client.post(reverse("governanca:tarefa_acao", args=[tarefa.pk]),
+                             {"acao": "iniciar"})
+        self.assertRedirects(r, reverse("governanca:quartos"))
+
+    def test_fila_vazia_explica_de_onde_vem_quarto(self):
+        corpo = self.client.get(reverse("governanca:minha_fila")).content.decode()
+        self.assertIn("Nenhum quarto na sua fila agora", corpo)
+
+    def test_o_motivo_da_devolucao_viaja_para_a_fila(self):
+        services.definir_status(self.uh, StatusLimpeza.Situacao.LIMPA, self.user)
+        services.reprovar_inspecao(self.uh, self.user, "pó no armário")
+        tarefa = TarefaGovernanca.objects.filter(uh=self.uh, origem="reprovada").first()
+        tarefa.camareira = self.maria
+        tarefa.save(update_fields=["camareira"])
+        self.assertContains(self.client.get(reverse("governanca:minha_fila")),
+                            "pó no armário")
+
+    def test_a_fila_dela_nao_repete_o_nome_dela(self):
+        """"Na fila de Maria Aparecida" em cada cartão da fila da Maria é ruído."""
+        self._para(self.uh, self.maria, origem="checkout")
+        fila = services.minha_fila(self.maria)["fila"]
+        self.assertIn("O hóspede fez check-out", fila[0]["explicacao"])
+        self.assertNotIn("Na fila de", fila[0]["explicacao"])
+        # Na lista da supervisora, que mostra a casa toda, o nome continua.
+        linha = next(ln for ln in services.painel_limpeza()["linhas"]
+                     if ln["uh"].pk == self.uh.pk)
+        self.assertIn("Na fila de Maria", linha["explicacao"])
+
+    def test_exige_o_modulo(self):
+        ModuloContratado.objects.filter(codigo=Modulo.GOVERNANCA).update(ativo=False)
+        self.assertEqual(
+            self.client.get(reverse("governanca:minha_fila")).status_code, 404)
+
+
+class ReportarProblemaTests(RondaBase):
+    """A camareira acha o chuveiro pingando e abre a OS dali mesmo."""
+
+    def setUp(self):
+        super().setUp()
+        self.maria = Usuario.objects.create_user(
+            username="maria", password="senha-forte-123", first_name="Maria")
+        self.maria.modulos.set(ModuloContratado.objects.filter(
+            codigo__in=[Modulo.GOVERNANCA, Modulo.MANUTENCAO]))
+        tarefa = services.abrir_faxina(self.uh, usuario=self.user)
+        tarefa.camareira = self.maria
+        tarefa.save(update_fields=["camareira"])
+        self.client.login(username="maria", password="senha-forte-123")
+
+    def _ordens(self):
+        from apps.manutencao.models import OrdemServico
+        return OrdemServico.objects.all()
+
+    def test_abre_ordem_de_servico_na_manutencao(self):
+        r = self.client.post(reverse("governanca:reportar", args=[self.uh.pk]),
+                             {"descricao": "chuveiro pingando", "fila": "1"},
+                             HTTP_HX_REQUEST="true")
+        self.assertTemplateUsed(r, "governanca/partials/fila.html")
+        ordem = self._ordens().get()
+        self.assertEqual(ordem.uh_id, self.uh.pk)
+        self.assertIn("chuveiro pingando", ordem.descricao)
+        self.assertEqual(ordem.criado_por_id, self.maria.pk)
+
+    def test_a_os_nao_tira_o_quarto_de_operacao(self):
+        """Quem decide bloquear a unidade é a Manutenção, não a camareira."""
+        self.client.post(reverse("governanca:reportar", args=[self.uh.pk]),
+                         {"descricao": "lâmpada queimada", "fila": "1"})
+        self.uh.refresh_from_db()
+        self.assertFalse(self._ordens().get().bloqueia_uh)
+        self.assertEqual(self.uh.status, UH.Status.ATIVA)
+
+    def test_sem_descricao_nao_abre_chamado(self):
+        r = self.client.post(reverse("governanca:reportar", args=[self.uh.pk]),
+                             {"descricao": "  ", "fila": "1"}, HTTP_HX_REQUEST="true")
+        self.assertEqual(self._ordens().count(), 0)
+        self.assertIn("Descreva o problema",
+                      json.loads(r["HX-Trigger"])["aviso"]["texto"])
+
+    def test_com_htmx_abre_o_modal_da_casa_e_sem_js_a_pagina(self):
+        r = self.client.get(reverse("governanca:reportar", args=[self.uh.pk]),
+                            HTTP_HX_REQUEST="true")
+        self.assertTemplateUsed(r, "governanca/partials/reportar_modal.html")
+        r = self.client.get(reverse("governanca:reportar", args=[self.uh.pk]))
+        self.assertTemplateUsed(r, "governanca/reportar.html")
+
+    def test_sem_o_modulo_manutencao_o_botao_some_e_o_post_explica(self):
+        ModuloContratado.objects.filter(codigo=Modulo.MANUTENCAO).update(ativo=False)
+        corpo = self.client.get(reverse("governanca:minha_fila")).content.decode()
+        self.assertNotIn("Reportar problema", corpo)
+        r = self.client.post(reverse("governanca:reportar", args=[self.uh.pk]),
+                             {"descricao": "torneira", "fila": "1"},
+                             HTTP_HX_REQUEST="true")
+        self.assertEqual(self._ordens().count(), 0)
+        self.assertIn("Manutenção desligado",
+                      json.loads(r["HX-Trigger"])["aviso"]["texto"])
+
+    def test_com_o_modulo_ativo_o_botao_aparece_na_fila(self):
+        self.assertContains(self.client.get(reverse("governanca:minha_fila")),
+                            "Reportar problema")
+
+
+class QuartoBloqueadoTests(RondaBase):
+    """Quarto em reparo não recebe hóspede nem entra na fila de ninguém."""
+
+    def setUp(self):
+        super().setUp()
+        self.uh.status = UH.Status.BLOQUEADA
+        self.uh.save(update_fields=["status"])
+        self.client.login(username="governanta", password="senha-forte-123")
+
+    def _linha(self):
+        return next(ln for ln in services.painel_limpeza()["linhas"]
+                    if ln["uh"].pk == self.uh.pk)
+
+    def test_a_frase_fala_do_reparo_e_nao_de_receber_hospede(self):
+        services.inspecionar(self.uh, self.user)
+        explicacao = self._linha()["explicacao"]
+        self.assertIn("Em manutenção", explicacao)
+        self.assertNotIn("Pode receber hóspede", explicacao)
+
+    def test_a_frase_diz_tambem_como_esta_a_limpeza(self):
+        services.abrir_faxina(self.uh, usuario=self.user)
+        self.assertIn("a limpar", self._linha()["explicacao"])
+
+    def test_a_linha_nao_oferece_proximo_passo_de_limpeza(self):
+        services.inspecionar(self.uh, self.user)
+        corpo = self.client.get(reverse("governanca:quartos")).content.decode()
+        linha = corpo[corpo.index(f'id="quarto-{self.uh.pk}"'):]
+        linha = linha[:linha.index("</tr>")]
+        self.assertIn("Em manutenção — fora de operação", linha)
+        self.assertNotIn("pronto para o hóspede", linha)
+        self.assertNotIn("Pedir nova limpeza", linha)
+
+
+class EscaladaSemLoginTests(GovernancaBase):
+    """Escalada hoje mas sem login no CRM: a tarefa é de um usuário, então não há
+    a quem atribuir — e "ninguém de turno hoje" seria mentira."""
+
+    def setUp(self):
+        super().setUp()
+        from datetime import time
+
+        from apps.escala.models import Turno
+        from apps.escala.services import atribuir
+        from apps.nucleo.models import Funcionario, Pessoa
+
+        self.hoje = timezone.localdate()
+        turno = Turno.objects.create(nome="Diurno", setor="governanca",
+                                     inicio=time(7, 0), fim=time(15, 0))
+        self.sem_login = Funcionario.objects.create(
+            pessoa=Pessoa.objects.create(nome="Rita Camareira"), cargo="Camareira")
+        atribuir(turno, self.sem_login, self.hoje, self.user)
+        services.abrir_faxina(self.uh, usuario=self.user)
+        self.client.login(username="governanta", password="senha-forte-123")
+
+    def test_a_escala_sabe_quem_e_mas_nao_ha_login(self):
+        quem = services.camareiras_do_dia()
+        self.assertEqual(quem["de_turno"], [])
+        self.assertEqual(quem["sem_login"], ["Rita Camareira"])
+
+    def test_distribuir_nomeia_a_causa_certa(self):
+        resultado = services.distribuir_fila(self.user)
+        self.assertEqual(resultado["motivo"], "sem_login")
+        r = self.client.post(reverse("governanca:distribuir"), HTTP_HX_REQUEST="true")
+        texto = json.loads(r["HX-Trigger"])["aviso"]["texto"]
+        self.assertIn("Rita Camareira", texto)
+        self.assertIn("sem login no CRM", texto)
+        self.assertNotIn("Ninguém de turno", texto)
+
+    def test_a_tela_diz_o_que_fazer(self):
+        corpo = self.client.get(reverse("governanca:quartos")).content.decode()
+        self.assertIn("Rita Camareira", corpo)
+        self.assertIn("ligue o login na ficha do funcionário", corpo)
+        self.assertNotIn("Distribuir a fila", corpo)
+
+    def test_com_o_login_ligado_passa_a_distribuir(self):
+        self.sem_login.usuario = Usuario.objects.create_user(
+            username="rita", password="senha-forte-123", first_name="Rita")
+        self.sem_login.save(update_fields=["usuario"])
+        self.assertEqual(services.distribuir_fila(self.user)["atribuidas"], 1)

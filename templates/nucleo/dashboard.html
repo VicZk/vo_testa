@@ -3,7 +3,7 @@
 {% block titulo %}Visão geral — CRM Vô Testa{% endblock %}
 
 {% block conteudo %}
-<p class="pagina-eyebrow letreiro">Recepção · hoje</p>
+<p class="pagina-eyebrow letreiro">{% if tem_reservas %}Recepção · hoje{% else %}Hoje{% endif %}</p>
 <div class="pagina-cabecalho">
   <h1>{% if tem_reservas %}O corredor{% else %}Visão geral{% endif %}</h1>
   {% if corredor %}
@@ -13,7 +13,24 @@
   </div>
   {% endif %}
 </div>
-<p class="subtitulo">{% if tem_reservas %}A casa fala primeiro — situação de cada quarto agora.{% else %}Seu resumo do dia.{% endif %}</p>
+<p class="subtitulo">{% if tem_reservas %}A casa fala primeiro — situação de cada quarto agora.{% elif atalhos_modulos %}Por onde começar hoje.{% else %}Seu resumo do dia.{% endif %}</p>
+
+{% comment %}Quem não tem nenhum bloco desta tela (só Restaurante e Loja, por exemplo)
+vê os atalhos dos módulos dele, em vez de uma página vazia. Quem tem um módulo só
+nem chega aqui: entra direto nele (views.dashboard).{% endcomment %}
+{% if atalhos_modulos %}
+<nav class="atalhos-modulos" aria-label="Seus módulos">
+  {% for grupo in grupos_modulos %}{% for item in grupo.itens %}{% if item.url %}
+    <a href="{{ item.url }}" class="cartao cartao-atalho">
+      <span>
+        <span class="atalho-titulo">{{ item.nome }}</span>
+        {% if item.descricao %}<span class="cartao-descricao">{{ item.descricao }}</span>{% endif %}
+      </span>
+      <span class="atalho-seta" aria-hidden="true">→</span>
+    </a>
+  {% endif %}{% endfor %}{% endfor %}
+</nav>
+{% endif %}
 
 {% if corredor %}
 <section class="corredor-hero">
