@@ -57,7 +57,20 @@ aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% e
     <tr id="quarto-{{ ln.uh.pk }}"
         x-show="(f==='todas' || f==='{{ ln.situacao }}') && (!soMeus || {{ ln.minha|yesno:'true,false' }})"
         x-transition.opacity>
-      <td data-rotulo="Quarto"><strong>{{ ln.uh.numero }}</strong><small class="ajuda">{{ ln.uh.tipo.nome }}</small></td>
+      {% comment %}Quem está no quarto (ocupação, de Reservas) é o dado que a
+      supervisora ia buscar no mapa ao lado: "Sai hoje · Ana Lima". O TIPO do
+      quarto é dado secundário e foi para a dica — ocupava a linha de baixo e
+      nunca mudava nada do que fazer agora.{% endcomment %}
+      <td data-rotulo="Quarto" class="col-quarto dica" data-dica="- {{ ln.uh.numero }}&#10;- {{ ln.uh.tipo.nome }}{% if ln.ocupacao.ajuda %}&#10;- {{ ln.ocupacao.ajuda }}{% endif %}">
+        <strong>{{ ln.uh.numero }}</strong>
+        {% if ln.ocupacao.rotulo %}
+          <span class="gov-ocupacao">
+            <span class="rotulo-dado">{{ ln.ocupacao.rotulo }}</span>{% if ln.ocupacao.hospede %}<span class="rotulo-dado gov-ocupacao-nome">{{ ln.ocupacao.hospede }}</span>{% endif %}{% if ln.ocupacao.cod == 'sai_hoje' and ln.ocupacao.chegada %}<span class="rotulo-dado">Chega outro</span>{% endif %}
+          </span>
+        {% else %}
+          <small class="ajuda">{{ ln.uh.tipo.nome }}</small>
+        {% endif %}
+      </td>
 
       {% comment %}O estado nunca vem sozinho: vem com a frase que diz por que ele
       está assim e o que falta. É o que ensina o fluxo linha a linha.{% endcomment %}

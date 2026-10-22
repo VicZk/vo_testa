@@ -27,3 +27,12 @@ daquele quarto na lista, onde está o próximo passo.{% endcomment %}
        data-dica="{{ e.resumo }}"><i></i>{{ e.rotulo }} <b>{{ e.n }}</b></a>
   {% endfor %}
 </div>
+{% comment %}A outra metade da leitura: a casa por OCUPAÇÃO. Texto, não cápsula —
+quem está dentro é dado, e o estado da limpeza (que pede ação) já tem os chips
+acima.{% endcomment %}
+{% if ocupacao %}
+<p class="corredor-ocupacao">
+  <span class="letreiro">A casa hoje</span>
+  {% for o in ocupacao %}<span class="rotulo-dado dica" data-dica="{{ o.ajuda }}">{{ o.rotulo }} <b>{{ o.n }}</b></span>{% endfor %}
+</p>
+{% endif %}

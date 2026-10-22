@@ -1510,6 +1510,15 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
   background: color-mix(in srgb, var(--lampiao) 30%, transparent);
   color: var(--pergaminho);
 }
+/* A casa por ocupação, embaixo da legenda de limpeza: uma linha de texto, porque
+   quem está no quarto é DADO (o que pede ação são os estados de limpeza acima). */
+.corredor-ocupacao {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: .1rem .2rem;
+  margin: .7rem 0 0;
+}
+.corredor-ocupacao .letreiro { color: var(--tinta-suave); margin-right: .5rem; }
+.corredor-ocupacao b { color: var(--tinta); font-variant-numeric: tabular-nums; }
+
 /* A legenda do corredor também filtra a lista. */
 .chip-legenda-link { text-decoration: none; cursor: pointer; }
 .chip-legenda-link:hover { border-color: var(--fio-forte); }
@@ -1673,6 +1682,17 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 .chip-limpa .ponto { background: var(--sucesso); }
 .chip-inspecionada .ponto { background: var(--info); }
 
+/* Ocupação na coluna do quarto: "SAI HOJE · ANA LIMA". Dois rótulos de DADO (o
+   ponto vem do `+ .rotulo-dado::before`) em vez de um texto só, para a dupla poder
+   quebrar entre as partes; o nome trunca com reticências em vez de empurrar a
+   coluna. O tipo do quarto saiu daqui para a dica — é dado secundário e nunca
+   muda o que fazer agora. */
+.gov-ocupacao {
+  display: flex; flex-wrap: wrap; align-items: baseline;
+  min-width: 0; margin-top: .2rem;
+}
+.gov-ocupacao-nome { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
 .tabela-limpeza td { padding-top: .55rem; padding-bottom: .55rem; }
 .tabela-limpeza .selo { min-width: 112px; }
 /* Coluna 100% vazia não ocupa 400px: quando nenhuma linha tem camareira para
@@ -1731,6 +1751,10 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
   /* O estado e a frase que o explica ocupam a linha inteira do cartão. */
   .tabela.tabela-cartoes td.col-estado { flex-wrap: wrap; }
   .tabela.tabela-cartoes td.col-estado .ajuda { flex: 1 1 100%; }
+  /* Quem está no quarto cai abaixo do número, na largura do cartão (o número fica
+     na linha do rótulo "QUARTO", como os outros dados). */
+  .tabela.tabela-cartoes td.col-quarto { flex-wrap: wrap; }
+  .tabela.tabela-cartoes td.col-quarto .gov-ocupacao { flex: 1 1 100%; margin-top: .1rem; }
   .tabela.tabela-cartoes .form-inline { margin: 0; flex: 1; justify-content: flex-end; }
   .tabela.tabela-cartoes .form-inline select { min-width: 0; flex: 1; }
   /* A ronda é o toque que a camareira dá no corredor, de celular: os três alvos

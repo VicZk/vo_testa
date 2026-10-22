@@ -224,6 +224,53 @@ CICLO = [
 ]
 SITUACAO_SIMPLES = {e["cod"]: e["rotulo"] for e in CICLO}
 
+# ───────────────── A outra metade da pergunta: quem está no quarto ─────────────────
+#
+# Hotelaria não pensa só em limpeza: pensa em OCUPAÇÃO × LIMPEZA. "Vago sujo" é
+# faxina de saída; "ocupado sujo" é arrumação com as coisas do hóspede dentro;
+# "vago pronto" é quarto vendável; e "chega hoje" muda a urgência de tudo. A tela
+# falava só de limpeza — a supervisora tinha de abrir o mapa de reservas ao lado
+# para saber se podia mandar alguém entrar.
+#
+# A ocupação vem de Reservas por service (`ocupacao_por_uh`), nunca por model.
+
+OCUPACAO = {
+    "vago": ("Vago", "Sem hóspede — o quarto está livre."),
+    "ocupado": ("Ocupado", "Hóspede em casa, continua amanhã."),
+    "sai_hoje": ("Sai hoje", "O hóspede vai embora hoje: o quarto suja na saída."),
+    "chega_hoje": ("Chega hoje", "Chega hóspede: tem de estar pronto antes."),
+    "bloqueado": ("Bloqueado", "Em manutenção — fora de operação."),
+}
+
+
+def ocupacao_do_quarto(info, *, bloqueado=False, sem_base=False) -> dict:
+    """Quem está no quarto hoje, em palavras de gente. Função pura (nenhuma consulta).
+
+    `info` = o dicionário do quarto em `reservas.ocupacao_por_uh` (None = o PMS
+    considera o quarto vazio); `sem_base` = Reservas inativo, e aí a Governança
+    não afirma nada sobre ocupação (degradação graciosa).
+
+    Devolve `{cod, rotulo, ajuda, hospede, chegada}`. `chegada` viaja separado do
+    código porque o caso mais apertado do dia é o back-to-back: **sai hoje E chega
+    hoje** no mesmo quarto — a camareira tem uma janela entre as duas coisas.
+    """
+    if sem_base:
+        return {"cod": "", "rotulo": "", "ajuda": "", "hospede": "", "chegada": False}
+    chegada = bool(info and info["chegada"])
+    if bloqueado:
+        cod = "bloqueado"
+    elif info and info["ocupado"]:
+        cod = "sai_hoje" if info["saida_ate"] else "ocupado"
+    elif chegada:
+        cod = "chega_hoje"
+    else:
+        cod = "vago"
+    rotulo, ajuda = OCUPACAO[cod]
+    return {
+        "cod": cod, "rotulo": rotulo, "ajuda": ajuda,
+        "hospede": (info or {}).get("hospede", ""), "chegada": chegada,
+    }
+
 # Por que o quarto está sujo — a origem da faxina vira frase de gente.
 _MOTIVO_DA_FAXINA = {
     "checkout": "O hóspede fez check-out.",
@@ -317,6 +364,11 @@ def _estado_dos_quartos(dia=None) -> dict:
         linhas.append({
             "uh": uh,
             "situacao": status.situacao,
+            # A outra metade da pergunta: limpeza diz como o quarto está, ocupação
+            # diz quem está dentro (e se alguém chega hoje). Sai do `pms` que já
+            # foi consultado — nenhuma consulta nova por quarto.
+            "ocupacao": ocupacao_do_quarto(info, bloqueado=bloqueado,
+                                           sem_base=pms is None),
             # Rótulo da TELA (plain) + a frase que explica por que o quarto está
             # assim e o que falta — é o que ensina o fluxo a quem está começando.
             "situacao_label": SITUACAO_SIMPLES.get(status.situacao,
@@ -469,10 +521,14 @@ def visao_geral(dia=None) -> dict:
     pms = dados["pms"] or {}
 
     portas, chegadas, divergentes = [], [], []
+    ocupacao_resumo = dict.fromkeys(OCUPACAO, 0)
     for ln in sorted(linhas, key=lambda x: x["uh"].numero):
         info = pms.get(ln["uh"].pk)
-        chegada = bool(info and info.get("chegada"))
+        ocup = ln["ocupacao"]
+        chegada = ocup["chegada"]
         pronto = ln["situacao"] == StatusLimpeza.Situacao.INSPECIONADA
+        if ocup["cod"]:
+            ocupacao_resumo[ocup["cod"]] += 1
         portas.append({
             "uh": ln["uh"],
             "cor": "limp-bloqueada" if ln["bloqueado"] else _COR_DA_PORTA.get(ln["situacao"], ""),
@@ -480,8 +536,14 @@ def visao_geral(dia=None) -> dict:
             "rotulo": ln["situacao_label"],
             "explicacao": ln["explicacao"],
             "camareira": (_quem(ln["tarefa"].camareira) if ln["tarefa"] else ""),
+            # Ocupação na própria porta: "Sai hoje · Ana Lima" responde o que a
+            # supervisora ia buscar no mapa de reservas.
+            "ocupacao": ocup["rotulo"],
+            "ocupacao_cod": ocup["cod"],
+            "hospede": ocup["hospede"],
             "chegada": chegada,
             "bloqueado": ln["bloqueado"],
+            "tipo": ln["uh"].tipo.nome,
             "divergente": ln["divergente"],
             "divergencia_rotulo": ln["divergencia_rotulo"],
         })
@@ -569,10 +631,19 @@ def visao_geral(dia=None) -> dict:
          "pct": round(100 * contagem.get(etapa["cod"], 0) / total) if total else 0}
         for etapa in CICLO
     ]
+    # A casa pela OCUPAÇÃO, do mais urgente para o resto — a faixa que fica ao lado
+    # da legenda de limpeza. Só os estados que existem hoje entram.
+    ocupacao = [
+        {"cod": cod, "rotulo": OCUPACAO[cod][0], "ajuda": OCUPACAO[cod][1],
+         "n": ocupacao_resumo[cod]}
+        for cod in ("chega_hoje", "sai_hoje", "ocupado", "vago", "bloqueado")
+        if ocupacao_resumo[cod]
+    ]
     return {
         "dia": dia,
         "ciclo": ciclo,
         "contagem": contagem,
+        "ocupacao": ocupacao,
         "portas": portas,
         "total": total,
         "prontos": prontos,

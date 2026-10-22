@@ -1176,3 +1176,130 @@ class ListaFiltradaPelaVisaoTests(GovernancaBase):
     def test_cada_linha_tem_ancora_para_a_porta_da_visao(self):
         self.assertContains(self.client.get(reverse("governanca:quartos")),
                             f'id="quarto-{self.uh.pk}"')
+
+
+class OcupacaoNoQuadroTests(RondaBase):
+    """Ocupação × limpeza: a tela diz COMO está o quarto e QUEM está dentro.
+
+    Antes falava só de limpeza, e a supervisora abria o mapa de reservas ao lado
+    para saber se podia mandar alguém entrar. "Vago sujo" é faxina de saída;
+    "ocupado sujo" é arrumação com as coisas do hóspede dentro.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="governanta", password="senha-forte-123")
+
+    def _linha(self, uh, dia=None):
+        return next(ln for ln in services.painel_limpeza(dia)["linhas"]
+                    if ln["uh"].pk == uh.pk)
+
+    def _chegada_hoje(self, uh, nome="Quem chega"):
+        from apps.reservas.models import Reserva
+        return Reserva.objects.create(
+            uh=uh, hospede=Pessoa.objects.create(nome=nome),
+            checkin=self.hoje, checkout=self.hoje + timedelta(days=2),
+            status=Reserva.Status.CONFIRMADA, valor_diaria=Decimal("200"),
+            criado_por=self.user)
+
+    def test_quarto_sem_ninguem_e_vago(self):
+        self.assertEqual(self._linha(self.uh)["ocupacao"]["cod"], "vago")
+
+    def test_hospede_que_continua_e_ocupado_com_o_nome(self):
+        self._hospedar(self.uh, sai_em_dias=3, nome="Ana")
+        ocup = self._linha(self.uh)["ocupacao"]
+        self.assertEqual((ocup["cod"], ocup["rotulo"]), ("ocupado", "Ocupado"))
+        self.assertIn("Ana", ocup["hospede"])
+
+    def test_hospede_que_vai_embora_hoje_e_sai_hoje(self):
+        self._hospedar(self.uh, sai_em_dias=0)
+        ocup = self._linha(self.uh)["ocupacao"]
+        self.assertEqual((ocup["cod"], ocup["rotulo"]), ("sai_hoje", "Sai hoje"))
+
+    def test_quem_chega_hoje_e_chega_hoje(self):
+        self._chegada_hoje(self.uh)
+        ocup = self._linha(self.uh)["ocupacao"]
+        self.assertEqual((ocup["cod"], ocup["rotulo"]), ("chega_hoje", "Chega hoje"))
+        self.assertTrue(ocup["chegada"])
+
+    def test_back_to_back_sai_hoje_e_ainda_marca_a_chegada(self):
+        """O caso mais apertado do dia: o hóspede sai e outro chega no mesmo quarto."""
+        self._hospedar(self.uh, sai_em_dias=0)
+        self._chegada_hoje(self.uh, nome="Quem chega depois")
+        ocup = self._linha(self.uh)["ocupacao"]
+        self.assertEqual(ocup["cod"], "sai_hoje")
+        self.assertTrue(ocup["chegada"])
+        self.assertContains(self.client.get(reverse("governanca:quartos")),
+                            "Chega outro")
+
+    def test_quarto_bloqueado_e_bloqueado_nao_vago(self):
+        self.uh.status = UH.Status.BLOQUEADA
+        self.uh.save(update_fields=["status"])
+        self.assertEqual(self._linha(self.uh)["ocupacao"]["cod"], "bloqueado")
+
+    def test_a_lista_mostra_quem_esta_no_quarto(self):
+        self._hospedar(self.uh, nome="Ana Lima")
+        corpo = self.client.get(reverse("governanca:quartos")).content.decode()
+        self.assertIn("gov-ocupacao", corpo)
+        self.assertIn("Ocupado", corpo)
+        self.assertIn("Ana Lima", corpo)
+
+    def test_o_tipo_do_quarto_vira_dica_e_sai_da_linha(self):
+        """Dado secundário: ocupava a linha de baixo e não muda o que fazer agora."""
+        self._hospedar(self.uh)
+        corpo = self.client.get(reverse("governanca:quartos")).content.decode()
+        self.assertIn(f"- {self.uh.tipo.nome}", corpo)        # está na dica
+        self.assertNotIn(f'<small class="ajuda">{self.uh.tipo.nome}</small>', corpo)
+
+    def test_a_visao_geral_resume_a_casa_por_ocupacao(self):
+        self._hospedar(self.uh, sai_em_dias=0)                # sai hoje
+        self._hospedar(self.uh2, sai_em_dias=3)               # ocupado
+        resumo = {o["cod"]: o["n"] for o in services.visao_geral()["ocupacao"]}
+        self.assertEqual(resumo.get("sai_hoje"), 1)
+        self.assertEqual(resumo.get("ocupado"), 1)
+        self.assertNotIn("chega_hoje", resumo)                # zero não vira linha
+        r = self.client.get(reverse("governanca:painel"))
+        self.assertContains(r, "A casa hoje")
+        self.assertContains(r, "corredor-ocupacao")
+
+    def test_ocupacao_na_porta_da_visao_geral(self):
+        self._hospedar(self.uh, nome="Ana Lima")
+        porta = next(p for p in services.visao_geral()["portas"]
+                     if p["uh"].pk == self.uh.pk)
+        self.assertEqual(porta["ocupacao"], "Ocupado")
+        self.assertIn("Ana Lima", porta["hospede"])
+
+    def test_consultas_constantes_com_a_ocupacao(self):
+        """A ocupação sai do mesmo retrato do PMS — nenhuma consulta nova."""
+        self._hospedar(self.uh)
+        services.visao_geral()          # aquece o singleton de configuração
+        with self.assertNumQueries(12):
+            services.visao_geral()
+        for n in range(3, 11):
+            self._hospedar(UH.objects.create(numero=f"Quarto {n:02d}", tipo=self.tipo))
+        with self.assertNumQueries(12):
+            services.visao_geral()
+
+
+class OcupacaoSemReservasTests(RondaBase):
+    """Sem o módulo Reservas a Governança não afirma nada sobre ocupação."""
+
+    def setUp(self):
+        super().setUp()
+        ModuloContratado.objects.filter(codigo=Modulo.RESERVAS).update(ativo=False)
+        self.client.login(username="governanta", password="senha-forte-123")
+
+    def test_a_linha_nao_inventa_ocupacao(self):
+        ocup = services.painel_limpeza()["linhas"][0]["ocupacao"]
+        self.assertEqual(ocup["cod"], "")
+        self.assertEqual(ocup["rotulo"], "")
+
+    def test_a_visao_geral_abre_sem_o_resumo_de_ocupacao(self):
+        dados = services.visao_geral()
+        self.assertEqual(dados["ocupacao"], [])
+        self.assertEqual(self.client.get(reverse("governanca:painel")).status_code, 200)
+
+    def test_a_lista_volta_a_mostrar_o_tipo_do_quarto(self):
+        """Sem ocupação para contar, a linha não fica muda: mostra o tipo."""
+        self.assertContains(self.client.get(reverse("governanca:quartos")),
+                            f'<small class="ajuda">{self.uh.tipo.nome}</small>')
