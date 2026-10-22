@@ -1,7 +1,11 @@
 {% load static %}
 
 <!-- FOOTER -->
-<footer class="bg-noturno py-12 sm:py-16 border-t border-lampiao/10">
+{% comment %}`pb` maior que o `pt`: o botão flutuante do WhatsApp ocupa os 64 px
+de baixo (80 px a partir de sm) do canto direito, e a prova social o canto
+esquerdo no tablet. Sem esta folga, a linha dos créditos fica POR BAIXO
+deles — não dá para ler nem para selecionar.{% endcomment %}
+<footer class="bg-noturno pt-12 sm:pt-16 pb-20 sm:pb-24 border-t border-lampiao/10">
     <div class="max-w-7xl mx-auto px-4 sm:px-6">
         <div class="grid grid-cols-2 md:grid-cols-4 gap-8 sm:gap-10">
             <!-- Logo & desc -->
@@ -34,23 +38,23 @@
             <!-- Links Explorar -->
             <div>
                 <h4 class="text-pergaminho font-semibold text-sm mb-4">Explorar</h4>
-                <ul class="space-y-2 text-pergaminho/40 text-sm">
-                    <li><a href="{% url 'core:home' %}#quartos" class="hover:text-lampiao transition">Quartos</a></li>
-                    <li><a href="{% url 'core:home' %}#dia-pousada" class="hover:text-lampiao transition">Dia na Pousada</a></li>
-                    <li><a href="{% url 'core:home' %}#eventos" class="hover:text-lampiao transition">Eventos</a></li>
-                    <li><a href="{% url 'core:home' %}#experiencias" class="hover:text-lampiao transition">Experiências</a></li>
-                    <li><a href="{% url 'core:home' %}#galeria" class="hover:text-lampiao transition">Galeria</a></li>
+                <ul class="text-pergaminho/40 text-sm">
+                    <li><a href="{% url 'core:home' %}#quartos" class="inline-flex items-center min-h-[44px] hover:text-lampiao transition">Quartos</a></li>
+                    <li><a href="{% url 'core:home' %}#dia-pousada" class="inline-flex items-center min-h-[44px] hover:text-lampiao transition">Dia na Pousada</a></li>
+                    <li><a href="{% url 'core:home' %}#eventos" class="inline-flex items-center min-h-[44px] hover:text-lampiao transition">Eventos</a></li>
+                    <li><a href="{% url 'core:home' %}#experiencias" class="inline-flex items-center min-h-[44px] hover:text-lampiao transition">Experiências</a></li>
+                    <li><a href="{% url 'core:home' %}#galeria" class="inline-flex items-center min-h-[44px] hover:text-lampiao transition">Galeria</a></li>
                 </ul>
             </div>
 
             <!-- Links Informações -->
             <div>
                 <h4 class="text-pergaminho font-semibold text-sm mb-4">Informações</h4>
-                <ul class="space-y-2 text-pergaminho/40 text-sm">
-                    <li><a href="{% url 'core:termos_servico' %}#cancelamento" class="hover:text-lampiao transition">Política de Cancelamento</a></li>
-                    <li><a href="{% url 'core:termos_servico' %}" class="hover:text-lampiao transition">Termos de Serviço</a></li>
-                    <li><a href="{% url 'core:politica_privacidade' %}" class="hover:text-lampiao transition">Privacidade</a></li>
-                    <li><a href="{% url 'core:exclusao_dados' %}" class="hover:text-lampiao transition">Exclusão de dados</a></li>
+                <ul class="text-pergaminho/40 text-sm">
+                    <li><a href="{% url 'core:termos_servico' %}#cancelamento" class="inline-flex items-center min-h-[44px] hover:text-lampiao transition">Política de Cancelamento</a></li>
+                    <li><a href="{% url 'core:termos_servico' %}" class="inline-flex items-center min-h-[44px] hover:text-lampiao transition">Termos de Serviço</a></li>
+                    <li><a href="{% url 'core:politica_privacidade' %}" class="inline-flex items-center min-h-[44px] hover:text-lampiao transition">Privacidade</a></li>
+                    <li><a href="{% url 'core:exclusao_dados' %}" class="inline-flex items-center min-h-[44px] hover:text-lampiao transition">Exclusão de dados</a></li>
                 </ul>
             </div>
         </div>

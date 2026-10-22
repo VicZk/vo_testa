@@ -49,9 +49,27 @@
     document.dispatchEvent(new CustomEvent('consentimento:aceito'));
   }
 
+  /* O aviso é `position: fixed` no rodapé da janela: enquanto está na tela ele
+   * TAPA o fim da página. No celular isso escondia o formulário de proposta da
+   * home, o botão do WhatsApp e o "Perdeu o código?" de Minha reserva — quem
+   * não rolasse de volta depois de escolher não via que havia algo ali. Em vez
+   * de só flutuar, ele reserva a própria altura no fim do documento (o CSS do
+   * componente lê `--aviso-cookies-altura`). Quando some, a folga some junto. */
+  function reservarEspaco(banner) {
+    var raiz = document.documentElement;
+    if (!banner || banner.hidden) {
+      raiz.classList.remove('com-aviso-cookies');
+      raiz.style.removeProperty('--aviso-cookies-altura');
+      return;
+    }
+    raiz.classList.add('com-aviso-cookies');
+    raiz.style.setProperty('--aviso-cookies-altura', banner.offsetHeight + 'px');
+  }
+
   function esconder(banner) {
     banner.hidden = true;
     banner.setAttribute('aria-hidden', 'true');
+    reservarEspaco(banner);
   }
 
   function iniciar() {
@@ -62,6 +80,9 @@
     if (!banner) return;                       // página sem o partial: não mede nada
     banner.hidden = false;
     banner.removeAttribute('aria-hidden');
+    reservarEspaco(banner);
+    // Girar o aparelho ou abrir o teclado muda quantas linhas o texto ocupa.
+    window.addEventListener('resize', function () { reservarEspaco(banner); });
     var aceitar = banner.querySelector('[data-consent-aceitar]');
     var recusar = banner.querySelector('[data-consent-recusar]');
     if (aceitar) aceitar.addEventListener('click', function () {

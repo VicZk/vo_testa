@@ -70,3 +70,23 @@
 .flatpickr-calendar.inline .flatpickr-day.flatpickr-disabled,
 .flatpickr-calendar.inline .flatpickr-day.prevMonthDay,
 .flatpickr-calendar.inline .flatpickr-day.nextMonthDay { color: rgba(79, 44, 29, .2); }
+
+/* ---- Toque: o calendário é o controle mais usado da reserva no celular ----
+   O mês e o ano do cabeçalho do flatpickr vêm com 27px de altura (e a seta de
+   trocar de mês com 28). Quem reserva pelo telefone erra os três. Só em
+   ponteiro grosso: no mouse o cabeçalho continua compacto. */
+@media (pointer: coarse) {
+  .flatpickr-calendar .flatpickr-monthDropdown-months,
+  .flatpickr-calendar .numInputWrapper,
+  .flatpickr-calendar .numInputWrapper input.cur-year {
+    min-height: 44px;
+  }
+  .flatpickr-calendar .flatpickr-prev-month,
+  .flatpickr-calendar .flatpickr-next-month {
+    min-width: 44px; min-height: 44px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  /* O dia é o alvo final: 39px de lado numa grade de 7 colunas. Cresce em
+     altura (a largura é a coluna, e mexer nela estoura o calendário). */
+  .flatpickr-calendar .flatpickr-day { min-height: 44px; line-height: 44px; }
+}

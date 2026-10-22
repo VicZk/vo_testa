@@ -545,3 +545,116 @@ class ComboNoPainelE2ETests(_BaseE2E):
         self.assertLessEqual(medida["base"], medida["painel_base"] + 1, medida)
         self.assertGreaterEqual(medida["topo"], medida["painel_topo"] - 1, medida)
         self.assertLessEqual(medida["base"], medida["tela"] + 1, medida)
+
+
+@unittest.skipUnless(_PLAYWRIGHT_OK, "playwright não instalado (ver docstring)")
+class SiteNoCelularE2ETests(_UnidadeVendavelMixin, _BaseE2E):
+    """O site no celular: nada fixo tapando o fim da página e alvo de 44px no
+    caminho da reserva.
+
+    Os dois achados que o dono viu no aparelho: o aviso de cookies é
+    `position: fixed` no rodapé e comia o fim de toda página (na home, o
+    formulário de proposta; em Minha reserva, o "Perdeu o código?"), e o botão
+    do WhatsApp ficava por cima da linha de créditos do rodapé.
+    """
+
+    CELULAR = {"width": 390, "height": 844}
+
+    # Mede o alvo de verdade: o que ACIONA o controle é o <label> que o embrulha,
+    # quando existe — uma caixa de marcar de 13px dentro de um rótulo de 324×44
+    # não é um alvo de 13px.
+    ALVOS = """
+    (sels) => sels.map(s => {
+      const el = document.querySelector(s);
+      if (!el) return {sel: s, achou: false};
+      const lab = el.closest('label');
+      const r = (lab || el).getBoundingClientRect();
+      return {sel: s, achou: true, w: Math.round(r.width), h: Math.round(r.height)};
+    })
+    """
+
+    def setUp(self):
+        super().setUp()
+        from django.core.cache import cache
+        cache.clear()
+        self.uh = self._semear_unidade()
+        self.page.set_viewport_size(self.CELULAR)
+
+    def _fim_da_pagina(self):
+        self.page.evaluate("() => window.scrollTo(0, document.scrollingElement.scrollHeight)")
+        self.page.wait_for_timeout(250)
+
+    def test_aviso_de_cookies_reserva_o_proprio_espaco(self):
+        """Sem a folga, quem abre o site pela primeira vez não vê o que está
+        embaixo do aviso — e não há como rolar mais, a página já acabou."""
+        p = self.page
+        p.goto(self.url("/minha-reserva/"))
+        p.wait_for_selector("#consentimento:not([hidden])", timeout=10000)
+        self._fim_da_pagina()
+        medida = p.evaluate("""() => {
+          const b = document.getElementById('consentimento');
+          const r = b.getBoundingClientRect();
+          const ancora = [...document.querySelectorAll('a')]
+              .find(a => a.textContent.includes('Voltar ao site'));
+          const v = ancora.getBoundingClientRect();
+          const meio = document.elementFromPoint(v.left + v.width / 2, v.top + v.height / 2);
+          return {folga: parseFloat(getComputedStyle(document.body).paddingBottom),
+                  aviso: Math.round(r.height), tapado: !!(meio && b.contains(meio))};
+        }""")
+        self.assertGreaterEqual(medida["folga"], medida["aviso"] - 1, medida)
+        self.assertFalse(medida["tapado"], f"o aviso cobre 'Voltar ao site': {medida}")
+
+        # Ao escolher, a folga some junto com o aviso.
+        p.click("[data-consent-recusar]")
+        p.wait_for_timeout(250)
+        folga = p.evaluate("() => getComputedStyle(document.body).paddingBottom")
+        self.assertIn(folga, ("0px", "0"), "a folga ficou sobrando depois de escolher")
+
+    def test_botao_do_whatsapp_nao_cobre_o_fim_do_rodape(self):
+        p = self.page
+        p.goto(self.url("/"))
+        p.wait_for_selector(".zap-flutuante", timeout=10000)
+        p.click("[data-consent-aceitar]")          # tira o aviso da frente
+        p.wait_for_timeout(250)
+        self._fim_da_pagina()
+        tapado = p.evaluate("""() => {
+          const zap = document.querySelector('.zap-flutuante');
+          const z = zap.getBoundingClientRect();
+          const creditos = [...document.querySelectorAll('footer p')].pop();
+          const c = creditos.getBoundingClientRect();
+          const cruza = Math.max(z.left, c.left) < Math.min(z.right, c.right)
+                     && Math.max(z.top, c.top) < Math.min(z.bottom, c.bottom);
+          return {cruza, zap: Math.round(z.top), creditos: Math.round(c.bottom)};
+        }""")
+        self.assertFalse(tapado["cruza"], f"o WhatsApp está em cima dos créditos: {tapado}")
+
+    def test_caminho_da_reserva_tem_alvo_de_44px(self):
+        """Campo de data, botão do hero, CTA do quarto e a escolha das camas —
+        tudo entre 20 e 40px antes desta passada."""
+        p = self.page
+        p.goto(self.url("/"))
+        # O flatpickr troca o campo de data por um par (um `hidden` com o valor e
+        # um visível ao lado), então aqui se mede o que está NA TELA, não o id.
+        hero = p.evaluate("""() => {
+            const f = document.querySelector('#hero-hospedes').closest('form');
+            return [...f.querySelectorAll('input, button')]
+              // `tabindex=-1` é a armadilha do antirrobô: não é alvo de ninguém.
+              .filter(e => e.type !== 'hidden' && e.offsetParent && e.tabIndex !== -1)
+              .map(e => ({campo: e.id || e.type, h: Math.round(e.getBoundingClientRect().height)}));
+        }""")
+        self.assertGreaterEqual(len(hero), 4, f"o formulário do hero sumiu: {hero}")
+        for item in hero:
+            self.assertGreaterEqual(item["h"], 44, f"{item} — {hero}")
+
+        checkin, checkout = self._datas()
+        p.goto(self.url(f"/reservar/?checkin={checkin:%Y-%m-%d}"
+                        f"&checkout={checkout:%Y-%m-%d}&hospedes=2"))
+        p.wait_for_selector("text=Cabine do Lago E2E", timeout=10000)
+        cta = p.get_by_role("link", name="Reservar").first.bounding_box()
+        self.assertGreaterEqual(round(cta["height"]), 44, cta)
+        cta_el = p.get_by_role("link", name="Reservar").first
+        cta_el.click()
+        p.wait_for_selector("input[name=nome]", timeout=10000)
+        for item in p.evaluate(self.ALVOS, ["input[name=arranjo]"]):
+            if item["achou"]:
+                self.assertGreaterEqual(item["h"], 44, item)
