@@ -554,10 +554,13 @@ def detalhe(request, pk):
             from apps.governanca.services import uh_pronta_para_checkin
 
             if not uh_pronta_para_checkin(reserva.uh):
+                # Leva à ficha DAQUELE quarto (estado, por quê e o próximo passo),
+                # não à casa inteira: quem está com o hóspede na frente não tem de
+                # caçar a linha dele numa lista de 24 — menos ainda no tablet.
                 aviso_checkin = {
                     "texto": f"O quarto {reserva.uh.numero} não está limpo/inspecionado.",
-                    "url": reverse("governanca:painel"),
-                    "acao": "Abrir governança",
+                    "url": reverse("governanca:quarto", args=[reserva.uh.pk]),
+                    "acao": "Ver a limpeza do quarto",
                 }
 
     # Prévia da política de cancelamento (quanto reteria/devolveria agora).

@@ -9,10 +9,16 @@ fazer agora) — o dono vê isso de longe, e lia a coisa errada. O tipo foi para
 dica; o rodapé só existe quando tem o que dizer, em vez de uma metade vazia.
 {% endcomment %}
 <div class="corredor corredor-gov" aria-label="Quartos por estado de limpeza">
+  {% comment %}A porta ABRE O QUARTO (gaveta com o próximo passo), em vez de
+  mandar caçar a linha dele numa lista de 24 — num tablet, "ir até a linha" é
+  sair da parede e rolar. A dica continua como complemento para quem usa mouse:
+  tudo o que ela diz está na ficha, a um toque.{% endcomment %}
   {% for p in portas %}
-    <a href="{% url 'governanca:quartos' %}#quarto-{{ p.uh.pk }}"
+    <a href="{% url 'governanca:quarto' p.uh.pk %}?voltar=painel"
        class="porta porta-gov {{ p.cor }} dica"
-       data-dica="- {{ p.uh.numero }}&#10;- {{ p.rotulo }}&#10;- {{ p.explicacao }}{% if p.ocupacao %}&#10;- {{ p.ocupacao }}{% if p.hospede %}: {{ p.hospede }}{% endif %}{% endif %}&#10;- {{ p.tipo }}{% if p.camareira %}&#10;- Limpa: {{ p.camareira }}{% endif %}{% if p.chegada %}&#10;- Chega hóspede hoje{% endif %}{% if p.divergente %}&#10;- {{ p.divergencia_rotulo }}{% endif %}">
+       hx-get="{% url 'governanca:quarto' p.uh.pk %}?voltar=painel" hx-target="#modal-conteudo"
+       aria-label="{{ p.uh.numero }}: {{ p.rotulo }}{% if p.ocupacao %}, {{ p.ocupacao }}{% endif %} — abrir"
+       data-dica="- {{ p.uh.numero }}&#10;- {{ p.rotulo }}&#10;- {{ p.explicacao }}{% if p.camareira %}&#10;- Limpa: {{ p.camareira }}{% endif %}{% if p.divergente %}&#10;- {{ p.divergencia_rotulo }}{% endif %}">
       <span class="porta-topo">
         <span class="porta-num">{{ p.uh.numero|cut:"Quarto " }}</span>
         <span class="porta-topo-marcas">

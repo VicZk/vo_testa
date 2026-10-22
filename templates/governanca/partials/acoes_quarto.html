@@ -1,0 +1,73 @@
+{% comment %}O PRÓXIMO PASSO de um quarto — fonte única.
+
+Uma ação principal, nomeada pelo que vai acontecer ("Começar limpeza",
+"Terminei a limpeza", "Aprovar limpeza"); as secundárias são discretas. Quem
+nunca trabalhou em hotel não precisa escolher entre três botões parecidos.
+
+Parâmetros do include:
+  ln     — a linha do quarto (services `_estado_dos_quartos`)
+  sheet  — verdadeiro na ficha do quarto: os formulários navegam de verdade (sem
+           HTMX) e levam `voltar`, porque dali a pessoa volta para a tela de
+           onde veio, não para a lista.
+  voltar — para onde voltar depois da ação ("painel" ou vazio)
+
+Sem JavaScript tudo continua funcionando: todo formulário tem `action` e
+`method`, e as views redirecionam quando o pedido não vem do HTMX.
+{% endcomment %}
+{% comment %}Quarto em reparo não tem próximo passo da governança: ele
+oferecia "Pedir nova limpeza" e dizia "pronto para o hóspede".{% endcomment %}
+{% if ln.bloqueado %}
+  <span class="acao-pronta">Em manutenção — fora de operação</span>
+
+{% elif ln.situacao == 'suja' %}
+  {% if ln.tarefa %}
+    <form method="post" action="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}"{% if not sheet %} hx-post="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}"{% endif %}>
+      {% csrf_token %}<input type="hidden" name="acao" value="iniciar">
+      {% if sheet %}<input type="hidden" name="voltar" value="{{ voltar }}">{% endif %}
+      <button type="submit" class="botao-primario">Começar limpeza</button>
+    </form>
+  {% else %}
+    {# Sem faxina na fila: abrir e começar é um gesto só. #}
+    <form method="post" action="{% url 'governanca:nova_tarefa' %}"{% if not sheet %} hx-post="{% url 'governanca:nova_tarefa' %}"{% endif %}>
+      {% csrf_token %}<input type="hidden" name="uh" value="{{ ln.uh.pk }}">
+      <input type="hidden" name="tipo" value="faxina_completa">
+      <input type="hidden" name="iniciar" value="1">
+      {% if sheet %}<input type="hidden" name="voltar" value="{{ voltar }}">{% endif %}
+      <button type="submit" class="botao-primario">Começar limpeza</button>
+    </form>
+  {% endif %}
+
+{% elif ln.situacao == 'em_limpeza' %}
+  {% if ln.tarefa %}
+    <form method="post" action="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}"{% if not sheet %} hx-post="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}"{% endif %}>
+      {% csrf_token %}<input type="hidden" name="acao" value="concluir">
+      {% if sheet %}<input type="hidden" name="voltar" value="{{ voltar }}">{% endif %}
+      <button type="submit" class="botao-primario">Terminei a limpeza</button>
+    </form>
+  {% else %}
+    <form method="post" action="{% url 'governanca:status_marcar' ln.uh.pk %}"{% if not sheet %} hx-post="{% url 'governanca:status_marcar' ln.uh.pk %}"{% endif %}>
+      {% csrf_token %}<input type="hidden" name="situacao" value="limpa">
+      {% if sheet %}<input type="hidden" name="voltar" value="{{ voltar }}">{% endif %}
+      <button type="submit" class="botao-primario">Terminei a limpeza</button>
+    </form>
+  {% endif %}
+
+{% elif ln.situacao == 'limpa' %}
+  <form method="post" action="{% url 'governanca:status_marcar' ln.uh.pk %}"{% if not sheet %} hx-post="{% url 'governanca:status_marcar' ln.uh.pk %}"{% endif %}>
+    {% csrf_token %}<input type="hidden" name="situacao" value="inspecionada">
+    {% if sheet %}<input type="hidden" name="voltar" value="{{ voltar }}">{% endif %}
+    <button type="submit" class="botao-primario">Aprovar limpeza</button>
+  </form>
+  {# Link de verdade: com JS abre o modal da casa; sem JS, abre a página. #}
+  <a href="{% url 'governanca:devolver' ln.uh.pk %}" class="botao-neutro"
+     {% if not sheet %}hx-get="{% url 'governanca:devolver' ln.uh.pk %}" hx-target="#modal-conteudo"{% endif %}>Devolver para limpar</a>
+
+{% elif ln.situacao == 'inspecionada' %}
+  <span class="acao-pronta">{% if ln.ocupacao.cod == 'ocupado' or ln.ocupacao.cod == 'sai_hoje' %}Nada a fazer — arrumação do dia feita{% else %}Nada a fazer — pronto para o hóspede{% endif %}</span>
+  <form method="post" action="{% url 'governanca:nova_tarefa' %}"{% if not sheet %} hx-post="{% url 'governanca:nova_tarefa' %}"{% endif %}>
+    {% csrf_token %}<input type="hidden" name="uh" value="{{ ln.uh.pk }}">
+    <input type="hidden" name="tipo" value="faxina_completa">
+    {% if sheet %}<input type="hidden" name="voltar" value="{{ voltar }}">{% endif %}
+    <button type="submit" class="botao-neutro">Pedir nova limpeza</button>
+  </form>
+{% endif %}
