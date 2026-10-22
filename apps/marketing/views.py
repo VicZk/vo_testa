@@ -1,14 +1,17 @@
 """Telas do módulo Marketing. Passos 2–3: Quadro (Kanban) + painel da verba mensal."""
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.db import transaction
+from django.forms.models import model_to_dict
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import never_cache
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_http_methods, require_POST
 
 from apps.nucleo.modulos import Modulo
 from apps.nucleo.permissoes import eh_gerente, requer_modulo
 
 from . import services
+from .forms import SECOES, DadosCampanhaForm, NovaCampanhaForm
 from .models import Campanha
 
 
@@ -145,9 +148,17 @@ def _envolvidos(campanha):
     return out
 
 
-def _ficha_ctx(request, campanha):
+def _ficha_ctx(request, campanha, dados_invalidos=None):
     """Contexto único da ficha — vale para a página (detalhe) e a gaveta (HTMX)."""
+    formularios = {}
+    for secao, campos in SECOES.items():
+        dados = None
+        if dados_invalidos is not None and any(campo in dados_invalidos for campo in campos):
+            dados = model_to_dict(campanha, fields=campos)
+            dados.update({campo: dados_invalidos[campo] for campo in campos if campo in dados_invalidos})
+        formularios[f"form_{secao}"] = DadosCampanhaForm(dados, instance=campanha, campos=campos)
     return {
+        **formularios,
         "c": campanha,
         "portao": services.portao_da(campanha),
         "verba": services.posicao_verba(services._mes_de_campanha(campanha)),
@@ -165,11 +176,17 @@ def _ficha_ctx(request, campanha):
     }
 
 
-def _pos_ficha(request, campanha):
+def _pos_ficha(request, campanha, dados_invalidos=None):
     """Resposta pós-ação: dentro da gaveta (HTMX) devolve a gaveta re-renderizada;
     fora dela, o redirect de sempre para a página da ficha."""
     if request.headers.get("HX-Request"):
-        return render(request, "marketing/_ficha_drawer.html", _ficha_ctx(request, campanha))
+        template = "marketing/_ficha_modal.html" if request.headers.get("HX-Target") == "modal-conteudo" else "marketing/_ficha_drawer.html"
+        response = render(request, template, _ficha_ctx(request, campanha, dados_invalidos))
+        if dados_invalidos is None:
+            response.headers["HX-Trigger"] = "marketing:alterado"
+        return response
+    if dados_invalidos is not None:
+        return render(request, "marketing/detalhe.html", _ficha_ctx(request, campanha, dados_invalidos))
     return redirect("marketing:detalhe", pk=campanha.pk)
 
 
@@ -178,7 +195,7 @@ def _pos_ficha(request, campanha):
 def ficha(request, pk):
     """A ficha como GAVETA (partial): carregada por HTMX sobre o quadro."""
     campanha = get_object_or_404(Campanha, pk=pk)
-    return render(request, "marketing/_ficha_drawer.html", _ficha_ctx(request, campanha))
+    return render(request, "marketing/_ficha_modal.html", _ficha_ctx(request, campanha))
 
 
 @never_cache
@@ -193,48 +210,15 @@ def detalhe(request, pk):
 @require_POST
 def salvar_campanha(request, pk):
     """Analista edita os campos da campanha (objetivo, público, canais, período, verba, retrô)."""
-    c = get_object_or_404(Campanha, pk=pk)
-    p = request.POST
-    # Atualiza só o que veio no POST — assim a gaveta pode ter formulários parciais
-    # (dados e retrospectiva separados) sem um zerar os campos do outro.
-    if p.get("nome", "").strip():
-        c.nome = p["nome"].strip()
-    if "objetivo" in p:
-        c.objetivo = p.get("objetivo", "").strip()
-    if "publico" in p:
-        c.publico = p.get("publico", "").strip()
-    if "canais" in p:
-        c.canais = [x.strip() for x in p.get("canais", "").split(",") if x.strip()]
-    # O mês da verba travada é o `inicio`; congela na aprovação (não remexer o teto
-    # de um mês já comprometido). verba_prevista idem + nunca negativa (infla o teto).
-    if "inicio" in p and not c.aprovada_em:
-        c.inicio = p.get("inicio") or None
-    if "fim" in p:
-        c.fim = p.get("fim") or None
-    if "verba_prevista" in p and not c.aprovada_em:
-        try:
-            v = services.parse_moeda(p.get("verba_prevista"))
-            c.verba_prevista = v if v >= 0 else c.verba_prevista
-        except Exception:  # noqa: BLE001
-            pass
-    if "etapa_funil" in p:
-        c.etapa_funil = p.get("etapa_funil", "").strip()
-    if "objetivo_tipo" in p:
-        c.objetivo_tipo = p.get("objetivo_tipo", "").strip()
-    for campo in ("meta_valor", "realizado_valor"):
-        if campo in p:
-            bruto = (p.get(campo) or "").strip()
-            try:
-                setattr(c, campo, services.parse_moeda(bruto) if bruto else None)
-            except Exception:  # noqa: BLE001
-                setattr(c, campo, None)
-    for campo in ("retro_funcionou", "retro_nao", "retro_diferente"):
-        if campo in p:
-            setattr(c, campo, p.get(campo, "").strip())
-    c.save()
-    # Autosave (change) é silencioso; só o clique explícito em "Salvar dados" avisa.
-    if "salvar" in p:
-        messages.success(request, "Campanha salva.")
+    with transaction.atomic():
+        c = get_object_or_404(Campanha.objects.select_for_update(), pk=pk)
+        campos = [campo for campo in DadosCampanhaForm.base_fields if campo in request.POST]
+        form = DadosCampanhaForm(request.POST, instance=c, campos=campos)
+        if not form.is_valid():
+            return _pos_ficha(request, c, dados_invalidos=request.POST)
+        form.save()
+    if "salvar" in request.POST:
+        messages.success(request, "Dados da campanha salvos.")
     return _pos_ficha(request, c)
 
 
@@ -356,13 +340,22 @@ def anexar_item(request, pk, chave):
 
 @never_cache
 @requer_modulo(Modulo.MARKETING)
-@require_POST
+@require_http_methods(["GET", "POST"])
 def nova_campanha(request):
-    """Cria uma ideia em branco e abre a ficha (não há mais campo solto no quadro)."""
-    nome = (request.POST.get("nome") or "").strip() or "Nova campanha"
-    c = Campanha.objects.create(nome=nome, solicitante=request.user)
-    messages.success(request, "Ideia criada — preencha a ficha.")
-    return _pos_ficha(request, c)
+    """Abrir/cancelar não grava nada; reenviar a mesma criação devolve a campanha."""
+    form = NovaCampanhaForm(request.POST if request.method == "POST" else None)
+    if request.method == "POST" and form.is_valid():
+        c, criada = Campanha.objects.get_or_create(
+            chave_criacao=form.cleaned_data["chave"],
+            defaults={"nome": form.cleaned_data["nome"],
+                      "objetivo": form.cleaned_data["objetivo"],
+                      "solicitante": request.user, "responsavel": request.user},
+        )
+        if criada:
+            messages.success(request, "Campanha criada. Agora organize os próximos passos.")
+        return _pos_ficha(request, c)
+    template = "marketing/_nova_campanha.html" if request.headers.get("HX-Request") else "marketing/nova.html"
+    return render(request, template, {"form": form, "atual": "marketing", "em_modal": bool(request.headers.get("HX-Request"))})
 
 
 # ── Passo 5: Calendário + peças ──────────────────────────────────────────────

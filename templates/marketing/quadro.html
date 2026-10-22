@@ -4,6 +4,7 @@
 
 {% block conteudo %}
 {% load moeda %}
+<div id="marketing-quadro">
 {% comment %}Transcrição do protótipo (ABRIR-Marketing.html). Cores → tokens app.css;
 terra(#9A4429/#B25837) → --madeira (não há --terra); texto < 11px pisado em 11px
 (Parte 3). Estrutura/medidas/textos copiados do DOM. Ordem: breadcrumb → título →
@@ -13,12 +14,13 @@ descrição → abas → faixa → verba → quadro. Papel vem de request.user (
 <div class="mk-pagina-tit">
   <div class="mk-trilha">MARKETING<span aria-hidden="true">›</span><span class="mk-trilha-atual">CAMPANHAS</span></div>
   <h1 class="mk-titulo">Quadro de campanhas</h1>
-  <p class="mk-descricao">Cada campanha está numa fase só. Criativo, envolvidos e custos são campos da ficha, não colunas. Arraste para avançar — o quadro recusa quando falta o que a próxima fase exige.</p>
+  <p class="mk-descricao">Crie a campanha, organize o trabalho e acompanhe os resultados. Abra uma campanha para ver o próximo passo.</p>
 </div>
 
 {% comment %}Navegação e filtro nos componentes da casa: eram cinco cápsulas
 desenhadas à mão, indistinguíveis dos chips de dado do quadro.{% endcomment %}
 <div class="mkt-barra">
+  <a href="{% url 'marketing:nova_campanha' %}" hx-get="{% url 'marketing:nova_campanha' %}" hx-target="#modal-conteudo" class="botao-primario">Nova campanha</a>
   <nav class="seg-filtro" aria-label="Seções do marketing">
     <a href="{% url 'marketing:quadro' %}" class="ativo" aria-current="page">Quadro</a>
     <a href="{% url 'marketing:calendario' %}">Calendário</a>
@@ -43,7 +45,7 @@ desenhadas à mão, indistinguíveis dos chips de dado do quadro.{% endcomment %
     </div>
     <div class="mk-urg-lista">
       {% for p in proximos %}
-      <a href="{% url 'marketing:ficha' p.id %}" hx-get="{% url 'marketing:ficha' p.id %}" hx-target="#ficha-slot" hx-swap="innerHTML"
+      <a href="{% url 'marketing:detalhe' p.id %}" hx-get="{% url 'marketing:ficha' p.id %}" hx-target="#modal-conteudo" hx-swap="innerHTML"
          class="mk-urg-item">
         <span class="mk-elastico">
           <span class="mk-item-nome">{{ p.nome }}</span>
@@ -67,7 +69,7 @@ desenhadas à mão, indistinguíveis dos chips de dado do quadro.{% endcomment %
     </div>
     <div class="mk-urg-lista">
       {% for a in atrasados %}
-      <a href="{% url 'marketing:ficha' a.id %}" hx-get="{% url 'marketing:ficha' a.id %}" hx-target="#ficha-slot" hx-swap="innerHTML"
+      <a href="{% url 'marketing:detalhe' a.id %}" hx-get="{% url 'marketing:ficha' a.id %}" hx-target="#modal-conteudo" hx-swap="innerHTML"
          class="mk-urg-item">
         {# O bloco inteiro já é o alerta (moldura vermelha): o tipo é rótulo. #}
         <span class="rotulo-dado mkt-tipo">{{ a.tipo }}</span>
@@ -150,11 +152,11 @@ desenhadas à mão, indistinguíveis dos chips de dado do quadro.{% endcomment %
     <div class="mk-coluna-cards">
       {% for c in col.cards %}
       <article draggable="true" data-camp="{{ c.obj.id }}"
-               hx-get="{% url 'marketing:ficha' c.obj.id %}" hx-target="#ficha-slot" hx-swap="innerHTML"
+               onclick="if(!event.target.closest('a, button, form')) this.querySelector('.mk-card-nome').click()"
                ondragstart="cardMktStart(event, '{{ c.obj.id }}')" ondragend="cardMktEnd(event)"
                class="mk-card">
         <div class="mk-card-topo">
-          <span class="mk-card-nome">{{ c.obj.nome }}</span>
+          <a class="mk-card-nome" href="{% url 'marketing:detalhe' c.obj.id %}" hx-get="{% url 'marketing:ficha' c.obj.id %}" hx-target="#modal-conteudo" hx-swap="innerHTML">{{ c.obj.nome }}</a>
           <span class="mk-card-cod">{{ c.codigo }}</span>
         </div>
         {% if c.obj.etapa_funil %}
@@ -208,10 +210,7 @@ desenhadas à mão, indistinguíveis dos chips de dado do quadro.{% endcomment %
       <div class="mk-coluna-vazio">{{ col.vazio_texto }}</div>
       {% endfor %}
       {% if col.fase == 'ideia' %}
-      <form hx-post="{% url 'marketing:nova_campanha' %}" hx-target="#ficha-slot" hx-swap="innerHTML">
-        {% csrf_token %}
-        <button type="submit" class="mk-nova-ideia">+ Nova ideia</button>
-      </form>
+      <a href="{% url 'marketing:nova_campanha' %}" hx-get="{% url 'marketing:nova_campanha' %}" hx-target="#modal-conteudo" class="mk-nova-ideia">+ Nova ideia</a>
       {% endif %}
     </div>
   </div>
@@ -219,7 +218,6 @@ desenhadas à mão, indistinguíveis dos chips de dado do quadro.{% endcomment %
 </div>
 
 {# A gaveta da ficha entra aqui (HTMX carrega marketing:ficha) #}
-<div id="ficha-slot"></div>
 {% include "marketing/_moeda_js.html" %}
 
 <form id="form-mover-mkt" method="post" class="mk-form-oculto">{% csrf_token %}
@@ -243,4 +241,6 @@ desenhadas à mão, indistinguíveis dos chips de dado do quadro.{% endcomment %
   };
 })();
 </script>
+</div>
+<div hidden hx-get="{{ request.get_full_path }}" hx-trigger="marketing:atualizar from:body" hx-target="#marketing-quadro" hx-select="#marketing-quadro" hx-swap="outerHTML"></div>
 {% endblock %}

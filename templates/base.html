@@ -17,6 +17,7 @@
   <script src="{% static 'js/tabela-rol.js' %}" defer></script>
   {# Validação em pt-BR no lugar do balão em inglês do navegador. #}
   <script src="{% static 'js/form-pt.js' %}" defer></script>
+  <script src="{% static 'js/marketing.js' %}" defer></script>
   {# Dicas (balão de hover) de todo [data-dica]: um motor só, fixo e dentro da tela. #}
   <script src="{% static 'js/dicas.js' %}" defer></script>
   {# Botão "Copiar" de qualquer `data-copiar` (componentes/copiar.html). #}
@@ -501,7 +502,7 @@
   function fecharSidebarMobile() {
     const estava = APP.classList.contains('sidebar-aberta');
     APP.classList.remove('sidebar-aberta');
-    document.body.classList.remove('sem-rolagem');
+    if (!caixaAberta()) document.body.classList.remove('sem-rolagem');
     const b = document.getElementById('btn-menu-mobile');
     if (b) { b.setAttribute('aria-expanded', 'false'); b.setAttribute('aria-label', 'Abrir menu'); }
     if (estava) devolverFoco();
@@ -581,6 +582,8 @@
   // ---------- Modal ----------
   // Origem do modal ancorada no último ponto de clique (§7 spatial consistency).
   let ultimoPonteiro = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+  let pararAnimacaoModal = () => {};
+  let modalFechando = false;
   document.addEventListener('pointerdown', e => {
     ultimoPonteiro = { x: e.clientX, y: e.clientY };
   }, true);
@@ -588,16 +591,23 @@
   function abrirModal() {
     const ov = document.getElementById('modal-reserva');
     const cx = document.getElementById('modal-conteudo');
+    const jaAberto = ov.style.display === 'flex' && !modalFechando;
+    pararAnimacaoModal();
+    modalFechando = false;
     if (ov.style.display !== 'flex') guardarFoco();   // antes de mexer no foco
     ov.style.display = 'flex';
+    document.body.classList.add('sem-rolagem');
+    const titulo = cx.querySelector('h2');
+    if (titulo) cx.setAttribute('aria-label', titulo.textContent.trim());
     focarPrimeiro(cx);
+    if (jaAberto) { ov.style.opacity = 1; cx.style.opacity = 1; cx.style.transform = 'none'; cx.style.filter = 'none'; return; }
     const r = cx.getBoundingClientRect();
     const ox = Math.max(0, Math.min(1, (ultimoPonteiro.x - r.left) / (r.width || 1))) * 100;
     const oy = Math.max(0, Math.min(1, (ultimoPonteiro.y - r.top) / (r.height || 1))) * 100;
     cx.style.transformOrigin = ox + '% ' + oy + '%';
     if (Fluid.reducedMotion()) { ov.style.opacity = 1; cx.style.opacity = 1; cx.style.transform = 'none'; cx.style.filter = 'none'; return; }
     // Materializar: escala + blur juntos, emergindo da origem (§12).
-    Fluid.spring({
+    pararAnimacaoModal = Fluid.spring({
       from: 0, to: 1, response: 0.34, bounce: 0,
       onUpdate: t => {
         ov.style.opacity = t;
@@ -612,13 +622,20 @@
     const ov = document.getElementById('modal-reserva');
     const cx = document.getElementById('modal-conteudo');
     const estavaAberto = ov.style.display === 'flex';
+    if (modalFechando) return;
+    if (estavaAberto && !document.dispatchEvent(new CustomEvent('modal:antesFechar', { cancelable: true, detail: { caixa: cx } }))) return;
+    pararAnimacaoModal();
+    modalFechando = true;
     const finish = () => {
       ov.style.display = 'none'; cx.innerHTML = ''; ov.style.opacity = ''; cx.removeAttribute('style');
+      if (!caixaAberta()) document.body.classList.remove('sem-rolagem');
       if (estavaAberto) devolverFoco();
+      modalFechando = false;
+      if (estavaAberto) document.dispatchEvent(new CustomEvent('modal:fechado'));
     };
     if (Fluid.reducedMotion() || !estavaAberto) { finish(); return; }
     // Sai pelo mesmo caminho que entrou (§7).
-    Fluid.spring({
+    pararAnimacaoModal = Fluid.spring({
       from: 1, to: 0, response: 0.22, bounce: 0,
       onUpdate: t => {
         ov.style.opacity = t;

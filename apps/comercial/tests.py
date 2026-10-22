@@ -1765,7 +1765,8 @@ class WhatsAppCloudTests(TestCase):
                              content_type="application/json")
             m = MensagemWhatsApp.objects.get(id_externo="wamid.AUDIO2")
             self.assertTrue(bool(m.midia_arquivo))
-            self.assertEqual(m.midia_arquivo.read(), b"OggS-fake-audio")
+            with m.midia_arquivo.open("rb") as arquivo:
+                self.assertEqual(arquivo.read(), b"OggS-fake-audio")
 
     # ---- áudio (envio) ----
     def test_enviar_audio_cria_saida(self):

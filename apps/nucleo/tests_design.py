@@ -1062,12 +1062,11 @@ class FlutuantesTests(TestCase):
         self.assertIn(".combo.combo-acima .combo-lista", self.css)
         self.assertIn("posicionar()", self.base)
 
-    def test_gaveta_do_marketing_entra_animada(self):
-        """O HTMX injeta o HTML e ela aparecia inteira de um quadro para o outro."""
-        self.assertIn("gaveta-entra", self.css)
-        bloco = re.search(r"\.fx-gaveta \{ animation: gaveta-entra ([^;]*);", self.css)
-        self.assertIsNotNone(bloco)
-        self.assertIn("var(--mov-lento)", bloco.group(1))
+    def test_ficha_do_marketing_reutiliza_modal_sem_reanimar_ao_salvar(self):
+        """A animação pertence à abertura do modal, não a cada resposta de salvar."""
+        self.assertNotRegex(self.css, r"\.fx-gaveta\s*\{[^}]*animation:")
+        quadro = (Path(settings.BASE_DIR) / "templates" / "marketing" / "quadro.html").read_text(encoding="utf-8")
+        self.assertIn('hx-target="#modal-conteudo"', quadro)
 
     def test_bottom_sheet_do_funil_usa_os_tokens(self):
         funil = (Path(settings.BASE_DIR) / "templates" / "comercial" / "funil.html"

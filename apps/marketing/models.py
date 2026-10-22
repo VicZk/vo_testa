@@ -89,6 +89,7 @@ class Campanha(models.Model):
         OUTRO = "outro", "Outro"
 
     nome = models.CharField("nome", max_length=140)
+    chave_criacao = models.UUIDField(null=True, blank=True, unique=True, editable=False)
     objetivo = models.TextField("objetivo", blank=True)
     publico = models.CharField("público-alvo", max_length=140, blank=True)
     canais = models.JSONField("canais", default=list, blank=True)  # Instagram, Meta Ads…

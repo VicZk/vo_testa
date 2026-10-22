@@ -48,17 +48,33 @@
     var v = opts.velocity || 0;
     var restD = opts.restDelta != null ? opts.restDelta : 0.25;
     var restV = opts.restSpeed != null ? opts.restSpeed : 0.25;
-    var raf = 0, last = 0, alive = true;
+    var raf = 0, last = null, alive = true;
 
     function frame(now) {
       if (!alive) return;
-      if (!last) last = now;
-      var dt = Math.min((now - last) / 1000, 1 / 30);   // trava passos longos (aba em 2º plano)
+      if (last === null) last = now;
+      var dt = Math.max(0, (now - last) / 1000);
       last = now;
-      // Semi-implícito: estável mesmo com springs rígidos.
-      var a = -k * (x - to) - c * v;
-      v += a * dt;
-      x += v * dt;
+      // Solução exata do oscilador: o passo de Euler divergia em 30 fps no
+      // fechamento do modal. O tempo real também permite terminar ao voltar
+      // de uma aba em segundo plano, sem dezenas de quadros para recuperar.
+      var y = x - to, alpha = c / 2, disc = k - alpha * alpha;
+      if (Math.abs(disc) < 1e-7) {
+        var beta = v + alpha * y, decay = Math.exp(-alpha * dt);
+        x = to + (y + beta * dt) * decay;
+        v = (v - alpha * beta * dt) * decay;
+      } else if (disc > 0) {
+        var omega = Math.sqrt(disc), sin = Math.sin(omega * dt), cos = Math.cos(omega * dt);
+        var fade = Math.exp(-alpha * dt);
+        x = to + fade * (y * cos + (v + alpha * y) / omega * sin);
+        v = fade * (v * cos - (alpha * v + k * y) / omega * sin);
+      } else {
+        var root = Math.sqrt(-disc), r1 = -alpha + root, r2 = -alpha - root;
+        var a1 = (v - r2 * y) / (r1 - r2), a2 = y - a1;
+        var e1 = Math.exp(r1 * dt), e2 = Math.exp(r2 * dt);
+        x = to + a1 * e1 + a2 * e2;
+        v = r1 * a1 * e1 + r2 * a2 * e2;
+      }
       if (Math.abs(x - to) < restD && Math.abs(v) < restV) {
         onUpdate(to); alive = false; onComplete(); return;
       }

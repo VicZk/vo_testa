@@ -18,6 +18,7 @@ original. Uma checklist marcada ou um teste antigo não comprova o ambiente atua
 | [Módulos e fluxos](MODULOS_E_FLUXOS.md) | Models, estados, services, telas e fluxos ponta a ponta |
 | [Convenções de desenvolvimento](../CLAUDE.md) | Regras de código, UI e publicação |
 | [Changelog](../CHANGELOG.md) | Histórico de entregas; evidências pertencem à versão registrada |
+| [Revisão de usabilidade de 22/10](REVISAO_USABILIDADE_2026-10-22.md) | Revisão em andamento, cobertura por fluxo e evidências das entregas |
 | [Checklist de ativação](Checklist_CRM_100.md) | Verificações da instalação, integrações e operação |
 | [Ideias](IMPLEMENTAR_Ideias.md) | Backlog; não representa funcionalidade concluída |
 

@@ -51,7 +51,7 @@ class _BaseE2E(StaticLiveServerTestCase):
         super().tearDownClass()
 
     def setUp(self):
-        self.page = self._browser.new_page()
+        self.page = self._browser.new_page(locale=getattr(self, "LOCALE", None))
 
     def tearDown(self):
         self.page.close()
@@ -239,6 +239,189 @@ class _FunilComercialMixin:
         self.page.fill("input[name=password]", senha)
         self.page.press("input[name=password]", "Enter")
         self.page.wait_for_load_state("networkidle")
+
+
+@unittest.skipUnless(_PLAYWRIGHT_OK, "playwright não instalado (ver docstring)")
+class CampanhaEdicaoE2ETests(_FunilComercialMixin, _BaseE2E):
+    """Criação, digitação, erro e fechamento reais, incluindo o espaço no celular."""
+
+    LOCALE = "pt-BR"
+
+    def setUp(self):
+        super().setUp()
+        from apps.marketing.models import Campanha
+        from apps.nucleo.models import ModuloContratado, Usuario
+        from apps.nucleo.modulos import Modulo
+        ModuloContratado.objects.update_or_create(
+            codigo=Modulo.MARKETING, defaults={"ativo": True})
+        Usuario.objects.create_superuser(username="campanha", password="forte-123-abc")
+        self.campanha = Campanha.objects.create(nome="Férias E2E", objetivo="Reservar cabanas")
+        self.page.add_init_script("localStorage.setItem('sidebar', 'aberta')")
+        self._login("campanha", "forte-123-abc")
+        self.page.goto(self.url("/crm/marketing/"))
+
+    def _abrir(self):
+        self.page.get_by_role("link", name="Férias E2E", exact=True).click()
+        self.page.get_by_label("Nome da campanha").wait_for()
+
+    def test_cancelar_nao_cria_e_duplo_clique_cria_uma_vez(self):
+        from apps.marketing.models import Campanha
+        p = self.page
+        p.get_by_role("link", name="Nova campanha", exact=True).click()
+        p.get_by_role("button", name="Cancelar", exact=True).click()
+        p.locator("#modal-reserva").wait_for(state="hidden")
+        self.assertEqual(Campanha.objects.count(), 1)
+        p.get_by_role("link", name="Nova campanha", exact=True).click()
+        p.get_by_label("Nome da campanha").fill("Semana da família E2E")
+        p.get_by_role("button", name="Criar campanha", exact=True).click(click_count=2)
+        p.get_by_role("heading", name="Semana da família E2E", exact=True).wait_for()
+        self.assertEqual(Campanha.objects.filter(nome="Semana da família E2E").count(), 1)
+        p.get_by_role("button", name="Fechar campanha").click()
+        p.locator("#modal-reserva").wait_for(state="hidden")
+        p.get_by_role("link", name="Semana da família E2E", exact=True).wait_for()
+        self.assertEqual(p.evaluate("document.activeElement.textContent.trim()"), "Semana da família E2E")
+        self.assertFalse(p.evaluate("document.body.classList.contains('sem-rolagem')"))
+
+    def test_digitacao_nao_salva_sozinha_e_erro_preserva_o_preenchimento(self):
+        from decimal import Decimal
+        p = self.page
+        self._abrir()
+        p.get_by_label("Nome da campanha").fill("Férias com crianças E2E")
+        p.get_by_label("Nome da campanha").press("Tab")
+        # O autosave antigo disparava após 600 ms e trocava o campo sob o teclado.
+        p.wait_for_timeout(750)
+        self.assertEqual(p.evaluate("document.activeElement.id"), "id_objetivo")
+        self.campanha.refresh_from_db()
+        self.assertEqual(self.campanha.nome, "Férias E2E")
+        p.get_by_label("Investimento previsto (R$)").fill("inválido")
+        p.get_by_role("button", name="Salvar dados", exact=True).click()
+        p.get_by_text("Digite um número válido, como 150 ou 1.500,50.", exact=True).wait_for()
+        self.assertEqual(p.input_value("#id_nome"), "Férias com crianças E2E")
+        self.assertEqual(p.input_value("#id_verba_prevista"), "inválido")
+        self.assertEqual(p.evaluate("document.activeElement.id"), "id_verba_prevista")
+        p.once("dialog", lambda dialog: dialog.dismiss())
+        p.get_by_role("button", name="Fechar campanha").click()
+        self.assertTrue(p.locator("#modal-conteudo").is_visible())
+        p.get_by_label("Investimento previsto (R$)").fill("1.500,50")
+        p.get_by_role("button", name="Salvar dados", exact=True).click()
+        p.get_by_text("Dados da campanha salvos.", exact=True).wait_for()
+        self.campanha.refresh_from_db()
+        self.assertEqual(self.campanha.nome, "Férias com crianças E2E")
+        self.assertEqual(self.campanha.verba_prevista, Decimal("1500.50"))
+        p.get_by_role("button", name="Fechar campanha").click()
+        p.get_by_role("link", name="Férias com crianças E2E", exact=True).wait_for()
+        self.assertEqual(p.evaluate("document.activeElement.textContent.trim()"), "Férias com crianças E2E")
+
+    def test_ficha_cabe_e_acoes_ficam_visiveis_nas_quatro_larguras(self):
+        p = self.page
+        for largura in (320, 390, 821, 1440):
+            with self.subTest(largura=largura):
+                p.set_viewport_size({"width": largura, "height": 844})
+                self._abrir()
+                p.wait_for_function("getComputedStyle(document.getElementById('modal-conteudo')).transform === 'none'")
+                medida = p.evaluate("""() => {
+                  const rect = s => { const r = document.querySelector(s).getBoundingClientRect();
+                    return {left:r.left, right:r.right, top:r.top, bottom:r.bottom, height:r.height}; };
+                  const close = document.querySelector('.fx-gaveta .modal-fechar'), r = close.getBoundingClientRect();
+                  const hit = document.elementFromPoint(r.left+r.width/2, r.top+r.height/2);
+                  return {ficha:rect('.fx-gaveta'), corpo:rect('.fx-corpo'), pe:rect('.fx-pe'),
+                    largura:document.documentElement.scrollWidth, tela:innerWidth,
+                    fechar:hit === close || close.contains(hit),
+                    trava:document.body.classList.contains('sem-rolagem')};
+                }""")
+                self.assertGreater(medida["corpo"]["height"], 300, medida)
+                self.assertGreaterEqual(medida["ficha"]["left"], 0, medida)
+                self.assertLessEqual(medida["ficha"]["right"], largura + 1, medida)
+                self.assertLessEqual(medida["pe"]["bottom"], 845, medida)
+                self.assertLessEqual(medida["largura"], medida["tela"], medida)
+                self.assertTrue(medida["fechar"], medida)
+                self.assertTrue(medida["trava"], medida)
+                if os.environ.get("E2E_EVIDENCIAS"):
+                    from pathlib import Path
+                    pasta = Path(os.environ["E2E_EVIDENCIAS"])
+                    pasta.mkdir(parents=True, exist_ok=True)
+                    p.screenshot(path=str(pasta / f"campanha-{largura}.png"))
+                p.get_by_role("button", name="Fechar campanha").click()
+                p.locator("#modal-reserva").wait_for(state="hidden")
+
+    def test_teclado_abre_fecha_e_devolve_foco(self):
+        p = self.page
+        p.emulate_media(reduced_motion="reduce")
+        link = p.get_by_role("link", name="Férias E2E", exact=True)
+        link.focus()
+        link.press("Enter")
+        p.get_by_label("Nome da campanha").wait_for()
+        p.keyboard.press("Shift+Tab")
+        self.assertTrue(p.evaluate("document.getElementById('modal-conteudo').contains(document.activeElement)"))
+        p.keyboard.press("Escape")
+        p.locator("#modal-reserva").wait_for(state="hidden")
+        self.assertEqual(p.evaluate("document.activeElement.textContent.trim()"), "Férias E2E")
+
+    def test_duplicar_pede_decisao_sobre_dados_pendentes(self):
+        from apps.marketing.models import Campanha
+        p = self.page
+        self._abrir()
+        p.get_by_label("Nome da campanha").fill("Ainda escrevendo")
+        p.once("dialog", lambda dialog: dialog.dismiss())
+        p.get_by_role("button", name="Duplicar campanha", exact=True).click()
+        self.assertEqual(p.input_value("#id_nome"), "Ainda escrevendo")
+        self.assertEqual(Campanha.objects.count(), 1)
+
+    def test_pagina_completa_descarta_com_uma_so_confirmacao(self):
+        from django.urls import reverse
+        p = self.page
+        p.goto(self.url(reverse("marketing:detalhe", args=[self.campanha.pk])))
+        p.get_by_label("Nome da campanha").fill("Alteração que será descartada")
+        dialogs = []
+
+        def aceitar(dialog):
+            dialogs.append(dialog.type)
+            dialog.accept()
+
+        p.on("dialog", aceitar)
+        p.get_by_role("button", name="Fechar campanha").click()
+        p.wait_for_url(self.url(reverse("marketing:quadro")))
+        self.assertEqual(dialogs, ["confirm"])
+        self.campanha.refresh_from_db()
+        self.assertEqual(self.campanha.nome, "Férias E2E")
+
+    def test_animacao_interrompida_nao_apaga_a_ficha_reaberta(self):
+        p = self.page
+        self._abrir()
+        p.evaluate("() => { fecharModal(); abrirModal(); }")
+        p.wait_for_timeout(600)
+        self.assertTrue(p.get_by_label("Nome da campanha").is_visible())
+        p.get_by_role("button", name="Fechar campanha").click()
+        p.locator("#modal-reserva").wait_for(state="hidden")
+
+    def test_animacao_termina_com_quadros_lentos_e_ao_voltar_a_aba(self):
+        # Relógio determinístico somente para o motor: reproduz 30 fps, 1 fps e
+        # aba suspensa sem depender da velocidade da máquina de CI.
+        resultado = self.page.evaluate("""() => {
+          const raf = window.requestAnimationFrame, cancel = window.cancelAnimationFrame;
+          const resultados = [];
+          try {
+            for (const passo of [1000/30, 1000, 60000]) {
+              for (const bounce of [0, .25, -.2]) {
+                let callback, tempo = 0, fim = 0, valores = [];
+                window.requestAnimationFrame = fn => { callback = fn; return 1; };
+                window.cancelAnimationFrame = () => { callback = null; };
+                Fluid.spring({from:1, to:0, response:.22, bounce,
+                  onUpdate:v => valores.push(v), onComplete:() => fim++});
+                for (let i=0; callback && i<100; i++) {
+                  const atual = callback; callback = null; atual(tempo); tempo += passo;
+                }
+                resultados.push({passo, bounce, fim, ultimo:valores.at(-1),
+                  estavel:valores.every(v => Number.isFinite(v) && Math.abs(v) <= 1.01)});
+              }
+            }
+          } finally { window.requestAnimationFrame = raf; window.cancelAnimationFrame = cancel; }
+          return resultados;
+        }""")
+        for caso in resultado:
+            self.assertEqual(caso["fim"], 1, caso)
+            self.assertEqual(caso["ultimo"], 0, caso)
+            self.assertTrue(caso["estavel"], caso)
 
 
 @unittest.skipUnless(_PLAYWRIGHT_OK, "playwright não instalado (ver docstring)")

@@ -9,6 +9,41 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 22/10/2026 — Campanhas com criação guiada e edição segura
+
+**O que melhorou**
+- "Nova campanha" pede nome e objetivo antes de criar. Cancelar não deixa uma
+  campanha vazia; repetir o envio retorna a mesma campanha.
+- A ficha usa a janela compartilhada do sistema, acima do menu, com cabeçalho
+  curto, conteúdo que rola e ações visíveis no rodapé. Planejamento, tarefas,
+  equipe, peças e resultados ficam organizados em seções.
+- Os dados são salvos por botão. Digitar ou mudar de campo não troca mais o
+  formulário; erros explicam a correção e preservam o preenchimento. Fechar ou
+  executar outra ação com dados pendentes pede uma decisão.
+- O quadro atualiza ao fechar uma ficha alterada. Os títulos das campanhas são
+  links acessíveis por teclado, também com abertura da página completa.
+- A animação compartilhada usa um cálculo estável com poucos quadros por segundo;
+  abrir novamente interrompe o fechamento anterior sem apagar a nova janela.
+
+**O que foi modificado**
+- Formulários, views, templates e JavaScript de Marketing; migration aditiva
+  `marketing.0007` para a chave única de criação. Campanhas existentes são preservadas.
+- Modal de `base.html`, estilos no design system e motor `fluid.js`.
+- Testes de validação/idempotência e oito cenários de navegador. O teste antigo de
+  áudio fecha o arquivo que lê para permitir a limpeza da pasta no Windows.
+
+**Validação e cobertura**
+- Suíte completa local: 1.786 testes aprovados. A rodada focada posterior passou
+  nos 13 testes de edição e oito testes de navegador, incluindo os dois casos
+  acrescentados após o início da suíte completa. Lint e migrations sem pendências.
+- Oito cenários novos passaram no Chromium: cancelamento/criação repetida,
+  digitação/erro/salvamento, alterações pendentes, teclado, interrupção da animação,
+  baixa taxa de quadros e larguras de 320, 390, 821 e 1440 px.
+- A cobertura da revisão geral, ainda em andamento, está em
+  [Revisão de usabilidade de 22/10](docs/REVISAO_USABILIDADE_2026-10-22.md).
+
+---
+
 ## 22/10/2026 — Dois arremates do toque (`03549c9`, `40280ee`; merges `f9c5832` e `3e72743`)
 
 **O que melhorou**

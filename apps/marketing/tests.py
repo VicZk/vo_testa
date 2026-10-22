@@ -63,7 +63,8 @@ class QuadroTests(TestCase):
         self.assertContains(r, "Quadro")
 
     def test_nova_campanha_nasce_em_ideia(self):
-        r = self.client.post("/crm/marketing/campanha/nova/", {"nome": "Feriadão"})
+        import uuid
+        r = self.client.post("/crm/marketing/campanha/nova/", {"nome": "Feriadão", "chave": uuid.uuid4()})
         self.assertEqual(r.status_code, 302)
         c = Campanha.objects.get(nome="Feriadão")
         self.assertEqual(c.fase, Campanha.Fase.IDEIA)
@@ -712,7 +713,7 @@ class FichaGavetaTests(TestCase):
 
     def test_quadro_tem_slot_e_cards_abrem_a_gaveta(self):
         r = self.client.get("/crm/marketing/")
-        self.assertContains(r, 'id="ficha-slot"')
+        self.assertContains(r, 'hx-target="#modal-conteudo"')
         self.assertContains(r, f"/crm/marketing/campanha/{self.c.id}/ficha/")
 
     def test_ficha_renderiza_a_gaveta(self):
