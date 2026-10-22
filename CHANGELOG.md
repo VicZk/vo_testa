@@ -9,7 +9,7 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
-## 21/10/2026 — O sistema roda sob um prefixo de URL e o ambiente de teste vai para viczk.cloud/votesta (`c37ae9a` a `d0d2d57`)
+## 21/10/2026 — O sistema roda sob um prefixo de URL e o ambiente de teste vai para viczk.cloud/votesta (`c37ae9a` a `ac3d522`)
 
 Décimo quarto bloco, pequeno: para o ambiente de teste morar num caminho do domínio
 pessoal do dono (onde outros projetos vivem lado a lado), e não num endereço próprio.
@@ -30,6 +30,9 @@ pessoal do dono (onde outros projetos vivem lado a lado), e não num endereço p
 - **Healthcheck sob prefixo (`d0d2d57`):** a isenção de HTTPS do `/healthz/` comparava
   com o caminho sem o prefixo; sob `/votesta` o healthcheck em HTTP levava 301 e o
   container nunca ficava saudável. Achado pelo próprio deploy.
+- **Relatório de CSP sob prefixo:** o navegador mandava as violações para
+  `viczk.cloud/csp/relatorio/`, a raiz do domínio (outro projeto); agora vão para
+  dentro do prefixo.
 
 **O que foi modificado**
 - `config/settings.py`: `URL_PREFIX` → `FORCE_SCRIPT_NAME`, cookies de sessão e CSRF
