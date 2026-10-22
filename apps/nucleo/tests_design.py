@@ -1514,8 +1514,25 @@ class AlvoDeToqueTests(TestCase):
 
     def test_controles_pequenos_entram_na_regra_de_toque(self):
         for sel in (".escala-chip", ".chip-x", ".he-selo .he-x", ".pdv-seg a",
-                    ".lb-btn-ghost", ".mk-pil-acao", "a.est-produto-nome"):
+                    ".lb-btn-ghost", ".mk-pil-acao", "a.est-produto-nome",
+                    # botões do kit da ficha de campanha (Marketing) e o "×" dos
+                    # carrinhos — Loja, Restaurante e Lavanderia usam a mesma classe
+                    ".fx-chip", ".fx-btn-n", ".fx-dispensar", ".fx-x", ".mkt-btn-ghost",
+                    ".pdv-x"):
             self.assertIn(sel, self.coarse, f"{sel} ficou fora do alvo de toque")
+
+    def test_caixinha_da_etapa_cresce_a_area_sem_crescer_o_quadrado(self):
+        """`.fx-chk` é um quadrado de 20px dentro de um cartão de linha: com 44px
+        de lado ele dominaria a linha. A área de toque vem de um pseudo-elemento
+        transparente (18px de caixa de preenchimento + 13 de cada lado = 44), e o
+        desenho fica. As linhas ficam a 67px uma da outra, então as áreas de duas
+        etapas vizinhas não se encostam."""
+        bloco = re.search(r"\.fx-chk::before \{([^}]*)\}", self.coarse)
+        self.assertIsNotNone(bloco, "a caixinha da etapa ficou sem área de toque")
+        self.assertIn("inset: -13px", bloco.group(1))
+        self.assertIn("position: absolute", bloco.group(1))
+        # sem `position` no próprio botão o inset se mede no ancestral errado
+        self.assertRegex(self.coarse, r"\.fx-chk \{[^}]*position: relative")
 
     def test_mais_da_hora_extra_cresce_a_caixa_sem_inchar_o_desenho(self):
         bloco = re.search(r"\.escala-chip \.he-add \{([^}]*)\}", self.coarse)
