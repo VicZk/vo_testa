@@ -476,6 +476,10 @@ class CicloDeEstadosTests(ReservasTestsBase):
             r.fazer_checkin(self.usuario)
         self.assertIn("limpeza ou inspeção", str(ctx.exception).lower())
         definir_status(self.uh, StatusLimpeza.Situacao.LIMPA, self.usuario)
+        with self.assertRaises(ValidationError):
+            r.fazer_checkin(self.usuario)
+        from apps.governanca.services import inspecionar
+        inspecionar(self.uh, self.usuario)
         conta = r.fazer_checkin(self.usuario)
         self.assertIsNotNone(conta)
 

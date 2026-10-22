@@ -1425,8 +1425,8 @@ def _contato_pousada():
     try:
         from apps.site.models import ConfiguracaoSite
         cfg = ConfiguracaoSite.load()
-        whatsapp = "".join(c for c in (cfg.whatsapp or "") if c.isdigit())
-        telefone = (cfg.telefone or "").strip()
+        whatsapp = cfg.whatsapp_publico
+        telefone = cfg.telefone_publico
         email = email or (cfg.email or "")
     except Exception:
         pass

@@ -286,6 +286,8 @@
 html,
 body { height: 100%; }
 
+html { scrollbar-gutter: stable; }
+
 body {
   margin: 0;
   font-family: var(--fonte-ui);
@@ -418,6 +420,8 @@ textarea { resize: vertical; }
 
 input[type="checkbox"],
 input[type="radio"] { accent-color: var(--lampiao); }
+
+.ajuda { display: block; color: var(--tinta-suave); font-size: .74rem; margin-top: .25rem; }
 
 .erro { display: block; color: var(--perigo); font-size: .78rem; margin-top: .25rem; }
 

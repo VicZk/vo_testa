@@ -6,6 +6,22 @@ from .models import ConfiguracaoSite
 
 
 class DivulgacaoVerificadaTests(TestCase):
+    def test_telefone_e_numeros_nao_verificados_tambem_ficam_fora_do_jsonld_e_email(self):
+        import json
+        import re
+
+        from apps.comercial.services import _contato_pousada
+        config = ConfiguracaoSite.load()
+        config.whatsapp, config.telefone = "5549999999999", "(49) 99999-9999"
+        config.numero_quartos = "30"
+        config.save()
+        html = self.client.get("/").content.decode()
+        dados = json.loads(re.search(r'<script type="application/ld\+json">(.*?)</script>', html, re.S).group(1))
+        self.assertNotIn("telephone", dados)
+        self.assertNotIn("numberOfRooms", dados)
+        self.assertNotIn("wa.me/5549999999999", html)
+        self.assertFalse(_contato_pousada()["whatsapp"])
+
     def test_legado_nao_publica_numeros_sem_fonte_nem_telefone_de_exemplo(self):
         config = ConfiguracaoSite(numero_avaliacoes="19k+", numero_viajantes="5k+",
             numero_quartos="30", whatsapp="5549999999999", telefone="(49) 99999-9999")

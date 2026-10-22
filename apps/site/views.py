@@ -84,7 +84,7 @@ def home(request):
 
 def politica_privacidade(request):
     """Política de Privacidade (LGPD) — URL pública usada pelo app Meta/WhatsApp."""
-    return render(request, 'site/legal/politica_privacidade.html')
+    return render(request, 'site/legal/politica_privacidade.html', {'config': ConfiguracaoSite.load()})
 
 
 def termos_servico(request):
@@ -94,12 +94,12 @@ def termos_servico(request):
     cálculo da devolução (`descricao_politica`, settings): o texto fixo dizia 90% de
     devolução dentro dos 7 dias, enquanto o sistema devolve 100%."""
     from apps.reservas.cancelamento import descricao_politica
-    return render(request, 'site/legal/termos_servico.html', {'politica': descricao_politica()})
+    return render(request, 'site/legal/termos_servico.html', {'politica': descricao_politica(), 'config': ConfiguracaoSite.load()})
 
 
 def exclusao_dados(request):
     """Instruções de exclusão de dados do usuário — exigido pelo app Meta."""
-    return render(request, 'site/legal/exclusao_dados.html')
+    return render(request, 'site/legal/exclusao_dados.html', {'config': ConfiguracaoSite.load()})
 
 
 def quartos_todos(request):

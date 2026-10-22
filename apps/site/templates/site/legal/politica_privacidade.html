@@ -72,7 +72,7 @@ em trânsito).</p>
 <p><b>Encarregado pelo tratamento de dados:</b> {{ dpo.nome }},
 <a href="mailto:{{ dpo.email }}">{{ dpo.email }}</a>.</p>
 <p>Dúvidas ou pedidos sobre seus dados, fale também pelo
-{% if config.whatsapp_publico %}<b>WhatsApp <a href="https://wa.me/{{ config.whatsapp_publico }}">{{ config.telefone|default:config.whatsapp_publico }}</a></b> ou pelo {% endif %}e-mail
+{% if config.whatsapp_publico %}<b>WhatsApp <a href="https://wa.me/{{ config.whatsapp_publico }}">{{ config.telefone_publico|default:config.whatsapp_publico }}</a></b> ou pelo {% endif %}e-mail
 <a href="mailto:comercial@pousadavotesta.com.br">comercial@pousadavotesta.com.br</a>.
 Responderemos nos prazos da LGPD.</p>
 

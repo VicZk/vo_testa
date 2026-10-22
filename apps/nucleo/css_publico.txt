@@ -30,6 +30,7 @@ a:hover
 h1
 h2
 .subtitulo
+.ajuda
 .campo
 textarea
 .campo label

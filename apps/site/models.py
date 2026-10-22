@@ -299,6 +299,12 @@ class ConfiguracaoSite(models.Model):
         return numero if self.contato_verificado and re.fullmatch(r"[1-9][0-9]{7,14}", numero) and numero != "5549999999999" else ""
 
     @property
+    def telefone_publico(self):
+        import re
+        numero = re.sub(r"\D", "", self.telefone or "")
+        return self.telefone if self.contato_verificado and len(numero) >= 10 and numero not in ("49999999999", "5549999999999") else ""
+
+    @property
     def numeros_publicos(self):
         if not self.numeros_verificados or not self.fonte_numeros.strip():
             return []
@@ -313,6 +319,8 @@ class ConfiguracaoSite(models.Model):
             raise ValidationError({"fonte_numeros": "Informe a fonte e a data da conferência antes de publicar os números."})
         if self.contato_verificado and self.whatsapp and not self.whatsapp_publico:
             raise ValidationError({"whatsapp": "Informe um número oficial válido, com DDI; o número de exemplo não pode ser publicado."})
+        if self.contato_verificado and self.telefone and not self.telefone_publico:
+            raise ValidationError({"telefone": "Informe o telefone oficial; o número de exemplo não pode ser publicado."})
 
     # Desconto
     desconto_pix = models.PositiveSmallIntegerField('Desconto Pix (%)', default=5)

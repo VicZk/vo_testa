@@ -628,6 +628,12 @@ class TermosSeguemAPoliticaTests(TestCase):
 class PaginasLegaisTests(TestCase):
     """Páginas legais públicas (privacidade/termos/exclusão) p/ o app Meta/WhatsApp."""
 
+    def setUp(self):
+        from apps.site.models import ConfiguracaoSite
+        cfg = ConfiguracaoSite.load()
+        cfg.whatsapp, cfg.telefone, cfg.contato_verificado = "554920550005", "(49) 2055-0005", True
+        cfg.save()
+
     def test_paginas_legais_abrem_e_tem_chrome(self):
         for nome, trecho in [
             ("core:politica_privacidade", "Política de Privacidade"),
@@ -791,6 +797,13 @@ class BuscaSemConsultaPorQuartoTests(TestCase):
 
 class DadosEstruturadosTests(TestCase):
     """JSON-LD da pousada na home (ficha de hospedagem do Google)."""
+
+    def setUp(self):
+        from apps.site.models import ConfiguracaoSite
+        cfg = ConfiguracaoSite.load()
+        cfg.telefone, cfg.contato_verificado = "(49) 2055-0005", True
+        cfg.numero_quartos, cfg.numeros_verificados, cfg.fonte_numeros = "24", True, "Cadastro fictício conferido no teste"
+        cfg.save()
 
     def test_home_tem_lodgingbusiness_valido(self):
         import json

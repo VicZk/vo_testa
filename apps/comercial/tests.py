@@ -2335,6 +2335,10 @@ class EmailLeadTests(TestCase):
         self.assertIn("http://x/p/1", d["html"])        # botão de pagamento
 
     def test_email_tem_links_de_resposta(self):
+        from apps.site.models import ConfiguracaoSite
+        cfg = ConfiguracaoSite.load()
+        cfg.whatsapp, cfg.contato_verificado = "554920550005", True
+        cfg.save()
         d = services.montar_proposta_email(self.op)
         self.assertIn("https://wa.me/", d["html"])          # botão WhatsApp
         self.assertIn("Responder no WhatsApp", d["html"])

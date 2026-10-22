@@ -1073,6 +1073,10 @@ class SiteNoCelularE2ETests(_UnidadeVendavelMixin, _BaseE2E):
         cache.clear()
         self.uh = self._semear_unidade()
         self.page.set_viewport_size(self.CELULAR)
+        from apps.site.models import ConfiguracaoSite
+        cfg = ConfiguracaoSite.load()
+        cfg.whatsapp, cfg.telefone, cfg.contato_verificado = "554920550005", "(49) 2055-0005", True
+        cfg.save()
 
     def _fim_da_pagina(self):
         self.page.evaluate("() => window.scrollTo(0, document.scrollingElement.scrollHeight)")

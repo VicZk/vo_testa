@@ -153,6 +153,7 @@ class Command(BaseCommand):
             ).order_by("pk"):
                 gov.concluir_tarefa(tarefa, self.user)
             gov.definir_status(uh, StatusLimpeza.Situacao.LIMPA, self.user)
+            gov.inspecionar(uh, self.user)
             # Hóspede de mentira não tem FNRH: só o seed passa pela trava.
             with override_settings(FNRH_BLOQUEAR_CHECKIN=False):
                 conta = r.fazer_checkin(self.user)

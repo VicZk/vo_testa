@@ -15,13 +15,12 @@ _ESCAPE_JSON_EM_SCRIPT = {ord(">"): "\\u003E", ord("<"): "\\u003C", ord("&"): "\
 # Município/UF da pousada — fixos (não é dado que o painel edita; o endereço
 # completo, sim, vem da Configuração do Site).
 CIDADE, UF, CEP, PAIS = "Itá", "SC", "89760-000", "BR"
-QUARTOS = 24  # os 24 quartos físicos de hospedagem (o day use fica fora da conta)
 
 
 @register.simple_tag(takes_context=True)
 def jsonld_pousada(context):
     """Ficha da pousada em JSON-LD (`LodgingBusiness`): nome, endereço em Itá/SC,
-    telefone/WhatsApp, 24 quartos e faixa de preço. É o que o Google usa para a
+    contatos e número de quartos conferidos. É o que o Google usa para a
     ficha de hospedagem e o mapa. Só é montado onde a tag é chamada (a home)."""
     from apps.site.models import ConfiguracaoSite
 
@@ -45,14 +44,16 @@ def jsonld_pousada(context):
             "postalCode": CEP,
             "addressCountry": PAIS,
         },
-        "telephone": cfg.telefone,
         "email": cfg.email,
-        "numberOfRooms": QUARTOS,
         "priceRange": "R$$",
         "currenciesAccepted": "BRL",
         "petsAllowed": True,
     }
-    redes = [f"https://wa.me/{cfg.whatsapp}"] if cfg.whatsapp else []
+    if cfg.telefone_publico:
+        dados["telephone"] = cfg.telefone_publico
+    if cfg.numeros_publicos and cfg.numero_quartos.isdigit():
+        dados["numberOfRooms"] = int(cfg.numero_quartos)
+    redes = [f"https://wa.me/{cfg.whatsapp_publico}"] if cfg.whatsapp_publico else []
     redes += [u for u in (cfg.instagram_url, cfg.facebook_url, cfg.tiktok_url) if u]
     if redes:
         dados["sameAs"] = redes
