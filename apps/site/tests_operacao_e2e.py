@@ -35,6 +35,40 @@ if _PLAYWRIGHT_OK:
 class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
     LOCALE = "pt-BR"
 
+    def test_busca_titulo_e_formulario_compartilham_o_centro_da_area_util(self):
+        p = self.page
+        p.emulate_media(reduced_motion="reduce")
+        rotas = [reverse("mfa_config"), reverse("uh_editar", args=[self.room.pk]),
+                 reverse("tipo_uh_novo"), reverse("pessoa_nova")]
+        for largura in (320, 390, 1024, 1440, 2560, 3440):
+            p.set_viewport_size({"width": largura, "height": 900})
+            for rota in rotas:
+                for recolhido in ((False, True) if largura > 820 else (False,)):
+                    with self.subTest(largura=largura, rota=rota, recolhido=recolhido):
+                        p.goto(self.url(rota))
+                        if recolhido:
+                            p.get_by_role("button", name="Recolher menu", exact=True).click()
+                            expect(p.get_by_role("button", name="Expandir menu", exact=True)).to_be_visible()
+                        medidas = p.evaluate("""() => {
+                            const box = selector => document.querySelector(selector).getBoundingClientRect();
+                            const main = box('.main');
+                            const cartao = box('.conteudo > .form-cartao, .conteudo-compacto > .cartao-estreito');
+                            const busca = box('.busca-global');
+                            return {centro: main.x + main.width / 2,
+                                    cartao: cartao.x + cartao.width / 2,
+                                    busca: busca.x + busca.width / 2,
+                                    titulo: box('main h1').x, borda: cartao.x,
+                                    documento: document.documentElement.scrollWidth};
+                        }""")
+                        self.assertAlmostEqual(medidas["busca"], medidas["centro"], delta=1)
+                        self.assertAlmostEqual(medidas["cartao"], medidas["centro"], delta=1)
+                        self.assertAlmostEqual(medidas["titulo"], medidas["borda"], delta=1)
+                        self.assertLessEqual(medidas["documento"], largura + 1)
+        p.locator('.busca-global').click()
+        expect(p.get_by_role("dialog", name="Buscar e comandos", exact=True)).to_be_visible()
+        p.locator('#paleta-input').press("Escape")
+        expect(p.get_by_role("dialog", name="Buscar e comandos", exact=True)).to_be_hidden()
+
     def test_conciliacao_alinha_controles_mesmo_com_nome_de_arquivo_longo(self):
         p = self.page
         for largura in (320, 390, 821, 1024, 1440):

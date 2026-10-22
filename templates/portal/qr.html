@@ -3,6 +3,8 @@
 
 {% block titulo %}{% if finalidade %}QR do pré check-in{% else %}QR do hóspede{% endif %} | Portal{% endblock %}
 
+{% block conteudo_classe %}conteudo-compacto{% endblock %}
+
 {% block conteudo %}
 {% comment %}A mesma tela serve dois links: o portal da estadia e o pré check-in
 (FNRH). O contexto mandava `finalidade` e o template ignorava — a tela do FNRH

@@ -3,6 +3,8 @@
 
 {% block titulo %}{% if pessoa %}{{ pessoa.nome }}{% else %}Nova pessoa{% endif %} | CRM Vô Testa{% endblock %}
 
+{% block conteudo_classe %}conteudo-formulario{% endblock %}
+
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Cadastros</p>
 <h1>{% if pessoa %}Editar {{ pessoa.nome }}{% else %}Nova pessoa{% endif %}</h1>

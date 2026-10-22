@@ -9,6 +9,16 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 22/10/2026: busca e formulários centralizados em telas ultrawide
+
+- A busca global acompanha o centro da área útil com o menu aberto ou recolhido.
+- MFA, cadastros, edição de quartos e formulários de operação agrupam título,
+  campos e ações numa coluna central com largura de leitura adequada.
+- Conferência visual em 38 telas, 117 medições de layout e regressão de navegador
+  com 40 combinações de largura, formulário e estado do menu.
+- O teste de limite do webhook usa uma janela de tempo controlada e também
+  confirma a renovação do limite, evitando falha aleatória na virada do minuto.
+
 ## 22/10/2026: credenciais fora da trilha de auditoria
 
 - A ativação e as alterações de MFA continuam auditadas, sem copiar segredos ou

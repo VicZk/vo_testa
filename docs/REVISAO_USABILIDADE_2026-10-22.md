@@ -498,3 +498,29 @@ As evidências visuais usam dados fictícios da instalação local:
 A aprovação da suíte existente valida esta alteração de interface. Ela não
 certifica a prontidão operacional para inauguração; a auditoria independente dos
 fluxos da pousada tem escopo, resultados e relatório próprios.
+
+## Entrega 9: centralização em monitores ultrawide
+
+A busca global estava alinhada à borda esquerda do conteúdo; os cartões de MFA e
+os formulários estreitos ocupavam a esquerda de uma área de até 1760 px. Agora a
+busca usa o centro da área disponível ao lado do menu. Os formulários e páginas de
+conta têm contêiner próprio, mantendo título, instruções e ações junto do cartão.
+O padrão também se aplica aos cadastros compartilhados e aos formulários de
+reservas e governança. Mapas e calendários conservam o espaço de trabalho amplo.
+
+Foram medidas 38 telas em 390, 1440 e 3440 px, mais três formulários em 2560 px
+com menu recolhido: 117 observações sem desvio do centro acima de 1 px nem
+transbordamento horizontal. São medições de geometria, não 117 jornadas completas.
+O menu móvel e a busca global foram abertos e fechados na inspeção manual.
+
+Uma regressão de Chromium valida 40 combinações de quatro páginas, larguras de
+320 a 3440 px e menu aberto/recolhido. Ela confere o centro da busca e do cartão,
+a borda do título e a largura do documento. O teste passou junto das verificações
+direcionadas; a execução integral no CI acompanha a publicação.
+
+Evidências com dados fictícios:
+
+- [MFA em 3440 px](evidencias/usabilidade-2026-10-22/9-mfa-3440.png)
+  e [em 390 px](evidencias/usabilidade-2026-10-22/9-mfa-390.png).
+- [Edição de quarto em 3440 px](evidencias/usabilidade-2026-10-22/9-quarto-3440.png).
+- [Matriz das 117 medições](evidencias/usabilidade-2026-10-22/9-medidas.json).

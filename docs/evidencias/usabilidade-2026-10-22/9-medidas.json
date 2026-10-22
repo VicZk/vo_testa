@@ -1,0 +1,2198 @@
+[
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Visão geral | CRM Vô Testa",
+    "url": "/crm/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo tela-reservas conteudo-largo",
+        "offset": 0,
+        "width": 3167
+      }
+    ],
+    "overflow": false,
+    "title": "Mapa de reservas | CRM Vô Testa",
+    "url": "/crm/reservas/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Governança | visão geral",
+    "url": "/crm/governanca/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Manutenção | CRM Vô Testa",
+    "url": "/crm/manutencao/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Estoque | CRM Vô Testa",
+    "url": "/crm/estoque/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Loja | PDV",
+    "url": "/crm/loja/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Restaurante | comandas",
+    "url": "/crm/restaurante/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Lavanderia | CRM Vô Testa",
+    "url": "/crm/lavanderia/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Pagamentos Online | CRM Vô Testa",
+    "url": "/crm/pagamentos/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Fiscal | CRM Vô Testa",
+    "url": "/crm/fiscal/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Escala | CRM Vô Testa",
+    "url": "/crm/escala/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Funil de vendas | Comercial",
+    "url": "/crm/comercial/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Páginas de Captação | Comercial",
+    "url": "/crm/comercial/paginas/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Respostas rápidas | Comercial",
+    "url": "/crm/comercial/respostas/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Marketing | CRM Vô Testa",
+    "url": "/crm/marketing/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Solicitações do portal",
+    "url": "/hospede/recepcao/solicitacoes/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Auditoria | CRM Vô Testa",
+    "url": "/crm/auditoria/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Relatórios | CRM Vô Testa",
+    "url": "/crm/relatorios/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Opinião dos hóspedes | CRM Vô Testa",
+    "url": "/crm/nps/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Caixa | CRM Vô Testa",
+    "url": "/crm/caixa/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      },
+      {
+        "class": "form-cartao lb-compose",
+        "offset": 0,
+        "width": 620
+      }
+    ],
+    "overflow": false,
+    "title": "Recados do turno | CRM Vô Testa",
+    "url": "/crm/logbook/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Hóspedes | CRM Vô Testa",
+    "url": "/crm/hospedes/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Agências | CRM Vô Testa",
+    "url": "/crm/agencias/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Empresas | CRM Vô Testa",
+    "url": "/crm/empresas/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Fornecedores | CRM Vô Testa",
+    "url": "/crm/fornecedores/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Pessoas | CRM Vô Testa",
+    "url": "/crm/pessoas/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Funcionários | CRM Vô Testa",
+    "url": "/crm/funcionarios/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Quartos & tipos | CRM Vô Testa",
+    "url": "/crm/estrutura/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      },
+      {
+        "class": "form-cartao form-largo",
+        "offset": 0,
+        "width": 1683.21875
+      }
+    ],
+    "overflow": false,
+    "title": "Tabela de preços | CRM Vô Testa",
+    "url": "/crm/precos/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Temporadas | CRM Vô Testa",
+    "url": "/crm/temporadas/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Lançamentos | CRM Vô Testa",
+    "url": "/crm/financeiro/lancamentos/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Contas a pagar/receber | CRM Vô Testa",
+    "url": "/crm/financeiro/contas/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Sessões de caixa | CRM Vô Testa",
+    "url": "/crm/caixa/sessoes/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Conciliação | CRM Vô Testa",
+    "url": "/crm/conciliacao/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1760
+      }
+    ],
+    "overflow": false,
+    "title": "Módulos | CRM Vô Testa",
+    "url": "/crm/configuracoes/modulos/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo conteudo-compacto",
+        "offset": -0.01,
+        "width": 596.796875
+      },
+      {
+        "class": "cartao cartao-estreito",
+        "offset": -0.01,
+        "width": 520.015625
+      }
+    ],
+    "overflow": false,
+    "title": "Verificação em duas etapas | CRM Vô Testa",
+    "url": "/crm/mfa/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo conteudo-formulario",
+        "offset": -0.01,
+        "width": 696.796875
+      },
+      {
+        "class": "form-cartao",
+        "offset": -0.02,
+        "width": 620
+      }
+    ],
+    "overflow": false,
+    "title": "Quarto | CRM Vô Testa",
+    "url": "/crm/estrutura/uhs/37/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo conteudo-formulario",
+        "offset": -0.01,
+        "width": 696.796875
+      },
+      {
+        "class": "form-cartao",
+        "offset": -0.02,
+        "width": 620
+      }
+    ],
+    "overflow": false,
+    "title": "Tipo de quarto | CRM Vô Testa",
+    "url": "/crm/estrutura/tipos/novo/",
+    "width": 3440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 375
+      }
+    ],
+    "overflow": false,
+    "title": "Visão geral | CRM Vô Testa",
+    "url": "/crm/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo tela-reservas conteudo-largo",
+        "offset": 0,
+        "width": 375
+      }
+    ],
+    "overflow": false,
+    "title": "Mapa de reservas | CRM Vô Testa",
+    "url": "/crm/reservas/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 375
+      }
+    ],
+    "overflow": false,
+    "title": "Governança | visão geral",
+    "url": "/crm/governanca/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 375
+      }
+    ],
+    "overflow": false,
+    "title": "Manutenção | CRM Vô Testa",
+    "url": "/crm/manutencao/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 375
+      }
+    ],
+    "overflow": false,
+    "title": "Estoque | CRM Vô Testa",
+    "url": "/crm/estoque/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 375
+      }
+    ],
+    "overflow": false,
+    "title": "Loja | PDV",
+    "url": "/crm/loja/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 375
+      }
+    ],
+    "overflow": false,
+    "title": "Restaurante | comandas",
+    "url": "/crm/restaurante/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 375
+      }
+    ],
+    "overflow": false,
+    "title": "Lavanderia | CRM Vô Testa",
+    "url": "/crm/lavanderia/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 375
+      }
+    ],
+    "overflow": false,
+    "title": "Pagamentos Online | CRM Vô Testa",
+    "url": "/crm/pagamentos/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 390
+      }
+    ],
+    "overflow": false,
+    "title": "Fiscal | CRM Vô Testa",
+    "url": "/crm/fiscal/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 375
+      }
+    ],
+    "overflow": false,
+    "title": "Escala | CRM Vô Testa",
+    "url": "/crm/escala/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 375
+      }
+    ],
+    "overflow": false,
+    "title": "Funil de vendas | Comercial",
+    "url": "/crm/comercial/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 390
+      }
+    ],
+    "overflow": false,
+    "title": "Páginas de Captação | Comercial",
+    "url": "/crm/comercial/paginas/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 390
+      }
+    ],
+    "overflow": false,
+    "title": "Respostas rápidas | Comercial",
+    "url": "/crm/comercial/respostas/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 375
+      }
+    ],
+    "overflow": false,
+    "title": "Marketing | CRM Vô Testa",
+    "url": "/crm/marketing/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 390
+      }
+    ],
+    "overflow": false,
+    "title": "Solicitações do portal",
+    "url": "/hospede/recepcao/solicitacoes/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 375
+      }
+    ],
+    "overflow": false,
+    "title": "Auditoria | CRM Vô Testa",
+    "url": "/crm/auditoria/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 375
+      }
+    ],
+    "overflow": false,
+    "title": "Relatórios | CRM Vô Testa",
+    "url": "/crm/relatorios/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 390
+      }
+    ],
+    "overflow": false,
+    "title": "Opinião dos hóspedes | CRM Vô Testa",
+    "url": "/crm/nps/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 375
+      }
+    ],
+    "overflow": false,
+    "title": "Caixa | CRM Vô Testa",
+    "url": "/crm/caixa/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 375
+      },
+      {
+        "class": "form-cartao lb-compose",
+        "offset": 0,
+        "width": 336.625
+      }
+    ],
+    "overflow": false,
+    "title": "Recados do turno | CRM Vô Testa",
+    "url": "/crm/logbook/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 390
+      }
+    ],
+    "overflow": false,
+    "title": "Hóspedes | CRM Vô Testa",
+    "url": "/crm/hospedes/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 390
+      }
+    ],
+    "overflow": false,
+    "title": "Agências | CRM Vô Testa",
+    "url": "/crm/agencias/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 390
+      }
+    ],
+    "overflow": false,
+    "title": "Empresas | CRM Vô Testa",
+    "url": "/crm/empresas/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 390
+      }
+    ],
+    "overflow": false,
+    "title": "Fornecedores | CRM Vô Testa",
+    "url": "/crm/fornecedores/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 375
+      }
+    ],
+    "overflow": false,
+    "title": "Pessoas | CRM Vô Testa",
+    "url": "/crm/pessoas/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 375
+      }
+    ],
+    "overflow": false,
+    "title": "Funcionários | CRM Vô Testa",
+    "url": "/crm/funcionarios/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 375
+      }
+    ],
+    "overflow": false,
+    "title": "Quartos & tipos | CRM Vô Testa",
+    "url": "/crm/estrutura/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 375
+      },
+      {
+        "class": "form-cartao form-largo",
+        "offset": 0,
+        "width": 336.625
+      }
+    ],
+    "overflow": false,
+    "title": "Tabela de preços | CRM Vô Testa",
+    "url": "/crm/precos/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 390
+      }
+    ],
+    "overflow": false,
+    "title": "Temporadas | CRM Vô Testa",
+    "url": "/crm/temporadas/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 390
+      }
+    ],
+    "overflow": false,
+    "title": "Lançamentos | CRM Vô Testa",
+    "url": "/crm/financeiro/lancamentos/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 390
+      }
+    ],
+    "overflow": false,
+    "title": "Contas a pagar/receber | CRM Vô Testa",
+    "url": "/crm/financeiro/contas/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 390
+      }
+    ],
+    "overflow": false,
+    "title": "Sessões de caixa | CRM Vô Testa",
+    "url": "/crm/caixa/sessoes/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 375
+      }
+    ],
+    "overflow": false,
+    "title": "Conciliação | CRM Vô Testa",
+    "url": "/crm/conciliacao/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 375
+      }
+    ],
+    "overflow": false,
+    "title": "Módulos | CRM Vô Testa",
+    "url": "/crm/configuracoes/modulos/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo conteudo-compacto",
+        "offset": 0,
+        "width": 390
+      },
+      {
+        "class": "cartao cartao-estreito",
+        "offset": 0,
+        "width": 351.625
+      }
+    ],
+    "overflow": false,
+    "title": "Verificação em duas etapas | CRM Vô Testa",
+    "url": "/crm/mfa/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo conteudo-formulario",
+        "offset": 0,
+        "width": 375
+      },
+      {
+        "class": "form-cartao",
+        "offset": 0,
+        "width": 336.625
+      }
+    ],
+    "overflow": false,
+    "title": "Quarto | CRM Vô Testa",
+    "url": "/crm/estrutura/uhs/37/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 90.5625
+      },
+      {
+        "class": "conteudo conteudo-formulario",
+        "offset": 0,
+        "width": 390
+      },
+      {
+        "class": "form-cartao",
+        "offset": 0,
+        "width": 351.625
+      }
+    ],
+    "overflow": false,
+    "title": "Tipo de quarto | CRM Vô Testa",
+    "url": "/crm/estrutura/tipos/novo/",
+    "width": 390
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1167
+      }
+    ],
+    "overflow": false,
+    "title": "Visão geral | CRM Vô Testa",
+    "url": "/crm/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo tela-reservas conteudo-largo",
+        "offset": 0,
+        "width": 1167
+      }
+    ],
+    "overflow": false,
+    "title": "Mapa de reservas | CRM Vô Testa",
+    "url": "/crm/reservas/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1167
+      }
+    ],
+    "overflow": false,
+    "title": "Governança | visão geral",
+    "url": "/crm/governanca/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1167
+      }
+    ],
+    "overflow": false,
+    "title": "Manutenção | CRM Vô Testa",
+    "url": "/crm/manutencao/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1167
+      }
+    ],
+    "overflow": false,
+    "title": "Estoque | CRM Vô Testa",
+    "url": "/crm/estoque/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1167
+      }
+    ],
+    "overflow": false,
+    "title": "Loja | PDV",
+    "url": "/crm/loja/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1182
+      }
+    ],
+    "overflow": false,
+    "title": "Restaurante | comandas",
+    "url": "/crm/restaurante/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1182
+      }
+    ],
+    "overflow": false,
+    "title": "Lavanderia | CRM Vô Testa",
+    "url": "/crm/lavanderia/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1182
+      }
+    ],
+    "overflow": false,
+    "title": "Pagamentos Online | CRM Vô Testa",
+    "url": "/crm/pagamentos/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1182
+      }
+    ],
+    "overflow": false,
+    "title": "Fiscal | CRM Vô Testa",
+    "url": "/crm/fiscal/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1167
+      }
+    ],
+    "overflow": false,
+    "title": "Escala | CRM Vô Testa",
+    "url": "/crm/escala/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1167
+      }
+    ],
+    "overflow": false,
+    "title": "Funil de vendas | Comercial",
+    "url": "/crm/comercial/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1182
+      }
+    ],
+    "overflow": false,
+    "title": "Páginas de Captação | Comercial",
+    "url": "/crm/comercial/paginas/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1182
+      }
+    ],
+    "overflow": false,
+    "title": "Respostas rápidas | Comercial",
+    "url": "/crm/comercial/respostas/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1167
+      }
+    ],
+    "overflow": false,
+    "title": "Marketing | CRM Vô Testa",
+    "url": "/crm/marketing/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1182
+      }
+    ],
+    "overflow": false,
+    "title": "Solicitações do portal",
+    "url": "/hospede/recepcao/solicitacoes/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1167
+      }
+    ],
+    "overflow": false,
+    "title": "Auditoria | CRM Vô Testa",
+    "url": "/crm/auditoria/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1167
+      }
+    ],
+    "overflow": false,
+    "title": "Relatórios | CRM Vô Testa",
+    "url": "/crm/relatorios/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1182
+      }
+    ],
+    "overflow": false,
+    "title": "Opinião dos hóspedes | CRM Vô Testa",
+    "url": "/crm/nps/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1167
+      }
+    ],
+    "overflow": false,
+    "title": "Caixa | CRM Vô Testa",
+    "url": "/crm/caixa/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1167
+      },
+      {
+        "class": "form-cartao lb-compose",
+        "offset": 0,
+        "width": 620
+      }
+    ],
+    "overflow": false,
+    "title": "Recados do turno | CRM Vô Testa",
+    "url": "/crm/logbook/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1182
+      }
+    ],
+    "overflow": false,
+    "title": "Hóspedes | CRM Vô Testa",
+    "url": "/crm/hospedes/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1182
+      }
+    ],
+    "overflow": false,
+    "title": "Agências | CRM Vô Testa",
+    "url": "/crm/agencias/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1182
+      }
+    ],
+    "overflow": false,
+    "title": "Empresas | CRM Vô Testa",
+    "url": "/crm/empresas/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1182
+      }
+    ],
+    "overflow": false,
+    "title": "Fornecedores | CRM Vô Testa",
+    "url": "/crm/fornecedores/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1167
+      }
+    ],
+    "overflow": false,
+    "title": "Pessoas | CRM Vô Testa",
+    "url": "/crm/pessoas/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1182
+      }
+    ],
+    "overflow": false,
+    "title": "Funcionários | CRM Vô Testa",
+    "url": "/crm/funcionarios/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1167
+      }
+    ],
+    "overflow": false,
+    "title": "Quartos & tipos | CRM Vô Testa",
+    "url": "/crm/estrutura/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1167
+      },
+      {
+        "class": "form-cartao form-largo",
+        "offset": 0,
+        "width": 1090.21875
+      }
+    ],
+    "overflow": false,
+    "title": "Tabela de preços | CRM Vô Testa",
+    "url": "/crm/precos/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1182
+      }
+    ],
+    "overflow": false,
+    "title": "Temporadas | CRM Vô Testa",
+    "url": "/crm/temporadas/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1182
+      }
+    ],
+    "overflow": false,
+    "title": "Lançamentos | CRM Vô Testa",
+    "url": "/crm/financeiro/lancamentos/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1182
+      }
+    ],
+    "overflow": false,
+    "title": "Contas a pagar/receber | CRM Vô Testa",
+    "url": "/crm/financeiro/contas/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1182
+      }
+    ],
+    "overflow": false,
+    "title": "Sessões de caixa | CRM Vô Testa",
+    "url": "/crm/caixa/sessoes/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1167
+      }
+    ],
+    "overflow": false,
+    "title": "Conciliação | CRM Vô Testa",
+    "url": "/crm/conciliacao/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo ",
+        "offset": 0,
+        "width": 1167
+      }
+    ],
+    "overflow": false,
+    "title": "Módulos | CRM Vô Testa",
+    "url": "/crm/configuracoes/modulos/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo conteudo-compacto",
+        "offset": -0.01,
+        "width": 596.796875
+      },
+      {
+        "class": "cartao cartao-estreito",
+        "offset": -0.01,
+        "width": 520.015625
+      }
+    ],
+    "overflow": false,
+    "title": "Verificação em duas etapas | CRM Vô Testa",
+    "url": "/crm/mfa/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo conteudo-formulario",
+        "offset": -0.01,
+        "width": 696.796875
+      },
+      {
+        "class": "form-cartao",
+        "offset": -0.02,
+        "width": 620
+      }
+    ],
+    "overflow": false,
+    "title": "Quarto | CRM Vô Testa",
+    "url": "/crm/estrutura/uhs/37/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo conteudo-formulario",
+        "offset": -0.01,
+        "width": 696.796875
+      },
+      {
+        "class": "form-cartao",
+        "offset": -0.02,
+        "width": 620
+      }
+    ],
+    "overflow": false,
+    "title": "Tipo de quarto | CRM Vô Testa",
+    "url": "/crm/estrutura/tipos/novo/",
+    "width": 1440
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo conteudo-compacto",
+        "offset": -0.01,
+        "width": 596.796875
+      },
+      {
+        "class": "cartao cartao-estreito",
+        "offset": -0.01,
+        "width": 520.015625
+      }
+    ],
+    "overflow": false,
+    "title": "Verificação em duas etapas | CRM Vô Testa",
+    "url": "/crm/mfa/",
+    "width": 2560
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo conteudo-formulario",
+        "offset": -0.01,
+        "width": 696.796875
+      },
+      {
+        "class": "form-cartao",
+        "offset": -0.02,
+        "width": 620
+      }
+    ],
+    "overflow": false,
+    "title": "Quarto | CRM Vô Testa",
+    "url": "/crm/estrutura/uhs/37/",
+    "width": 2560
+  },
+  {
+    "offsets": [
+      {
+        "class": "busca-global",
+        "offset": 0,
+        "width": 420
+      },
+      {
+        "class": "conteudo conteudo-formulario",
+        "offset": -0.01,
+        "width": 696.796875
+      },
+      {
+        "class": "form-cartao",
+        "offset": -0.02,
+        "width": 620
+      }
+    ],
+    "overflow": false,
+    "title": "Tipo de quarto | CRM Vô Testa",
+    "url": "/crm/estrutura/tipos/novo/",
+    "width": 2560
+  }
+]

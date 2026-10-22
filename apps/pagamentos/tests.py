@@ -548,12 +548,18 @@ class RateLimitTests(PagamentosBase):
         self.assertContains(r, "Muitas tentativas")
 
     def test_webhook_bloqueia_flood(self):
+        from unittest.mock import patch
+
         c = self.cobranca()
         url = reverse("pagamentos:webhook")
-        codigo = 200
-        for _ in range(61):
-            codigo = self.client.post(url, {"gateway_id": c.gateway_id}).status_code
-        self.assertEqual(codigo, 429)  # passou de 60/min
+        # Todas as chamadas pertencem à mesma janela, inclusive se o CI começar
+        # o teste no último segundo do minuto real.
+        with patch("apps.nucleo.ratelimit.janela_atual", return_value=(1800000000, 60)) as janela:
+            for _ in range(60):
+                self.assertEqual(self.client.post(url, {"gateway_id": c.gateway_id}).status_code, 200)
+            self.assertEqual(self.client.post(url, {"gateway_id": c.gateway_id}).status_code, 429)
+            janela.return_value = (1800000060, 60)
+            self.assertEqual(self.client.post(url, {"gateway_id": c.gateway_id}).status_code, 200)
 
 
 class RedacaoWebhookTests(PagamentosBase):
