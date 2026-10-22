@@ -9,6 +9,7 @@ from apps.nucleo.modulos import Modulo
 from apps.nucleo.permissoes import requer_modulo
 
 from . import services
+from .forms import ReportarProblemaForm
 from .models import ConferenciaOcupacao, StatusLimpeza, TarefaGovernanca
 
 Usuario = get_user_model()
@@ -199,27 +200,28 @@ def reportar(request, pk):
     from apps.nucleo.models import modulo_ativo
 
     uh = get_object_or_404(UH, pk=pk)
-    if request.method != "POST":
-        gabarito = ("governanca/partials/reportar_modal.html"
-                    if request.headers.get("HX-Request")
-                    else "governanca/reportar.html")
-        return render(request, gabarito, {"uh": uh})
-    if not modulo_ativo(Modulo.MANUTENCAO):
-        return _resposta_acao(request, "Módulo Manutenção desligado — avise a "
-                                       "recepção.", tipo="warning")
-    descricao = (request.POST.get("descricao") or "").strip()
-    if not descricao:
-        return _resposta_acao(request, "Descreva o problema para abrir o chamado.",
-                              tipo="warning")
-    from apps.manutencao import services as manutencao
+    form = ReportarProblemaForm(request.POST if request.method == "POST" else None)
+    if request.method == "POST" and form.is_valid():
+        if not modulo_ativo(Modulo.MANUTENCAO):
+            form.add_error(None, "Módulo Manutenção desligado — avise a recepção.")
+        else:
+            from apps.manutencao import services as manutencao
 
-    manutencao.abrir_os(
-        request.user, uh=uh,
-        titulo=f"Problema no {uh.numero} (governança)",
-        descricao=descricao,
-    )
-    return _resposta_acao(request, f"Chamado aberto para o {uh.numero}. "
-                                   "A manutenção foi avisada.")
+            manutencao.abrir_os(
+                request.user, uh=uh,
+                titulo=f"Problema no {uh.numero} (governança)",
+                descricao=form.cleaned_data["descricao"],
+            )
+            resposta = _resposta_acao(request, f"Chamado aberto para o {uh.numero}. "
+                                     "Ele já aparece na lista da manutenção.")
+            if request.headers.get("HX-Request"):
+                resposta["HX-Retarget"] = "#gov-fila"
+                resposta["HX-Reswap"] = "innerHTML"
+                resposta["X-Gov-Registrado"] = "1"
+            return resposta
+    gabarito = ("governanca/partials/reportar_modal.html"
+                if request.headers.get("HX-Request") else "governanca/reportar.html")
+    return render(request, gabarito, {"uh": uh, "form": form})
 
 
 @requer_modulo(Modulo.GOVERNANCA)

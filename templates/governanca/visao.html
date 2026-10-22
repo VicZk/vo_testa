@@ -83,8 +83,13 @@ A barra mostra a casa inteira repartida pelos quatro estados.{% endcomment %}
 {% else %}
 <section class="atencao-secao">
   <div class="estado-vazio">
+    {% if plano.a_fazer %}
+    <p>A limpeza já está distribuída.</p>
+    <p class="ajuda">Ainda há {{ plano.a_fazer }} quarto{{ plano.a_fazer|pluralize }} no plano do dia abaixo. Acompanhe o andamento pela lista de quartos.</p>
+    {% else %}
     <p>Nada pendente na governança agora.</p>
     <p class="ajuda">Quando um hóspede fizer check-out, o quarto aparece aqui para limpar.</p>
+    {% endif %}
   </div>
 </section>
 {% endif %}

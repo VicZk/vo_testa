@@ -3,7 +3,10 @@
   'use strict';
   const seletor = '[data-edicao-pendente], [data-mkt-edit]';
   function pendentes(raiz, exceto) {
-    return Array.from((raiz || document).querySelectorAll(seletor))
+    raiz = raiz || document;
+    const forms = Array.from(raiz.querySelectorAll(seletor));
+    if (raiz.matches && raiz.matches(seletor)) forms.unshift(raiz);
+    return forms
       .filter(form => form !== exceto && form.dataset.dirty === '1');
   }
   function podeDescartar(raiz, exceto) {

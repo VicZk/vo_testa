@@ -597,6 +597,128 @@ class LeadManualE2ETests(_FunilComercialMixin, _BaseE2E):
 
 
 @unittest.skipUnless(_PLAYWRIGHT_OK, "playwright não instalado (ver docstring)")
+class GovernancaFilaE2ETests(_FunilComercialMixin, _BaseE2E):
+    """O perfil de camareira recebe o próximo passo e consegue corrigir um relato."""
+
+    LOCALE = "pt-BR"
+
+    def setUp(self):
+        super().setUp()
+        from django.urls import reverse
+
+        from apps.governanca import services
+        from apps.nucleo.models import UH, ModuloContratado, TipoUH, Usuario
+
+        for codigo in ("governanca", "manutencao", "reservas"):
+            ModuloContratado.objects.update_or_create(codigo=codigo, defaults={"ativo": True})
+        supervisora = Usuario.objects.create_superuser(username="supervisora-fila-e2e", password=None)
+        self.camareira = Usuario.objects.create_user(username="camareira-fila-e2e", password="senha-forte-123")
+        self.camareira.modulos.add(ModuloContratado.objects.get(codigo="governanca"))
+        tipo = TipoUH.objects.create(nome="Quarto da fila E2E", tarifa_base="300.00")
+        self.uh = UH.objects.create(numero="Quarto 21", tipo=tipo)
+        self.tarefa = services.abrir_faxina(self.uh, usuario=supervisora)
+        self.tarefa.camareira = self.camareira
+        self.tarefa.save(update_fields=["camareira"])
+        self.fila_url = reverse("governanca:minha_fila")
+        self.page.add_init_script("localStorage.setItem('sidebar', 'aberta')")
+        self.page.set_viewport_size({"width": 390, "height": 844})
+        self._login(self.camareira.username, "senha-forte-123")
+
+    def _abrir_relato(self):
+        self.page.get_by_role("link", name="Reportar problema", exact=True).click()
+        self.page.locator("#modal-conteudo textarea[name=descricao]").wait_for()
+
+    def test_entrada_direta_e_orientacao_acompanham_a_limpeza(self):
+        from playwright.sync_api import expect
+
+        p = self.page
+        self.assertTrue(p.url.endswith(self.fila_url))
+        expect(p.locator(".gov-orientacao")).to_contain_text("1 quarto")
+        p.get_by_role("button", name="Começar", exact=True).click(click_count=2)
+        expect(p.get_by_role("button", name="Terminei", exact=True)).to_be_visible()
+        expect(p.locator(".gov-orientacao")).to_contain_text("Você está no Quarto 21")
+        p.get_by_role("button", name="Terminei", exact=True).click()
+        expect(p.locator(".gov-orientacao")).to_contain_text("Você terminou")
+        expect(p.get_by_text("Nenhum quarto na sua fila agora.", exact=True)).to_be_visible()
+        expect(p.get_by_role("heading", name="Já entreguei hoje 1")).to_be_visible()
+        self.tarefa.refresh_from_db()
+        self.assertEqual(self.tarefa.status, "concluida")
+
+    def test_erro_no_relato_continua_aberto_e_correcao_cria_um_chamado(self):
+        from playwright.sync_api import expect
+
+        from apps.manutencao.models import OrdemServico
+
+        self._abrir_relato()
+        p = self.page
+        campo = p.locator("#modal-conteudo textarea[name=descricao]")
+        campo.fill("   ")
+        p.get_by_role("button", name="Abrir chamado", exact=True).click()
+        expect(p.locator("#modal-conteudo .erro")).to_contain_text("Descreva o problema")
+        expect(campo).to_be_focused()
+        campo.fill("Lâmpada do banheiro não acende.")
+        p.get_by_role("button", name="Abrir chamado", exact=True).click(click_count=2)
+        expect(p.locator("#modal-conteudo form")).to_be_hidden()
+        ordem = OrdemServico.objects.get()
+        self.assertEqual(ordem.descricao, "Lâmpada do banheiro não acende.")
+        self.assertEqual(ordem.uh_id, self.uh.pk)
+        self.assertFalse(ordem.bloqueia_uh)
+        expect(p.get_by_text("Ele já aparece na lista da manutenção.", exact=False)).to_be_visible()
+
+    def test_cancelar_pergunta_sobre_o_texto_e_nao_abre_chamado(self):
+        from playwright.sync_api import expect
+
+        from apps.manutencao.models import OrdemServico
+
+        self._abrir_relato()
+        p = self.page
+        campo = p.locator("#modal-conteudo textarea[name=descricao]")
+        campo.fill("Chuveiro pingando")
+        p.once("dialog", lambda dialog: dialog.dismiss())
+        p.keyboard.press("Escape")
+        expect(campo).to_have_value("Chuveiro pingando")
+        p.once("dialog", lambda dialog: dialog.accept())
+        p.keyboard.press("Escape")
+        expect(p.locator("#modal-conteudo form")).to_be_hidden()
+        expect(p.get_by_role("link", name="Reportar problema", exact=True)).to_be_focused()
+        self.assertFalse(OrdemServico.objects.exists())
+
+    def test_relato_cabe_e_tem_botoes_visiveis_nas_quatro_larguras(self):
+        from pathlib import Path
+
+        from playwright.sync_api import expect
+
+        p = self.page
+        for largura in (320, 390, 821, 1440):
+            with self.subTest(largura=largura):
+                p.set_viewport_size({"width": largura, "height": 844})
+                p.goto(self.url(self.fila_url))
+                self._abrir_relato()
+                expect(p.locator("#modal-conteudo")).to_be_visible()
+                p.wait_for_function("getComputedStyle(document.getElementById('modal-conteudo')).transform === 'none'")
+                medidas = p.evaluate('''() => {
+                    const caixa=document.getElementById('modal-conteudo').getBoundingClientRect();
+                    const enviar=document.querySelector('#modal-conteudo button[type=submit]');
+                    const r=enviar.getBoundingClientRect();
+                    return {largura:document.documentElement.scrollWidth,top:caixa.top,bottom:caixa.bottom,
+                        acao:r.height,alvo:enviar.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)),
+                        bloqueado:document.body.classList.contains('sem-rolagem')};
+                }''')
+                self.assertLessEqual(medidas["largura"], largura+1)
+                self.assertGreaterEqual(medidas["top"], -1)
+                self.assertLessEqual(medidas["bottom"], 845)
+                self.assertTrue(medidas["alvo"] and medidas["bloqueado"])
+                if largura <= 820:
+                    self.assertGreaterEqual(medidas["acao"], 44)
+                if os.environ.get("E2E_EVIDENCIAS"):
+                    pasta = Path(os.environ["E2E_EVIDENCIAS"])
+                    pasta.mkdir(parents=True, exist_ok=True)
+                    p.screenshot(path=str(pasta / f"governanca-relato-{largura}.png"))
+                p.get_by_role("button", name="Cancelar", exact=True).click()
+                expect(p.locator("#modal-conteudo form")).to_be_hidden()
+
+
+@unittest.skipUnless(_PLAYWRIGHT_OK, "playwright não instalado (ver docstring)")
 class FunilBuscaE2ETests(_FunilComercialMixin, _BaseE2E):
     def test_busca_do_funil_filtra_cards(self):
         from apps.comercial import services

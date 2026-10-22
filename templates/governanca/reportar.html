@@ -11,11 +11,13 @@ JavaScript (o botão da fila é um link de verdade).{% endcomment %}
   <h1>Problema no {{ uh.numero }}</h1>
 </div>
 
-<form class="form-cartao" method="post" action="{% url 'governanca:reportar' uh.pk %}">
+<form class="form-cartao" method="post" data-edicao-pendente novalidate
+      data-voltar="{% url 'governanca:minha_fila' %}" action="{% url 'governanca:reportar' uh.pk %}">
   {% include "governanca/partials/reportar_campos.html" %}
   <div class="acoes">
     <button type="submit" class="botao-primario">Abrir chamado</button>
-    <a href="{% url 'governanca:minha_fila' %}" class="botao-neutro">Cancelar</a>
+    <a href="{% url 'governanca:minha_fila' %}" class="botao-neutro"
+       onclick="event.preventDefault(); fecharEdicao(this)">Cancelar</a>
   </div>
 </form>
 {% endblock %}

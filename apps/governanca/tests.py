@@ -1910,6 +1910,8 @@ class ReportarProblemaTests(RondaBase):
         self.assertEqual(ordem.uh_id, self.uh.pk)
         self.assertIn("chuveiro pingando", ordem.descricao)
         self.assertEqual(ordem.criado_por_id, self.maria.pk)
+        self.assertEqual(r["HX-Retarget"], "#gov-fila")
+        self.assertEqual(r["X-Gov-Registrado"], "1")
 
     def test_a_os_nao_tira_o_quarto_de_operacao(self):
         """Quem decide bloquear a unidade é a Manutenção, não a camareira."""
@@ -1923,8 +1925,29 @@ class ReportarProblemaTests(RondaBase):
         r = self.client.post(reverse("governanca:reportar", args=[self.uh.pk]),
                              {"descricao": "  ", "fila": "1"}, HTTP_HX_REQUEST="true")
         self.assertEqual(self._ordens().count(), 0)
-        self.assertIn("Descreva o problema",
-                      json.loads(r["HX-Trigger"])["aviso"]["texto"])
+        self.assertTemplateUsed(r, "governanca/partials/reportar_modal.html")
+        self.assertContains(r, "Descreva o problema")
+        self.assertNotIn("X-Gov-Registrado", r)
+
+    def test_descricao_longa_volta_preenchida_e_sem_abrir_chamado(self):
+        texto = "Descrição do defeito " * 25
+        r = self.client.post(reverse("governanca:reportar", args=[self.uh.pk]),
+                             {"descricao": texto, "fila": "1"}, HTTP_HX_REQUEST="true")
+        self.assertEqual(self._ordens().count(), 0)
+        self.assertContains(r, "Use até 400 caracteres")
+        self.assertEqual(r.context["form"].data["descricao"], texto)
+
+    def test_erro_sem_javascript_permanece_na_pagina_de_relato(self):
+        r = self.client.post(reverse("governanca:reportar", args=[self.uh.pk]),
+                             {"descricao": " ", "fila": "1"})
+        self.assertEqual(r.status_code, 200)
+        self.assertTemplateUsed(r, "governanca/reportar.html")
+        self.assertContains(r, "Descreva o problema")
+
+    def test_painel_nao_diz_fila_vazia_quando_ha_trabalho_distribuido(self):
+        r = self.client.get(reverse("governanca:painel"))
+        self.assertContains(r, "A limpeza já está distribuída")
+        self.assertNotContains(r, "Nada pendente na governança agora")
 
     def test_com_htmx_abre_o_modal_da_casa_e_sem_js_a_pagina(self):
         r = self.client.get(reverse("governanca:reportar", args=[self.uh.pk]),
@@ -1941,8 +1964,9 @@ class ReportarProblemaTests(RondaBase):
                              {"descricao": "torneira", "fila": "1"},
                              HTTP_HX_REQUEST="true")
         self.assertEqual(self._ordens().count(), 0)
-        self.assertIn("Manutenção desligado",
-                      json.loads(r["HX-Trigger"])["aviso"]["texto"])
+        self.assertContains(r, "Manutenção desligado")
+        self.assertContains(r, "torneira")
+        self.assertNotIn("X-Gov-Registrado", r)
 
     def test_com_o_modulo_ativo_o_botao_aparece_na_fila(self):
         self.assertContains(self.client.get(reverse("governanca:minha_fila")),

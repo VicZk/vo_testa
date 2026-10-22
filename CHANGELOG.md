@@ -9,6 +9,30 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 22/10/2026 — Governança com orientação atualizada e relato que pode ser corrigido
+
+**O que melhorou**
+- A Minha fila atualiza a instrução ao começar e terminar a limpeza. O perfil
+  exclusivo da Governança entra nessa tela e vê o quarto e o próximo botão.
+- Relatar um problema mantém a janela e o preenchimento quando falta a descrição
+  ou ela passa do limite. O campo explica a correção e recebe o foco.
+- O fechamento de um relato preenchido pede confirmação; o envio concluído
+  confirma que o chamado está na lista da manutenção. O relato não bloqueia o
+  quarto automaticamente; a orientação pede avisar a recepção se ele não puder ser usado.
+- A visão geral distingue uma fila já distribuída de um dia sem pendências.
+  A conferência de ocupação usa instruções curtas, sem termos em inglês.
+
+**O que foi modificado**
+- Formulário de relato, respostas HTMX da Governança, fila e telas de orientação.
+- Proteção compartilhada de alterações pendentes passa a considerar o próprio
+  formulário quando ele é a raiz da página completa.
+- Três casos novos de servidor e quatro cenários de navegador, incluindo erros,
+  cliques repetidos, teclado, perfil de camareira e quatro larguras.
+- Validação local: 1.820 testes passaram em 730,298 s, sem pulos; lint,
+  sintaxe do JavaScript e comparação das migrations sem pendências.
+
+---
+
 ## 22/10/2026 — Leads ligados às campanhas e cadastro em uma só etapa
 
 **O que melhorou**

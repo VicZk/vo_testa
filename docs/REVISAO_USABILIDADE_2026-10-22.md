@@ -29,7 +29,7 @@ salvamento, recuperação de erros e detalhes apresentados quando necessários.
 | Comercial | Novo lead, contato existente, origem da campanha, filtros e movimentação | Implementado; 18 testes de cadastro/integração e sete cenários de navegador aprovados |
 | Comercial | Tarefas, cotação, comparação de quartos e conversão em reserva | Conferência complementar pendente |
 | Navegação e acesso | Menu, busca, entrada por perfil e troca de telas | Conferência complementar pendente |
-| Governança | Minha fila, quarto, limpeza, enxoval, inspeção e problema | Conferência com perfil de camareira pendente |
+| Governança | Minha fila, iniciar/terminar limpeza e relato de problema | Falhas reproduzidas e corrigidas; quatro cenários com perfil de camareira aprovados no navegador automatizado |
 | Reservas | Mapa, criação, alteração, grupos, entrada, saída, conta e FNRH | Conferência pendente |
 | Operação | Manutenção, escala e lavanderia | Conferência pendente |
 | Vendas | Loja, restaurante, comanda, cozinha e recebimento | Conferência pendente |
@@ -116,3 +116,42 @@ A conferência manual por Computer Use segue pendente da conexão.
 Capturas do teste automatizado com dados fictícios:
 [celular de 390 px](evidencias/usabilidade-2026-10-22/lead-390.png) e
 [desktop de 1440 px](evidencias/usabilidade-2026-10-22/lead-1440.png).
+
+## Entrega 3 — Governança
+
+No teste com o perfil exclusivo de camareira, começar uma limpeza mudava o botão
+para «Terminei», mas mantinha a instrução antiga no cabeçalho. A orientação agora
+faz parte do trecho atualizado e mostra o quarto em andamento ou o trabalho
+concluído. A visão geral também distingue tarefas já distribuídas de nenhuma
+limpeza pendente.
+
+Um relato com espaços em branco fechava o modal sem registrar o chamado. O
+formulário agora valida descrição obrigatória e limite de 400 caracteres,
+preserva o texto, apresenta o motivo e mantém a janela aberta. Apenas o sucesso
+confirmado fecha o relato e atualiza a fila. O chamado aparece na Manutenção;
+o bloqueio do quarto continua sendo uma decisão operacional separada.
+
+Os quatro cenários de Governança passaram junto dos oito de campanhas e sete
+de leads (19 testes, 92,154 s). Incluem a entrada direta pelo perfil, começo e
+conclusão da limpeza, erro e correção do relato, clique repetido, descarte,
+retorno do foco e geometria nas quatro larguras. A suíte completa passou:
+1.820 testes em 730,298 s, sem pulos. Ruff, sintaxe do JavaScript, comparação
+das migrations e diff passaram; os arquivos publicados correspondem à cópia testada.
+
+Capturas automatizadas, inspecionadas visualmente nas quatro larguras:
+[relato no celular](evidencias/usabilidade-2026-10-22/governanca-relato-390.png) e
+[relato no desktop](evidencias/usabilidade-2026-10-22/governanca-relato-1440.png).
+
+## Varredura complementar em andamento
+
+A primeira matriz percorreu 95 rotas GET em quatro larguras (380 combinações):
+respostas 200, sem largura excedente na página e sem erro JavaScript. Algumas
+rotas redirecionam à mesma tela. As capturas iniciais de celular e desktop foram
+inspecionadas; essa matriz não comprova todos os fluxos de escrita.
+
+A matriz adicional percorreu 37 rotas em quatro larguras. Encontrou largura
+excedente no detalhe de página de captação (320 px) e no editor de e-mail
+(320 e 390 px). Testes de interação reproduziram falha de Escape na comparação
+de quartos e de contenção do foco na confirmação de e-mail. Mensagens de tabelas
+vazias e alguns campos estavam cortados mesmo sem aumentar a largura da página.
+Essas correções integram a próxima entrega.

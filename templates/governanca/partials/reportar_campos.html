@@ -2,13 +2,7 @@
 Abre uma ordem de serviço na Manutenção pelo service público dela.{% endcomment %}
 {% csrf_token %}
 <input type="hidden" name="fila" value="1">
-<p class="bloco-texto">A manutenção recebe o chamado com o seu nome. O quarto
-  <strong>não</strong> sai de operação por causa disso — quem decide bloquear é a
-  manutenção.</p>
-<div class="campo">
-  <label for="problema-{{ uh.pk }}">O que você achou?</label>
-  <textarea id="problema-{{ uh.pk }}" name="descricao" rows="3" maxlength="400"
-            placeholder="Ex.: chuveiro pingando, lâmpada do banheiro queimada"
-            required autocomplete="off"></textarea>
-  <small class="ajuda">Conte o que viu, com o máximo de detalhe que der.</small>
-</div>
+<p class="bloco-texto">Descreva o problema para a equipe de manutenção.
+  Se o quarto não puder ser usado, avise também a recepção.</p>
+{% for error in form.non_field_errors %}<p class="erro" role="alert">{{ error }}</p>{% endfor %}
+{% for field in form %}{% include "componentes/campo.html" %}{% endfor %}

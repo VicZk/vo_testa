@@ -9,6 +9,18 @@ e nada que ela não vá tocar com a mão ocupada. O `fila=1` de cada formulário
 Sem JavaScript continua funcionando: todo formulário tem `action` e `method`, e a
 view redireciona para a fila quando o pedido não vem do HTMX.
 {% endcomment %}
+<p class="subtitulo gov-orientacao" role="status" aria-live="polite">
+  {% if fazendo %}
+    Você está no <strong>{{ fazendo.uh.numero }}</strong>. Quando acabar a limpeza, toque em «Terminei».
+  {% elif fila %}
+    <strong>{{ fila|length }} quarto{{ fila|pluralize }}</strong> na sua fila.
+    Toque em «Começar» no quarto que vai limpar agora.
+  {% elif feitas %}
+    Você terminou os quartos da sua fila. Seu trabalho de hoje está registrado abaixo.
+  {% else %}
+    Nenhum quarto foi atribuído a você.
+  {% endif %}
+</p>
 {% include "governanca/partials/desfazer.html" %}
 
 {% if fila %}
@@ -31,7 +43,7 @@ view redireciona para a fila quando o pedido não vem do HTMX.
         <div class="gov-fila-acoes">
           {% if q.fazendo %}
             <form method="post" action="{% url 'governanca:tarefa_acao' q.tarefa.pk %}"
-                  hx-post="{% url 'governanca:tarefa_acao' q.tarefa.pk %}">
+                  hx-post="{% url 'governanca:tarefa_acao' q.tarefa.pk %}" hx-disabled-elt="find button">
               {% csrf_token %}
               <input type="hidden" name="acao" value="concluir">
               <input type="hidden" name="fila" value="1">
@@ -39,7 +51,7 @@ view redireciona para a fila quando o pedido não vem do HTMX.
             </form>
           {% else %}
             <form method="post" action="{% url 'governanca:tarefa_acao' q.tarefa.pk %}"
-                  hx-post="{% url 'governanca:tarefa_acao' q.tarefa.pk %}">
+                  hx-post="{% url 'governanca:tarefa_acao' q.tarefa.pk %}" hx-disabled-elt="find button">
               {% csrf_token %}
               <input type="hidden" name="acao" value="iniciar">
               <input type="hidden" name="fila" value="1">

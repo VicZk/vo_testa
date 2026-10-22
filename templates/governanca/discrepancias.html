@@ -7,11 +7,8 @@
 <div class="pagina-cabecalho">
   <h1>Discrepâncias da ronda</h1>
 </div>
-<p class="subtitulo">O que a camareira viu em cada quarto hoje, confrontado com o que o
-  sistema diz. É aqui que aparece o hóspede que foi embora sem passar na recepção
-  (<em>skip</em> — conta em aberto, quarto invendável) e o quarto que o sistema dá como
-  livre com gente dentro (<em>sleeper</em> — check-in não lançado).
-  A lista é de agora: o que a recepção resolver sai sozinho daqui.</p>
+<p class="subtitulo">Confira se a ocupação vista nos quartos é a mesma registrada na recepção.
+  Se houver diferença, avise a recepção. A coluna «O que fazer» mostra o próximo passo.</p>
 
 {% include "governanca/partials/abas.html" %}
 
@@ -32,11 +29,11 @@
     <span class="indicador-valor">{{ conferidos }}<small class="ajuda"> de {{ quartos }}</small></span>
   </div>
   <div class="cartao">
-    <span class="indicador-rotulo letreiro">Conferem</span>
+    <span class="indicador-rotulo letreiro">Tudo certo</span>
     <span class="indicador-valor">{{ conferem }}</span>
   </div>
   <div class="cartao">
-    <span class="indicador-rotulo letreiro">Sem ronda</span>
+    <span class="indicador-rotulo letreiro">Falta conferir</span>
     <span class="indicador-valor">{{ resumo.nao_conferido }}</span>
   </div>
 </div>
@@ -65,8 +62,8 @@
     {% empty %}
       <tr><td colspan="5" class="vazio">
         {% if conferidos %}A ronda de hoje bate com o sistema em todos os quartos conferidos.
-        {% else %}Nenhum quarto conferido hoje ainda. Registre a ronda na aba
-          <strong>Limpeza</strong> — sem ela não há como comparar.{% endif %}
+        {% else %}Nenhum quarto conferido hoje ainda. Abra a aba
+          <strong>Quartos</strong> e marque o que você viu em cada quarto.{% endif %}
       </td></tr>
     {% endfor %}
   </tbody>

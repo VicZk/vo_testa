@@ -1,13 +1,13 @@
 {% comment %}Modal da casa: a camareira abre o chamado da manutenção sem sair da
 fila. Troca só a fila e fecha sozinho.{% endcomment %}
-<form class="modal-form" method="post"
+<form class="modal-form" method="post" data-edicao-pendente novalidate
       action="{% url 'governanca:reportar' uh.pk %}"
       hx-post="{% url 'governanca:reportar' uh.pk %}"
-      hx-target="#gov-fila" hx-swap="innerHTML"
-      hx-on::after-request="if (event.detail.successful) fecharModal()">
+      hx-target="#modal-conteudo" hx-swap="innerHTML" hx-disabled-elt="find button[type='submit']"
+      hx-on::after-request="if (event.detail.xhr.getResponseHeader('X-Gov-Registrado') === '1') { EdicaoPendente.limpar(document.getElementById('modal-conteudo')); fecharModal(); }">
   <header class="modal-cabecalho">
     <h2>Problema no {{ uh.numero }}</h2>
-    <button type="button" class="modal-fechar" onclick="fecharModal()" aria-label="Fechar">&times;</button>
+    <button type="button" class="modal-fechar" onclick="fecharModal()" aria-label="Fechar relato de problema">&times;</button>
   </header>
   <div class="modal-corpo">
     {% include "governanca/partials/reportar_campos.html" %}
