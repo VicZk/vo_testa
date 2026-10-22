@@ -2,7 +2,7 @@
 Usado na lista e como resposta HTMX (troca o próprio <article> via outerHTML).{% endcomment %}
 <article class="lb-occ lb-{{ e.status }}" id="occ-{{ e.pk }}">
   <div class="lb-head">
-    <span class="lb-avatar">{{ e.autor.get_short_name|default:e.autor|slice:":2"|upper }}</span>
+    <span class="lb-avatar">{{ e.autor.get_short_name|default:e.autor.username|slice:":2"|upper }}</span>
     <div class="lb-main">
       <div class="lb-meta">
         <span class="lb-who">{{ e.autor }}</span>
@@ -36,7 +36,7 @@ Usado na lista e como resposta HTMX (troca o próprio <article> via outerHTML).{
   <div class="lb-thread">
     {% for c in comentarios %}
     <div class="lb-reply">
-      <span class="lb-av">{{ c.autor.get_short_name|default:c.autor|slice:":2"|upper }}</span>
+      <span class="lb-av">{{ c.autor.get_short_name|default:c.autor.username|slice:":2"|upper }}</span>
       <div>
         <div class="lb-rmeta"><b>{{ c.autor }}</b><span class="lb-when">{{ c.criado_em|date:"d/m H:i" }}</span></div>
         <div class="lb-rtext">{{ c.texto|linebreaksbr }}</div>

@@ -33,7 +33,7 @@ paradas): quando não sobra nada, o hóspede lê o MOTIVO e o caminho — não u
     <p class="text-madeira/70 text-sm leading-snug">{{ aviso }}</p>
     {% endfor %}
     <a href="{% url 'core:reservar' %}{% if busca.modalidade %}?modalidade={{ busca.modalidade }}{% endif %}"
-       class="text-madeira text-sm font-semibold mt-2 inline-flex">Escolher outras datas</a>
+       class="text-madeira text-sm font-semibold mt-2 inline-flex items-center min-h-[44px]">Escolher outras datas</a>
 </div>
 {% endif %}
 
@@ -80,7 +80,7 @@ paradas): quando não sobra nada, o hóspede lê o MOTIVO e o caminho — não u
                         <p class="text-madeira font-display text-2xl font-bold mt-1">R$ {{ r.total|floatformat:0 }} <span class="text-madeira/30 text-xs font-normal">total</span></p>
                     </div>
                     <a href="{% if r.eh_unidade %}{% url 'core:selecionar_unidade' r.quarto.uh_id %}{% else %}{% url 'core:selecionar_quarto' r.quarto.id %}{% endif %}?checkin={{ busca.checkin|date:'Y-m-d' }}&checkout={{ busca.checkout|date:'Y-m-d' }}&hospedes={{ busca.hospedes }}&criancas_0_5={{ busca.criancas_0_5|default:0 }}&criancas_6_15={{ busca.criancas_6_15|default:0 }}{% if busca.modalidade %}&modalidade={{ busca.modalidade }}{% endif %}"
-                       class="bg-madeira text-pergaminho font-bold text-sm px-6 py-2.5 rounded-xl hover:bg-madeira/90 transition shadow-sm">
+                       class="bg-madeira text-pergaminho font-bold text-sm inline-flex items-center min-h-[44px] px-6 py-2.5 rounded-xl hover:bg-madeira/90 transition shadow-sm">
                         Reservar
                     </a>
                 </div>
@@ -115,7 +115,7 @@ paradas): quando não sobra nada, o hóspede lê o MOTIVO e o caminho — não u
 </div>
 
 <div class="flex justify-between">
-    <a href="{% url 'core:reservar' %}{% if busca.modalidade %}?modalidade={{ busca.modalidade }}{% endif %}" class="text-madeira/40 hover:text-madeira transition flex items-center gap-2 text-sm">
+    <a href="{% url 'core:reservar' %}{% if busca.modalidade %}?modalidade={{ busca.modalidade }}{% endif %}" class="text-madeira/40 hover:text-madeira transition inline-flex items-center min-h-[44px] gap-2 text-sm">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
         Alterar datas
     </a>

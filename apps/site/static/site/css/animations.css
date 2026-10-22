@@ -186,3 +186,19 @@ header { view-transition-name: site-header; }
     opacity: 1;
     pointer-events: auto;
 }
+
+/* Gaveta aberta = diálogo: o que flutua por cima da página sai da frente.
+   A gaveta e o véu são z-40; por cima deles passavam o aviso de cookies
+   (z-index 90, do componente do núcleo) — que cobria a faixa de baixo da
+   gaveta, inclusive o "Fazer Reserva" — e os dois flutuantes do site, o
+   WhatsApp e a prova social (z-50). Subir a gaveta não resolveria: o aviso
+   é branco e apareceria pelo véu translúcido, com os botões inalcançáveis.
+   `visibility` em vez de `display`: o aviso continua medindo a própria
+   altura (o consentimento.js lê `offsetHeight` para reservar a folga do
+   rodapé) e volta inteiro quando a gaveta fecha. */
+html.menu-do-site-aberto .aviso-cookies,
+html.menu-do-site-aberto .zap-flutuante,
+html.menu-do-site-aberto .social-proof {
+    visibility: hidden;
+    pointer-events: none;
+}

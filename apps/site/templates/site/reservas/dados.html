@@ -28,18 +28,18 @@
             <div class="bg-pergaminho/40 border border-madeira/10 rounded-xl p-4 mt-6">
                 <p class="text-madeira/50 text-xs uppercase tracking-wider font-semibold mb-1">Montagem das camas</p>
                 <p class="text-madeira/40 text-xs mb-3">Como prefere as camas? (não altera o preço)</p>
-                <div class="space-y-2">
-                    <label class="flex items-center gap-2 text-sm text-madeira cursor-pointer">
+                <div>
+                    <label class="flex items-center min-h-[44px] gap-2 text-sm text-madeira cursor-pointer">
                         <input type="radio" name="arranjo" value="" class="accent-madeira" checked> Sugerido pelo sistema
                     </label>
                     {% for a in arranjos %}
-                    <label class="flex items-center gap-2 text-sm text-madeira cursor-pointer">
+                    <label class="flex items-center min-h-[44px] gap-2 text-sm text-madeira cursor-pointer">
                         <input type="radio" name="arranjo" value="{{ a.casais }}-{{ a.solteiros }}" class="accent-madeira">
                         {{ a.rotulo }}
                     </label>
                     {% endfor %}
                     {% if arranjos.0.tem_sofa %}
-                    <label class="flex items-center gap-2 text-sm text-madeira cursor-pointer mt-1">
+                    <label class="flex items-center min-h-[44px] gap-2 text-sm text-madeira cursor-pointer mt-1">
                         <input type="checkbox" name="usa_sofa_cama" value="1" class="accent-madeira"> Abrir o sofá-cama
                     </label>
                     {% endif %}

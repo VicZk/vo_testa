@@ -5726,6 +5726,24 @@ body.escala-dragging .escala-drop { cursor: copy; }
   .login-cartao input, .pay input, .pay select {
     min-height: 44px;
   }
+  /* O modal também mora fora do `.conteudo` (é filho do `.modal-overlay`, que é
+     `position: fixed`), e ali está a ação mais repetida da recepção: a janela de
+     "Nova reserva" saía com campos de 40 a 42px. Vale para TODO modal do CRM.
+     Caixa de marcar fica de fora: com largura e altura fixas, o `min-height`
+     esticaria o DESENHO (vira um retângulo), e quem aciona ali é o rótulo. */
+  .modal-caixa input:not([type="checkbox"]):not([type="radio"]),
+  .modal-caixa select, .modal-caixa textarea {
+    min-height: 44px;
+  }
+  /* E o alvo da caixa de marcar é o RÓTULO que a embrulha. Fora do modal ele
+     já vinha com 44px de tabela (o input esticado pela regra do `.conteudo`
+     empurrava a linha); dentro, nada o alcançava e "Usa o sofá-cama" ou
+     "Cobra ISS" viravam alvos de 19px de altura. */
+  .modal-caixa .check-inline,
+  .modal-caixa label:has(> input[type="checkbox"]),
+  .modal-caixa label:has(> input[type="radio"]) {
+    min-height: 44px; display: inline-flex; align-items: center;
+  }
   /* Link que ocupa a linha inteira (voltar, "esqueci minha senha") vira alvo de
      44px. Link no MEIO de uma frase fica de fora de propósito: crescer a caixa
      dele quebraria o parágrafo, e a WCAG 2.5.8 isenta o alvo inline. */
@@ -6421,3 +6439,90 @@ body.escala-dragging .escala-drop { cursor: copy; }
    esquerdo era um vão dentro de uma moldura. */
 .acao-painel { max-width: 900px; }
 .acao-painel .form-cartao, .acao-painel .aviso-politica { max-width: 100%; }
+
+/* ═══════════════════════════════════════════════════════════════
+   POLIMENTO MOBILE — o que o dedo erra
+
+   A equipe opera em celular e tablet. A seção "ALVOS DE TOQUE" acima já
+   cresceu os botões e os campos; o que sobra aqui são os controles pequenos
+   que vivem DENTRO de outra coisa (um chip, uma célula, uma linha de tabela),
+   onde crescer o desenho estragaria o layout. A receita é sempre a mesma:
+   a CAIXA DE TOQUE cresce, o DESENHO fica onde está.
+
+   Medido com Playwright em 390×844 e 768×1024, com toque emulado.
+   ═══════════════════════════════════════════════════════════════ */
+@media (pointer: coarse), (max-width: 820px) {
+  /* Grade da escala: cada chip de funcionário traz "+" (hora extra) e "×"
+     (tirar do turno) colados — 16 px e 14 px, 56 alvos numa tela só. O chip
+     passa a 44 px e os dois botões a 36 px. O "+" mantém o círculo de 16 px
+     desenhado: o padding transparente vira área de toque porque o fundo é
+     pintado só no conteúdo (`background-clip`). */
+  .escala-chip { min-height: 44px; gap: 0; padding-block: 0; padding-right: 0; }
+  .escala-chip .he-add {
+    width: 44px; height: 44px; padding: 14px;
+    background-clip: content-box;
+  }
+  .chip-x {
+    min-width: 44px; min-height: 44px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  /* O "×" do selo de hora extra é o mesmo gesto, com 12 px de fonte. */
+  .he-selo .he-x {
+    min-width: 44px; min-height: 44px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+}
+
+@media (pointer: coarse), (max-width: 820px) {
+  /* Botão de um símbolo só ("‹" da semana da escala, 35 px de largura): a
+     altura já vinha da regra acima, faltava a largura. Em botão com texto a
+     regra não muda nada — ele já passa de 44 px. */
+  .botao-primario, .botao-neutro, .botao-perigo, .botao-mini, .mk-pil { min-width: 44px; }
+  /* `.escala-semana .botao-neutro` fixa 2.2rem (35 px) e vence a linha acima
+     pela especificidade: repetida aqui com o mesmo peso, mais tarde. */
+  .escala-semana .botao-neutro { min-width: 44px; }
+
+  /* Controles que a seção de alvos acima não alcançava, medidos agora:
+     abas de "Tarefas do dia" (são <a> dentro do `.pdv-seg`, não <button>),
+     "Responder"/"Enviar" dos recados do turno (30 px) e as ações do relatório
+     do Marketing ("Exportar CSV" 33 px, "Imprimir" 28 px). */
+  .pdv-seg a, .lb-btn-ghost, .lb-btn-ok, .mk-pil-acao {
+    min-height: 44px; display: inline-flex; align-items: center; justify-content: center;
+  }
+
+  /* Nome do produto na posição de estoque: link de 18 px de altura dentro de
+     uma célula bem mais alta. Cresce para a altura da linha sem sair do lugar
+     — mesma receita do link sem classe da tabela. */
+  .tabela td > a.est-produto-nome {
+    display: inline-block; padding-block: .8rem; margin-block: -.8rem;
+  }
+}
+
+/* Bolinha de iniciais (recados do turno, ficha do Marketing, avatar do topo):
+   o conteúdo é cortado no círculo. Um nome inteiro escapava pelos dois lados e
+   ficava escrito POR CIMA do cartão — foi o que o dono viu no celular. O
+   template já manda só as iniciais; isto é o cinto de segurança para o dia em
+   que um valor vier maior. */
+.lb-avatar, .lb-av, .fx-av, .avatar { overflow: hidden; }
+
+/* ---- Corredor de quartos: a porta sem o vão morto no toque ----
+   A porta é desenhada na proporção 4/5 (gesto de porta), e no dedo isso vira
+   altura sobrando: medido em 390 px, 26 px de vão entre a data e o dinheiro num
+   cartão de 130 px; no tablet de 1024 px, 66 px num de 169 px — 39% do cartão
+   vazio, e os 24 quartos pedindo rolagem à toa. A recepção lê este mapa de pé,
+   com o celular na mão: o que importa é quarto, hóspede, data e saldo juntos.
+   No mouse a proporção fica como está (o corredor é o herói da tela grande).
+
+   `:not(.corredor-gov)`: o corredor da Governança usa as mesmas classes
+   (`<div class="corredor corredor-gov">`) e já resolveu isto à sua maneira, em
+   qualquer largura — `aspect-ratio: auto` com `min-height: 94px`, porque lá o
+   bloco mostra menos coisa. Sem a exceção, este bloco vem depois no arquivo e
+   zeraria aquele piso justamente no toque, que é onde a Governança vive. */
+@media (pointer: coarse), (max-width: 820px) {
+  .corredor:not(.corredor-gov) .porta {
+    aspect-ratio: auto;
+    min-height: 0;
+    /* Sem a proporção mandando na altura, o respiro volta pelo padding. */
+    padding-bottom: 7px;
+  }
+}
