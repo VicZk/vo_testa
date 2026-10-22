@@ -658,3 +658,42 @@ class SiteNoCelularE2ETests(_UnidadeVendavelMixin, _BaseE2E):
         for item in p.evaluate(self.ALVOS, ["input[name=arranjo]"]):
             if item["achou"]:
                 self.assertGreaterEqual(item["h"], 44, item)
+
+    def test_gaveta_aberta_nao_tem_nada_flutuando_por_cima(self):
+        """A gaveta e o véu são z-40; o aviso de cookies (z-90, do componente do
+        núcleo) e os flutuantes do site (z-50) passavam por cima dela. O aviso
+        cobria a faixa de baixo — inclusive o "Fazer Reserva", que é o fim do
+        caminho de quem abriu o menu para reservar."""
+        p = self.page
+        p.goto(self.url("/"))
+        p.wait_for_selector("#consentimento:not([hidden])", timeout=10000)
+        p.click("#menuBtn")
+        p.wait_for_timeout(500)
+        estado = p.evaluate("""() => {
+          const gaveta = document.getElementById('mobileMenu');
+          const tapados = [];
+          for (const el of gaveta.querySelectorAll('a, button')) {
+            const r = el.getBoundingClientRect();
+            if (!r.width || !r.height) continue;
+            const x = Math.min(Math.max(r.left + r.width / 2, 1), innerWidth - 1);
+            const y = Math.min(Math.max(r.top + r.height / 2, 1), innerHeight - 1);
+            const topo = document.elementFromPoint(x, y);
+            if (topo && el !== topo && !el.contains(topo)) {
+              tapados.push((el.textContent || '').trim().slice(0, 20) + ' por '
+                           + topo.tagName.toLowerCase() + '.' + topo.className);
+            }
+          }
+          const ver = s => getComputedStyle(document.querySelector(s)).visibility;
+          return {tapados, aviso: ver('#consentimento'), zap: ver('.zap-flutuante')};
+        }""")
+        self.assertEqual(estado["tapados"], [], estado)
+        self.assertEqual(estado["aviso"], "hidden", estado)
+        self.assertEqual(estado["zap"], "hidden", estado)
+
+        # Fechada a gaveta, os dois voltam — o aviso ainda precisa ser respondido.
+        p.click("#menuBtn")
+        p.wait_for_timeout(500)
+        volta = p.evaluate("""() => ({
+            aviso: getComputedStyle(document.getElementById('consentimento')).visibility,
+            zap: getComputedStyle(document.querySelector('.zap-flutuante')).visibility})""")
+        self.assertEqual(volta, {"aviso": "visible", "zap": "visible"})
