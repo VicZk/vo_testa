@@ -39,6 +39,11 @@ def validar_periodo_day_use(tipo_uh, checkin, checkout):
         )
 
 
+def exigir_hospedagem(tipo_uh):
+    if tipo_uh is not None and tipo_uh.modalidade == TipoUH.Modalidade.DAY_USE:
+        raise ValidationError("Cadastre os visitantes na página Day pass, com turno e lotação definidos. Unidades antigas de day use não aceitam novas reservas ou entradas.")
+
+
 class Tarifa(models.Model):
     """Matriz TipoUH × classificação de temporada. Sem linha → tarifa_base do tipo."""
 
@@ -660,6 +665,8 @@ class Reserva(models.Model):
             )
         if self.uh_id:
             validar_periodo_day_use(self.uh.tipo, self.checkin, self.checkout)
+            if self._state.adding:
+                exigir_hospedagem(self.uh.tipo)
         # Pelo menos 1 adulto: 0 hóspedes burlaria a trava de FNRH (len>=0) e zeraria
         # o cálculo de colchão/diária.
         if (self.adultos or 0) < 1:
@@ -700,6 +707,7 @@ class Reserva(models.Model):
 
         travar(self)
         travar_quartos(self.uh)
+        exigir_hospedagem(self.uh.tipo)
         era_orcamento = self.status == self.Status.ORCAMENTO
         self._exige_status(self.Status.ORCAMENTO, self.Status.PRE_RESERVA)
         conferir_disponibilidade_reserva(self)
@@ -737,6 +745,7 @@ class Reserva(models.Model):
 
         travar(self)
         self._exige_status(self.Status.CONFIRMADA, self.Status.PRE_RESERVA)
+        exigir_hospedagem(self.uh.tipo)
         travar_quartos(self.uh)
         conferir_entrada(self)
         # FNRH obrigatória: ficha completa de cada hóspede antes de hospedar.

@@ -227,6 +227,40 @@ class FluxoReservaViewTests(TestCase):
         self.assertContains(resp, 'value="cartao"')
         self.assertContains(resp, 'value="boleto"')
 
+    def test_resumo_preserva_contato_em_erro_edicao_e_indisponibilidade(self):
+        from unittest.mock import patch
+
+        from apps.reservas.models import Reserva as CrmReserva
+
+        base = {'checkin': self.ci, 'checkout': self.co, 'hospedes': 2,
+                'metodo_pagamento': 'cartao', 'nome': 'Pessoa preservada QA',
+                'email': 'preservada@example.test', 'telefone': '49999990000',
+                'cpf': CPF_VALIDO, 'observacoes': 'Pedido que deve continuar aqui'}
+        for unidade in (False, True):
+            dados = {**base, ('uh_id' if unidade else 'quarto_id'):
+                     self.uh.pk if unidade else self.quarto.pk}
+            for motivo in ('editar', 'dados_invalidos', 'indisponivel', 'restricao'):
+                with self.subTest(unidade=unidade, motivo=motivo):
+                    envio = {**dados}
+                    if motivo == 'editar':
+                        envio['editar_dados'] = '1'
+                    if motivo == 'dados_invalidos':
+                        envio['cpf'] = '000.000.000-00'
+                    with (patch('apps.reservas.services.uh_disponivel', return_value=motivo != 'indisponivel'),
+                          patch('apps.reservas.services.tipo_disponivel', return_value=motivo != 'indisponivel'),
+                          patch('apps.site.views._motivos_restricao', return_value=['Revisar período QA'] if motivo == 'restricao' else [])):
+                        resposta = self.client.post(reverse('core:resumo_reserva'), envio)
+                    self.assertEqual(resposta.status_code, 200)
+                    self.assertTemplateUsed(resposta, 'site/reservas/dados.html')
+                    self.assertContains(resposta, 'value="Pessoa preservada QA"')
+                    self.assertContains(resposta, 'Pedido que deve continuar aqui')
+                    self.assertContains(resposta, 'name="metodo_pagamento" value="cartao"')
+                    self.assertEqual(resposta['Cache-Control'], 'no-store')
+                    self.assertEqual(resposta.context['dados_form'].data['email'], base['email'])
+                    self.assertTrue(resposta.context['busca_form'].is_bound)
+                    self.assertFalse(CrmReserva.objects.exists())
+                    self.assertFalse(Hospede.objects.exists())
+
     def test_finalizar_com_cartao_cria_cobranca_cartao(self):
         from apps.pagamentos.models import Cobranca
         resp = self._post_finalizar(metodo_pagamento='cartao')
@@ -367,8 +401,7 @@ class FluxoReservaViewTests(TestCase):
         resp = self.client.get(reverse('core:reservar'), {
             'checkin': ci, 'hospedes': 2, 'modalidade': 'day_use',
         })
-        self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, 'Dia na Pousada')
+        self.assertRedirects(resp, reverse('daypass_publico'))
         co = (date.today() + timedelta(days=16)).strftime('%Y-%m-%d')
         resp = self.client.post(reverse('core:finalizar_reserva'), {
             'quarto_id': quarto.id, 'checkin': ci, 'checkout': co,
@@ -376,10 +409,9 @@ class FluxoReservaViewTests(TestCase):
             'nome': 'Day User', 'email': 'day@ex.com', 'telefone': '49999990000',
             'cpf': CPF_VALIDO, 'observacoes': '', 'aceite_politica': '1',
         })
-        self.assertEqual(resp.status_code, 302)
-        reserva = Reserva.objects.latest('id')
-        crm = CrmReserva.objects.get(pk=reserva.crm_reserva_id)
-        self.assertEqual(crm.uh.tipo.modalidade, 'day_use')
+        self.assertRedirects(resp, reverse('daypass_publico'))
+        self.assertFalse(Reserva.objects.exists())
+        self.assertFalse(CrmReserva.objects.filter(uh__tipo=tipo).exists())
 
     # ── Aceite da política de cancelamento (venda pela internet, CDC art. 49) ──
 

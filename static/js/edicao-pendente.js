@@ -25,7 +25,7 @@
   document.addEventListener('change', alterou);
   document.addEventListener('submit', ev => {
     const form = ev.target;
-    if (ev.defaultPrevented || form.hasAttribute('hx-post')) return;
+    if (ev.defaultPrevented || form.hasAttribute('hx-post') || form.hasAttribute('data-preservar-erros')) return;
     if (!podeDescartar(document, form)) { ev.preventDefault(); return; }
     limpar(document);
   });

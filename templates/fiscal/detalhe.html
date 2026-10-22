@@ -36,7 +36,7 @@
   <section>
     {% if doc.status != 'cancelada' %}<div class="painel-bloco bloco-fim">
       <h2 class="titulo-topo">Conferir emissão</h2>
-      <form method="post" action="{% url 'fiscal:atualizar' doc.pk %}" class="acoes">{% csrf_token %}
+      <form data-preservar-erros method="post" action="{% url 'fiscal:atualizar' doc.pk %}" class="acoes">{% csrf_token %}
         <button type="submit" name="acao" value="consultar" class="botao-neutro">Consultar provedor</button>
         {% if doc.status == 'pendente' or doc.status == 'processando' %}<button type="submit" name="acao" value="reenviar" class="botao-neutro">Reenviar com a mesma referência</button>{% endif %}
         {% if doc.status == 'rejeitada' and eh_gerente %}<button type="submit" name="acao" value="corrigir" class="botao-neutro">Reenviar cadastro corrigido</button>{% endif %}
@@ -45,7 +45,7 @@
     {% if doc.autorizada and eh_gerente %}
       <div class="painel-bloco bloco-fim">
         <h2 class="titulo-topo">Cancelar</h2>
-        <form method="post" action="{% url 'fiscal:cancelar' doc.pk %}" class="form-cartao">
+        <form data-preservar-erros method="post" action="{% url 'fiscal:cancelar' doc.pk %}" class="form-cartao">
           {% csrf_token %}
           <div class="campo"><label for="motivo-fiscal">Motivo</label><input id="motivo-fiscal" type="text" name="motivo" minlength="15" maxlength="255" required></div>
           <div class="acoes"><button type="submit" class="botao-perigo">Cancelar documento</button></div>

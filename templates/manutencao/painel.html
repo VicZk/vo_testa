@@ -46,7 +46,7 @@
 
   <section class="painel-bloco" x-data="{ alvo: 'quarto', tipo: 'corretiva' }">
     <h2 class="titulo-topo">Nova ordem de serviço</h2>
-    <form method="post" action="{% url 'manutencao:nova' %}" class="form-cartao">
+    <form data-preservar-erros method="post" action="{% url 'manutencao:nova' %}" class="form-cartao">
       {% csrf_token %}
 
       <div class="pdv-seg">

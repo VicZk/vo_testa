@@ -5,6 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pagamento | Pousada Vô Testa</title>
+  <script src="{% static 'js/formularios.js' %}" defer></script>
   {% comment %}Link de pagamento com token na URL: fora de índice de busca, e sem
   vazar a URL no Referer para o gateway/anúncio.{% endcomment %}
   <meta name="robots" content="noindex, nofollow">
@@ -153,7 +154,7 @@
       {% if cobranca.pagamento_cartao and not sandbox %}
         {# Captura do cartão — crédito à vista. O número só transita para o gateway. #}
         <p class="subtitulo">Pague com cartão de crédito.</p>
-        <form method="post" action="{% url 'pagamentos:pagar_cartao' cobranca.token %}" class="card-form" data-verificar>
+        <form data-preservar-erros method="post" action="{% url 'pagamentos:pagar_cartao' cobranca.token %}" class="card-form">
           {% csrf_token %}
           <input type="hidden" name="session_id" id="sessao-antifraude">
           <label for="cc-nome">Nome impresso no cartão</label>

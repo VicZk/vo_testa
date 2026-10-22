@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% load moeda nucleo_extras %}
+{% block titulo %}Cadastrar grupo | Day pass{% endblock %}
+{% block conteudo_classe %}conteudo-formulario{% endblock %}
+{% block conteudo %}<p class="pagina-eyebrow letreiro">Day pass · {{ turno }}</p>
+<h1>Cadastrar grupo</h1>
+<p class="subtitulo">{{ turno.inicio|time:'H:i' }}–{{ turno.fim|time:'H:i' }} · {{ ocupacao.disponiveis }} vagas disponíveis</p>
+<div class="painel-bloco bloco-fim">
+<p>Adulto: <strong>{{ turno.preco_adulto|intcomma_brl }}</strong> · Criança: <strong>{{ turno.preco_crianca|intcomma_brl }}</strong>
+</p>
+<p class="ajuda">{% if turno.preco_hospede != None %}Pessoa hospedada: {{ turno.preco_hospede|intcomma_brl }}. Vincule a estadia do titular.{% else %}Acesso de hóspedes ainda sem preço definido neste turno.{% endif %}</p>
+</div>
+<form method="post" class="form-cartao">{% csrf_token %}{{ form.non_field_errors }}{% for campo in form %}{% if campo.is_hidden %}{{ campo }}{% else %}<div class="campo">{{ campo|rotulo }}{{ campo }}{% if campo.help_text %}<p class="ajuda">{{ campo.help_text }}</p>{% endif %}{{ campo.errors }}</div>{% endif %}{% endfor %}<div class="acoes">
+<button class="botao-primario">Reservar vagas</button>
+<a class="botao-neutro" href="{% url 'daypass:painel' %}">Voltar</a>
+</div>
+</form>{% endblock %}

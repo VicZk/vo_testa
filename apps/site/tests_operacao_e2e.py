@@ -35,6 +35,152 @@ if _PLAYWRIGHT_OK:
 class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
     LOCALE = "pt-BR"
 
+    def test_daypass_configuracao_reserva_recebimento_acesso_e_consumo(self):
+        from apps.daypass.models import TurnoDayPass, VisitaDayPass
+        from apps.restaurante.models import Comanda
+
+        p = self.page
+        p.emulate_media(reduced_motion="reduce")
+        p.goto(self.url(reverse("daypass:painel")))
+        expect(p.get_by_text("Nenhum turno configurado", exact=True)).to_be_visible()
+        p.get_by_role("link", name="Configurar turno").click()
+        for nome, valor in {"data": self.today.isoformat(), "nome": "Piscina QA", "inicio": "00:00", "fim": "23:59", "capacidade": "4", "preco_adulto": "5000", "preco_crianca": "2500", "preco_hospede": "0"}.items():
+            p.locator(f'[name="{nome}"]').fill(valor)
+        p.locator('[name="contar_hospedes"]').select_option("sim")
+        p.locator('[name="ativo"]').check()
+        p.get_by_role("button", name="Salvar turno").click()
+        expect(p.get_by_role("heading", name="Day pass", exact=True)).to_be_visible()
+        turno = TurnoDayPass.objects.get(nome="Piscina QA")
+        self.assertEqual(turno.preco_adulto, Decimal("50"))
+        p.get_by_role("link", name="Cadastrar grupo", exact=True).click()
+        p.locator('[name="responsavel"]').select_option(str(self.guest.pk))
+        p.locator('[name="adultos"]').fill(self.guest.nome)
+        p.locator('[name="criancas"]').fill("Criança visitante QA")
+        p.get_by_role("button", name="Reservar vagas").click()
+        expect(p.get_by_role("heading", name=self.guest.nome, exact=True, level=1)).to_be_visible()
+        visita = VisitaDayPass.objects.get(turno=turno)
+        self.assertEqual(visita.valor_ingressos, Decimal("75"))
+        for largura in (320, 390, 821, 1440, 2560, 3440):
+            p.set_viewport_size({"width": largura, "height": 900})
+            for nome, args in (("daypass:painel", []), ("daypass:turno", [turno.pk]), ("daypass:nova_visita", [turno.pk]), ("daypass:visita", [visita.pk]), ("daypass_publico", [])):
+                with self.subTest(largura=largura, tela=nome):
+                    resposta = p.goto(self.url(reverse(nome, args=args)), wait_until="networkidle")
+                    self.assertEqual(resposta.status, 200)
+                    self.assertLessEqual(p.evaluate("document.documentElement.scrollWidth"), largura+1)
+                    if largura in (320, 1440):
+                        self._foto(f"fase5-{nome.replace(':','-')}-{largura}.png", full_page=True)
+        p.set_viewport_size({"width":390,"height":900})
+        p.goto(self.url(reverse("daypass:visita", args=[visita.pk])))
+        p.locator('[name="forma"]').select_option(str(self.cash.pk))
+        p.locator('[name="valor"]').fill("8000")
+        p.get_by_role("button", name="Registrar recebimento").click()
+        expect(p.locator('[data-erros-envio]')).to_contain_text("supera o saldo")
+        expect(p.locator('[name="valor"]')).to_have_value("80,00")
+        expect(p.locator('[name="forma"]')).to_have_value(str(self.cash.pk))
+        self.assertEqual(visita.total_pago(), 0)
+        self._foto("fase5-pagamento-erro-preservado.png")
+        p.locator('[name="valor"]').fill("7500")
+        pagamento_url = "**" + reverse("daypass:acao", args=[visita.pk, "receber"])
+        p.route(pagamento_url, lambda rota: rota.abort("failed"))
+        p.get_by_role("button", name="Registrar recebimento").click()
+        expect(p.locator('[data-erros-envio]')).to_contain_text("conexão")
+        expect(p.locator('[name="valor"]')).to_have_value("75,00")
+        self.assertEqual(visita.total_pago(), 0)
+        p.unroute(pagamento_url)
+        p.get_by_role("button", name="Registrar recebimento").click()
+        expect(p.get_by_role("button", name="Registrar recebimento")).to_have_count(0)
+        self.assertEqual(visita.total_pago(), Decimal("75"))
+        for restantes in (1, 0):
+            p.get_by_role("button", name="Registrar entrada", exact=True).first.click()
+            expect(p.get_by_role("button", name="Registrar entrada", exact=True)).to_have_count(restantes)
+        p.locator('[name="local"]').select_option(str(self.kitchen.pk))
+        p.get_by_role("button", name="Abrir comanda", exact=True).click()
+        expect(p.locator('.pdv-produto').filter(has_text=self.product.nome)).to_be_visible()
+        comanda = Comanda.objects.get(visita_daypass=visita)
+        p.locator('.pdv-produto').filter(has_text=self.product.nome).click()
+        expect(p.get_by_role("dialog")).to_be_visible()
+        p.get_by_role("dialog").get_by_role("button", name="Adicionar à comanda", exact=True).click()
+        expect(p.get_by_role("dialog")).to_be_hidden()
+        p.locator('.comanda-fechar [name="forma"]').select_option(str(self.cash.pk))
+        p.get_by_role("button", name="Fechar comanda", exact=True).click()
+        expect(p.get_by_role("button", name="Fechar comanda", exact=True)).to_have_count(0)
+        comanda.refresh_from_db()
+        self.assertEqual(comanda.status, "fechada")
+        p.goto(self.url(reverse("daypass:visita", args=[visita.pk])))
+        for restantes in (1, 0):
+            p.get_by_role("button", name="Registrar saída", exact=True).first.click()
+            expect(p.get_by_role("button", name="Registrar saída", exact=True)).to_have_count(restantes)
+        p.get_by_role("button", name="Encerrar visita", exact=True).click()
+        expect(p.get_by_role("button", name="Encerrar visita", exact=True)).to_have_count(0)
+        visita.refresh_from_db()
+        self.assertEqual(visita.status, "encerrada")
+
+    def test_formulario_preserva_texto_selecao_arquivo_e_erro_de_rede(self):
+        from apps.escala.models import Turno
+
+        p = self.page
+        p.goto(self.url(reverse("escala:turnos")))
+        nome = "Nome de turno que excede o limite de quarenta caracteres QA"
+        p.locator('[name="nome"]').fill(nome)
+        p.locator('[name="inicio"]').fill("09:00")
+        p.locator('[name="fim"]').fill("17:00")
+        p.get_by_role("button", name="Salvar", exact=True).click()
+        expect(p.locator('[data-erros-envio]')).to_be_visible()
+        expect(p.locator('[name="nome"]')).to_have_value(nome)
+        expect(p.locator('[name="inicio"]')).to_have_value("09:00")
+        self.assertFalse(Turno.objects.filter(nome=nome).exists())
+        p.locator('[name="nome"]').fill("Turno preservado QA")
+        p.get_by_role("button", name="Salvar", exact=True).click()
+        expect(p.get_by_text("Turno cadastrado.", exact=True)).to_be_visible()
+        self.assertEqual(Turno.objects.filter(nome="Turno preservado QA").count(), 1)
+        p.goto(self.url(reverse("conciliacao:painel")))
+        p.locator('#arq-ofx').set_input_files({"name":"extrato-qa.ofx","mimeType":"application/x-ofx","buffer":b"conteudo invalido QA"})
+        p.locator('#conta-ofx').fill("Conta ficticia QA")
+        with p.expect_response(lambda r: r.request.method == "POST" and "importar" in r.url):
+            p.get_by_role("button", name="Importar OFX", exact=True).click()
+        expect(p.locator('[data-erros-envio]')).to_be_visible()
+        expect(p.locator('#conta-ofx')).to_have_value("Conta ficticia QA")
+        self.assertEqual(p.locator('#arq-ofx').evaluate("el => el.files[0].name"), "extrato-qa.ofx")
+        p.route("**/conciliacao/importar-ofx/", lambda rota: rota.abort("failed"))
+        p.get_by_role("button", name="Importar OFX", exact=True).click()
+        expect(p.locator('[data-erros-envio]')).to_contain_text("conexão")
+        expect(p.get_by_role("button", name="Importar OFX", exact=True)).to_be_enabled()
+        self.assertEqual(p.locator('#arq-ofx').evaluate("el => el.files[0].name"), "extrato-qa.ofx")
+        self._foto("fase5-arquivo-erro-preservado.png")
+        p.evaluate("EdicaoPendente.limpar(document)")
+
+    def test_htmx_preserva_resposta_recusada_e_modal_nao_fecha_no_erro(self):
+        from django.core.exceptions import ValidationError
+
+        from apps.governanca import services as governanca
+        from apps.nucleo import logbook_services
+
+        entrada = logbook_services.registrar_ocorrencia(self.op, "Recado fictício QA")
+        p = self.page
+        p.goto(self.url(reverse("logbook")))
+        form = p.locator(f'#occ-{entrada.pk} .lb-replybox')
+        form.locator('[name="texto"]').fill("Minha resposta ainda não foi salva QA")
+        logbook_services.resolver(self.op, entrada, "Resolvido em outra estação")
+        form.get_by_role("button", name="Enviar", exact=True).click()
+        expect(p.locator(f'#occ-{entrada.pk} .lb-erro')).to_contain_text("já foi resolvida")
+        expect(p.locator(f'#occ-{entrada.pk} [name="texto"]')).to_have_value("Minha resposta ainda não foi salva QA")
+        tarefa = governanca.abrir_faxina(self.room, usuario=self.op)
+        governanca.iniciar_tarefa(tarefa, self.op)
+        governanca.concluir_tarefa(tarefa, self.op)
+        p.goto(self.url(reverse("governanca:quartos")))
+        p.locator(f'[hx-get="{reverse("governanca:devolver", args=[self.room.pk])}"]').first.click()
+        expect(p.get_by_role("dialog")).to_be_visible()
+        p.get_by_role("dialog").locator('[name="motivo"]').fill("Conferir o banheiro QA")
+        with patch("apps.governanca.services.reprovar_inspecao", side_effect=ValidationError("Revisão recusada para teste QA")):
+            with p.expect_response(lambda r: r.request.method == "POST" and "governanca" in r.url):
+                p.get_by_role("button", name="Solicitar nova limpeza", exact=True).click()
+            expect(p.get_by_role("dialog").locator('[data-erros-envio]')).to_contain_text("Revisão recusada para teste QA")
+        expect(p.get_by_role("dialog")).to_be_visible()
+        expect(p.get_by_role("dialog").locator('[name="motivo"]')).to_have_value("Conferir o banheiro QA")
+        self._foto("fase5-modal-erro-preservado.png")
+        p.get_by_role("button", name="Solicitar nova limpeza", exact=True).click()
+        expect(p.get_by_role("dialog")).to_be_hidden()
+
     def test_fiscal_integracoes_e_devolucao_nas_seis_larguras(self):
         from apps.fiscal.models import ConfigFiscalProduto, DocumentoFiscal
         from apps.pagamentos import services as pagamentos
@@ -105,6 +251,14 @@ class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
             dados = {"nome":"Pessoa QA", "numero":"4111111111111111", "validade":"1230", "cvv":"123", "documento":"11144477735", "logradouro":"Rua de Teste", "numero_endereco":"10", "bairro":"Bairro QA", "cidade":"Itá", "uf":"SC", "cep":"89760000"}
             for nome, valor in dados.items():
                 p.locator(f'[name="{nome}"]').fill(valor)
+            with patch("apps.pagamentos.services.autorizar_cartao_online", return_value=(False, "Recusa fictícia QA")):
+                p.get_by_role("button", name="Pagar R$ 20,00", exact=True).click()
+                expect(p.locator('[data-erros-envio]')).to_contain_text("Não foi possível confirmar")
+            expect(p.locator('[name="logradouro"]')).to_have_value("Rua de Teste")
+            expect(p.locator('[name="numero"]')).to_have_value("4111 1111 1111 1111")
+            expect(p.locator('[name="cvv"]')).to_have_value("123")
+            self.assertFalse(p.evaluate("Object.values(sessionStorage).some(v=>v.includes('4111111111111111'))"))
+            self.assertFalse(p.evaluate("Object.values(localStorage).some(v=>v.includes('4111111111111111'))"))
             def confirmar(cobranca, card, **kwargs):
                 self.assertEqual(kwargs["session_id"], "sessao-qa")
                 self.assertEqual(card["billingAddress"]["street"], "Rua de Teste")
@@ -143,6 +297,7 @@ class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
         p.get_by_text("Registrar acompanhamento", exact=True).click()
         p.locator('[name="tratativa"]').fill("Agradecimento registrado pela equipe.")
         p.get_by_role("button", name="Salvar acompanhamento").click()
+        expect(p.get_by_text("Acompanhamento registrado.", exact=True)).to_be_visible()
         self.assertEqual(RespostaNPS.objects.get(reserva=self.hospedagem).tratativa,
                          "Agradecimento registrado pela equipe.")
         self._foto("nps-painel-acompanhamento.png")

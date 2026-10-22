@@ -1,0 +1,16 @@
+{% extends "site/base.html" %}{% load moeda nucleo_extras site_contato %}
+{% block title %}Day pass | Pousada Vô Testa{% endblock %}
+{% block content %}{% contato_pousada as contato %}<main class="max-w-5xl mx-auto px-6 pt-32 pb-20">
+<p class="text-sm uppercase tracking-widest">Um dia na pousada</p>
+<h1 class="text-4xl font-display mb-4">Day pass</h1>
+<p class="mb-8">Confira os horários e consulte a recepção para reservar seu grupo. A disponibilidade considera todos os visitantes do turno.</p>{% for turno in turnos %}<section class="bg-white rounded-2xl p-6 mb-6">
+<h2 class="text-2xl mb-2">{{ turno.dia_id|date:'d/m/Y' }} · {{ turno.nome }}</h2>
+<p>{{ turno.inicio|time:'H:i' }}–{{ turno.fim|time:'H:i' }} · {{ turno.ocupacao.disponiveis }} vagas disponíveis</p>
+<p class="mt-2">Adulto: {{ turno.preco_adulto|intcomma_brl }} · Criança: {{ turno.preco_crianca|intcomma_brl }}</p>
+</section>{% empty %}<section class="bg-white rounded-2xl p-6 mb-6">
+<h2 class="text-2xl mb-2">Agenda em preparação</h2>
+<p>As reservas de day pass serão abertas após a confirmação dos horários e da capacidade de atendimento.</p>
+</section>{% endfor %}{% if contato.whatsapp_publico %}<a class="inline-block bg-noturno text-white rounded-full px-6 py-3" href="https://wa.me/{{ contato.whatsapp_publico }}" target="_blank" rel="noopener">Consultar a recepção</a>{% elif contato.telefone_publico %}<p>Consulte a recepção: {{ contato.telefone_publico }}</p>{% endif %}<p class="mt-6">
+<a href="{% url 'core:home' %}" class="underline">Voltar ao site</a>
+</p>
+</main>{% endblock %}

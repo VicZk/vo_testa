@@ -56,7 +56,7 @@
     </div>
 
     {% if comanda.aberta %}
-      <form method="post" action="{% url 'restaurante:fechar' comanda.pk %}" class="comanda-fechar" x-data="{ destino: 'caixa' }">
+      <form data-preservar-erros method="post" action="{% url 'restaurante:fechar' comanda.pk %}" class="comanda-fechar" x-data="{ destino: 'caixa' }">
         {% csrf_token %}
         <input type="hidden" name="destino" :value="destino">
         <div class="pdv-resumo">
@@ -85,14 +85,14 @@
       </form>
 
       <div class="comanda-extras">
-        {% if contas %}<form method="post" action="{% url 'restaurante:vincular' comanda.pk %}" class="campo">
+        {% if contas %}<form data-preservar-erros method="post" action="{% url 'restaurante:vincular' comanda.pk %}" class="campo">
           {% csrf_token %}<label for="comanda-estadia">Estadia vinculada</label>
           <select id="comanda-estadia" name="conta_id" required><option value="">Selecione o quarto / hóspede…</option>
             {% for conta in contas %}<option value="{{ conta.id }}"{% if conta.id == comanda.conta_id %} selected{% endif %}>{{ conta.rotulo }}</option>{% endfor %}
           </select><button class="botao-neutro" type="submit">Vincular à estadia</button>
           <small class="ajuda">O check-out avisa sobre esta comanda enquanto ela estiver aberta.</small>
         </form>{% endif %}
-        <form method="post" action="{% url 'restaurante:transferir' comanda.pk %}" class="form-inline">
+        <form data-preservar-erros method="post" action="{% url 'restaurante:transferir' comanda.pk %}" class="form-inline">
           {% csrf_token %}
           <select name="mesa"><option value="">Transferir para ponto…</option>
             {% for m in mesas %}<option value="{{ m.pk }}" {% if comanda.mesa_id == m.pk %}selected{% endif %}>{{ m.nome }}</option>{% endfor %}
@@ -102,7 +102,7 @@
         {% if eh_gerente %}
           <details class="acao-sensivel">
             <summary>Cancelar comanda</summary>
-            <form method="post" action="{% url 'restaurante:cancelar' comanda.pk %}" class="form-cartao">
+            <form data-preservar-erros method="post" action="{% url 'restaurante:cancelar' comanda.pk %}" class="form-cartao">
               {% csrf_token %}
               <div class="campo"><label>Motivo</label><input type="text" name="motivo" required></div>
               <div class="acoes"><button type="submit" class="botao-perigo">Confirmar cancelamento</button></div>

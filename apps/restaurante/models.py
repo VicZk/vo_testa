@@ -70,6 +70,7 @@ class Comanda(models.Model):
         related_name="comanda", verbose_name="recebimento no caixa",
     )
     conta_ref = models.CharField("conta do quarto", max_length=120, blank=True)
+    visita_daypass = models.ForeignKey("daypass.VisitaDayPass", on_delete=models.PROTECT, null=True, blank=True, related_name="comandas")
     conta = models.ForeignKey(
         "reservas.ContaHospedagem", on_delete=models.PROTECT, null=True, blank=True,
         related_name="comandas_restaurante", verbose_name="estadia vinculada",

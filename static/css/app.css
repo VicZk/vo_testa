@@ -6981,3 +6981,24 @@ body.escala-dragging .escala-drop { cursor: copy; }
 .botao-ronda:active { transform:none; }
 .mk-pil-acao { border-radius:6px; min-height:44px; }
 @media (min-width:821px) { .tabela-limpeza tbody tr { height:6rem; } }
+
+/* Turnos e contas de visitantes. */
+.daypass-turnos { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,24rem),1fr)); gap:1.2rem; }
+.daypass-turnos > * { min-width:0; }
+
+.daypass-filtro { display:flex; gap:1rem; align-items:end; flex-wrap:wrap; }
+.daypass-filtro .campo { margin:0; }
+.daypass-form :is(input:not([type="hidden"]),select), .daypass-filtro input { width:100%; min-height:44px; border:1px solid var(--fio-forte); border-radius:var(--raio-p); padding:.65rem .8rem; background:var(--superficie); color:var(--tinta); font:inherit; }
+.daypass-form .campo { margin-bottom:1rem; }
+.daypass-form label { display:block; margin-bottom:.35rem; }
+.daypass-turnos summary, details.painel-bloco > summary { cursor:pointer; min-height:44px; align-content:center; }
+.daypass-pessoas { list-style: none; padding: 0; margin: 1.2rem 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: 1rem; }
+.daypass-pessoa { min-width: 0; padding: 1rem; border: 1px solid var(--fio); border-radius: var(--raio); display: flex; flex-direction: column; align-items: flex-start; }
+.daypass-pessoa h3 { margin: 0 0 .25rem; overflow-wrap: anywhere; }
+.daypass-pessoa dl { display: flex; gap: 2rem; margin: 1rem 0; }
+.daypass-pessoa dt { color: var(--tinta-suave); font-size: .8rem; }
+.daypass-pessoa dd { margin: .2rem 0 0; }
+.daypass-pessoa form { width: 100%; margin-top: auto; }
+.daypass-pessoa button { width: 100%; min-height: 44px; }
+[data-erros-envio] { white-space: normal; overflow-wrap: anywhere; }
+[data-erros-envio] p { margin: .25rem 0; }

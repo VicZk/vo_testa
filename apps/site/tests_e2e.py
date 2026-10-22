@@ -104,6 +104,10 @@ class ReservaSiteE2ETests(_UnidadeVendavelMixin, _BaseE2E):
         self.uh = self._semear_unidade()
 
     def test_reserva_ponta_a_ponta(self):
+        from unittest.mock import patch
+
+        from playwright.sync_api import expect
+
         checkin, checkout = self._datas()
         # Passo 2 — entra direto com as datas (o calendário tem teste próprio) e
         # confere que o quarto físico aparece com o nome temático.
@@ -119,10 +123,24 @@ class ReservaSiteE2ETests(_UnidadeVendavelMixin, _BaseE2E):
         self.page.fill("input[name=email]", "maria.e2e@exemplo.com")
         self.page.fill("input[name=telefone]", "(49) 99143-8813")
         self.page.fill("input[name=cpf]", "111.444.777-35")
+        # A última disponibilidade muda depois do preenchimento: não perde o contato.
+        with patch('apps.reservas.services.uh_disponivel', return_value=False):
+            self.page.get_by_role("button", name="Continuar").click()
+            expect(self.page.get_by_text("seus dados foram mantidos", exact=False)).to_be_visible()
+        expect(self.page.locator('input[name="nome"]')).to_have_value("Maria Teste E2E")
+        expect(self.page.locator('input[name="email"]')).to_have_value("maria.e2e@exemplo.com")
+        expect(self.page.locator('input[name="checkin"]')).to_have_value(checkin.isoformat())
+        for largura in (320, 390, 821, 1440, 2560, 3440):
+            self.page.set_viewport_size({"width": largura, "height": 900})
+            self.assertLessEqual(self.page.evaluate("document.documentElement.scrollWidth"), largura+1)
         self.page.get_by_role("button", name="Continuar").click()
 
         # Passo 4 — resumo e confirmação.
         self.page.wait_for_selector("text=Confirmar Reserva", timeout=10000)
+        self.page.get_by_role("button", name="Editar dados", exact=True).click()
+        expect(self.page.locator('input[name="nome"]')).to_have_value("Maria Teste E2E")
+        expect(self.page.locator('input[name="email"]')).to_have_value("maria.e2e@exemplo.com")
+        self.page.get_by_role("button", name="Continuar").click()
         # Sem o aceite da política o navegador não deixa enviar (caixa obrigatória).
         self.page.check("input[name=aceite_politica]")
         self.page.get_by_role("button", name="Confirmar Reserva").click()

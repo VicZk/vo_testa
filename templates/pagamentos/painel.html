@@ -65,7 +65,7 @@
   <section class="painel-bloco" id="nova-cobranca"
            x-data="{ fin: '{{ pre.finalidade|default:'avulso' }}', metodo: 'pix' }">
     <h2 class="titulo-topo">Nova cobrança</h2>
-    <form method="post" action="{% url 'pagamentos:criar' %}" class="form-cartao">
+    <form data-preservar-erros method="post" action="{% url 'pagamentos:criar' %}" class="form-cartao">
       {% csrf_token %}
       <div class="campo"><label>Descrição</label><input type="text" name="descricao" placeholder="Ex.: Sinal reserva #12" value="{{ pre.descricao|default:'' }}" required></div>
       <div class="form-grade">

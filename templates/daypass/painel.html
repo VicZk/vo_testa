@@ -1,0 +1,62 @@
+{% extends "base.html" %}{% load moeda nucleo_extras %}
+{% block titulo %}Day pass | Vô Testa{% endblock %}
+{% block conteudo %}
+<p class="pagina-eyebrow letreiro">Áreas comuns · Acesso de visitantes</p>
+<div class="pagina-cabecalho">
+<div>
+<h1>Day pass</h1>
+<p class="subtitulo">Turnos, lotação e presença nas áreas comuns.</p>
+</div>{% if eh_gerente %}<a class="botao-primario" href="{% url 'daypass:turno_novo' %}">Configurar turno</a>{% endif %}</div>
+{% include "reservas/partials/nav.html" %}
+<form method="get" class="daypass-filtro bloco-fim">
+<div class="campo">
+<label for="data">Data da visita</label>
+<input type="date" id="data" name="data" value="{{ dia|date:'Y-m-d' }}">
+</div>
+<button class="botao-neutro">Ver dia</button>
+</form>
+{% if not turnos %}<section class="painel-bloco bloco-fim">
+<h2>Nenhum turno configurado</h2>
+<p>O day pass só aceita reservas após a gerência definir horários, lotação, preços e a regra de acesso de hóspedes. Cadastros antigos de day use por quarto não liberam novas vendas.</p>
+</section>{% endif %}
+<div class="daypass-turnos bloco-fim">{% for turno in turnos %}<section class="painel-bloco">
+<div class="pagina-cabecalho">
+<h2>{{ turno.nome }}</h2>
+<span class="selo">{% if turno.ativo %}Vendas abertas{% else %}Vendas pausadas{% endif %}</span>
+</div>
+<p>{{ turno.inicio|time:'H:i' }}–{{ turno.fim|time:'H:i' }} · {{ turno.capacidade }} vagas</p>
+<p>
+<strong>{{ turno.ocupacao.disponiveis }} disponíveis</strong> · {{ turno.ocupacao.reservadas }} reservadas · {{ turno.ocupacao.presentes }} pessoas presentes</p>
+<p class="ajuda">{% if turno.contar_hospedes %}Hóspedes e visitantes compartilham o limite.{% else %}O limite é exclusivo de visitantes; hóspedes são registrados separadamente.{% endif %} A saída não revende a vaga neste turno.</p>
+<div class="acoes">{% if turno.ativo %}<a class="botao-primario" href="{% url 'daypass:nova_visita' turno.pk %}">Cadastrar grupo</a>{% endif %}{% if eh_gerente %}<a class="botao-neutro" href="{% url 'daypass:turno' turno.pk %}">Editar turno</a>{% endif %}</div>
+</section>{% endfor %}</div>
+<section class="painel-bloco">
+<h2>Grupos do dia</h2>
+<table class="tabela">
+<thead>
+<tr>
+<th>Grupo</th>
+<th>Responsável</th>
+<th>Turno</th>
+<th>Pessoas</th>
+<th>Situação</th>
+<th>Ingressos</th>
+</tr>
+</thead>
+<tbody>{% for visita in visitas %}<tr>
+<td>
+<a href="{% url 'daypass:visita' visita.pk %}">#{{ visita.pk }}</a>
+</td>
+<td>
+<a href="{% url 'daypass:visita' visita.pk %}">{{ visita.responsavel }}</a>{% if visita.hospedagem_id %}<span class="selo">Hóspedes</span>{% endif %}</td>
+<td>{{ visita.turno.nome }}</td>
+<td>{{ visita.visitantes.all|length }}</td>
+<td>{{ visita.get_status_display }}</td>
+<td>{{ visita.valor_ingressos|intcomma_brl }}</td>
+</tr>{% empty %}<tr>
+<td colspan="6">Nenhum grupo registrado para esta data.</td>
+</tr>{% endfor %}</tbody>
+</table>
+{% include "componentes/paginacao.html" with pagina=visitas %}
+</section>
+{% endblock %}

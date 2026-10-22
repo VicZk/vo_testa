@@ -9,6 +9,33 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 22/10/2026: Day Pass por turno e formulários que preservam o preenchimento
+
+- Visitas às áreas comuns têm agenda, lotação por pessoa, regra explícita para
+  hóspedes, ingresso, controle nominal de entrada/saída e comanda do grupo.
+  A última vaga e os recebimentos são protegidos contra operações simultâneas.
+  Sem horários, valores e capacidade definidos, a agenda pública permanece fechada.
+- Erros de validação e conexão mantêm campos, seleções e arquivos. Modais só
+  fecham quando a ação é confirmada; valores em reais permanecem corretos no reenvio.
+  No site, indisponibilidade e edição da revisão preservam os contatos informados.
+- Contatos públicos dependem de conferência; selos de escassez sem cálculo real
+  foram removidos. A comparação com OCA/vertical-hotel está documentada com fontes.
+- Regressões de navegador incluem seis larguras, cartão recusado, arquivo inválido,
+  resposta a ocorrência já resolvida e o ciclo completo de Day Pass.
+
+## 22/10/2026: correções operacionais e preparação das integrações
+
+- Reservas, contas, consumos, estoque e rotinas sensíveis revalidam o estado sob
+  trava; concorrência não pode duplicar recebimentos, devoluções ou reservas.
+- Escala considera virada de data e descanso configurável. NPS tem convite,
+  consentimento, resposta e acompanhamento. FNRH diferencia nacionalidade de
+  residência e prepara o ciclo completo de atualizações e saída.
+- Fiscal e pagamentos têm adaptadores, configuração verificável e ensaios
+  registrados. Credenciais e homologação externas ainda são necessárias.
+- Backup automático passa a usar destino persistente; restauração isolada
+  conferiu dez tabelas e os totais de caixa, estoque e contas da instalação VPS.
+  Cópia externa, monitores e destinatários do kit aguardam configuração.
+
 ## 22/10/2026: busca e formulários centralizados em telas ultrawide
 
 - A busca global acompanha o centro da área útil com o menu aberto ou recolhido.

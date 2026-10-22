@@ -29,9 +29,9 @@
 <div class="acoes bloco-fim-curto">
   <form method="post" action="{% url 'reservas:grupo_confirmar' grupo.pk %}">{% csrf_token %}
     <button class="botao-neutro">Confirmar grupo</button></form>
-  <form method="post" action="{% url 'reservas:grupo_checkin' grupo.pk %}">{% csrf_token %}
+  <form data-preservar-erros method="post" action="{% url 'reservas:grupo_checkin' grupo.pk %}">{% csrf_token %}
     <button class="botao-neutro">Check-in do grupo</button></form>
-  <form method="post" action="{% url 'reservas:grupo_encerrar' grupo.pk %}">{% csrf_token %}
+  <form data-preservar-erros method="post" action="{% url 'reservas:grupo_encerrar' grupo.pk %}">{% csrf_token %}
     <button class="botao-neutro">Encerrar grupo</button></form>
 </div>
 {% endif %}
@@ -48,7 +48,7 @@
     {% if 'fiscal'|modulo_ativo %} · <a href="{% url 'fiscal:preparar_conta' resumo.folio.pk %}">Preparar NFS-e do grupo</a>{% endif %}
   </p>
   {% if resumo.folio.aberta and not grupo.encerrado_em %}
-    <form method="post" action="{% url 'reservas:grupo_receber_folio' grupo.pk %}" class="form-cartao grupo-form" aria-label="Receber pagamento do grupo">
+    <form data-preservar-erros method="post" action="{% url 'reservas:grupo_receber_folio' grupo.pk %}" class="form-cartao grupo-form" aria-label="Receber pagamento do grupo">
       {% csrf_token %}
       <div class="campo"><label for="grupo-forma">Forma de pagamento</label><select id="grupo-forma" name="forma" required>
         {% for f in formas %}<option value="{{ f.pk }}">{{ f.nome }}</option>{% endfor %}
@@ -60,7 +60,7 @@
       <div class="acoes"><button class="botao-primario">Registrar recebimento</button></div>
     </form>
     {% if faturar %}
-    <form method="post" action="{% url 'reservas:grupo_faturar' grupo.pk %}" class="form-cartao grupo-form">
+    <form data-preservar-erros method="post" action="{% url 'reservas:grupo_faturar' grupo.pk %}" class="form-cartao grupo-form">
       {% csrf_token %}
       <div class="campo"><label for="grupo-faturado">Valor faturado (R$)</label><input id="grupo-faturado" type="text" name="valor" class="mascara-reais" inputmode="numeric" value="{{ faturar.valor }}" required></div>
       <div class="campo"><label for="grupo-vencimento">Vencimento</label><input id="grupo-vencimento" type="date" name="vencimento" value="{{ faturar.vencimento|date:'Y-m-d' }}" required></div>
@@ -68,7 +68,7 @@
     </form>
     {% endif %}
     {% if grupo.titular %}
-    <form method="post" action="{% url 'reservas:grupo_sinal' grupo.pk %}" class="form-cartao grupo-form">
+    <form data-preservar-erros method="post" action="{% url 'reservas:grupo_sinal' grupo.pk %}" class="form-cartao grupo-form">
       {% csrf_token %}
       <div class="campo"><label for="grupo-sinal">Valor do sinal (R$)</label><input id="grupo-sinal" type="text" name="valor" class="mascara-reais" inputmode="numeric" placeholder="0,00" required></div>
       <div class="campo"><label for="grupo-metodo">Como cobrar</label><select id="grupo-metodo" name="metodo">
@@ -103,7 +103,7 @@
         <td class="num">{{ q.saldo|intcomma_brl }}</td>
         <td>
           {% if not grupo.encerrado_em %}{% if q.reserva.status == 'pre_reserva' or q.reserva.status == 'confirmada' %}
-          <form method="post" action="{% url 'reservas:grupo_remover_quarto' grupo.pk q.reserva.pk %}"
+          <form data-preservar-erros method="post" action="{% url 'reservas:grupo_remover_quarto' grupo.pk q.reserva.pk %}"
                 onsubmit="return confirm('Remover {{ q.uh.numero }} do grupo?')">
             {% csrf_token %}
             <input type="hidden" name="motivo" value="Quarto removido do grupo.">
@@ -122,7 +122,7 @@
 <div class="cartao bloco-respiro">
   <h3>Adicionar quarto</h3>
   {% if quartos_livres %}
-  <form method="post" action="{% url 'reservas:grupo_adicionar_quarto' grupo.pk %}" class="form-cartao grupo-form" aria-label="Adicionar quarto ao grupo">
+  <form data-preservar-erros method="post" action="{% url 'reservas:grupo_adicionar_quarto' grupo.pk %}" class="form-cartao grupo-form" aria-label="Adicionar quarto ao grupo">
     {% csrf_token %}
     <div class="campo"><label for="grupo-quarto">Quarto</label><select id="grupo-quarto" name="uh" required>
       <option value="">Quarto livre…</option>
@@ -144,7 +144,7 @@
 
 <div class="cartao bloco-respiro">
   <h3>Cancelar o grupo</h3>
-  <form method="post" action="{% url 'reservas:grupo_cancelar' grupo.pk %}" class="form-cartao grupo-form"
+  <form data-preservar-erros method="post" action="{% url 'reservas:grupo_cancelar' grupo.pk %}" class="form-cartao grupo-form"
         onsubmit="return confirm('Cancelar o grupo inteiro?')">
     {% csrf_token %}
     <div class="campo"><label for="grupo-motivo">Motivo do cancelamento</label><input id="grupo-motivo" type="text" name="motivo" required></div>

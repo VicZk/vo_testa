@@ -13,7 +13,7 @@
 
 {% if not sessao %}
   <p class="subtitulo">Você não tem caixa aberto. Abra a sessão do seu módulo com o fundo de troco.</p>
-  <form method="post" action="{% url 'caixa_abrir' %}" class="form-cartao caixa-formulario" aria-label="Abrir caixa">
+  <form data-preservar-erros method="post" action="{% url 'caixa_abrir' %}" class="form-cartao caixa-formulario" aria-label="Abrir caixa">
     {% csrf_token %}
     {% include "nucleo/partials/campos.html" with form=form_abrir %}
     <div class="acoes">
@@ -53,7 +53,7 @@
   </div>
 
   <div class="caixa-operacao">
-      <form method="post" action="{% url 'caixa_movimento' %}" class="form-cartao caixa-formulario" aria-labelledby="caixa-registrar-titulo">
+      <form data-preservar-erros method="post" action="{% url 'caixa_movimento' %}" class="form-cartao caixa-formulario" aria-labelledby="caixa-registrar-titulo">
       <h2 id="caixa-registrar-titulo">Registrar movimento
         <span class="info-dica dica" data-dica="Recebimento = entra dinheiro por pagamento · Reforço = coloca troco no caixa · Sangria = retira dinheiro do caixa">ⓘ</span>
       </h2>
@@ -66,7 +66,7 @@
           <button type="submit" class="botao-primario">Registrar</button>
         </div>
       </form>
-      <form method="post" action="{% url 'caixa_fechar' %}" class="form-cartao caixa-formulario caixa-conferencia" aria-labelledby="caixa-fechar-titulo">
+      <form data-preservar-erros method="post" action="{% url 'caixa_fechar' %}" class="form-cartao caixa-formulario caixa-conferencia" aria-labelledby="caixa-fechar-titulo">
       <h2 id="caixa-fechar-titulo">Conferir e fechar</h2>
       <p class="ajuda">Ao terminar o turno, informe o dinheiro contado e registre qualquer observação.</p>
         {% csrf_token %}

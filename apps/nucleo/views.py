@@ -1370,7 +1370,8 @@ def logbook_comentar(request, pk):
     except ValidationError as erro:
         return render(
             request, "nucleo/partials/logbook_ocorrencia.html",
-            {"e": entrada, "erro": " ".join(erro.messages)},
+            {"e": entrada, "erro": " ".join(erro.messages),
+             "texto_respondido": request.POST.get("texto", "")},
         )
     entrada.refresh_from_db()
     return render(request, "nucleo/partials/logbook_ocorrencia.html", {"e": entrada})

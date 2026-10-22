@@ -17,7 +17,7 @@
 
 <section class="painel-bloco form-abertura estreito">
   <h2 class="titulo-topo">Abrir comanda</h2>
-  <form method="post" action="{% url 'restaurante:abrir' %}" class="abrir-comanda">
+  <form data-preservar-erros method="post" action="{% url 'restaurante:abrir' %}" class="abrir-comanda">
     {% csrf_token %}
     {% if contas %}<label class="select-wrap"><select name="conta" aria-label="Estadia vinculada">
       <option value="">Estadia (opcional)…</option>

@@ -39,7 +39,7 @@
         {% if setor %}<input type="hidden" name="setor" value="{{ setor }}">{% endif %}
         <button type="submit" class="botao-primario">⟳ Gerar semana</button>
       </form>
-      <form method="post" action="{% url 'escala:publicar' %}" id="form-publicar" data-bloqueios="{{ bloqueios|length }}">
+      <form data-preservar-erros method="post" action="{% url 'escala:publicar' %}" id="form-publicar" data-bloqueios="{{ bloqueios|length }}">
         {% csrf_token %}
         <input type="hidden" name="inicio" value="{{ inicio|date:'Y-m-d' }}">
         {% if setor %}<input type="hidden" name="setor" value="{{ setor }}">{% endif %}
@@ -86,7 +86,7 @@
   <section class="escala-escalar">
     <h2>Escalar funcionário</h2>
     <p class="escala-escalar-dica">Também pode arrastar os nomes acima direto para a grade.</p>
-    <form method="post" action="{% url 'escala:atribuir' %}">
+    <form data-preservar-erros method="post" action="{% url 'escala:atribuir' %}">
       {% csrf_token %}
       <input type="hidden" name="semana" value="{{ inicio|date:'Y-m-d' }}">
       <select name="funcionario" required aria-label="Funcionário">

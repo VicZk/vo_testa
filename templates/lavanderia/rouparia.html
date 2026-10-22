@@ -35,7 +35,7 @@
   <section>
     <div class="painel-bloco bloco-fim">
       <h2 class="titulo-topo">Movimentar</h2>
-      <form method="post" action="{% url 'lavanderia:rouparia_mover' %}" class="form-cartao" x-data="{ acao: 'adquirir' }">
+      <form data-preservar-erros method="post" action="{% url 'lavanderia:rouparia_mover' %}" class="form-cartao" x-data="{ acao: 'adquirir' }">
         {% csrf_token %}
         <div class="campo"><label>Item</label>
           <select name="item" required>{% for i in itens %}<option value="{{ i.pk }}">{{ i.nome }}</option>{% endfor %}</select>

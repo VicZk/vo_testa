@@ -1422,7 +1422,8 @@ class DayUseUmDiaTests(ReservasTestsBase):
         with self.assertRaises(ValidationError):
             r.full_clean()
         r.checkout = HOJE + timedelta(days=1)
-        r.full_clean()  # um dia: válido
+        with self.assertRaisesMessage(ValidationError, "Day pass"):
+            r.full_clean()  # novas visitas usam turnos e lotação próprios
 
     def test_transferir_day_use_para_varios_dias_e_recusado(self):
         r = Reserva.objects.create(
@@ -2413,8 +2414,15 @@ class OcupacaoSemDayUseTests(TestCase):
                 uh=uh, hospede=hospede,
                 checkin=self.ontem, checkout=HOJE, status=Reserva.Status.CONFIRMADA,
                 valor_diaria=Decimal(valor), criado_por=op)
-            with patch("django.utils.timezone.localdate", return_value=r.checkin):
-                r.fazer_checkin(op)
+            if uh.tipo.eh_day_use:
+                # Histórico anterior ao Day Pass: continua fora da ocupação de UHs.
+                from .models import ContaHospedagem
+                Reserva.objects.filter(pk=r.pk).update(status=Reserva.Status.HOSPEDADA)
+                conta = ContaHospedagem.objects.create(reserva=r)
+                conta.lancar_diarias(op)
+            else:
+                with patch("django.utils.timezone.localdate", return_value=r.checkin):
+                    r.fazer_checkin(op)
 
     def test_relatorio_conta_so_os_quartos(self):
         o = services.relatorio_ocupacao(self.ontem, self.ontem)

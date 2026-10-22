@@ -55,7 +55,7 @@
 
     {% if ordem.em_producao %}
       {% if ordem.status != 'pronta' %}
-        <form method="post" action="{% url 'lavanderia:avancar' ordem.pk %}" class="pdv-destino">
+        <form data-preservar-erros method="post" action="{% url 'lavanderia:avancar' ordem.pk %}" class="pdv-destino">
           {% csrf_token %}
           <button type="submit" class="botao-neutro botao-largo">
             {% if ordem.status == 'recebida' %}Enviar para lavagem{% else %}Marcar como pronta{% endif %}
@@ -63,7 +63,7 @@
         </form>
       {% endif %}
 
-      <form method="post" action="{% url 'lavanderia:entregar' ordem.pk %}" class="comanda-fechar" x-data="{ destino: 'caixa' }">
+      <form data-preservar-erros method="post" action="{% url 'lavanderia:entregar' ordem.pk %}" class="comanda-fechar" x-data="{ destino: 'caixa' }">
         {% csrf_token %}
         <input type="hidden" name="destino" :value="destino">
         <div class="pdv-resumo">
@@ -91,7 +91,7 @@
         <button type="submit" class="botao-primario pdv-finalizar">Entregar e cobrar</button>
       </form>
 
-      {% if contas %}<form method="post" action="{% url 'lavanderia:vincular' ordem.pk %}" class="comanda-extras campo">
+      {% if contas %}<form data-preservar-erros method="post" action="{% url 'lavanderia:vincular' ordem.pk %}" class="comanda-extras campo">
         {% csrf_token %}<label for="lavanderia-estadia">Estadia vinculada</label>
         <select id="lavanderia-estadia" name="conta_id" required><option value="">Selecione o quarto / hóspede…</option>
           {% for conta in contas %}<option value="{{ conta.id }}"{% if conta.id == ordem.conta_id %} selected{% endif %}>{{ conta.rotulo }}</option>{% endfor %}
@@ -102,7 +102,7 @@
         <div class="comanda-extras">
           <details class="acao-sensivel">
             <summary>Cancelar ordem</summary>
-            <form method="post" action="{% url 'lavanderia:cancelar' ordem.pk %}" class="form-cartao">
+            <form data-preservar-erros method="post" action="{% url 'lavanderia:cancelar' ordem.pk %}" class="form-cartao">
               {% csrf_token %}
               <div class="campo"><label>Motivo</label><input type="text" name="motivo" required></div>
               <div class="acoes"><button type="submit" class="botao-perigo">Cancelar ordem</button></div>

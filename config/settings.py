@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     # Módulos do sistema
     "apps.nucleo",
     "apps.reservas",
+    "apps.daypass",
     "apps.estoque",
     "apps.loja",
     "apps.governanca",
@@ -109,6 +110,7 @@ MIDDLEWARE = [
     "apps.nucleo.audit.AuditContextMiddleware",
     # MFA obrigatório p/ superusuário (depois do auth — precisa de request.user).
     "apps.nucleo.security_headers.MFAObrigatorioMiddleware",
+    "apps.nucleo.formularios.RespostaFormularioMiddleware",
 ]
 
 # CSP: começa observando (report-only). Trocar para False quando o console estiver limpo.

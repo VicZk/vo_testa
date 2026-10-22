@@ -12,13 +12,26 @@
         <form method="post" action="{% url 'core:resumo_reserva' %}" id="form-dados">
             {% csrf_token %}
             {% if uh_id %}<input type="hidden" name="uh_id" value="{{ uh_id }}">{% else %}<input type="hidden" name="quarto_id" value="{{ quarto.id }}">{% endif %}
+            {% if busca_form %}
+            <fieldset class="bg-pergaminho/40 border border-madeira/10 rounded-xl p-4 mb-6">
+                <legend class="text-madeira font-semibold">Datas e hóspedes</legend>
+                {{ busca_form.non_field_errors }}
+                <div class="grid sm:grid-cols-2 gap-3">
+                {% for campo in busca_form %}{% if campo.name != 'modalidade' %}
+                    <div><label class="block text-sm text-madeira" for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+                    {{ campo }}{% if campo.errors %}<p class="text-perigo text-sm">{{ campo.errors|striptags }}</p>{% endif %}</div>
+                {% endif %}{% endfor %}
+                </div>
+            </fieldset>
+            {% else %}
             <input type="hidden" name="checkin" value="{{ busca.checkin|date:'Y-m-d' }}">
             <input type="hidden" name="checkout" value="{{ busca.checkout|date:'Y-m-d' }}">
             <input type="hidden" name="hospedes" value="{{ busca.hospedes }}">
             <input type="hidden" name="criancas_0_5" value="{{ busca.criancas_0_5|default:0 }}">
             <input type="hidden" name="criancas_6_15" value="{{ busca.criancas_6_15|default:0 }}">
+            {% endif %}
             <input type="hidden" name="modalidade" value="{{ modalidade|default:busca.modalidade }}">
-            <input type="hidden" name="metodo_pagamento" value="pix">
+            <input type="hidden" name="metodo_pagamento" value="{{ metodo|default:'pix' }}">
 
             <div id="dados-campos">
                 {% include 'site/reservas/partials/dados_campos.html' %}
@@ -30,17 +43,17 @@
                 <p class="text-madeira/40 text-xs mb-3">Como prefere as camas? (não altera o preço)</p>
                 <div>
                     <label class="flex items-center min-h-[44px] gap-2 text-sm text-madeira cursor-pointer">
-                        <input type="radio" name="arranjo" value="" class="accent-madeira" checked> Sugerido pelo sistema
+                        <input type="radio" name="arranjo" value="" class="accent-madeira" {% if not arranjo_sel %}checked{% endif %}> Sugerido pelo sistema
                     </label>
                     {% for a in arranjos %}
                     <label class="flex items-center min-h-[44px] gap-2 text-sm text-madeira cursor-pointer">
-                        <input type="radio" name="arranjo" value="{{ a.casais }}-{{ a.solteiros }}" class="accent-madeira">
+                        <input type="radio" name="arranjo" value="{{ a.casais }}-{{ a.solteiros }}" class="accent-madeira" {% if a.selecionado %}checked{% endif %}>
                         {{ a.rotulo }}
                     </label>
                     {% endfor %}
                     {% if arranjos.0.tem_sofa %}
                     <label class="flex items-center min-h-[44px] gap-2 text-sm text-madeira cursor-pointer mt-1">
-                        <input type="checkbox" name="usa_sofa_cama" value="1" class="accent-madeira"> Abrir o sofá-cama
+                        <input type="checkbox" name="usa_sofa_cama" value="1" class="accent-madeira" {% if arranjo_sofa %}checked{% endif %}> Abrir o sofá-cama
                     </label>
                     {% endif %}
                 </div>
@@ -95,7 +108,8 @@
 {% block extra_head %}
 <style>
     #form-dados input[type=text], #form-dados input[type=email],
-    #form-dados input[type=tel], #form-dados textarea {
+    #form-dados input[type=tel], #form-dados input[type=date],
+    #form-dados input[type=number], #form-dados textarea {
         width: 100%;
         background: #fff;
         border: 1px solid rgba(79, 44, 29, .12);

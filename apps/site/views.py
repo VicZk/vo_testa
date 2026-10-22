@@ -7,6 +7,7 @@ from django.db import transaction
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.site.forms import (
     BuscaDisponibilidadeForm,
@@ -55,9 +56,8 @@ def home(request):
     # Vitrine por unidade: os 9 melhores quartos (grid 3×3), destaque primeiro.
     vitrines = _vitrines_publicadas().order_by('-destaque', 'ordem', 'uh__numero')[:9]
     quartos = [_card_de_uh(v, reservas.tarifa_base_unidade(v.uh)) for v in vitrines]
-    dia_pousada = Quarto.objects.filter(
-        status='disponivel', tipo_uh__modalidade='day_use',
-    ).select_related('categoria', 'tipo_uh').first()
+    from apps.daypass.models import TurnoDayPass
+    dia_pousada = TurnoDayPass.objects.filter(ativo=True, dia_id__gte=timezone.localdate()).order_by('preco_adulto').first()
     experiencias = Experiencia.objects.filter(destaque=True)
     depoimentos = Depoimento.objects.filter(destaque=True)[:6]
     galeria = FotoGaleria.objects.all()[:12]
@@ -536,6 +536,8 @@ def _modalidade_do_quarto(quarto):
 def reservar(request):
     """Passo 1 (datas) e Passo 2 (quartos / Dia na Pousada disponíveis)."""
     modalidade = request.GET.get('modalidade', '') or ''
+    if modalidade == 'day_use':
+        return redirect('daypass_publico')
     # Quarto pré-escolhido no card (deep-link): carrega até as datas e então pula
     # direto para aquele quarto, se estiver livre.
     uh_id = request.GET.get('uh', '') or ''
@@ -636,6 +638,8 @@ def selecionar_quarto(request, quarto_id):
     quarto = get_object_or_404(
         Quarto.objects.select_related('tipo_uh'), pk=quarto_id, status='disponivel',
     )
+    if _modalidade_do_quarto(quarto) == 'day_use':
+        return redirect('daypass_publico')
     form = BuscaDisponibilidadeForm(request.GET or None)
 
     if not (request.GET and form.is_valid()):
@@ -691,6 +695,8 @@ def selecionar_unidade(request, uh_id):
     from apps.reservas import services as reservas
 
     uh = get_object_or_404(UH, pk=uh_id, status=UH.Status.ATIVA)
+    if uh.tipo.eh_day_use:
+        return redirect('daypass_publico')
     vitrine = _vitrine_ou_404(uh)
     form = BuscaDisponibilidadeForm(request.GET or None)
     if not (request.GET and form.is_valid()):
@@ -728,12 +734,45 @@ def selecionar_unidade(request, uh_id):
     return render(request, 'site/reservas/dados.html', context)
 
 
+def _retornar_dados_reserva(request, *, quarto, busca_form, dados_form, metodo, uh=None, erro=""):
+    """Reapresenta o POST no próprio fluxo, sem guardar contatos em URL ou sessão."""
+    from apps.reservas import services as reservas
+
+    busca_valida = busca_form.is_valid()
+    dados_form.is_valid()
+    if erro:
+        dados_form.add_error(None, erro)
+    context = {
+        "passo": 3, "quarto": quarto, "busca": busca_form.cleaned_data or {},
+        "busca_form": busca_form, "resumo": None, "dados_form": dados_form,
+        "config": ConfiguracaoSite.load(), "eh_day_use": False,
+        "modalidade": "hospedagem", "metodo": metodo,
+        "arranjo_sel": request.POST.get("arranjo", ""),
+        "arranjo_sofa": request.POST.get("usa_sofa_cama") == "1",
+    }
+    if uh:
+        context.update(uh_id=uh.pk, arranjos=reservas.arranjos_disponiveis(uh))
+        for arranjo in context['arranjos']:
+            arranjo['selecionado'] = f"{arranjo['casais']}-{arranjo['solteiros']}" == context['arranjo_sel']
+    if busca_valida:
+        calcular = _resumo_preco_unidade if uh else _resumo_preco
+        context["resumo"] = calcular(
+            uh or quarto, busca_form.cleaned_data["checkin"],
+            busca_form.cleaned_data["checkout"], metodo,
+            hospedes=busca_form.cleaned_data["hospedes"], **_criancas(busca_form))
+    resposta = render(request, "site/reservas/dados.html", context)
+    resposta["Cache-Control"] = "no-store"
+    return resposta
+
+
 def _resumo_reserva_unidade(request):
     """Passo 4 (venda por unidade) — revisão da reserva de um quarto específico."""
     from apps.nucleo.models import UH
     from apps.reservas import services as reservas
 
     uh = get_object_or_404(UH, pk=request.POST.get('uh_id'), status=UH.Status.ATIVA)
+    if uh.tipo.eh_day_use:
+        return redirect('daypass_publico')
     vitrine = _vitrine_ou_404(uh)
     card = _card_de_uh(vitrine, reservas.tarifa_base_unidade(uh))
     busca_form = BuscaDisponibilidadeForm({
@@ -750,21 +789,10 @@ def _resumo_reserva_unidade(request):
     dados_form = DadosHospedeForm(request.POST, instance=hospede_existente)
     metodo = request.POST.get('metodo_pagamento', 'pix')
 
-    if not busca_form.is_valid() or not dados_form.is_valid():
-        context = {
-            'passo': 3, 'quarto': card, 'uh_id': uh.pk,
-            'busca': busca_form.cleaned_data or {}, 'resumo': None,
-            'dados_form': dados_form, 'config': ConfiguracaoSite.load(),
-            'eh_day_use': False, 'modalidade': 'hospedagem',
-        }
-        if busca_form.is_valid():
-            context['busca'] = busca_form.cleaned_data
-            context['resumo'] = _resumo_preco_unidade(
-                uh, busca_form.cleaned_data['checkin'],
-                busca_form.cleaned_data['checkout'], metodo,
-                hospedes=busca_form.cleaned_data['hospedes'], **_criancas(busca_form),
-            )
-        return render(request, 'site/reservas/dados.html', context)
+    if (request.POST.get('editar_dados') == '1'
+            or not busca_form.is_valid() or not dados_form.is_valid()):
+        return _retornar_dados_reserva(request, quarto=card, uh=uh,
+            busca_form=busca_form, dados_form=dados_form, metodo=metodo)
 
     checkin = busca_form.cleaned_data['checkin']
     checkout = busca_form.cleaned_data['checkout']
@@ -772,12 +800,13 @@ def _resumo_reserva_unidade(request):
 
     if (hospedes > uh.tipo.capacidade
             or not reservas.uh_disponivel(uh, checkin, checkout, adultos=hospedes)):
-        messages.error(request, 'Este quarto não está mais disponível nessas datas.')
-        return redirect_busca(checkin, checkout, hospedes)
+        return _retornar_dados_reserva(request, quarto=card, uh=uh,
+            busca_form=busca_form, dados_form=dados_form, metodo=metodo,
+            erro='Este quarto não está mais disponível nessas datas. Revise as datas abaixo; seus dados foram mantidos.')
     motivos = _motivos_restricao(checkin, checkout, uh=uh)
     if motivos:
-        messages.error(request, ' '.join(motivos))
-        return redirect_busca(checkin, checkout, hospedes)
+        return _retornar_dados_reserva(request, quarto=card, uh=uh,
+            busca_form=busca_form, dados_form=dados_form, metodo=metodo, erro=' '.join(motivos))
 
     from apps.reservas.cancelamento import descricao_politica
     cr = _criancas(busca_form)
@@ -808,6 +837,8 @@ def resumo_reserva(request):
         Quarto.objects.select_related('tipo_uh'),
         pk=request.POST.get('quarto_id'), status='disponivel',
     )
+    if _modalidade_do_quarto(quarto) == 'day_use':
+        return redirect('daypass_publico')
     modalidade = request.POST.get('modalidade') or _modalidade_do_quarto(quarto)
     busca_form = BuscaDisponibilidadeForm({
         'checkin': request.POST.get('checkin'),
@@ -825,25 +856,10 @@ def resumo_reserva(request):
     metodo = request.POST.get('metodo_pagamento', 'pix')
 
     # Validação: se algo falhar, volta ao passo 3 mostrando os erros.
-    if not busca_form.is_valid() or not dados_form.is_valid():
-        context = {
-            'passo': 3,
-            'quarto': quarto,
-            'busca': busca_form.cleaned_data or {},
-            'resumo': None,
-            'dados_form': dados_form,
-            'config': ConfiguracaoSite.load(),
-            'eh_day_use': _modalidade_do_quarto(quarto) == 'day_use',
-            'modalidade': modalidade,
-        }
-        if busca_form.is_valid():
-            context['busca'] = busca_form.cleaned_data
-            context['resumo'] = _resumo_preco(
-                quarto, busca_form.cleaned_data['checkin'],
-                busca_form.cleaned_data['checkout'], metodo,
-                hospedes=busca_form.cleaned_data['hospedes'], **_criancas(busca_form),
-            )
-        return render(request, 'site/reservas/dados.html', context)
+    if (request.POST.get('editar_dados') == '1'
+            or not busca_form.is_valid() or not dados_form.is_valid()):
+        return _retornar_dados_reserva(request, quarto=quarto,
+            busca_form=busca_form, dados_form=dados_form, metodo=metodo)
 
     checkin = busca_form.cleaned_data['checkin']
     checkout = busca_form.cleaned_data['checkout']
@@ -853,12 +869,13 @@ def resumo_reserva(request):
     if (hospedes > quarto.capacidade
             or not reservas.tipo_disponivel(
                 quarto.tipo_uh, checkin, checkout, adultos=hospedes)):
-        messages.error(request, 'Esta opção não está mais disponível nessas datas.')
-        return redirect_busca(checkin, checkout, hospedes, modalidade)
+        return _retornar_dados_reserva(request, quarto=quarto,
+            busca_form=busca_form, dados_form=dados_form, metodo=metodo,
+            erro='Esta opção não está mais disponível nessas datas. Revise as datas abaixo; seus dados foram mantidos.')
     motivos = _motivos_restricao(checkin, checkout, tipo_uh=quarto.tipo_uh)
     if motivos:
-        messages.error(request, ' '.join(motivos))
-        return redirect_busca(checkin, checkout, hospedes, modalidade)
+        return _retornar_dados_reserva(request, quarto=quarto,
+            busca_form=busca_form, dados_form=dados_form, metodo=metodo, erro=' '.join(motivos))
 
     from apps.reservas.cancelamento import descricao_politica
     cr = _criancas(busca_form)
@@ -907,6 +924,8 @@ def finalizar_reserva(request):
     quarto = get_object_or_404(
         Quarto.objects.select_related('tipo_uh'), pk=request.POST.get('quarto_id'),
     )
+    if _modalidade_do_quarto(quarto) == 'day_use':
+        return redirect('daypass_publico')
     modalidade = request.POST.get('modalidade') or _modalidade_do_quarto(quarto)
     busca_form = BuscaDisponibilidadeForm({
         'checkin': request.POST.get('checkin'),
@@ -1033,6 +1052,8 @@ def _finalizar_reserva_unidade(request):
     from apps.reservas import services as reservas
 
     uh = get_object_or_404(UH, pk=request.POST.get('uh_id'), status=UH.Status.ATIVA)
+    if uh.tipo.eh_day_use:
+        return redirect('daypass_publico')
     busca_form = BuscaDisponibilidadeForm({
         'checkin': request.POST.get('checkin'),
         'checkout': request.POST.get('checkout'),

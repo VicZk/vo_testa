@@ -49,6 +49,8 @@ class ReservaForm(forms.ModelForm):
             )
             .order_by("_day_use", "numero")
         )
+        if not self.instance.pk:
+            self.fields["uh"].queryset = self.fields["uh"].queryset.exclude(tipo__modalidade=TipoUH.Modalidade.DAY_USE)
         # Titular só faz sentido quando não é particular; queryset = agências/empresas.
         self.fields["titular"].queryset = Pessoa.objects.filter(
             ativo=True, agencia__isnull=False

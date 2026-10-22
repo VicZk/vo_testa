@@ -10,7 +10,7 @@
 <details class="painel-bloco">
   <summary>Regras de planejamento · descanso mínimo de {{ config.descanso_horas }} horas</summary>
   <p class="subtitulo">Confira o intervalo aplicável com a gestão de pessoal. Turnos que atravessam a meia-noite contam até a saída do dia seguinte.</p>
-  {% if eh_gerente %}<form method="post" class="form-cartao">
+  {% if eh_gerente %}<form data-preservar-erros method="post" class="form-cartao">
     {% csrf_token %}<input type="hidden" name="acao" value="descanso">
     <div class="campo"><label for="descanso_horas">Descanso entre jornadas (horas)</label><input id="descanso_horas" type="number" min="1" max="48" name="descanso_horas" value="{{ config.descanso_horas }}" required></div>
     <div class="acoes"><button class="botao-primario">Salvar regra</button></div>
@@ -34,7 +34,7 @@
   </section>
   <section class="painel-bloco">
     <h2 class="titulo-topo">Novo turno</h2>
-    <form method="post" class="form-cartao">
+    <form data-preservar-erros method="post" class="form-cartao">
       {% csrf_token %}
       <div class="campo"><label>Nome</label><input type="text" name="nome" placeholder="Ex.: Manhã" required></div>
       <div class="campo"><label>Setor</label>

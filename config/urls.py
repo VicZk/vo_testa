@@ -9,6 +9,7 @@ from django.views.generic import RedirectView
 from django.views.static import serve
 
 from apps.comercial import views_lp
+from apps.daypass import views as daypass_views
 from apps.nucleo import mfa_views
 from apps.nucleo.auth_views import LoginComLimite, RecuperarSenha
 from apps.nucleo.security_headers import relatorio_csp
@@ -93,6 +94,8 @@ urlpatterns = [
     path("crm/mfa/", mfa_views.mfa_config, name="mfa_config"),
     path("crm/", include("apps.nucleo.urls")),
     path("crm/reservas/", include("apps.reservas.urls")),
+    path("crm/day-pass/", include("apps.daypass.urls")),
+    path("day-pass/", daypass_views.publico, name="daypass_publico"),
     path("crm/estoque/", include("apps.estoque.urls")),
     path("crm/loja/", include("apps.loja.urls")),
     path("crm/governanca/", include("apps.governanca.urls")),

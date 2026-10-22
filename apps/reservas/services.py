@@ -410,6 +410,8 @@ def uh_disponivel(uh: UH, checkin: date, checkout: date, *,
 def conferir_disponibilidade_reserva(reserva, *, uh=None):
     """Revalida uma reserva existente enquanto a UH está travada pelo chamador."""
     uh = uh or reserva.uh
+    from apps.reservas.models import exigir_hospedagem
+    exigir_hospedagem(uh.tipo)
     if uh.status != UH.Status.ATIVA:
         raise ValidationError(f"O quarto {uh.numero} está {uh.get_status_display().lower()}.")
     if reservas_no_periodo(uh, reserva.checkin, reserva.checkout).exclude(pk=reserva.pk).exists():
@@ -910,8 +912,9 @@ def criar_prereserva(*, tipo_uh=None, uh=None, checkin, checkout, hospede, usuar
     atende negocia (ver `restricoes_da_estadia`)."""
     from apps.nucleo.sistema import travar_quartos
     from apps.reservas import precos
-    from apps.reservas.models import validar_periodo_day_use
+    from apps.reservas.models import exigir_hospedagem, validar_periodo_day_use
 
+    exigir_hospedagem(uh.tipo if uh is not None else tipo_uh)
     validar_periodo_day_use(uh.tipo if uh is not None else tipo_uh, checkin, checkout)
     if respeitar_restricoes is None:
         respeitar_restricoes = canal in CANAIS_AUTOATENDIMENTO
@@ -1453,6 +1456,16 @@ def historico_hospede(pessoa) -> dict:
 def reserva_por_id(reserva_id):
     """Reserva já vinculada por outro módulo; preserva a identidade em reenvios."""
     return Reserva.objects.get(pk=reserva_id)
+
+
+def hospedagens_para_daypass(dia=None):
+    """Estadias elegíveis para a seleção de acesso às áreas comuns."""
+    if dia is None:
+        return Reserva.objects.none()
+    return Reserva.objects.filter(
+        status__in=[Reserva.Status.CONFIRMADA, Reserva.Status.HOSPEDADA],
+        checkin__lte=dia, checkout__gte=dia,
+        uh__tipo__modalidade=TipoUH.Modalidade.HOSPEDAGEM).select_related("uh", "hospede")
 
 
 def confirmar_reserva(reserva_id, usuario) -> bool:

@@ -777,6 +777,7 @@ class PaginaPublicaPagarTests(PagamentosBase):
 
         cfg = ConfiguracaoSite.load()
         cfg.whatsapp = "5549999990000"
+        cfg.contato_verificado = True
         cfg.save()
         c = self.cobranca(metodo="cartao")
         self.marcar_real(c)
@@ -795,6 +796,15 @@ class PaginaPublicaPagarTests(PagamentosBase):
         pix = self.html(metodo="pix")
         self.assertNotIn("não guarda o número do seu cartão", pix)
         self.assertIn("wa.me/5549999990000", pix)
+
+    def test_contato_nao_verificado_nao_aparece_no_pagamento(self):
+        from apps.site.models import ConfiguracaoSite
+
+        cfg = ConfiguracaoSite.load()
+        cfg.whatsapp = "5549999990000"
+        cfg.contato_verificado = False
+        cfg.save()
+        self.assertNotIn("wa.me/5549999990000", self.html(metodo="pix"))
 
     def test_mascara_e_bandeira_no_cartao(self):
         """Com gateway real a captura de cartão aparece; a máscara e a bandeira

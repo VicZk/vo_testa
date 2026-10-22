@@ -125,6 +125,7 @@ def _resposta_acao(request, aviso="", tipo="success"):
                           _contexto_quadro(request, request.user))
     if aviso:
         resposta["HX-Trigger"] = json.dumps({"aviso": {"texto": aviso, "tipo": tipo}})
+    resposta["X-Gov-Sucesso"] = "0" if tipo == "error" else "1"
     return resposta
 
 
@@ -370,7 +371,10 @@ def status_marcar(request, pk):
     aviso = ""
     if situacao == "reprovada":
         # Supervisora devolveu o quarto: volta para a fila com motivo registrado.
-        services.reprovar_inspecao(uh, request.user, request.POST.get("motivo", ""))
+        try:
+            services.reprovar_inspecao(uh, request.user, request.POST.get("motivo", ""))
+        except ValidationError as erro:
+            return _resposta_acao(request, " ".join(erro.messages), tipo="error")
         aviso = f"{uh.numero} reprovado. Voltou para a fila de limpeza."
     elif situacao == StatusLimpeza.Situacao.INSPECIONADA:
         try:

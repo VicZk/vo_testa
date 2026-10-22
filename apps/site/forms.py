@@ -105,11 +105,11 @@ class BuscaDisponibilidadeForm(forms.Form):
 
     checkin = forms.DateField(
         label='Check-in',
-        widget=forms.DateInput(attrs={'type': 'date'}),
+        widget=forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'}),
     )
     checkout = forms.DateField(
         label='Check-out',
-        widget=forms.DateInput(attrs={'type': 'date'}),
+        widget=forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'}),
         required=False,
     )
     hospedes = forms.IntegerField(

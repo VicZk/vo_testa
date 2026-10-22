@@ -26,7 +26,7 @@
   <div class="cartao-el bloco-texto">
     <p class="bloco-chamada"><b>{{ publico_count }}</b> pessoa(s) vão receber. Envie um teste antes de disparar.</p>
     <div class="eleg-acoes">
-      <form method="post" action="{% url 'comercial:email_campanha_teste' campanha.pk %}" class="form-plano">{% csrf_token %}
+      <form data-preservar-erros method="post" action="{% url 'comercial:email_campanha_teste' campanha.pk %}" class="form-plano">{% csrf_token %}
         <button class="botao-neutro">Enviar teste pra mim</button>
       </form>
       <form method="post" action="{% url 'comercial:email_campanha_enviar' campanha.pk %}"

@@ -33,7 +33,7 @@
   </div>
 
   <div class="importar-conciliar">
-    <form method="post" action="{% url 'conciliacao:importar_ofx' %}" enctype="multipart/form-data"
+    <form data-preservar-erros method="post" action="{% url 'conciliacao:importar_ofx' %}" enctype="multipart/form-data"
           class="filtro-barra filtro-inline conciliacao-importacao">
       {% csrf_token %}
       <h2>Extrato bancário</h2>
@@ -55,7 +55,7 @@
       <small id="nome-ofx" class="arq-nome ajuda" aria-live="polite"></small>
     </form>
 
-    <form method="post" action="{% url 'conciliacao:importar_cartao' %}" enctype="multipart/form-data"
+    <form data-preservar-erros method="post" action="{% url 'conciliacao:importar_cartao' %}" enctype="multipart/form-data"
           class="filtro-barra filtro-inline conciliacao-importacao">
       {% csrf_token %}
       <h2>Vendas da SafraPay</h2>

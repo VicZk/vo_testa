@@ -238,11 +238,15 @@ ativação/homologação externa; o que entrou depois está no [CHANGELOG](CHANG
   peças e orçamento. Site e portal integrados à hospedagem.
 - **Integrações:** Safrapay, Serpro, WhatsApp Cloud, Meta e JEV têm adapters; produção
   depende de configuração/homologação verificadas. Pix direto tem baixa manual.
-- **E-mail:** `EMAIL_GATEWAY=simulado` usa o backend Django e envia de verdade quando
-  há SMTP configurado. SES continua stub.
-- **Fiscal:** modelos/telas/simulador e campos tributários existem; providers
-  `focus` e `governo` continuam com `NotImplementedError`.
-- **Futuro:** NPS sem coleta persistida, CRM do Hóspede, Canais/OTAs e telefonia.
+- **E-mail (22/10):** modo simulado não envia; adaptadores SMTP e SES implementados.
+  Envio real exige configuração explícita e preferências de contato válidas.
+- **Fiscal (22/10):** Focus NFe v2, NFS-e/NFC-e, consulta e cancelamento implementados;
+  classificação fiscal e credenciais precisam ser conferidas antes da homologação real.
+- **NPS (22/10):** coleta persistida, consentimento e acompanhamento disponíveis.
+- **Day pass:** módulo próprio de turnos, capacidade, visitantes, caixa e comandas;
+  veja `docs/Reservas/DAY_PASS.md`. Nenhuma capacidade física é presumida.
+- **Formulários:** veja `docs/FORMULARIOS.md`; erro não deve apagar campos ou fechar modal.
+- **Futuro:** CRM do Hóspede, Canais/OTAs e telefonia.
   Frigobar foi removido; não existe app ativo desse módulo.
 
 Detalhes técnicos devem ficar em [Arquitetura](docs/ARQUITETURA.md) e

@@ -17,7 +17,7 @@
 
 <section class="painel-bloco form-abertura">
   <h2 class="titulo-topo">Nova ordem</h2>
-  <form method="post" action="{% url 'lavanderia:abrir' %}" class="abrir-comanda">
+  <form data-preservar-erros method="post" action="{% url 'lavanderia:abrir' %}" class="abrir-comanda">
     {% csrf_token %}
     {% if contas %}<label class="select-wrap"><select name="conta" aria-label="Estadia vinculada">
       <option value="">Estadia (opcional)…</option>

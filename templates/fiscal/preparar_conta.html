@@ -23,7 +23,7 @@
 <div class="tabela-responsiva"><table class="tabela"><thead><tr><th>Código</th><th>Base</th><th>Desconto</th><th>Valor da nota</th><th>Ação</th></tr></thead><tbody>
 {% for grupo in dados.grupos %}<tr><td>{{ grupo.codigo|default:"Pendente" }}</td><td>{{ grupo.bruto|intcomma_brl }}</td><td>{{ grupo.desconto|intcomma_brl }}</td><td>{{ grupo.valor|intcomma_brl }}</td><td>
 {% if grupo.documento %}<a class="botao-neutro" href="{% url 'fiscal:detalhe' grupo.documento.pk %}">Consultar nota</a>
-{% elif not dados.pendentes and grupo.valor > 0 %}<form method="post" action="{% url 'fiscal:emitir_nfse' %}">{% csrf_token %}<input type="hidden" name="conta_id" value="{{ conta.pk }}"><input type="hidden" name="codigo_servico" value="{{ grupo.codigo }}"><button class="botao-primario" type="submit">Emitir NFS-e</button></form>{% endif %}
+{% elif not dados.pendentes and grupo.valor > 0 %}<form data-preservar-erros method="post" action="{% url 'fiscal:emitir_nfse' %}">{% csrf_token %}<input type="hidden" name="conta_id" value="{{ conta.pk }}"><input type="hidden" name="codigo_servico" value="{{ grupo.codigo }}"><button class="botao-primario" type="submit">Emitir NFS-e</button></form>{% endif %}
 </td></tr>{% empty %}<tr><td colspan="5">Sem valores para emissão.</td></tr>{% endfor %}
 </tbody></table></div></section>
 {% endblock %}

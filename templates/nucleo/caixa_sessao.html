@@ -45,7 +45,7 @@
 {% if eh_gerente and not sessao.aberta %}
   <details class="acao-sensivel">
     <summary>Reabrir sessão (gerência)</summary>
-    <form method="post" action="{% url 'caixa_reabrir' sessao.pk %}" class="form-cartao">
+    <form data-preservar-erros method="post" action="{% url 'caixa_reabrir' sessao.pk %}" class="form-cartao">
       {% csrf_token %}
       <div class="campo">
         <label for="motivo-reabertura">Motivo da reabertura</label>
@@ -76,7 +76,7 @@
             {% if m.tipo == "recebimento" and sessao.aberta %}
               <details class="acao-sensivel">
                 <summary>Estornar</summary>
-                <form method="post" action="{% url 'estorno' m.pk %}" class="form-inline">
+                <form data-preservar-erros method="post" action="{% url 'estorno' m.pk %}" class="form-inline">
                   {% csrf_token %}
                   <input type="number" step="0.01" min="0.01" name="valor" value="{{ m.valor }}" required>
                   <input type="text" name="motivo" placeholder="Motivo (obrigatório)" required>

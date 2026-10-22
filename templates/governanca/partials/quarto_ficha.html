@@ -34,7 +34,7 @@ porta do corredor guardava na dica está escrito aqui.
 {% if ln.ocupacao.cod == 'ocupado' or ln.ocupacao.cod == 'sai_hoje' %}
 <details class="gov-ajuda">
   <summary>Preferência de limpeza do hóspede</summary>
-  <form method="post" action="{% url 'governanca:restricao' uh.pk %}" class="gov-preferencia" hx-boost="false">
+  <form data-preservar-erros method="post" action="{% url 'governanca:restricao' uh.pk %}" class="gov-preferencia" hx-boost="false">
     {% csrf_token %}
     {{ restricao_form.as_p }}
     <p class="ajuda">A dispensa vale até o fim do dia. “Não perturbe” impede o início da limpeza até o horário informado.</p>

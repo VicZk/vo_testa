@@ -84,7 +84,7 @@
                         :aria-expanded="aberto">Liquidar</button>
                 <div class="reveal-liquidar" x-ref="painel" x-cloak
                      :style="aberto ? 'max-height:' + $refs.painel.scrollHeight + 'px;opacity:1' : 'max-height:0;opacity:0'">
-                  <form method="post" action="{% url 'pagamentos:liquidar' c.pk %}" class="conc-acao-painel">
+                  <form data-preservar-erros method="post" action="{% url 'pagamentos:liquidar' c.pk %}" class="conc-acao-painel">
                     {% csrf_token %}
                     <input type="number" name="valor_liquido" step="0.01" placeholder="Líquido (R$)">
                     <input type="date" name="data_liquidacao">

@@ -4,6 +4,7 @@
   <a href="{% url 'reservas:mapa_quartos' %}" class="est-aba"{% if atual == 'mapa_quartos' %} aria-current="page"{% endif %}>Quartos</a>
   <a href="{% url 'reservas:lista' %}" class="est-aba"{% if atual == 'lista' or atual == 'reserva_detalhe' %} aria-current="page"{% endif %}>Reservas</a>
   <a href="{% url 'reservas:grupos' %}" class="est-aba"{% if atual == 'grupos' or atual == 'grupo_detalhe' %} aria-current="page"{% endif %}>Grupos</a>
+  <a href="{% url 'daypass:painel' %}" class="est-aba"{% if request.resolver_match.app_name == 'daypass' %} aria-current="page"{% endif %}>Day pass</a>
   <a href="{% url 'reservas:boh' %}" class="est-aba"{% if atual == 'boh' %} aria-current="page"{% endif %}>Operação diária</a>
 </nav>
 {% endwith %}

@@ -48,7 +48,7 @@
 {% if eh_gerente and venda.status == 'fechada' and venda.destino == 'caixa' %}
   <details class="acao-sensivel">
     <summary>Cancelar venda (gerência)</summary>
-    <form method="post" action="{% url 'loja:cancelar' venda.pk %}" class="form-cartao">
+    <form data-preservar-erros method="post" action="{% url 'loja:cancelar' venda.pk %}" class="form-cartao">
       {% csrf_token %}
       <div class="campo">
         <label>Motivo do cancelamento</label>

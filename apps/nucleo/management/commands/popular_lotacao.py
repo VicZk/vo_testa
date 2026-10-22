@@ -121,7 +121,8 @@ class Command(BaseCommand):
     def _lotacao(self):
         hospedes = self._hospedes()
         gi = 0
-        quartos = list(UH.objects.filter(status=UH.Status.ATIVA).order_by("numero"))
+        quartos = list(UH.objects.filter(status=UH.Status.ATIVA).exclude(
+            tipo__modalidade="day_use").order_by("numero"))
         ja = sum(1 for uh in quartos if self._quarto_ocupado_hoje(uh))
         alvo = round(len(quartos) * 0.80)
 

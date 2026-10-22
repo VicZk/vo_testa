@@ -100,7 +100,7 @@ desenhadas à mão, indistinguíveis dos chips de dado do quadro.{% endcomment %
       <span class="mk-verba-num">
         <span class="mk-rotulo bloco">TETO DO MÊS</span>
         {% if eh_gerente %}
-        <form method="post" action="{% url 'marketing:editar_teto' %}" class="mk-teto-form">
+        <form data-preservar-erros method="post" action="{% url 'marketing:editar_teto' %}" class="mk-teto-form">
           {% csrf_token %}<input type="hidden" name="mes" value="{{ verba.mes }}">
           <input type="text" name="valor" class="js-moeda mk-teto-campo" value="{{ verba.teto|intcomma_brl }}">
           <button type="submit" class="mk-teto-salvar">Salvar</button>

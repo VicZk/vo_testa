@@ -107,6 +107,16 @@ def abrir_comanda(operador, local, mesa=None, cliente=None, rotulo="", conta_id=
 
 
 @transaction.atomic
+def abrir_comanda_daypass(operador, local, visita):
+    """A visita já está travada pelo Day Pass; não vincula a conta do hotel por inferência."""
+    comanda = Comanda.objects.create(
+        local=local, cliente=visita.responsavel, rotulo=f"Day pass #{visita.pk}",
+        criado_por=operador, visita_daypass=visita)
+    registrar_auditoria(operador, "daypass_abrir_comanda", comanda, {"visita": visita.pk})
+    return comanda
+
+
+@transaction.atomic
 def adicionar_item(comanda, produto, quantidade, operador, *, observacoes="", opcoes=()):
     """Lança um item na comanda e baixa o estoque na hora (o produto saiu).
 

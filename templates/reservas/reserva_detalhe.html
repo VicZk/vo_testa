@@ -139,7 +139,7 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
       <h2 class="acao-painel-titulo">Adiantamento / sinal
         <span class="info-dica dica" data-dica="Valor pago antes da entrada; vira crédito na conta do quarto.">ⓘ</span>
       </h2>
-      <form method="post" action="{% url 'reservas:adiantamento_novo' reserva.pk %}" class="form-cartao">
+      <form data-preservar-erros method="post" action="{% url 'reservas:adiantamento_novo' reserva.pk %}" class="form-cartao">
         {% csrf_token %}
         {% include "nucleo/partials/campos.html" with form=form_recebimento %}
         <div class="acoes"><button type="submit" class="botao-primario">Receber no meu caixa</button></div>
@@ -149,7 +149,7 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
     <div class="acao-painel" id="acao-lotacao" x-show="acao === 'lotacao'" x-cloak>
       <h2 class="acao-painel-titulo">Alterar a lotação</h2>
       <p class="ajuda">Confere as camas no quarto e refaz a diária pela tarifa da nova lotação.</p>
-      <form method="post" action="{% url 'reservas:lotacao' reserva.pk %}" class="form-cartao">
+      <form data-preservar-erros method="post" action="{% url 'reservas:lotacao' reserva.pk %}" class="form-cartao">
         {% csrf_token %}
         <div class="form-grade">
           <div class="campo">
@@ -176,7 +176,7 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
       <h2 class="acao-painel-titulo">Transferir as datas</h2>
       <p class="ajuda">1ª opção antes de cancelar: reagenda a reserva para outras datas
         (revalida disponibilidade e recalcula a diária). Não gera multa.</p>
-      <form method="post" action="{% url 'reservas:transferir' reserva.pk %}" class="form-cartao">
+      <form data-preservar-erros method="post" action="{% url 'reservas:transferir' reserva.pk %}" class="form-cartao">
         {% csrf_token %}
         <div class="form-grade">{% include "nucleo/partials/campos.html" with form=form_transferencia %}</div>
         <div class="acoes"><button type="submit" class="botao-primario">Reagendar</button></div>
@@ -205,7 +205,7 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
           <small class="ajuda">Depois de cancelar, a devolução sai em "Devolver ao hóspede", no fim desta página. Prefira transferir a data.</small>
         </div>
       {% endif %}
-      <form method="post" action="{% url 'reservas:cancelar' reserva.pk %}" class="form-cartao"
+      <form data-preservar-erros method="post" action="{% url 'reservas:cancelar' reserva.pk %}" class="form-cartao"
             onsubmit="return confirm('Cancelar a reserva #{{ reserva.pk }}? A devolução sai em «Devolver ao hóspede».')">
         {% csrf_token %}
         {% include "nucleo/partials/campos.html" with form=form_cancelamento %}
@@ -220,7 +220,7 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
       <p class="ajuda">As noites a mais entram na conta pela tarifa de hoje, com ISS e taxa de
         turismo como no check-in. O quarto precisa estar livre até a nova saída; se não
         estiver, troque de quarto.</p>
-      <form method="post" action="{% url 'reservas:estender' reserva.pk %}" class="form-cartao">
+      <form data-preservar-erros method="post" action="{% url 'reservas:estender' reserva.pk %}" class="form-cartao">
         {% csrf_token %}
         <div class="campo">
           <label for="nova-saida">Nova saída</label>
@@ -252,7 +252,7 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
       <h2 class="acao-painel-titulo">Trocar de quarto</h2>
       <p class="ajuda">A conta acompanha a reserva na troca de quarto, incluindo diárias, consumo e pagamentos.</p>
       {% if quartos_livres %}
-        <form method="post" action="{% url 'reservas:trocar_quarto' reserva.pk %}" class="form-cartao">
+        <form data-preservar-erros method="post" action="{% url 'reservas:trocar_quarto' reserva.pk %}" class="form-cartao">
           {% csrf_token %}
           <div class="form-grade">
             <div class="campo">
@@ -408,7 +408,7 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
       <span class="selo selo-neutro">Pendente de envio</span>
     {% endif %}
     {% if eh_gerente and reserva.fnrh_status != 'enviada' %}
-      <form method="post" action="{% url 'reservas:fnrh_reenviar' reserva.pk %}" class="form-embutido">
+      <form data-preservar-erros method="post" action="{% url 'reservas:fnrh_reenviar' reserva.pk %}" class="form-embutido">
         {% csrf_token %}
         <button type="submit" class="botao-mini">Reenviar</button>
       </form>
@@ -482,7 +482,7 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
     <div class="colunas">
       <section>
         <h2>Lançar na conta</h2>
-        <form method="post" action="{% url 'reservas:lancamento_novo' reserva.pk %}" class="form-cartao">
+        <form data-preservar-erros method="post" action="{% url 'reservas:lancamento_novo' reserva.pk %}" class="form-cartao">
           {% csrf_token %}
           {% include "nucleo/partials/campos.html" with form=form_lancamento %}
           <div class="acoes"><button type="submit" class="botao-primario">Lançar</button></div>
@@ -490,7 +490,7 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
       </section>
       <section>
         <h2>Receber pagamento</h2>
-        <form method="post" action="{% url 'reservas:pagamento_novo' reserva.pk %}" class="form-cartao">
+        <form data-preservar-erros method="post" action="{% url 'reservas:pagamento_novo' reserva.pk %}" class="form-cartao">
           {% csrf_token %}
           {% include "nucleo/partials/campos.html" with form=form_recebimento %}
           <div class="acoes"><button type="submit" class="botao-primario">Receber no meu caixa</button></div>
@@ -522,7 +522,7 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
       <p class="ajuda">{{ devolucao.online|intcomma_brl }} entrou online e só volta pela cobrança, em Pagamentos (estorno no gateway). Pelo caixa dá para devolver até {{ devolucao.no_caixa|intcomma_brl }}.</p>
     {% endif %}
     {% if eh_gerente %}
-      <form method="post" action="{% url 'reservas:devolver' reserva.pk %}" class="form-cartao">
+      <form data-preservar-erros method="post" action="{% url 'reservas:devolver' reserva.pk %}" class="form-cartao">
         {% csrf_token %}
         {% include "nucleo/partials/campos.html" with form=form_devolucao %}
         <div class="acoes"><button type="submit" class="botao-primario">Devolver pelo meu caixa</button></div>

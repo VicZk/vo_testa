@@ -10,7 +10,7 @@
     <a href="{% url 'comercial:email_campanhas' %}" class="botao-neutro">Cancelar</a>
   </div>
 
-  <form method="post" class="cartao-el eleg-form">
+  <form data-preservar-erros method="post" class="cartao-el eleg-form">
     {% csrf_token %}
 
     <div class="campo-el">

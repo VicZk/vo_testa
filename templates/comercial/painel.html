@@ -76,7 +76,7 @@ cartão.{% endcomment %}
 
   <aside>
     <h2>Meta do mês</h2>
-    <form method="post" action="{% url 'comercial:meta' %}" class="form-cartao form-cartao-largo">
+    <form data-preservar-erros method="post" action="{% url 'comercial:meta' %}" class="form-cartao form-cartao-largo">
       {% csrf_token %}
       <div class="campo">{{ meta_form.valor_meta|rotulo }}{{ meta_form.valor_meta }}</div>
       <div class="campo">{{ meta_form.oportunidades_meta|rotulo }}{{ meta_form.oportunidades_meta }}</div>

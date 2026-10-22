@@ -180,7 +180,10 @@ class KitDadosTests(KitBase):
             checkout=self.hoje + timedelta(days=1), status=Reserva.Status.CONFIRMADA,
             valor_diaria=Decimal("90.00"), criado_por=self.usuario,
         )
-        r.fazer_checkin(self.usuario)
+        # Registro histórico: novas entradas nesse modelo estão bloqueadas.
+        Reserva.objects.filter(pk=r.pk).update(status=Reserva.Status.HOSPEDADA)
+        from apps.reservas.models import ContaHospedagem
+        ContaHospedagem.objects.create(reserva=r)
         quartos = services.kit_contingencia()["quartos"]
         linha = [q for q in quartos if q["numero"] == "DAYK-01"]
         self.assertEqual(len(linha), 1)

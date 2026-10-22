@@ -31,7 +31,7 @@
             {% else %}<span class="selo selo-perigo">{{ l.valor }}</span>{% endif %}
           </td>
           <td>
-            <form method="post" action="{% url 'conciliacao:casar_extrato' %}"
+            <form data-preservar-erros method="post" action="{% url 'conciliacao:casar_extrato' %}"
                   class="form-inline-largo">
               {% csrf_token %}
               <input type="hidden" name="lancamento" value="{{ l.id }}">
@@ -71,7 +71,7 @@
           <td class="num">{{ t.nsu }}</td>
           <td class="num">{{ t.bruto }}</td>
           <td>
-            <form method="post" action="{% url 'conciliacao:casar_cartao' %}"
+            <form data-preservar-erros method="post" action="{% url 'conciliacao:casar_cartao' %}"
                   class="form-inline-largo">
               {% csrf_token %}<input type="hidden" name="transacao" value="{{ t.id }}">
               <select name="escolha" class="campo-medio">

@@ -88,7 +88,7 @@
       </div>
       {% endif %}
 
-      <form method="post" action="{% url 'comercial:whatsapp_enviar' op.pk %}" class="wpp-form">
+      <form data-preservar-erros method="post" action="{% url 'comercial:whatsapp_enviar' op.pk %}" class="wpp-form">
         {% csrf_token %}
         <input type="text" name="texto" id="wpp-texto" placeholder="Escreva uma resposta…" autocomplete="off">
         <button type="button" class="wpp-mic" id="wpp-anexo" title="Enviar imagem" aria-label="Enviar imagem"><svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><path d="M21.4 11.1l-9.2 9.2a6 6 0 01-8.5-8.5l9.2-9.2a4 4 0 015.7 5.7l-9.2 9.2a2 2 0 01-2.8-2.8l8.5-8.5"/></svg></button>
@@ -140,7 +140,7 @@
     <section class="cartao op-bloco">
       <div class="cartao-cabeca"><h2>Linha do tempo</h2></div>
       {% if op.aberta %}
-        <form method="post" action="{% url 'comercial:atividade' op.pk %}" class="op-nova-atividade">
+        <form data-preservar-erros method="post" action="{% url 'comercial:atividade' op.pk %}" class="op-nova-atividade">
           {% csrf_token %}
           <select name="tipo" aria-label="Tipo">{% for v, r in tipos_atividade %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select>
           <input type="text" name="descricao" placeholder="Registrar ligação, WhatsApp, nota ou tarefa…" required>
@@ -216,7 +216,7 @@
     <div class="cartao op-acoes">
       <p class="rot-secao">Ações rápidas</p>
       {% if pagamentos_ativo %}
-      <form method="post" action="{% url 'comercial:enviar_proposta_sinal' op.pk %}" onsubmit="return confirm('Gerar o sinal ({{ sinal_pct }}% do valor) e enviar no WhatsApp?')" class="op-form-plano">
+      <form data-preservar-erros method="post" action="{% url 'comercial:enviar_proposta_sinal' op.pk %}" onsubmit="return confirm('Gerar o sinal ({{ sinal_pct }}% do valor) e enviar no WhatsApp?')" class="op-form-plano">
         {% csrf_token %}
         <button type="submit" class="botao-primario botao-largo">Enviar proposta + sinal (Safrapay)</button>
       </form>
@@ -224,7 +224,7 @@
       <a href="{% url 'comercial:enviar_email_lead' op.pk %}" class="botao-neutro botao-largo op-botao-bloco">Enviar por e-mail</a>
       <details class="op-det op-det-ganhar">
         <summary>Ganhar → criar reserva</summary>
-        <form method="post" action="{% url 'comercial:converter' op.pk %}" id="formGanhar" data-quartos="{{ op.quartos }}">
+        <form data-preservar-erros method="post" action="{% url 'comercial:converter' op.pk %}" id="formGanhar" data-quartos="{{ op.quartos }}">
           {% csrf_token %}
           <div class="campo">{{ conversao_form.checkin|rotulo }}{{ conversao_form.checkin }}</div>
           <div class="campo">{{ conversao_form.checkout|rotulo }}{{ conversao_form.checkout }}</div>
@@ -357,7 +357,7 @@
 
       <details class="op-det">
         <summary>Registrar cotação</summary>
-        <form method="post" action="{% url 'comercial:cotar' op.pk %}">
+        <form data-preservar-erros method="post" action="{% url 'comercial:cotar' op.pk %}">
           {% csrf_token %}
           <div class="campo">{{ cotacao_form.checkin|rotulo }}{{ cotacao_form.checkin }}</div>
           <div class="campo">{{ cotacao_form.checkout|rotulo }}{{ cotacao_form.checkout }}</div>
@@ -382,7 +382,7 @@
 
       <details class="op-det op-det-perder">
         <summary>Marcar como perdida</summary>
-        <form method="post" action="{% url 'comercial:perder' op.pk %}">
+        <form data-preservar-erros method="post" action="{% url 'comercial:perder' op.pk %}">
           {% csrf_token %}
           <div class="campo">{{ perda_form.motivo|rotulo }}{{ perda_form.motivo }}</div>
           <div class="campo">{{ perda_form.detalhe|rotulo }}{{ perda_form.detalhe }}</div>
@@ -410,7 +410,7 @@
         {% if op.status == 'ganha' and not reserva_vinculada.cancelavel %}<br>A reserva não é mais cancelável ({{ reserva_vinculada.status }}). Resolva em Reservas antes de continuar.{% endif %}</span>
       </p>
       {% endif %}
-      <form method="post" action="{% url 'comercial:mover_fechado' op.pk %}"
+      <form data-preservar-erros method="post" action="{% url 'comercial:mover_fechado' op.pk %}"
             onsubmit="return confirm('{% if op.status == 'ganha' and reserva_vinculada %}Isto vai CANCELAR a reserva #{{ reserva_vinculada.pk }}{% if reserva_vinculada.no_caixa %} e ESTORNAR {{ reserva_vinculada.no_caixa|intcomma_brl }} no caixa{% endif %}. {% endif %}Mover este lead?')">
         {% csrf_token %}
         <div class="campo">
@@ -465,7 +465,7 @@
         <p class="op-linha-sub">{{ c.get_evento_display }} → {{ c.provedor }} · {% if c.status == 'enviada' %}enviada{% else %}<span class="wpp-erro">erro</span>{% endif %} · {{ c.enviado_em|date:"d/m H:i" }}</p>
       {% endfor %}
       {% if op.origem_rastreio.fbclid or op.origem_rastreio.gclid %}
-      <form method="post" action="{% url 'comercial:conversao_reenviar' op.pk %}" class="op-form-respiro">{% csrf_token %}
+      <form data-preservar-erros method="post" action="{% url 'comercial:conversao_reenviar' op.pk %}" class="op-form-respiro">{% csrf_token %}
         <button type="submit" class="botao-mini">Reenviar conversão</button>
       </form>
       {% else %}

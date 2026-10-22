@@ -13,14 +13,14 @@ digita o cartão sem estar logado — a dúvida aqui vira reserva perdida.
         processado pela operadora{% if cobranca.pagamento_cartao %}. A Pousada Vô Testa não guarda o número do seu cartão{% endif %}.{% endif %}</span></li>
     <li><span class="ok" aria-hidden="true">✓</span>
       <span>Após a confirmação, esta página mostra o pagamento registrado.</span></li>
-    {% if contato.whatsapp or contato.telefone %}
+    {% if contato.whatsapp_publico or contato.telefone_publico %}
     <li><span class="ok" aria-hidden="true">✓</span>
       <span>Dúvida antes de pagar?
-        {% if contato.whatsapp %}
+        {% if contato.whatsapp_publico %}
           Fale com a recepção no
-          <a href="https://wa.me/{{ contato.whatsapp }}" target="_blank" rel="noopener">WhatsApp</a>{% if contato.telefone %} ou ligue para {{ contato.telefone }}{% endif %}.
+          <a href="https://wa.me/{{ contato.whatsapp_publico }}" target="_blank" rel="noopener">WhatsApp</a>{% if contato.telefone_publico %} ou ligue para {{ contato.telefone_publico }}{% endif %}.
         {% else %}
-          Ligue para {{ contato.telefone }}.
+          Ligue para {{ contato.telefone_publico }}.
         {% endif %}
       </span></li>
     {% endif %}

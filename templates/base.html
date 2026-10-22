@@ -18,6 +18,7 @@
   {# Validação em pt-BR no lugar do balão em inglês do navegador. #}
   <script src="{% static 'js/form-pt.js' %}" defer></script>
   <script src="{% static 'js/edicao-pendente.js' %}" defer></script>
+  <script src="{% static 'js/formularios.js' %}" defer></script>
   <script src="{% static 'js/marketing.js' %}" defer></script>
   {# Dicas (balão de hover) de todo [data-dica]: um motor só, fixo e dentro da tela. #}
   <script src="{% static 'js/dicas.js' %}" defer></script>
@@ -1059,12 +1060,21 @@
     else if (t.classList && t.classList.contains('mascara-cpfcnpj')) t.value = mascaraCpfCnpj(t.value);
     else if (t.classList && t.classList.contains('mascara-reais')) t.value = mascaraReais(t.value);
   });
-  // Antes de enviar, converte "1.784,00" → "1784.00" para o backend (DecimalField).
-  document.addEventListener('submit', e => {
-    e.target.querySelectorAll('.mascara-reais').forEach(el => {
-      if (el.value) el.value = el.value.replace(/\./g, '').replace(',', '.');
+  // Converte só a carga enviada. Campos visíveis nunca mudam em uma tentativa.
+  document.addEventListener('formdata', e => {
+    e.target.querySelectorAll('.mascara-reais[name]').forEach(el => {
+      if (!el.disabled && el.value) e.formData.set(el.name, el.value.replace(/\./g, '').replace(',', '.'));
     });
   }, true);
+  // HTMX serializa os valores sem alterar o que continua visível no formulário.
+  // Assim um erro de rede não transforma R$ 50,00 em R$ 5.000,00 no reenvio.
+  document.addEventListener('htmx:configRequest', e => {
+    const form = e.detail.elt.closest('form');
+    if (!form) return;
+    form.querySelectorAll('.mascara-reais[name]').forEach(el => {
+      if (!el.disabled && el.value) e.detail.parameters[el.name] = el.value.replace(/\./g, '').replace(',', '.');
+    });
+  });
 </script>
 {% endwith %}
 {% else %}

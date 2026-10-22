@@ -27,13 +27,13 @@
                     <li class="flex gap-3"><span class="text-lampiao">◆</span> Consumo à parte (restaurante, loja…)</li>
                 </ul>
                 <div class="flex flex-wrap gap-3 items-center">
-                    <a href="{% url 'core:reservar' %}?modalidade=day_use"
+                    <a href="{% url 'daypass_publico' %}"
                        class="inline-flex items-center gap-2 bg-madeira text-pergaminho font-semibold text-sm px-6 py-3 rounded-full hover:bg-lampiao hover:text-madeira transition">
-                        Reservar Dia na Pousada
+                        Consultar agenda de day pass
                     </a>
                     {% if dia_pousada %}
                     <span class="text-madeira/50 text-sm">
-                        a partir de <strong class="text-madeira">R$ {{ dia_pousada.preco_base|floatformat:0 }}</strong>/dia
+                        adulto a partir de <strong class="text-madeira">R$ {{ dia_pousada.preco_adulto|floatformat:2 }}</strong>/turno
                     </span>
                     {% endif %}
                 </div>

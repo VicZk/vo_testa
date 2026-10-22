@@ -135,31 +135,23 @@
     </div>
 
     <div class="flex justify-between mt-8">
-        <a href="{% if uh_id %}{% url 'core:selecionar_unidade' uh_id %}{% else %}{% url 'core:selecionar_quarto' quarto.id %}{% endif %}?checkin={{ busca.checkin|date:'Y-m-d' }}&checkout={{ busca.checkout|date:'Y-m-d' }}&hospedes={{ busca.hospedes }}&criancas_0_5={{ busca.criancas_0_5|default:0 }}&criancas_6_15={{ busca.criancas_6_15|default:0 }}"
-           class="text-madeira/40 hover:text-madeira transition flex items-center gap-2 text-sm">
+        <form method="post" action="{% url 'core:resumo_reserva' %}" id="form-editar-dados">
+            {% csrf_token %}
+            {% include 'site/reservas/partials/dados_resumo_ocultos.html' %}
+            <input type="hidden" name="editar_dados" value="1">
+            <input type="hidden" name="metodo_pagamento" value="{{ metodo|default:'pix' }}">
+            <button type="submit" class="text-madeira/40 hover:text-madeira transition flex items-center gap-2 text-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
             Editar dados
-        </a>
+            </button>
+        </form>
 
-        <form method="post" action="{% url 'core:finalizar_reserva' %}" id="form-finalizar">
+        <form data-preservar-erros method="post" action="{% url 'core:finalizar_reserva' %}" id="form-finalizar">
             {% csrf_token %}
-            {% if uh_id %}<input type="hidden" name="uh_id" value="{{ uh_id }}">{% else %}<input type="hidden" name="quarto_id" value="{{ quarto.id }}">{% endif %}
-            <input type="hidden" name="checkin" value="{{ busca.checkin|date:'Y-m-d' }}">
-            <input type="hidden" name="checkout" value="{{ busca.checkout|date:'Y-m-d' }}">
-            <input type="hidden" name="hospedes" value="{{ busca.hospedes }}">
-            <input type="hidden" name="criancas_0_5" value="{{ busca.criancas_0_5|default:0 }}">
-            <input type="hidden" name="criancas_6_15" value="{{ busca.criancas_6_15|default:0 }}">
-            {% if arranjo_sel %}<input type="hidden" name="arranjo" value="{{ arranjo_sel }}">{% endif %}
-            {% if arranjo_sofa %}<input type="hidden" name="usa_sofa_cama" value="1">{% endif %}
+            {% include 'site/reservas/partials/dados_resumo_ocultos.html' %}
             <input type="hidden" name="cobra_iss" id="h-cobra-iss" value="1">
             <input type="hidden" name="cobra_taxa_turismo" id="h-cobra-turismo" value="1">
-            <input type="hidden" name="modalidade" value="{{ modalidade|default:busca.modalidade }}">
             <input type="hidden" name="metodo_pagamento" id="metodo_pagamento" value="{{ metodo|default:'pix' }}">
-            <input type="hidden" name="nome" value="{{ dados.nome }}">
-            <input type="hidden" name="cpf" value="{{ dados.cpf }}">
-            <input type="hidden" name="email" value="{{ dados.email }}">
-            <input type="hidden" name="telefone" value="{{ dados.telefone }}">
-            <input type="hidden" name="observacoes" value="{{ dados.observacoes }}">
             <button type="submit" class="bg-madeira text-pergaminho font-bold px-8 py-3 rounded-xl hover:bg-madeira/90 transition flex items-center gap-2 shadow-lg shadow-madeira/20">
                 Confirmar Reserva
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
@@ -175,6 +167,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<script src="{% static 'js/formularios.js' %}" defer></script>
 <script>
 (function () {
   var root = document.getElementById('resumo-reserva');
@@ -184,7 +177,6 @@
   var issAliq = parseFloat(root.dataset.issAliq || '0');
   var turismoUnit = parseFloat(root.dataset.turismo || '0');
   var noites = parseInt(root.dataset.noites || '1', 10);
-  var metodoHidden = document.getElementById('metodo_pagamento');
   var hIss = document.getElementById('h-cobra-iss');
   var hTur = document.getElementById('h-cobra-turismo');
   var chkIss = document.getElementById('chk-iss');
@@ -203,7 +195,7 @@
 
   function atualizar() {
     var metodo = (document.querySelector('input[name="metodo_ui"]:checked') || {}).value || 'pix';
-    if (metodoHidden) metodoHidden.value = metodo;
+    document.querySelectorAll('input[name="metodo_pagamento"]').forEach(function (campo) { campo.value = metodo; });
     var desconto = metodo === 'pix' ? round2(hospedagem * pct / 100) : 0;
     var liquida = hospedagem - desconto;
     var iss = chkIss && chkIss.checked ? round2(liquida * issAliq / 100) : 0;

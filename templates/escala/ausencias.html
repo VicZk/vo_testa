@@ -25,7 +25,7 @@
   </section>
   <section class="painel-bloco">
     <h2 class="titulo-topo">Nova ausência</h2>
-    <form method="post" class="form-cartao">
+    <form data-preservar-erros method="post" class="form-cartao">
       {% csrf_token %}
       <div class="campo"><label>Funcionário</label>
         <select name="funcionario" required>{% for f in funcionarios %}<option value="{{ f.pk }}">{{ f.pessoa.nome }}</option>{% endfor %}</select>

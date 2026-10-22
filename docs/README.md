@@ -21,6 +21,8 @@ original. Uma checklist marcada ou um teste antigo não comprova o ambiente atua
 | [Revisão de usabilidade de 22/10](REVISAO_USABILIDADE_2026-10-22.md) | Revisão em andamento, cobertura por fluxo e evidências das entregas |
 | [Checklist de ativação](Checklist_CRM_100.md) | Verificações da instalação, integrações e operação |
 | [Ideias](IMPLEMENTAR_Ideias.md) | Backlog; não representa funcionalidade concluída |
+| [Comparação com OCA/vertical-hotel](REFERENCIA_OCA_HOTEL.md) | Leitura de código em 22/10: cobertura existente, lacunas e propostas |
+| [Formulários e erros](FORMULARIOS.md) | Preservação dos campos, arquivos e valores após falhas |
 
 ## Integrações e operação
 
@@ -31,7 +33,7 @@ original. Uma checklist marcada ou um teste antigo não comprova o ambiente atua
 | [Decisão SafraPay](SafraPay/DECISAO.md) | Histórico da estratégia de contratação e maquininha |
 | [Pacote de evidências Safrapay](../evidencias/safrapay/README.md) | Registro HML de 01/10/2026 |
 | [Resposta Safrapay](../evidencias/safrapay/Resposta_Safrapay_2026-10-01.md) | Texto de resposta preparado naquela homologação |
-| [Fiscal](Implementar_fiscal.md) | Plano e dados fiscais históricos; providers reais ainda pendentes |
+| [Fiscal](Implementar_fiscal.md) | Adaptador Focus e cadastro fiscal implementados; configuração e homologação real pendentes |
 | [Checklist do contador](Checklist_contador.md) | Perguntas e parâmetros para validação contábil atual |
 | [Produtos para NCM](Produtos_para_NCM.md) | Modelo de levantamento; não substitui classificação fiscal validada |
 | [WhatsApp Meta](Implementar_WhatsApp_Meta.md) | Procedimento de ativação; validar estado da conta e API |
@@ -39,9 +41,9 @@ original. Uma checklist marcada ou um teste antigo não comprova o ambiente atua
 | [Áudio WhatsApp](WhatsAppAPI/Plano_Audio_WhatsApp.md) | Plano com implementação incorporada; consultar código e matriz atual |
 | [Campanhas/opt-in WhatsApp](WhatsAppAPI/Plano_Campanhas_e_Optin_WhatsApp.md) | Backlog de painel/captação; há comando manual de campanha |
 | [Evidência WhatsApp 141008](Evidencia_WhatsApp_141008.md) | Registro histórico de erro externo |
-| [E-mail](PLANEJAMENTO_EMAIL.md) | Planejamento e decisões; SMTP Django existe, SES é stub |
+| [E-mail](PLANEJAMENTO_EMAIL.md) | Planejamento histórico; adaptadores SMTP e SES implementados, ativação depende da configuração |
 | [E-mail de leads](Marketing/Gestor_email_leads_funil.md) | Fluxo implementado e plano de evolução |
-| [E-mail em massa](Marketing/Gestor_Email_MKT_Massa.md) | Campanhas implementadas; provider SES ainda pendente |
+| [E-mail em massa](Marketing/Gestor_Email_MKT_Massa.md) | Campanhas implementadas; envios reais dependem de credenciais e preferências de contato |
 | [Impulsionamento](Marketing/Gestor_Impulsionamento_CRM.md) | Recursos implementados e fases futuras de mídia |
 | [Landing pages](Marketing/Gestor_LPs.md) | Guia/plano do gestor de LPs e captação |
 | [JEV](JEV_CRM_TEST.md) | Plano de validação do adapter de decisão; serviço externo a confirmar |
@@ -54,6 +56,7 @@ original. Uma checklist marcada ou um teste antigo não comprova o ambiente atua
 |---|---|
 | [Configuração dos quartos](Reservas/CONFIGURACAO_QUARTOS.md) | Decisões de capacidade e montagem incorporadas ao modelo |
 | [Estoque de colchões](Reservas/PLANO_ESTOQUE_COLCHOES.md) | Plano e registro de implementação; conferir inventário real |
+| [Day pass](Reservas/DAY_PASS.md) | Turnos, lotação, ingressos, acesso nominal e consumo |
 | [Descritivo dos quartos](Descritivo_Quartos/descritivo-quartos-vo-testa.md) | Referência física/comercial; não é snapshot atual do banco |
 | [Parâmetros CRM](Descritivo_Quartos/Parametros_CRM.md) | Proposta histórica de modelagem; prevalecem especificação e código atuais |
 | [Descritivo na conversa](Descritivo_Quartos/DESCRITIVO-NA-CONVERSA.md) | Notas históricas que acompanham o material original |

@@ -1,0 +1,56 @@
+{% extends "base.html" %}{% load moeda nucleo_extras %}
+{% block titulo %}Grupo #{{ visita.pk }} | Day pass{% endblock %}
+{% block conteudo %}
+<p class="pagina-eyebrow letreiro">Day pass · {{ visita.turno }}</p>
+<h1>{{ visita.responsavel }}</h1>
+<p class="subtitulo">Grupo #{{ visita.pk }} · {{ visita.get_status_display }} · {{ visita.turno.inicio|time:'H:i' }}–{{ visita.turno.fim|time:'H:i' }}</p>
+<a class="botao-neutro bloco-fim" href="{% url 'daypass:painel' %}?data={{ visita.turno.dia_id|date:'Y-m-d' }}">Voltar aos grupos</a>
+<div class="daypass-turnos bloco-fim">
+<section class="painel-bloco">
+<h2>Ingressos</h2>{% for pg in visita.pagamentos.all %}<p class="ajuda">
+<a href="{% url 'caixa_sessao' pg.movimento.sessao_id %}">Recebimento #{{ pg.movimento_id }} no caixa</a>{% if eh_gerente %} · <a href="{% url 'estorno' pg.movimento_id %}">Registrar estorno</a>{% endif %}</p>{% endfor %}<p>Total: <strong>{{ visita.valor_ingressos|intcomma_brl }}</strong>
+</p>
+<p>Recebido: {{ pago|intcomma_brl }} · <strong>Saldo: {{ saldo|intcomma_brl }}</strong>
+</p>{% if saldo > 0 and visita.status != 'cancelada' and visita.status != 'encerrada' %}<form data-preservar-erros class="daypass-form" method="post" action="{% url 'daypass:acao' visita.pk 'receber' %}">{% csrf_token %}{% for campo in pagamento_form %}{% if campo.is_hidden %}{{ campo }}{% else %}<div class="campo">{{ campo|rotulo }}{{ campo }}</div>{% endif %}{% endfor %}<p class="ajuda">O valor entra no caixa de Reservas do operador. Registre apenas pagamentos já conferidos.</p>
+<button class="botao-primario">Registrar recebimento</button>
+</form>{% endif %}</section>
+<section class="painel-bloco">
+<h2>Consumo do grupo</h2>{% for comanda in visita.comandas.all %}<p>
+<a href="{% url 'restaurante:comanda' comanda.pk %}">Comanda #{{ comanda.pk }}</a> · {{ comanda.get_status_display }}</p>{% empty %}<p>Nenhuma comanda vinculada.</p>{% endfor %}{% if visita.status == 'em_visita' %}<form data-preservar-erros class="daypass-form" method="post" action="{% url 'daypass:acao' visita.pk 'consumo' %}">{% csrf_token %}{% for campo in consumo_form %}<div class="campo">{{ campo|rotulo }}{{ campo }}</div>{% endfor %}<button class="botao-neutro">Abrir comanda</button>
+</form>{% endif %}</section>
+</div>
+<section class="painel-bloco bloco-fim">
+<h2>Visitantes</h2>
+<p class="ajuda">Registre cada entrada e saída. Para voltar em outro turno, faça uma nova reserva de vagas.</p>
+<ul class="daypass-pessoas">
+{% for pessoa in visita.visitantes.all %}
+  <li class="daypass-pessoa">
+    <h3>{{ pessoa.nome }}</h3>
+    <span class="ajuda">{% if pessoa.crianca %}Criança acompanhada{% else %}Adulto{% endif %}</span>
+    <dl><div><dt>Entrada</dt><dd>{{ pessoa.entrou_em|date:'H:i'|default:'Pendente' }}</dd></div><div><dt>Saída</dt><dd>{{ pessoa.saiu_em|date:'H:i'|default:'Pendente' }}</dd></div></dl>
+    {% if visita.status == 'reservada' or visita.status == 'em_visita' %}
+      {% if not pessoa.entrou_em %}
+        <form data-preservar-erros class="daypass-form" method="post" action="{% url 'daypass:acesso' visita.pk pessoa.pk 'entrada' %}">{% csrf_token %}<button class="botao-neutro">Registrar entrada</button></form>
+      {% elif not pessoa.saiu_em %}
+        <form data-preservar-erros class="daypass-form" method="post" action="{% url 'daypass:acesso' visita.pk pessoa.pk 'saida' %}">{% csrf_token %}<button class="botao-neutro">Registrar saída</button></form>
+      {% else %}<span class="selo">Visita concluída</span>{% endif %}
+    {% endif %}
+  </li>
+{% endfor %}
+</ul>
+</section>
+{% if visita.status == 'em_visita' %}<form data-preservar-erros class="daypass-form painel-bloco bloco-fim" method="post" action="{% url 'daypass:acao' visita.pk 'encerrar' %}">{% csrf_token %}<h2>Encerrar o grupo</h2>
+<p>Todos os presentes devem ter a saída registrada e as comandas precisam estar resolvidas.</p>
+<button class="botao-primario">Encerrar visita</button>
+</form>{% endif %}
+{% if visita.status == 'reservada' and eh_gerente %}<details class="painel-bloco">
+<summary>Cancelar antes da entrada</summary>
+<p class="ajuda">Se houve pagamento, devolva o valor e registre o estorno no caixa antes de cancelar. O cancelamento libera as vagas do grupo.</p>
+<form data-preservar-erros class="daypass-form" method="post" action="{% url 'daypass:acao' visita.pk 'cancelar' %}">{% csrf_token %}<div class="campo">
+<label for="motivo">Motivo</label>
+<input id="motivo" name="motivo" minlength="5" maxlength="300" required>
+</div>
+<button class="botao-neutro">Cancelar visita</button>
+</form>
+</details>{% endif %}
+{% endblock %}
