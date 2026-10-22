@@ -2,13 +2,16 @@
 {% comment %}O verde #25D366 do WhatsApp era a única cor fria e saturada da
 página. O ícone já identifica o serviço; o botão usa a cor da marca.{% endcomment %}
 <style>
-  /* Enquanto o aviso de cookies está na tela ele ocupa os 197 px de baixo e
+  /* Enquanto o aviso de cookies está na tela ele ocupa o pé da janela e
      engolia este botão — o ícone sumia atrás do cartão branco na primeira
      visita. O aviso publica a própria altura em `--aviso-cookies-altura`
-     (componentes/consentimento.html); o botão sobe junto e desce quando ele
-     some. Sem JS: é só uma conta no `bottom`. */
-  html.com-aviso-cookies .zap-flutuante {
-    bottom: calc(1rem + var(--aviso-cookies-altura, 0px));
+     (componentes/consentimento.html).
+     Do tablet para cima o botão sobe junto e desce quando o aviso some (é só
+     uma conta no `bottom`). No celular ele sai de cena até a escolha: acima
+     dos 197 px do aviso caía em cima do formulário de datas da primeira tela,
+     no canto do "Ver Disponibilidade". */
+  @media (max-width: 639.98px) {
+    html.com-aviso-cookies .zap-flutuante { visibility: hidden; pointer-events: none; }
   }
   @media (min-width: 640px) {
     html.com-aviso-cookies .zap-flutuante {

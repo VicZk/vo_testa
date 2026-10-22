@@ -628,6 +628,31 @@ class SiteNoCelularE2ETests(_UnidadeVendavelMixin, _BaseE2E):
         }""")
         self.assertFalse(tapado["cruza"], f"o WhatsApp está em cima dos créditos: {tapado}")
 
+    def test_whatsapp_nao_encavala_no_formulario_da_primeira_tela(self):
+        """Na primeira visita, com o aviso de cookies no pé da tela, o botão do
+        WhatsApp subia para cima dele e caía no canto do "Ver Disponibilidade" —
+        o "ícone com overlap" que o dono viu na home. No celular ele espera a
+        escolha e volta depois."""
+        p = self.page
+        p.goto(self.url("/"))
+        p.wait_for_selector("#consentimento:not([hidden])", timeout=10000)
+        p.wait_for_timeout(250)
+        medida = p.evaluate("""() => {
+          const zap = document.querySelector('.zap-flutuante');
+          const z = zap.getBoundingClientRect();
+          const f = document.querySelector('#hero-hospedes').closest('form').getBoundingClientRect();
+          const cruza = Math.max(z.left, f.left) < Math.min(z.right, f.right)
+                     && Math.max(z.top, f.top) < Math.min(z.bottom, f.bottom);
+          return {visivel: getComputedStyle(zap).visibility === 'visible', cruza};
+        }""")
+        self.assertFalse(medida["visivel"] and medida["cruza"],
+                         f"o WhatsApp está em cima do formulário de datas: {medida}")
+        p.click("[data-consent-aceitar]")
+        p.wait_for_timeout(250)
+        self.assertEqual(
+            p.evaluate("() => getComputedStyle(document.querySelector('.zap-flutuante')).visibility"),
+            "visible", "o WhatsApp não voltou depois da escolha")
+
     def test_caminho_da_reserva_tem_alvo_de_44px(self):
         """Campo de data, botão do hero, CTA do quarto e a escolha das camas —
         tudo entre 20 e 40px antes desta passada."""
