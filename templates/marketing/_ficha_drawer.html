@@ -189,10 +189,14 @@
 
     </details>
 
-    <details class="mkt-dobra"><summary>Leads e reservas</summary>
+    <details class="mkt-dobra"><summary>Interessados e reservas</summary>
     {# ── Aquisição ── #}
     <h3 class="fx-h3 com-info">Aquisição{% include "marketing/_info.html" with tip="Os leads que a campanha gerou (fonte única: o funil do Comercial), incluindo ganhos e perdas por motivo." %}</h3>
     <div class="fx-sec">
+      <p class="fx-sub">Veja quem chegou por esta campanha e acompanhe o atendimento até a reserva.</p>
+      {% if c.anuncio_id and request.user|pode_modulo:'comercial' %}
+      <a class="botao-neutro" href="{% url 'comercial:funil' %}?campanha={{ c.anuncio_id }}">Ver leads desta campanha</a>
+      {% elif not c.anuncio_id %}<p class="fx-sub">A ligação com o atendimento é criada quando a campanha é aprovada.</p>{% endif %}
       <div class="fx-aq">
         <span>Total <b>{{ aq.total }}</b></span><span>Abertos <b>{{ aq.abertos }}</b></span>
         <span class="mk-tom-sucesso">Ganhos <b>{{ aq.ganhos }}</b></span>

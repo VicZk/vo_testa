@@ -1,0 +1,45 @@
+<div class="modal-cabecalho">
+  <div><h2>Novo lead</h2><p class="ajuda">Cadastre quem demonstrou interesse para acompanhar o atendimento.</p></div>
+  <button type="button" class="modal-fechar" onclick="fecharEdicao(this)" aria-label="Fechar cadastro de lead">&times;</button>
+</div>
+<form method="post" action="{% url 'comercial:nova' %}" class="modal-form lead-form" data-edicao-pendente
+      {% if em_modal %}hx-post="{% url 'comercial:nova' %}" hx-target="#modal-conteudo" hx-disabled-elt="find button[type='submit']"{% endif %}
+      x-data="{ tipo: '{{ form.tipo_contato.value|default:'novo'|escapejs }}' }" novalidate>
+  {% csrf_token %}{{ form.chave }}
+  <div class="modal-corpo">
+    {% if form.errors or contato_form.errors %}<p class="alerta alerta-erro" role="alert">Confira os campos indicados. O cadastro ainda não foi salvo.</p>{% endif %}
+    {% for error in form.non_field_errors %}<p class="erro" role="alert">{{ error }}</p>{% endfor %}
+    {% for error in form.chave.errors %}<p class="erro" role="alert">{{ error }}</p>{% endfor %}
+    <fieldset class="lead-tipo">
+      <legend>Quem está interessado?</legend>
+      <label><input type="radio" name="tipo_contato" value="novo" x-model="tipo"> Novo contato</label>
+      <label><input type="radio" name="tipo_contato" value="cadastrado" x-model="tipo"> Já cadastrado</label>
+      {% for error in form.tipo_contato.errors %}<small class="erro" role="alert">{{ error }}</small>{% endfor %}
+    </fieldset>
+    <fieldset class="lead-contato form-grade" x-show="tipo === 'novo'" :disabled="tipo !== 'novo'">
+      {% for field in contato_form %}{% include "componentes/campo.html" %}{% endfor %}
+    </fieldset>
+    <fieldset class="lead-contato" x-show="tipo === 'cadastrado'" :disabled="tipo !== 'cadastrado'">
+      <div class="campo{% if form.pessoa.errors %} campo-erro{% endif %}">
+        <label for="id_pessoa">Buscar contato cadastrado</label>
+        {% include "componentes/combo_pessoa.html" with dados=pessoas_data dados_id="novo-lead-pessoas" campo="pessoa" valor_id=form.pessoa.value placeholder="Digite o nome e escolha na lista…" %}
+        {% for error in form.pessoa.errors %}<small class="erro" role="alert">{{ error }}</small>{% endfor %}
+      </div>
+    </fieldset>
+    <div class="form-grade">
+      {% for field in campos_principais %}{% include "componentes/campo.html" %}{% endfor %}
+    </div>
+    <details class="mkt-dobra lead-detalhes"{% if form.errors %} open{% endif %}>
+      <summary>Mais informações — período, pessoas e responsável</summary>
+      <p class="ajuda">Preencha o que já souber. Esses dados ajudam a preparar a proposta.</p>
+      <div class="form-grade">
+        {% for field in campos_detalhes %}{% include "componentes/campo.html" %}{% endfor %}
+      </div>
+    </details>
+    <span data-estado-edicao role="status" aria-live="polite" class="ajuda"></span>
+  </div>
+  <footer class="modal-acoes">
+    <button type="button" class="botao-neutro" onclick="fecharEdicao(this)">Cancelar</button>
+    <button type="submit" class="botao-primario">Salvar e abrir atendimento</button>
+  </footer>
+</form>

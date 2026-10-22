@@ -15,6 +15,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
+from django.views.decorators.http import require_http_methods
 
 from apps.nucleo.areas import Area
 from apps.nucleo.models import Pessoa, Prospecto, modulo_ativo
@@ -32,8 +33,10 @@ from .forms import (
     PerdaForm,
     RespostaRapidaForm,
 )
+from .forms_lead import ContatoLeadForm, MoverLeadForm, NovoLeadForm
 from .models import (
     AtividadeComercial,
+    Campanha,
     EtapaFunil,
     MotivoPerda,
     Oportunidade,
@@ -124,7 +127,15 @@ def funil(request):
     fat = request.GET.get("fat", "")
     todos = request.GET.get("fechados") == "todos"
     inicio, fim, rotulo = periodo(request)
-    colunas = services.dados_kanban(faturamento=fat, inicio=inicio, fim=fim, todos=todos)
+    campanha = None
+    if request.GET.get("campanha"):
+        try:
+            campanha_id = int(request.GET["campanha"])
+        except (ValueError, TypeError):
+            raise Http404("Campanha não encontrada.") from None
+        campanha = get_object_or_404(Campanha, pk=campanha_id)
+    colunas = services.dados_kanban(faturamento=fat, inicio=inicio, fim=fim, todos=todos,
+                                  campanha_id=campanha.pk if campanha else None)
     # KPIs do topo = só o pipeline ABERTO (as colunas terminais trazem fechados do período).
     abertos = [op for col in colunas if col["etapa"].tipo == "aberta" for op in col["itens"]]
     ctx = {
@@ -138,10 +149,20 @@ def funil(request):
         "agora": timezone.now(),
         "todos_fechados": todos,
         "periodo_rotulo": rotulo,
+        "campanha_filtro": campanha,
+        "campanhas_filtro": Campanha.objects.order_by("nome"),
+        "campanha_planejada": _campanha_planejada(request, campanha.pk if campanha else None),
     }
     ctx.update(selecao_periodo(request))
     ctx.update(_contexto_form())
     return render(request, "comercial/funil.html", ctx)
+
+
+def _campanha_planejada(request, campanha_id):
+    if campanha_id and request.user.pode_acessar(Modulo.MARKETING) and modulo_ativo(Modulo.MARKETING):
+        from apps.marketing.services import referencia_campanha
+        return referencia_campanha(campanha_id)
+    return None
 
 
 @requer_modulo(Modulo.COMERCIAL)
@@ -176,38 +197,43 @@ def assumir(request, pk):
     return redirect(destino if destino else "comercial:funil")
 
 
+@never_cache
 @requer_modulo(Modulo.COMERCIAL)
+@require_http_methods(["GET", "POST"])
 def nova(request):
-    if request.method != "POST":
-        return redirect("comercial:funil")
-    pessoa = Pessoa.objects.filter(pk=request.POST.get("pessoa") or None).first()
-    if not pessoa:
-        messages.error(request, "Selecione o lead (pessoa/agência/empresa).")
-        return redirect("comercial:funil")
-    responsavel = (Usuario.objects.filter(pk=request.POST.get("responsavel") or None).first()
-                   or request.user)
-    etapa = EtapaFunil.objects.filter(pk=request.POST.get("etapa") or None).first()
-    try:
-        op = services.criar_oportunidade(
-            usuario=request.user, pessoa=pessoa,
-            titulo=request.POST.get("titulo", "").strip() or f"Oportunidade — {pessoa.nome}",
-            etapa=etapa,
-            faturamento=request.POST.get("faturamento") or Oportunidade.Faturamento.PARTICULAR,
-            origem=request.POST.get("origem") or Oportunidade.Origem.OUTRO,
-            valor_estimado=_valor(request.POST.get("valor_estimado")) or Decimal("0.00"),
-            checkin_previsto=_data(request.POST.get("checkin_previsto")),
-            checkout_previsto=_data(request.POST.get("checkout_previsto")),
-            quartos=int(request.POST.get("quartos") or 1),
-            hospedes=int(request.POST.get("hospedes") or 2),
-            responsavel=responsavel,
-            observacao=request.POST.get("observacao", ""),
-        )
-    except (ValidationError, ValueError) as erro:
-        msg = " ".join(erro.messages) if isinstance(erro, ValidationError) else "Dados inválidos."
-        messages.error(request, msg)
-        return redirect("comercial:funil")
-    messages.success(request, "Oportunidade criada.")
-    return redirect("comercial:oportunidade", pk=op.pk)
+    post = request.POST if request.method == "POST" else None
+    inicial = {}
+    campanha_id = request.GET.get("campanha", "")
+    if campanha_id.isdecimal() and Campanha.objects.filter(pk=campanha_id, ativa=True).exists():
+        inicial["campanha"] = campanha_id
+    form = NovoLeadForm(post, initial=inicial)
+    contato = ContatoLeadForm(post, prefix="contato")
+    if post is not None:
+        valido = form.is_valid()
+        if form.data.get("tipo_contato") == "novo":
+            valido = contato.is_valid() and valido
+        if valido:
+            dados = form.cleaned_data.copy()
+            novo_contato = dados.pop("tipo_contato") == "novo"
+            try:
+                op, criado = services.criar_lead_manual(
+                    usuario=request.user, contato=contato.cleaned_data if novo_contato else None, **dados)
+            except ValidationError as erro:
+                form.add_error(None, erro)
+            else:
+                if criado:
+                    messages.success(request, "Lead criado. Registre o próximo contato para acompanhar o atendimento.")
+                destino = reverse("comercial:oportunidade", args=[op.pk])
+                if request.headers.get("HX-Request"):
+                    return HttpResponse(headers={"HX-Redirect": destino})
+                return redirect(destino)
+    template = "comercial/_novo_lead.html" if request.headers.get("HX-Request") else "comercial/novo_lead.html"
+    return render(request, template, {
+        "form": form, "contato_form": contato, "em_modal": bool(request.headers.get("HX-Request")),
+        "pessoas_data": pessoas_agrupadas(Pessoa.objects.filter(ativo=True)),
+        "campos_principais": [form[nome] for nome in ("origem", "campanha", "tipo_interesse", "observacao")],
+        "campos_detalhes": [form[nome] for nome in ("titulo", "checkin_previsto", "checkout_previsto", "quartos", "hospedes", "valor_estimado", "faturamento", "etapa", "responsavel")],
+    })
 
 
 @requer_modulo(Modulo.COMERCIAL)
@@ -227,30 +253,39 @@ def lead_novo(request):
     return JsonResponse({"id": pessoa.pk, "nome": pessoa.nome, "grupo": "Prospecção"})
 
 
+@never_cache
 @requer_modulo(Modulo.COMERCIAL)
+@require_http_methods(["GET", "POST"])
 def mover(request, pk):
-    oportunidade = get_object_or_404(Oportunidade, pk=pk)
-    if request.method == "POST":
-        etapa = get_object_or_404(EtapaFunil, pk=request.POST.get("etapa"))
-        motivo = MotivoPerda.objects.filter(pk=request.POST.get("motivo") or None).first()
+    oportunidade = get_object_or_404(Oportunidade.objects.select_related("pessoa", "etapa"), pk=pk)
+    form = MoverLeadForm(request.POST if request.method == "POST" else None,
+                        initial={"etapa": request.GET.get("etapa") or oportunidade.etapa_id})
+    destino = request.POST.get("next") or request.GET.get("next") or ""
+    if not destino.startswith(reverse("dashboard")):
+        destino = reverse("comercial:funil")
+    if request.method == "POST" and form.is_valid():
         try:
-            services.mover_etapa(oportunidade, etapa, request.user, motivo=motivo,
-                                 detalhe=request.POST.get("detalhe", ""))
-            messages.success(request, f"Movida para '{etapa.nome}'.")
+            services.mover_etapa(oportunidade, form.cleaned_data["etapa"], request.user,
+                                 motivo=form.cleaned_data["motivo"], detalhe=form.cleaned_data["detalhe"])
         except ValidationError as erro:
-            messages.error(request, " ".join(erro.messages))
-    destino = request.POST.get("next", "")
-    # Só volta para dentro do CRM — e o CRM pode morar sob um prefixo (URL_PREFIX).
-    if destino.startswith(reverse("dashboard")):
-        return redirect(destino)
-    return redirect("comercial:funil")
+            form.add_error(None, erro)
+        else:
+            messages.success(request, f"Atendimento movido para {form.cleaned_data['etapa'].nome}.")
+            if request.headers.get("HX-Request"):
+                return HttpResponse(headers={"HX-Redirect": destino})
+            return redirect(destino)
+    perda = EtapaFunil.objects.filter(ativa=True, tipo=EtapaFunil.Tipo.PERDIDO).first()
+    template = "comercial/_mover_lead.html" if request.headers.get("HX-Request") else "comercial/mover_lead.html"
+    return render(request, template, {"op": oportunidade, "form": form, "destino": destino,
+                                     "perda_id": perda.pk if perda else "",
+                                     "em_modal": bool(request.headers.get("HX-Request"))})
 
 
 @never_cache
 @requer_modulo(Modulo.COMERCIAL)
 def oportunidade(request, pk):
     op = get_object_or_404(
-        Oportunidade.objects.select_related("pessoa", "etapa", "responsavel", "motivo_perda"),
+        Oportunidade.objects.select_related("pessoa", "etapa", "responsavel", "motivo_perda", "campanha"),
         pk=pk,
     )
     from django.conf import settings as _settings
@@ -270,6 +305,7 @@ def oportunidade(request, pk):
         reserva_vinculada = situacao_da_venda(op.reserva_id)
     return render(request, "comercial/oportunidade.html", {
         "op": op,
+        "campanha_planejada": _campanha_planejada(request, op.campanha_id),
         "sinal_pct": settings.COMERCIAL_SINAL_PCT,
         "proxima_acao": services.proxima_acao(op),
         "historico_cliente": historico_cliente,

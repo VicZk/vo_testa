@@ -425,6 +425,178 @@ class CampanhaEdicaoE2ETests(_FunilComercialMixin, _BaseE2E):
 
 
 @unittest.skipUnless(_PLAYWRIGHT_OK, "playwright não instalado (ver docstring)")
+class LeadManualE2ETests(_FunilComercialMixin, _BaseE2E):
+    """Contato, campanha, erro recuperável e mudança de etapa no navegador."""
+
+    LOCALE = "pt-BR"
+
+    def setUp(self):
+        super().setUp()
+        from apps.comercial.models import Campanha, MotivoPerda
+        from apps.marketing.models import Campanha as Planejamento
+        from apps.nucleo.models import ModuloContratado, Usuario
+        from apps.nucleo.modulos import Modulo
+        ModuloContratado.objects.update_or_create(codigo=Modulo.MARKETING, defaults={"ativo": True})
+        self.user = Usuario.objects.create_superuser(username="lead-ui", password="forte-123-abc")
+        self.campanha = Campanha.objects.create(nome="Férias de novembro E2E", codigo="ferias-lead-ui", criado_por=self.user)
+        self.plano = Planejamento.objects.create(nome="Plano das férias E2E", anuncio=self.campanha)
+        MotivoPerda.objects.get_or_create(nome="Mudou de planos")
+        self.page.add_init_script("localStorage.setItem('sidebar', 'aberta')")
+        self._login("lead-ui", "forte-123-abc")
+        self.page.goto(self.url(f"/crm/comercial/?campanha={self.campanha.pk}"))
+
+    def _abrir(self):
+        self.page.get_by_role("link", name="+ Novo lead", exact=True).click()
+        self.page.get_by_label("Nome do contato").wait_for()
+
+    def test_cancelar_nao_cria_e_duplo_clique_nao_duplica(self):
+        from apps.comercial.models import Oportunidade
+        from apps.nucleo.models import Pessoa
+        p = self.page
+        self._abrir()
+        p.get_by_role("button", name="Cancelar", exact=True).click()
+        p.locator("#modal-reserva").wait_for(state="hidden")
+        self.assertFalse(Oportunidade.objects.exists())
+        self._abrir()
+        p.get_by_label("Nome do contato").fill("Família E2E")
+        p.get_by_role("button", name="Salvar e abrir atendimento").click(click_count=2)
+        p.get_by_role("heading", name="Família E2E", exact=True).wait_for()
+        op = Oportunidade.objects.get()
+        self.assertEqual(op.campanha, self.campanha)
+        self.assertEqual(Pessoa.objects.filter(nome="Família E2E").count(), 1)
+        self.assertIn(f"campanha={self.campanha.pk}", p.get_by_role("link", name="Voltar ao funil").get_attribute("href"))
+
+    def test_erro_preserva_contato_e_valor_e_foca_campo(self):
+        from decimal import Decimal
+
+        from apps.comercial.models import Oportunidade
+        from apps.nucleo.models import Pessoa
+        p = self.page
+        self._abrir()
+        p.get_by_label("Nome do contato").fill("Contato preservado E2E")
+        p.get_by_label("O que a pessoa procura?").fill("Quero um quarto com vista")
+        p.get_by_text("Mais informações — período, pessoas e responsável", exact=True).click()
+        p.get_by_label("Valor estimado").fill("valor inválido")
+        p.get_by_role("button", name="Salvar e abrir atendimento").click()
+        p.get_by_text("Confira os campos indicados.", exact=False).wait_for()
+        self.assertEqual(p.get_by_label("Nome do contato").input_value(), "Contato preservado E2E")
+        self.assertEqual(p.get_by_label("Valor estimado").input_value(), "valor inválido")
+        p.wait_for_function("document.activeElement.name === 'valor_estimado'")
+        self.assertEqual(p.evaluate("document.activeElement.name"), "valor_estimado")
+        self.assertFalse(Pessoa.objects.filter(nome="Contato preservado E2E").exists())
+        self.assertFalse(Oportunidade.objects.exists())
+        p.once("dialog", lambda dialog: dialog.dismiss())
+        p.get_by_role("button", name="Cancelar", exact=True).click()
+        self.assertTrue(p.get_by_label("Nome do contato").is_visible())
+        p.get_by_label("Valor estimado").fill("1.500,50")
+        p.get_by_role("button", name="Salvar e abrir atendimento").click()
+        p.get_by_role("heading", name="Contato preservado E2E", exact=True).wait_for()
+        self.assertEqual(Oportunidade.objects.get().valor_estimado, Decimal("1500.50"))
+
+    def test_busca_contato_existente_sem_cadastro_repetido(self):
+        from apps.comercial.models import Oportunidade
+        from apps.nucleo.models import Pessoa
+        pessoa = Pessoa.objects.create(nome="Cliente Recorrente E2E")
+        p = self.page
+        self._abrir()
+        p.get_by_label("Já cadastrado", exact=True).check()
+        p.get_by_role("combobox", name="Buscar contato cadastrado").fill("Recorrente")
+        p.get_by_role("option", name="Cliente Recorrente E2E").click()
+        p.get_by_role("button", name="Salvar e abrir atendimento").click()
+        p.get_by_role("heading", name="Cliente Recorrente E2E", exact=True).wait_for()
+        self.assertEqual(Oportunidade.objects.get().pessoa, pessoa)
+        self.assertEqual(Pessoa.objects.filter(nome=pessoa.nome).count(), 1)
+
+    def test_formulario_cabe_no_celular_e_desktop(self):
+        p = self.page
+        for largura in (320, 390, 821, 1440):
+            with self.subTest(largura=largura):
+                p.set_viewport_size({"width": largura, "height": 844})
+                self._abrir()
+                p.wait_for_function("getComputedStyle(document.querySelector('#modal-conteudo')).transform === 'none'")
+                geometria = p.evaluate("""() => {
+                    const caixa = document.querySelector('#modal-conteudo');
+                    const corpo = caixa.querySelector('.modal-corpo').getBoundingClientRect();
+                    const rodape = caixa.querySelector('.modal-acoes').getBoundingClientRect();
+                    const fechar = caixa.querySelector('.modal-fechar'), r = fechar.getBoundingClientRect();
+                    return {largura: document.documentElement.scrollWidth, viewport: innerWidth,
+                            corpo: corpo.height, rodape: rodape.bottom, altura: innerHeight,
+                            topo: caixa.getBoundingClientRect().top,
+                            fechar: fechar.contains(document.elementFromPoint(r.left+r.width/2, r.top+r.height/2))};
+                }""")
+                self.assertLessEqual(geometria["largura"], geometria["viewport"] + 1)
+                self.assertGreater(geometria["corpo"], 280)
+                self.assertLessEqual(geometria["rodape"], geometria["altura"] + 1)
+                self.assertGreaterEqual(geometria["topo"], 0)
+                self.assertTrue(geometria["fechar"])
+                self.assertEqual(p.get_by_label("Nome do contato").evaluate("el => getComputedStyle(el).fontSize"), "16px")
+                evidencia = os.environ.get("E2E_EVIDENCIAS")
+                if evidencia:
+                    from pathlib import Path
+                    destino = Path(evidencia)
+                    destino.mkdir(parents=True, exist_ok=True)
+                    p.screenshot(path=str(destino / f"lead-{largura}.png"))
+                p.get_by_text("Mais informações — período, pessoas e responsável", exact=True).click()
+                self.assertLessEqual(p.locator("#modal-conteudo .modal-acoes").bounding_box()["y"] +
+                                     p.locator("#modal-conteudo .modal-acoes").bounding_box()["height"], 845)
+                self.assertTrue(p.get_by_role("button", name="Fechar cadastro de lead").is_visible())
+                p.get_by_role("button", name="Cancelar", exact=True).click()
+                p.locator("#modal-reserva").wait_for(state="hidden")
+
+    def test_marketing_abre_apenas_leads_da_campanha(self):
+        from django.urls import reverse
+
+        from apps.comercial import services
+        from apps.nucleo.models import Pessoa
+        p = self.page
+        for nome, campanha in (("Interessado das férias E2E", self.campanha), ("Outra campanha E2E", None)):
+            services.criar_oportunidade(usuario=self.user, pessoa=Pessoa.objects.create(nome=nome),
+                                       titulo="Proposta", campanha=campanha, disparar_crm=False)
+        p.goto(self.url(reverse("marketing:detalhe", args=[self.plano.pk])))
+        p.get_by_text("Interessados e reservas", exact=True).click()
+        p.get_by_role("link", name="Ver leads desta campanha").click()
+        p.get_by_role("link", name="Interessado das férias E2E", exact=True).wait_for()
+        self.assertEqual(p.locator(".funil-card").count(), 1)
+        p.get_by_role("link", name="Ver planejamento da campanha").click()
+        p.get_by_role("heading", name="Plano das férias E2E", exact=True).wait_for()
+
+    def test_mover_no_celular_preserva_campanha_e_valida_perda(self):
+        from apps.comercial import services
+        from apps.comercial.models import EtapaFunil, Oportunidade
+        from apps.nucleo.models import Pessoa
+        op = services.criar_oportunidade(usuario=self.user, pessoa=Pessoa.objects.create(nome="Mover com toque E2E"),
+                                        titulo="Proposta", campanha=self.campanha, disparar_crm=False)
+        p = self.page
+        p.set_viewport_size({"width": 390, "height": 844})
+        p.reload()
+        p.get_by_role("link", name="Mover Mover com toque E2E para outra etapa").click()
+        p.get_by_role("heading", name="Mover atendimento").wait_for()
+        perdida = EtapaFunil.objects.get(tipo="perdido")
+        p.get_by_label("Próxima etapa").select_option(str(perdida.pk))
+        p.get_by_role("button", name="Salvar etapa", exact=True).click()
+        p.get_by_text("Escolha o motivo para registrar a perda.", exact=True).wait_for()
+        op.refresh_from_db()
+        self.assertEqual(op.status, Oportunidade.Status.ABERTA)
+        p.get_by_label("Motivo da perda").select_option(label="Mudou de planos")
+        with p.expect_navigation():
+            p.get_by_role("button", name="Salvar etapa", exact=True).click()
+        p.locator("#funilBoard").wait_for()
+        self.assertIn(f"campanha={self.campanha.pk}", p.url)
+        op.refresh_from_db()
+        self.assertEqual(op.status, Oportunidade.Status.PERDIDA)
+
+    def test_teclado_e_escape_devolvem_foco(self):
+        p = self.page
+        p.emulate_media(reduced_motion="reduce")
+        p.get_by_role("link", name="+ Novo lead", exact=True).focus()
+        p.keyboard.press("Enter")
+        p.get_by_role("heading", name="Novo lead", exact=True).wait_for()
+        p.keyboard.press("Escape")
+        p.locator("#modal-reserva").wait_for(state="hidden")
+        self.assertEqual(p.evaluate("document.activeElement.textContent.trim()"), "+ Novo lead")
+
+
+@unittest.skipUnless(_PLAYWRIGHT_OK, "playwright não instalado (ver docstring)")
 class FunilBuscaE2ETests(_FunilComercialMixin, _BaseE2E):
     def test_busca_do_funil_filtra_cards(self):
         from apps.comercial import services

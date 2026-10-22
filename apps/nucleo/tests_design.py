@@ -1068,11 +1068,12 @@ class FlutuantesTests(TestCase):
         quadro = (Path(settings.BASE_DIR) / "templates" / "marketing" / "quadro.html").read_text(encoding="utf-8")
         self.assertIn('hx-target="#modal-conteudo"', quadro)
 
-    def test_bottom_sheet_do_funil_usa_os_tokens(self):
+    def test_mover_no_funil_usa_modal_compartilhado(self):
         funil = (Path(settings.BASE_DIR) / "templates" / "comercial" / "funil.html"
                  ).read_text(encoding="utf-8")
         self.assertNotIn("cubic-bezier(.22,.61,.36,1)", funil)
-        self.assertIn("animation:sheet-sobe var(--mov-padrao)", funil)
+        self.assertIn('hx-target="#modal-conteudo"', funil)
+        self.assertNotIn('class="sheet-overlay"', funil)
 
     def test_alvo_de_44px_nas_telas_fora_da_casca(self):
         """Portal, pagamento e login não vivem dentro de `.conteudo`: a regra de

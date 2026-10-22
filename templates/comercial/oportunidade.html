@@ -18,8 +18,15 @@
     </p>
     {% endif %}
   </div>
-  <a href="{% url 'comercial:funil' %}" class="botao-mini">Voltar ao funil</a>
+  <a href="{% url 'comercial:funil' %}{% if op.campanha_id %}?campanha={{ op.campanha_id }}{% endif %}" class="botao-mini">Voltar ao funil</a>
 </div>
+{% if op.campanha %}
+<div class="alerta alerta-info funil-campanha">
+  <span>Origem: <strong>{{ op.campanha.nome }}</strong></span>
+  <a class="botao-mini" href="{% url 'comercial:funil' %}?campanha={{ op.campanha_id }}">Ver outros leads da campanha</a>
+  {% if campanha_planejada %}<a class="botao-mini" href="{% url 'marketing:detalhe' campanha_planejada.id %}">Ver planejamento da campanha</a>{% endif %}
+</div>
+{% endif %}
 
 <div class="op-layout">
   <!-- ESQUERDA: conversa + cotações + linha do tempo -->

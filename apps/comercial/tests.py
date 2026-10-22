@@ -1015,7 +1015,9 @@ class ViewTests(TestCase):
         self.assertEqual(self.client.get(reverse("comercial:tarefas")).status_code, 200)
 
     def test_nova_via_post(self):
+        import uuid
         r = self.client.post(reverse("comercial:nova"), {
+            "chave": uuid.uuid4(), "tipo_contato": "cadastrado", "tipo_interesse": "hospedagem",
             "pessoa": self.pessoa.pk, "titulo": "Nova op", "valor_estimado": "1.500,00",
             "faturamento": "particular", "origem": "site", "quartos": "1", "hospedes": "2",
         })
@@ -1053,7 +1055,8 @@ class ViewTests(TestCase):
         op = services.criar_oportunidade(usuario=self.op, pessoa=self.pessoa, titulo="Drag")
         ganho = EtapaFunil.objects.get(tipo="ganho")
         r = self.client.post(reverse("comercial:mover", args=[op.pk]), {"etapa": ganho.pk})
-        self.assertRedirects(r, reverse("comercial:funil"))
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r.context["form"].errors)
         op.refresh_from_db()
         self.assertEqual(op.status, Oportunidade.Status.ABERTA)
 

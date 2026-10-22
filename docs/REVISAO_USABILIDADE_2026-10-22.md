@@ -26,7 +26,8 @@ salvamento, recuperação de erros e detalhes apresentados quando necessários.
 | Marketing | Criar/cancelar campanha, editar dados e meta, validar, fechar, atualizar quadro | Corrigido; inspeção real do formulário e oito regressões no navegador aprovadas |
 | Interface compartilhada | Modal, rolagem da página e interrupção da animação | Falha de escala reproduzida; motor corrigido e testado em 30 fps, 1 fps e retomada de aba |
 | Marketing | Calendário, ocupação, relatório, peças, orçamento e aprovação | Próxima conferência de fluxo |
-| Comercial | Origem da campanha, leads, responsáveis, tarefas, cotação e reserva | Próxima implementação e conferência |
+| Comercial | Novo lead, contato existente, origem da campanha, filtros e movimentação | Implementado; 18 testes de cadastro/integração e sete cenários de navegador aprovados |
+| Comercial | Tarefas, cotação, comparação de quartos e conversão em reserva | Conferência complementar pendente |
 | Navegação e acesso | Menu, busca, entrada por perfil e troca de telas | Conferência complementar pendente |
 | Governança | Minha fila, quarto, limpeza, enxoval, inspeção e problema | Conferência com perfil de camareira pendente |
 | Reservas | Mapa, criação, alteração, grupos, entrada, saída, conta e FNRH | Conferência pendente |
@@ -71,3 +72,47 @@ Capturas do teste automatizado com dados fictícios:
 A conexão de Computer Use deixou de responder durante a rodada final. Os oito
 cenários de navegador foram executados e aprovados pelo teste automatizado; a
 reconferência visual final está pendente da retomada da conexão.
+
+Publicação confirmada: commit `e12cb510e319d01ebad87cefb555308b1d0c9b35`,
+[CI aprovado](https://github.com/VicZk/vo_testa/actions/runs/39727416864), VPS
+conferida às 02:35 de 22/10 (Brasília). A imagem ativa foi comparada ao código
+publicado, a migration estava aplicada, o banco e a aplicação estavam saudáveis
+e o health check público e o login responderam 200. O backup foi validado por
+leitura do catálogo e SHA-256; a imagem anterior foi preservada para retorno.
+
+## Entrega 2 — Leads e integração com campanhas
+
+O formulário anterior criava o contato separadamente e redirecionava ao funil em
+caso de erro na oportunidade, perdendo o preenchimento. O novo formulário grava
+contato e atendimento na mesma transação e permite escolher alguém já cadastrado.
+A chave única também foi testada com duas solicitações concorrentes; apenas um
+contato e um atendimento permaneceram no banco.
+
+Campanha, canal de origem e interesse ficam no primeiro grupo de campos. Datas,
+quantidades, valor e responsável aparecem em uma seção opcional. Valores inválidos,
+datas invertidas e contatos malformados retornam com o texto preservado e foco no
+erro. A criação manual não concede consentimento de marketing ao contato.
+
+A ligação entre Marketing e Comercial leva ao funil filtrado pela campanha,
+mantém o filtro na movimentação e apresenta o acesso ao planejamento apenas para
+quem tem permissão. A agregação de resultados passou para a interface pública do
+Comercial, preservando a fonte única dos leads e das reservas.
+
+A movimentação no celular usa o modal compartilhado. Uma falha de autorização
+encontrada durante a revisão permitia reabrir um lead encerrado pela rota comum,
+sem passar pela gestão de fechados. Os serviços agora travam e conferem o estado
+antes de alterar; a perda de um lead ganho também exige o fluxo apropriado.
+
+Validações aprovadas: 513 testes de Comercial, Marketing e design; oito testes de
+navegador (sete novos e o arrasto existente). Os cenários incluem quatro larguras,
+erro e recuperação, contato existente, ida e volta entre campanha e funil,
+cancelamento, cliques repetidos, teclado e motivo de perda. A suíte completa da
+segunda entrega passou em 1.813 testes (719,514 s), sem pulos. Ruff, sintaxe dos
+scripts, comparação das migrations e verificação do diff não indicaram pendências.
+A fixture do teste de limpeza de reservas passou a criar sua própria etapa do
+funil; o teste de concorrência encerra as conexões dos dois trabalhadores.
+A conferência manual por Computer Use segue pendente da conexão.
+
+Capturas do teste automatizado com dados fictícios:
+[celular de 390 px](evidencias/usabilidade-2026-10-22/lead-390.png) e
+[desktop de 1440 px](evidencias/usabilidade-2026-10-22/lead-1440.png).

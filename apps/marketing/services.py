@@ -788,33 +788,14 @@ def aquisicao(campanha) -> dict:
     (status GANHA + reserva_id — a origem viaja junto) e a perda traz o motivo. CAC = gasto
     por FECHAMENTO. Receita = valor dos ganhos (rastreada).
     """
-    from django.db.models import Count
+    from apps.comercial.services import resumo_aquisicao
+    return resumo_aquisicao(campanha.anuncio_id, campanha.gasta)
 
-    from apps.comercial.models import Oportunidade
-    vazio = {"total": 0, "abertos": 0, "ganhos": 0, "perdidos": 0,
-             "receita": Decimal("0.00"), "conversao": 0, "cac": None, "motivos": []}
-    if not campanha.anuncio_id:
-        return vazio
-    qs = Oportunidade.objects.filter(campanha_id=campanha.anuncio_id)
-    total = qs.count()
-    ganhos_qs = qs.filter(status=Oportunidade.Status.GANHA)
-    ganhos = ganhos_qs.count()
-    perdidos = qs.filter(status=Oportunidade.Status.PERDIDA).count()
-    abertos = qs.filter(status=Oportunidade.Status.ABERTA).count()
-    receita = ganhos_qs.aggregate(s=Sum("valor_estimado"))["s"] or Decimal("0.00")
-    gasto = campanha.gasta
-    motivos = [
-        {"motivo": m["motivo_perda__nome"] or "—", "n": m["n"]}
-        for m in (qs.filter(status=Oportunidade.Status.PERDIDA)
-                  .values("motivo_perda__nome").annotate(n=Count("id")).order_by("-n"))
-    ]
-    return {
-        "total": total, "abertos": abertos, "ganhos": ganhos, "perdidos": perdidos,
-        "receita": receita,
-        "conversao": int(round(ganhos / total * 100)) if total else 0,
-        "cac": (gasto / ganhos).quantize(Decimal("0.01")) if ganhos else None,
-        "motivos": motivos,
-    }
+
+def referencia_campanha(anuncio_id):
+    """Identidade pública do planejamento associado a uma campanha do Comercial."""
+    return Campanha.objects.filter(anuncio_id=anuncio_id).values("id", "nome").first()
+
 
 
 # ── Passo 9: ocupação × campanha (próximos 90 dias) ──────────────────────────

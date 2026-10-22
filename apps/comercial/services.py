@@ -12,7 +12,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import (
     Avg,
     Count,
@@ -343,7 +343,7 @@ def _anotar_tarefa_e_contato(ops):
         op._ultimo_contato_pre = contatos.get(op.pk)
 
 
-def dados_kanban(faturamento="", inicio=None, fim=None, todos=False):
+def dados_kanban(faturamento="", inicio=None, fim=None, todos=False, campanha_id=None):
     """Colunas do funil. As etapas abertas mostram os leads em aberto (sempre — o pipeline
     é "agora", não depende de período); as etapas terminais (Ganho/Perdido) mostram os
     fechados do PERÍODO (padrão = mês corrente) — ou o histórico inteiro se `todos=True`.
@@ -351,12 +351,14 @@ def dados_kanban(faturamento="", inicio=None, fim=None, todos=False):
     """
     from .models import ConversaWhatsApp
     base = Oportunidade.objects.select_related(
-        "pessoa", "etapa", "responsavel", "pagina_captacao", "analise"
+        "pessoa", "etapa", "responsavel", "pagina_captacao", "campanha", "analise"
     ).annotate(
         # Mensagens de WhatsApp recebidas e ainda não respondidas (zera ao responder).
         wpp_nao_lidas=Subquery(ConversaWhatsApp.objects.filter(
             oportunidade=OuterRef("pk")).values("nao_lidas")[:1]),
     )
+    if campanha_id is not None:
+        base = base.filter(campanha_id=campanha_id)
     abertas = base.filter(status=Oportunidade.Status.ABERTA)
     if faturamento:
         abertas = abertas.filter(faturamento=faturamento)
@@ -408,6 +410,52 @@ def criar_oportunidade(*, usuario, pessoa, titulo, etapa=None, disparar_crm=True
     if disparar_crm:
         transaction.on_commit(lambda: enviar_evento_crm(op, _estagio_key(op.etapa)))
     return op
+
+
+@transaction.atomic
+def criar_lead_manual(*, usuario, chave, pessoa=None, contato=None, **campos):
+    """Contato e atendimento nascem juntos; repetir o envio não deixa duplicatas."""
+    existente = Oportunidade.objects.filter(chave_criacao=chave).first()
+    if existente:
+        return existente, False
+    try:
+        # Savepoint: se outra requisição ganhar a corrida da chave, desfaz também
+        # o contato que esta requisição criou antes de devolver o atendimento.
+        with transaction.atomic():
+            if pessoa is None:
+                from apps.nucleo.models import Pessoa
+                pessoa = Pessoa.objects.create(**(contato or {}), aceita_email=False)
+                Prospecto.objects.create(pessoa=pessoa)
+            titulo = campos.pop("titulo", "") or f"Atendimento — {pessoa.nome}"[:120]
+            campos["responsavel"] = campos.get("responsavel") or usuario
+            campos["adultos"] = campos.get("hospedes", 2)
+            op = criar_oportunidade(usuario=usuario, pessoa=pessoa, titulo=titulo,
+                                    chave_criacao=chave, **campos)
+    except IntegrityError:
+        existente = Oportunidade.objects.filter(chave_criacao=chave).first()
+        if existente is None:
+            raise
+        return existente, False
+    return op, True
+
+
+def resumo_aquisicao(campanha_id, gasto=Decimal("0.00")):
+    """Interface pública dos resultados de uma campanha para Marketing."""
+    qs = Oportunidade.objects.filter(campanha_id=campanha_id) if campanha_id else Oportunidade.objects.none()
+    totais = qs.aggregate(total=Count("pk"),
+        abertos=Count("pk", filter=Q(status=Oportunidade.Status.ABERTA)),
+        ganhos=Count("pk", filter=Q(status=Oportunidade.Status.GANHA)),
+        perdidos=Count("pk", filter=Q(status=Oportunidade.Status.PERDIDA)),
+        receita=Sum("valor_estimado", filter=Q(status=Oportunidade.Status.GANHA)))
+    total, ganhos = totais["total"], totais["ganhos"]
+    return {
+        **totais, "receita": totais["receita"] or Decimal("0.00"),
+        "conversao": int(round(ganhos / total * 100)) if total else 0,
+        "cac": (gasto / ganhos).quantize(Decimal("0.01")) if ganhos else None,
+        "motivos": [{"motivo": item["motivo_perda__nome"] or "—", "n": item["n"]}
+                    for item in qs.filter(status=Oportunidade.Status.PERDIDA)
+                    .values("motivo_perda__nome").annotate(n=Count("pk")).order_by("-n")],
+    }
 
 
 @transaction.atomic
@@ -773,8 +821,15 @@ def assumir_lead(oportunidade, usuario) -> bool:
     return True
 
 
+@transaction.atomic
 def mover_etapa(oportunidade, etapa, usuario, motivo=None, detalhe=""):
     """Move entre etapas abertas. Ganho exige reserva; Perdido exige motivo."""
+    from apps.nucleo.sistema import travar
+    oportunidade = travar(oportunidade)
+    if oportunidade.status != Oportunidade.Status.ABERTA:
+        raise ValidationError("Este atendimento já foi encerrado. A reabertura precisa ser feita pela gestão no detalhe do lead.")
+    if oportunidade.etapa_id == etapa.pk:
+        return oportunidade
     assumir_lead(oportunidade, usuario)
     de = oportunidade.etapa.nome
     if etapa.tipo == EtapaFunil.Tipo.GANHO:
@@ -834,6 +889,12 @@ def concluir_tarefa(atividade, usuario):
 
 @transaction.atomic
 def marcar_perdida(oportunidade, motivo, usuario, detalhe=""):
+    from apps.nucleo.sistema import travar
+    oportunidade = travar(oportunidade)
+    if oportunidade.status == Oportunidade.Status.GANHA:
+        raise ValidationError("Este atendimento já tem uma reserva. Use a gestão de leads fechados para alterar a venda.")
+    if oportunidade.status == Oportunidade.Status.PERDIDA:
+        return oportunidade
     if motivo is None:
         raise ValidationError("Informe o motivo da perda.")
     detalhe = (detalhe or "").strip()

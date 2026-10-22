@@ -2601,7 +2601,7 @@ class ZerarReservasCommandTests(TransactionTestCase):
         from django.core.management import call_command
 
         from apps.comercial import services as csvc
-        from apps.comercial.models import Oportunidade
+        from apps.comercial.models import EtapaFunil, Oportunidade
         from apps.nucleo.models import UH, Pessoa, TipoUH
         from apps.pagamentos.services import criar_cobranca
 
@@ -2614,7 +2614,10 @@ class ZerarReservasCommandTests(TransactionTestCase):
             valor_diaria=Decimal("300.00"), criado_por=self.usuario_ou_cria())
         criar_cobranca(self.usuario_ou_cria(), valor=Decimal("180.00"), metodo="pix",
                        descricao="sinal", finalidade="sinal_reserva", reserva_id=r.pk)
-        op = csvc.criar_oportunidade(usuario=self.usuario_ou_cria(), pessoa=pessoa, titulo="L")
+        # TransactionTestCase anterior pode ter limpado os dados de migração.
+        etapa = EtapaFunil.objects.create(nome="Novo contato do teste de limpeza")
+        op = csvc.criar_oportunidade(
+            usuario=self.usuario_ou_cria(), pessoa=pessoa, titulo="L", etapa=etapa)
         Oportunidade.objects.filter(pk=op.pk).update(
             reserva_id=r.pk, status=Oportunidade.Status.GANHA)
 

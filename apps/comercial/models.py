@@ -87,6 +87,7 @@ class Oportunidade(models.Model):
         related_name="oportunidades", verbose_name="lead (pessoa/agência/empresa)",
     )
     titulo = models.CharField("título", max_length=120)
+    chave_criacao = models.UUIDField(null=True, blank=True, unique=True, editable=False)
     etapa = models.ForeignKey(
         EtapaFunil, on_delete=models.PROTECT,
         related_name="oportunidades", verbose_name="etapa",

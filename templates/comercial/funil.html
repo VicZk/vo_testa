@@ -18,6 +18,7 @@
   .card-nome{display:flex;align-items:center;gap:6px;margin:0;font-size:15px;font-weight:700;
     letter-spacing:-.01em;color:var(--tinta);line-height:1.25}
   .card-nome svg{width:15px;height:15px;flex:0 0 auto;color:var(--tinta-suave)}
+  .card-abrir{color:inherit;text-decoration:none;overflow-wrap:anywhere}
   .card-proposta{margin:.15rem 0 0;font-size:12.5px;color:var(--tinta-suave);line-height:1.3}
   /* A ÚNICA cápsula preenchida do cartão: lead recém-chegado é o que pede
      atenção primeiro e não tem outro sinal no cartão. */
@@ -75,32 +76,10 @@
   .funil-coluna.sem-resultado{opacity:.5}
 
   /* Botão "Mover" no card — caminho de toque E teclado para mudar de etapa */
-  .card-mover{font-size:12px;font-weight:700;color:var(--info);background:none;border:none;
+  .card-mover{font-size:12px;font-weight:700;color:var(--info);background:none;border:none;text-decoration:none;
     padding:4px 2px;cursor:pointer;white-space:nowrap;min-height:28px}
   .card-mover:hover{text-decoration:underline}
   .card-mover:active{opacity:.7}
-
-  /* Bottom sheet — "Mover para etapa" */
-  .sheet-overlay{position:fixed;inset:0;z-index:70;background:color-mix(in srgb, var(--noturno) 38%, transparent);
-    display:flex;align-items:flex-end;justify-content:center}
-  .sheet{width:100%;max-width:520px;background:var(--superficie);
-    border-radius:var(--raio-g) var(--raio-g) 0 0;
-    box-shadow:0 -12px 44px color-mix(in srgb, var(--noturno) 24%, transparent);
-    padding:.5rem .9rem calc(1rem + env(safe-area-inset-bottom));max-height:80vh;overflow-y:auto}
-  .sheet-alca{width:36px;height:4px;border-radius:999px;background:var(--fio-forte);margin:.4rem auto .6rem}
-  .sheet-tit{font-size:12px;font-weight:700;color:var(--tinta-suave);text-transform:uppercase;
-    letter-spacing:.06em;margin:.1rem .2rem .55rem}
-  .sheet-etapa{display:flex;align-items:center;gap:.6rem;width:100%;text-align:left;
-    background:var(--superficie-2);border:1px solid var(--fio);border-radius:var(--raio-p);
-    padding:.75rem .85rem;margin-bottom:.4rem;font-size:14px;font-weight:600;color:var(--tinta);
-    cursor:pointer;min-height:48px}
-  .sheet-etapa:hover{border-color:var(--fio-forte)}
-  .sheet-etapa:active{background:var(--canvas)}
-  .sheet-etapa .ponto{width:10px;height:10px;border-radius:50%;background:var(--cor-etapa,var(--lampiao));flex:0 0 auto}
-  @media (prefers-reduced-motion: no-preference){
-    .sheet{animation:sheet-sobe var(--mov-padrao) var(--curva-entrada)}
-    @keyframes sheet-sobe{from{transform:translateY(14px);opacity:.5}to{transform:none;opacity:1}}
-  }
 
   /* Mobile: uma etapa por tela (largura total + snap horizontal), esconde a barra espelho.
      O "Mover" vira o caminho principal já que o drag HTML5 não funciona no toque. */
@@ -118,7 +97,7 @@
     .card-acao .botao-mini, .card-wpp, .card-mover{min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center}
   }
 </style>
-<div x-data="{ nova: false, perda: false, perdaOp: null, perdaEtapa: null, mover: false, moverOp: null }">
+<div id="funil-interface">
   <div class="pagina-cabecalho">
     <div>
       <p class="pagina-eyebrow letreiro">Comercial</p>
@@ -128,10 +107,19 @@
       <a href="{% url 'comercial:tarefas' %}" class="botao-neutro">Tarefas</a>
       <a href="{% url 'comercial:email_campanhas' %}" class="botao-neutro">E-mail</a>
       <a href="{% url 'comercial:painel' %}" class="botao-neutro">Painel</a>
-      <button type="button" class="botao-primario" @click="nova = true">+ Nova oportunidade</button>
+      <a href="{% url 'comercial:nova' %}{% if campanha_filtro %}?campanha={{ campanha_filtro.pk }}{% endif %}"
+         hx-get="{% url 'comercial:nova' %}{% if campanha_filtro %}?campanha={{ campanha_filtro.pk }}{% endif %}" hx-target="#modal-conteudo"
+         class="botao-primario">+ Novo lead</a>
     </div>
   </div>
-  <p class="subtitulo">Arraste entre etapas abertas. Ganho só via conversão em reserva; perda pede motivo.</p>
+  <p class="subtitulo">Acompanhe quem demonstrou interesse, combine o próximo contato e prepare a reserva. Abra um cartão para atender ou use Mover para mudar de etapa.</p>
+  {% if campanha_filtro %}
+  <div class="alerta alerta-info funil-campanha">
+    <span>Campanha: <strong>{{ campanha_filtro.nome }}</strong></span>
+    {% if campanha_planejada %}<a class="botao-mini" href="{% url 'marketing:detalhe' campanha_planejada.id %}">Ver planejamento da campanha</a>{% endif %}
+    <a class="botao-mini" href="{% querystring campanha=None %}">Ver todas as campanhas</a>
+  </div>
+  {% endif %}
 
   <div class="funil-topo">
     <div class="funil-kpis">
@@ -140,15 +128,20 @@
       <div class="funil-kpi"><span class="valor">{{ qtd_total }}</span><span class="rotulo">Abertas</span></div>
     </div>
     <div class="seg-filtro">
-      <a href="?{% if todos_fechados %}fechados=todos{% else %}mes={{ mes_sel }}&ano={{ ano_sel }}{% endif %}" class="{% if not fat %}ativo{% endif %}">Todos</a>
+      <a href="{% querystring fat=None %}" class="{% if not fat %}ativo{% endif %}">Todos</a>
       {% for valor, rotulo in faturamento_filtros %}
-        <a href="?fat={{ valor }}{% if todos_fechados %}&fechados=todos{% else %}&mes={{ mes_sel }}&ano={{ ano_sel }}{% endif %}" class="{% if fat == valor %}ativo{% endif %}">{{ rotulo }}</a>
+        <a href="{% querystring fat=valor %}" class="{% if fat == valor %}ativo{% endif %}">{{ rotulo }}</a>
       {% endfor %}
     </div>
   </div>
 
   <form method="get" class="funil-periodo" aria-label="Período dos fechados (Ganho/Perdido)">
     {% if fat %}<input type="hidden" name="fat" value="{{ fat }}">{% endif %}
+    <label class="fp-rot" for="funil-campanha">Campanha</label>
+    <select id="funil-campanha" name="campanha" onchange="this.form.submit()">
+      <option value="">Todas as campanhas</option>
+      {% for campanha in campanhas_filtro %}<option value="{{ campanha.pk }}"{% if campanha.pk == campanha_filtro.pk %} selected{% endif %}>{{ campanha.nome }}</option>{% endfor %}
+    </select>
     <span class="fp-rot">Fechados (Ganho/Perdido):</span>
     <select name="mes" aria-label="Mês" onchange="this.form.submit()" {% if todos_fechados %}disabled{% endif %}>
       {% for num, nome in meses %}<option value="{{ num }}" {% if num == mes_sel %}selected{% endif %}>{{ nome }}</option>{% endfor %}
@@ -188,20 +181,19 @@
             <article class="funil-card fat-{{ op.faturamento }} status-{{ op.status }}{% if op.wpp_nao_lidas %} tem-wpp-nova{% endif %}" data-op="{{ op.id }}"
                      data-busca="{{ op.pessoa.nome|default:'' }} {{ op.titulo_curto|default:'' }} {{ op.pessoa.telefone|default:'' }}"
                      {% if op.status == 'aberta' %}draggable="true" ondragstart="cardDragStart(event, '{{ op.id }}')" ondragend="cardDragEnd(event)"{% endif %}
-                     role="link" tabindex="0" aria-label="Abrir oportunidade — {{ op.pessoa.nome }}{% if op.wpp_nao_lidas %} ({{ op.wpp_nao_lidas }} mensagem nova no WhatsApp){% endif %}"
-                     onclick="location.href='{% url 'comercial:oportunidade' op.pk %}'"
-                     onkeydown="if((event.key==='Enter'||event.key===' ')&&event.target===this){event.preventDefault();location.href='{% url 'comercial:oportunidade' op.pk %}'}">
-              {% if op.eh_novo %}<span class="card-novo">novo</span>{% endif %}
+                     onclick="if(!event.target.closest('a,button,input,select,form'))this.querySelector('.card-abrir').click()">
+              {% if op.eh_novo %}<span class="card-novo">Novo</span>{% endif %}
               {% if op.wpp_nao_lidas %}<span class="card-wpp-nova selo selo-sucesso" title="{{ op.wpp_nao_lidas }} mensagem(ns) de WhatsApp aguardando resposta">{{ op.wpp_nao_lidas }} no WhatsApp</span>{% endif %}
               <p class="card-nome">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
-                {{ op.pessoa.nome }}
+                <a class="card-abrir" href="{% url 'comercial:oportunidade' op.pk %}">{{ op.pessoa.nome }}</a>
               </p>
               {% if op.titulo_curto %}<p class="card-proposta">{{ op.titulo_curto }}</p>{% endif %}
 
               {# 1 origem · 2 reativação · 3 campanha/LP · 4 temperatura #}
               <div class="card-chips">
                 <span class="rotulo-dado">{{ op.get_origem_display }}</span>
+                {% if op.campanha %}<span class="rotulo-dado card-campanha" title="Campanha de origem">{{ op.campanha.nome }}</span>{% endif %}
                 {% if op.pagina_captacao %}<span class="rotulo-dado card-campanha" title="Campanha">{{ op.pagina_captacao.nome }}</span>{% endif %}
                 {% if op.reativada_em %}<span class="selo card-reativado" title="Cliente voltou a falar em {{ op.reativada_em|date:'d/m/Y H:i' }}">Reativado</span>{% endif %}
                 {% if op.temperatura %}<span class="selo temp-{{ op.temperatura }}">{{ op.temperatura_display }}</span>{% endif %}
@@ -233,17 +225,17 @@
               {% if op.proxima_tarefa %}
                 <p class="tarefa {% if op.proxima_tarefa.quando < agora %}alerta{% endif %}">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-                  {% if op.proxima_tarefa.quando < agora %}atrasado — {% endif %}{{ op.proxima_tarefa.quando|date:"d/m H:i" }}
+                  {% if op.proxima_tarefa.quando < agora %}Atrasado — {% endif %}{{ op.proxima_tarefa.quando|date:"d/m H:i" }}
                 </p>
               {% else %}
                 <p class="tarefa alerta">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
-                  sem próxima ação
+                  Agende o próximo contato
                 </p>
               {% endif %}
 
               {# 8 tempo parado #}
-              {% if op.dias_parado >= 3 %}<p class="card-parado">parado há {{ op.dias_parado }} dia{{ op.dias_parado|pluralize }}</p>{% endif %}
+              {% if op.dias_parado >= 3 %}<p class="card-parado">Parado há {{ op.dias_parado }} dia{{ op.dias_parado|pluralize }}</p>{% endif %}
 
               {# 3 WhatsApp · 7 responsável / assumir #}
               <div class="card-acao" onclick="event.stopPropagation()">
@@ -255,145 +247,24 @@
                   </form>
                 {% endif %}
                 {% if op.whatsapp_url %}<a href="{{ op.whatsapp_url }}" class="card-wpp" title="Falar no WhatsApp (abre o app)">WhatsApp</a>{% endif %}
-                {% if op.status == 'aberta' %}<button type="button" class="card-mover" onclick="abrirMover(event, '{{ op.pk }}')" aria-label="Mover {{ op.pessoa.nome }} para outra etapa">Mover</button>{% endif %}
+                {% if op.status == 'aberta' %}<a class="card-mover" href="{% url 'comercial:mover' op.pk %}?next={{ request.get_full_path|urlencode }}"
+                  hx-get="{% url 'comercial:mover' op.pk %}?next={{ request.get_full_path|urlencode }}" hx-target="#modal-conteudo"
+                  aria-label="Mover {{ op.pessoa.nome }} para outra etapa">Mover</a>{% endif %}
               </div>
             </article>
           {% empty %}
-            <div class="funil-vazio">{% if col.etapa.tipo == 'ganho' %}Ganho só via converter{% else %}Solte um card aqui{% endif %}</div>
+            <div class="funil-vazio">{% if col.etapa.tipo == 'ganho' %}As reservas concluídas aparecem aqui{% else %}Nenhum atendimento nesta etapa{% endif %}</div>
           {% endfor %}
         </div>
       </div>
     {% endfor %}
   </div>
 
-  {# Modal — Nova oportunidade #}
-  <div class="modal-overlay" x-show="nova" x-cloak @click.self="nova = false">
-    <div class="modal-caixa">
-      <form method="post" action="{% url 'comercial:nova' %}" class="modal-form" id="form-nova-op">
-        {% csrf_token %}
-        <header class="modal-cabecalho">
-          <h2>Nova oportunidade</h2>
-          <button type="button" class="modal-fechar" @click="nova = false" aria-label="Fechar">&times;</button>
-        </header>
-        <div class="modal-corpo">
-          <div class="form-grade">
-            <div class="campo col-2" x-data="{ novoLead: false }">
-              <label for="id_pessoa">Lead (pessoa, agência ou empresa)</label>
-              <div class="campo-com-acao" id="combo-lead">
-                {% include "componentes/combo_pessoa.html" with dados=pessoas_data dados_id="pessoas-data" campo="pessoa" placeholder="Buscar lead…" %}
-                <button type="button" class="botao-mini" @click="novoLead = !novoLead" x-text="novoLead ? 'Fechar' : '+ Novo'"></button>
-              </div>
-              <div class="bloco-inline" x-show="novoLead" x-cloak
-                   id="bloco-novo-lead" data-url="{% url 'comercial:lead_novo' %}">
-                <p class="bloco-titulo letreiro">Cadastrar lead — entra na categoria Prospecção</p>
-                <div class="bloco-campos">
-                  <input type="text" id="nl-nome" placeholder="Nome*" autocomplete="off">
-                  <input type="text" id="nl-telefone" class="mascara-telefone" placeholder="Telefone" inputmode="numeric" autocomplete="off">
-                  <input type="email" id="nl-email" placeholder="E-mail" autocomplete="off">
-                  <input type="text" id="nl-documento" class="mascara-cpfcnpj" placeholder="CPF/CNPJ" inputmode="numeric" autocomplete="off">
-                </div>
-                <small class="erro" id="nl-erro"></small>
-                <div class="acoes">
-                  <button type="button" class="botao-primario" onclick="salvarNovoLead()">Salvar lead</button>
-                  <button type="button" class="botao-neutro" @click="novoLead = false">Cancelar</button>
-                </div>
-              </div>
-            </div>
-            <div class="campo col-2"><label>Título</label><input type="text" name="titulo" placeholder="Ex.: Feriadão — família Silva (2 quartos)"></div>
-            <div class="campo"><label>Etapa</label><select name="etapa">{% for e in etapas %}{% if e.tipo == 'aberta' %}<option value="{{ e.id }}">{{ e.nome }}</option>{% endif %}{% endfor %}</select></div>
-            <div class="campo"><label>Faturamento</label><select name="faturamento">{% for v, r in faturamentos %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select></div>
-            <div class="campo"><label>Origem</label><select name="origem">{% for v, r in origens %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select></div>
-            <div class="campo"><label>Valor estimado (R$)</label><input type="text" name="valor_estimado" class="mascara-reais" inputmode="numeric" placeholder="0,00"></div>
-            <div class="campo"><label>Check-in previsto</label><input type="date" name="checkin_previsto"></div>
-            <div class="campo"><label>Check-out previsto</label><input type="date" name="checkout_previsto"></div>
-            <div class="campo"><label>Quartos</label><input type="number" name="quartos" value="1" min="1"></div>
-            <div class="campo"><label>Hóspedes</label><input type="number" name="hospedes" value="2" min="1"></div>
-            <div class="campo col-2"><label>Responsável</label><select name="responsavel"><option value="">—</option>{% for u in responsaveis %}<option value="{{ u.id }}">{{ u.get_full_name|default:u.username }}</option>{% endfor %}</select></div>
-            <div class="campo col-2"><label>Observação</label><textarea name="observacao" rows="2"></textarea></div>
-          </div>
-        </div>
-        <footer class="modal-acoes">
-          <button type="submit" class="botao-primario">Criar oportunidade</button>
-          <button type="button" class="botao-neutro" @click="nova = false">Cancelar</button>
-        </footer>
-      </form>
-    </div>
-  </div>
-
-  {# Modal — Motivo da perda no drag #}
-  <div class="modal-overlay" x-show="perda" x-cloak @click.self="perda = false">
-    <div class="modal-caixa estreita">
-      <form method="post" :action="'{% url 'comercial:mover' 0 %}'.replace('/0/', '/' + perdaOp + '/')" class="modal-form">
-        {% csrf_token %}
-        <input type="hidden" name="etapa" :value="perdaEtapa">
-        <header class="modal-cabecalho">
-          <h2>Motivo da perda</h2>
-          <button type="button" class="modal-fechar" @click="perda = false" aria-label="Fechar">&times;</button>
-        </header>
-        <div class="modal-corpo">
-          <div class="campo">
-            <label>Por que perdemos?</label>
-            <select name="motivo" required>
-              <option value="">Selecione…</option>
-              {% for m in motivos_perda %}<option value="{{ m.id }}">{{ m.nome }}</option>{% endfor %}
-            </select>
-          </div>
-          <div class="campo">
-            <label>Relato da perda <span class="rotulo-opcional">(opcional)</span></label>
-            <textarea name="detalhe" rows="2" placeholder="O que aconteceu? (ex.: telefone deu número errado 3×)"></textarea>
-          </div>
-        </div>
-        <footer class="modal-acoes">
-          <button type="submit" class="botao-primario">Confirmar perda</button>
-          <button type="button" class="botao-neutro" @click="perda = false">Cancelar</button>
-        </footer>
-      </form>
-    </div>
-  </div>
-
-  {# Bottom sheet — Mover card para etapa (toque + teclado; reusa o fluxo do drag) #}
-  <div class="sheet-overlay" x-show="mover" x-cloak @click.self="mover = false" @keydown.escape.window="mover = false">
-    <div class="sheet" role="dialog" aria-modal="true" aria-label="Mover para etapa">
-      <div class="sheet-alca" aria-hidden="true"></div>
-      <p class="sheet-tit">Mover para</p>
-      {% for col in colunas %}
-        <button type="button" class="sheet-etapa"
-                style="--cor-etapa: {% if col.etapa.tipo == 'ganho' %}var(--sucesso){% elif col.etapa.tipo == 'perdido' %}var(--perigo){% else %}var(--lampiao){% endif %}"
-                onclick="moverPara('{{ col.etapa.id }}', '{{ col.etapa.tipo }}')">
-          <span class="ponto" aria-hidden="true"></span>{{ col.etapa.nome }}
-        </button>
-      {% endfor %}
-    </div>
-  </div>
 </div>
 
-<form id="form-mover" method="post" class="form-oculto">{% csrf_token %}<input type="hidden" name="etapa" id="mover-etapa"></form>
+<form id="form-mover" method="post" class="form-oculto">{% csrf_token %}<input type="hidden" name="etapa" id="mover-etapa"><input type="hidden" name="next" value="{{ request.get_full_path }}"></form>
 
 <script>
-  async function salvarNovoLead() {
-    const bloco = document.getElementById('bloco-novo-lead');
-    const erro = document.getElementById('nl-erro');
-    const nome = document.getElementById('nl-nome').value.trim();
-    erro.textContent = '';
-    if (!nome) { erro.textContent = 'Informe o nome do lead.'; return; }
-    const dados = new FormData();
-    dados.append('nome', nome);
-    dados.append('telefone', document.getElementById('nl-telefone').value);
-    dados.append('email', document.getElementById('nl-email').value);
-    dados.append('documento', document.getElementById('nl-documento').value);
-    const csrf = document.querySelector('#form-nova-op [name=csrfmiddlewaretoken]').value;
-    try {
-      const resp = await fetch(bloco.dataset.url, { method: 'POST', headers: { 'X-CSRFToken': csrf }, body: dados });
-      const dado = await resp.json();
-      if (!resp.ok) { erro.textContent = dado.erro || 'Não foi possível salvar.'; return; }
-      const combo = document.querySelector('#combo-lead .combo');
-      Alpine.$data(combo).adicionar({ id: dado.id, nome: dado.nome, grupo: dado.grupo });
-      ['nome', 'telefone', 'email', 'documento'].forEach(c => { document.getElementById('nl-' + c).value = ''; });
-      Alpine.$data(bloco.closest('[x-data]')).novoLead = false;
-      if (typeof toast === 'function') toast('Lead cadastrado em Prospecção.', 'success');
-    } catch (e) { erro.textContent = 'Falha de conexão. Tente de novo.'; }
-  }
-
   function cardDragStart(ev, opId) {
     ev.dataTransfer.setData('op', opId);
     ev.dataTransfer.effectAllowed = 'move';
@@ -414,10 +285,8 @@
       return;
     }
     if (tipo === 'perdido') {
-      const data = Alpine.$data(document.querySelector('[x-data]'));
-      data.perdaOp = opId;
-      data.perdaEtapa = etapaId;
-      data.perda = true;
+      const url = '{% url "comercial:mover" 0 %}'.replace('/0/', '/' + opId + '/');
+      htmx.ajax('GET', url + '?etapa=' + encodeURIComponent(etapaId) + '&next=' + encodeURIComponent(location.pathname + location.search), { target: '#modal-conteudo' });
       return;
     }
     const form = document.getElementById('form-mover');
@@ -430,51 +299,6 @@
     ev.currentTarget.classList.remove('dragover');
     executarMover(ev.dataTransfer.getData('op'), etapaId, tipo);
   }
-  /* Bottom sheet (toque/teclado) — abre a lista de etapas e reusa executarMover. */
-  function abrirMover(ev, opId) {
-    ev.stopPropagation();
-    const data = Alpine.$data(document.querySelector('[x-data]'));
-    data.moverOp = opId;
-    data.mover = true;
-  }
-  function moverPara(etapaId, tipo) {
-    const data = Alpine.$data(document.querySelector('[x-data]'));
-    const opId = data.moverOp;
-    data.mover = false;
-    executarMover(opId, etapaId, tipo);
-  }
-
-  /* Arrastar o sheet para baixo para fechar (apple-design: segue o dedo + mola na soltura).
-     Só inicia o arrasto quando o conteúdo está no topo, para não brigar com o scroll interno. */
-  (function () {
-    const sheet = document.querySelector('.sheet');
-    if (!sheet) return;
-    const reduzir = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let y0 = 0, dy = 0, ativo = false;
-    sheet.addEventListener('touchstart', e => {
-      y0 = e.touches[0].clientY; dy = 0; ativo = true; sheet.style.transition = 'none';
-    }, { passive: true });
-    sheet.addEventListener('touchmove', e => {
-      if (!ativo) return;
-      const d = e.touches[0].clientY - y0;
-      if (d > 0 && sheet.scrollTop <= 0) { dy = d; sheet.style.transform = 'translateY(' + d + 'px)'; }
-    }, { passive: true });
-    sheet.addEventListener('touchend', () => {
-      if (!ativo) return;
-      ativo = false;
-      sheet.style.transition = reduzir ? ''
-        : 'transform var(--mov-padrao) var(--curva-entrada)';
-      if (dy > 90) {                                  // passou do limiar → fecha
-        const data = Alpine.$data(document.querySelector('[x-data]'));
-        sheet.style.transform = 'translateY(100%)';
-        setTimeout(() => { data.mover = false; sheet.style.transform = ''; sheet.style.transition = ''; },
-                   reduzir ? 0 : 220);
-      } else {                                        // não passou → volta (mola)
-        sheet.style.transform = '';
-      }
-    });
-  })();
-
   /* Barra do topo = trilho + polegar. O board é o ÚNICO contêiner que rola:
      - board rola      → move o polegar (transform; NUNCA escreve no board)
      - arrasta polegar → seta board.scrollLeft

@@ -9,6 +9,38 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 22/10/2026 — Leads ligados às campanhas e cadastro em uma só etapa
+
+**O que melhorou**
+- "Novo lead" reúne o contato e o atendimento em um único salvamento. É possível
+  escolher um contato já cadastrado; cancelar ou corrigir um erro não deixa
+  cadastros incompletos. Reenvios e solicitações simultâneas criam um só lead.
+- Origem, campanha e interesse ficam à mão; período, pessoas, previsão de valor
+  e responsável ficam em "Mais informações". O formulário preserva o preenchimento
+  e leva o foco ao campo que precisa de correção.
+- A campanha abre os seus leads no funil. Os filtros, os indicadores e as etapas
+  abertas/encerradas respeitam a campanha escolhida; o atendimento permite voltar
+  ao mesmo conjunto e consultar o planejamento, quando o perfil tem acesso.
+- "Mover" usa a janela compartilhada, com acesso por teclado e formulário de
+  perda que mantém a explicação digitada. O cabeçalho e os botões permanecem
+  acessíveis enquanto o formulário rola, no celular e no computador.
+- A rota comum de movimentação não reabre atendimentos encerrados nem desfaz uma
+  venda. Essas alterações continuam pelo fluxo da gestão, que verifica a reserva
+  e os efeitos financeiros. Repetir uma perda não duplica o histórico.
+
+**O que foi modificado**
+- Formulários e serviços do Comercial, migration aditiva `comercial.0033`, filtros
+  do funil e ligações com Marketing por interfaces públicas.
+- Proteção de alterações pendentes compartilhada com a edição de campanhas.
+- Dezoito testes de cadastro/integração e sete novos cenários de navegador.
+  A rodada de regressão de Comercial, Marketing e design passou em 513 testes;
+  os sete cenários novos e o arrasto existente passaram no Chromium.
+- Suíte completa local: 1.813 testes aprovados, sem pulos (719,514 s). Ruff,
+  migrations, sintaxe dos scripts e diff sem pendências. A fixture de limpeza de
+  reservas ficou independente dos dados semeados pelas migrations.
+
+---
+
 ## 22/10/2026 — Campanhas com criação guiada e edição segura
 
 **O que melhorou**
@@ -41,6 +73,9 @@ A entrada mais nova fica no topo. As datas são as do push.
   baixa taxa de quadros e larguras de 320, 390, 821 e 1440 px.
 - A cobertura da revisão geral, ainda em andamento, está em
   [Revisão de usabilidade de 22/10](docs/REVISAO_USABILIDADE_2026-10-22.md).
+- Publicado como `e12cb51` na fork e na VPS, após os dois jobs do CI. A migration,
+  os arquivos do container, a saúde do serviço e os endpoints públicos foram
+  conferidos em 22/10 às 02:35 (Brasília), com backup verificável preservado.
 
 ---
 

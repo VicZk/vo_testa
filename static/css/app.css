@@ -2508,6 +2508,22 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 
 /* ---------- Modal ---------- */
 
+.lead-pagina { max-width: 920px; margin-inline: auto; overflow: hidden; }
+.lead-pagina .modal-form { max-height: none; }
+.modal-caixa:has(> .lead-form) { display: flex; flex-direction: column; max-height: 88vh; max-height: 88dvh; overflow: hidden; }
+.modal-caixa > .lead-form { display: flex; flex-direction: column; min-height: 0; }
+.modal-caixa > .lead-form .modal-corpo { overflow: auto; min-height: 0; overscroll-behavior: contain; }
+.modal-caixa > .lead-form .modal-acoes, .modal-caixa:has(> .lead-form) > .modal-cabecalho { flex-shrink: 0; }
+.lead-tipo, .lead-contato { border: 0; padding: 0; margin: 0 0 1.2rem; min-width: 0; }
+.lead-tipo legend { font-weight: 700; margin-bottom: .6rem; }
+.lead-tipo label { display: inline-flex; align-items: center; gap: .5rem; min-height: 44px; margin-right: 1rem; cursor: pointer; }
+.lead-tipo input { width: auto; accent-color: var(--lampiao); }
+.lead-form .form-grade { grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr)); }
+.modal-form.lead-form input[type], .modal-form.lead-form select, .modal-form.lead-form textarea { font: inherit; font-size: 16px; min-height: 44px; }
+.lead-form .lead-tipo input[type=radio] { width: 18px; height: 18px; min-height: auto; flex: 0 0 18px; padding: 0; margin: 0; }
+.lead-detalhes { margin-top: 1rem; }
+.funil-campanha { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
+.funil-campanha > span { overflow-wrap: anywhere; }
 .modal-overlay {
   position: fixed;
   inset: 0;

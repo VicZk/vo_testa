@@ -1,0 +1,25 @@
+<div class="modal-cabecalho">
+  <div><h2>Mover atendimento</h2><p class="ajuda">{{ op.pessoa.nome }} · Etapa atual: {{ op.etapa.nome }}</p></div>
+  <button type="button" class="modal-fechar" onclick="fecharEdicao(this)" aria-label="Fechar mudança de etapa">&times;</button>
+</div>
+<form method="post" action="{% url 'comercial:mover' op.pk %}" class="modal-form lead-form" data-edicao-pendente
+      {% if em_modal %}hx-post="{% url 'comercial:mover' op.pk %}" hx-target="#modal-conteudo" hx-disabled-elt="find button[type='submit']"{% endif %}
+      x-data="{ etapa: '{{ form.etapa.value|default:''|escapejs }}' }">
+  {% csrf_token %}<input type="hidden" name="next" value="{{ destino }}">
+  <div class="modal-corpo">
+    {% for error in form.non_field_errors %}<p class="erro" role="alert">{{ error }}</p>{% endfor %}
+    <div @change="if ($event.target.name === 'etapa') etapa = $event.target.value">
+      {% include "componentes/campo.html" with field=form.etapa %}
+    </div>
+    <div x-show="etapa === '{{ perda_id }}'">
+      {% include "componentes/campo.html" with field=form.motivo %}
+      {% include "componentes/campo.html" with field=form.detalhe %}
+    </div>
+    <p class="ajuda">Para concluir a venda, abra o atendimento e crie a reserva.</p>
+    <span data-estado-edicao role="status" aria-live="polite" class="ajuda"></span>
+  </div>
+  <footer class="modal-acoes">
+    <button type="button" class="botao-neutro" onclick="fecharEdicao(this)">Cancelar</button>
+    <button type="submit" class="botao-primario">Salvar etapa</button>
+  </footer>
+</form>
