@@ -148,6 +148,46 @@ def inspecionar(uh, usuario=None):
     return definir_status(uh, StatusLimpeza.Situacao.INSPECIONADA, usuario)
 
 
+def frase_de_aprovacao(uh, dia=None) -> str:
+    """O que a aprovação daquele quarto quer dizer, em uma frase.
+
+    "Liberado para a recepção" só vale para quarto VAGO: no ocupado, aprovar é
+    dizer que a arrumação do dia está conferida — o hóspede já está lá dentro.
+    Mesma distinção de `rotulo_do_estado` ("Pronto" × "Arrumado"). Uma consulta.
+    """
+    pms = ocupacao_pms(dia)
+    ocupacao = ocupacao_do_quarto((pms or {}).get(uh.pk), sem_base=pms is None)
+    if _tem_hospede(ocupacao):
+        return "conferido — arrumação do dia aprovada."
+    return "aprovado e liberado para a recepção."
+
+
+def desfazer_inspecao(uh, usuario=None):
+    """Tira o carimbo de aprovação: o quarto volta para «Limpo», esperando a
+    supervisora. É o «Desfazer» de um toque errado em «Aprovar limpeza».
+
+    Só mexe no veredito — a faxina continua entregue, e a camareira continua com
+    o crédito dela. Não existe «desfazer» equivalente para «Terminei a limpeza»:
+    concluir a faxina avisa a Lavanderia, que recolhe o enxoval do quarto, e esse
+    movimento é um livro-razão (não se apaga). O caminho de volta de lá é
+    «Devolver para limpar», que é o gesto certo e já existe.
+    """
+    status = situacao_uh(uh)
+    if status.situacao != StatusLimpeza.Situacao.INSPECIONADA:
+        return status   # idempotente: já saiu do aprovado (ou nunca esteve)
+    tarefa = (
+        TarefaGovernanca.objects.filter(uh=uh, inspecionada_em__isnull=False,
+                                        reprovada_em__isnull=True)
+        .order_by("-inspecionada_em", "-pk").first()
+    )
+    if tarefa:
+        tarefa.inspecionada_em = None
+        tarefa.inspecionada_por = None
+        tarefa.save(update_fields=["inspecionada_em", "inspecionada_por"])
+    registrar_auditoria(usuario, "inspecao_desfeita", uh, {"quarto": uh.numero})
+    return definir_status(uh, StatusLimpeza.Situacao.LIMPA, usuario)
+
+
 def reprovar_inspecao(uh, usuario=None, motivo=""):
     """Supervisora reprovou: o quarto volta para a fila (nova faxina, origem
     "reprovada") e fica registrado quem reprovou, quando e por quê."""
@@ -432,6 +472,21 @@ def _estado_dos_quartos(dia=None) -> dict:
     # `pms` vai junto: quem já pagou a consulta não deve pagar de novo (a visão
     # geral precisa das chegadas de hoje, que vêm deste mesmo dicionário).
     return {"dia": dia, "sem_base": pms is None, "linhas": linhas, "pms": pms}
+
+
+def quarto(uh, dia=None):
+    """A linha de UM quarto, no mesmo formato da lista — a ficha que abre ao
+    tocar numa porta do corredor ou no número na lista.
+
+    No tablet, "ir até a linha daquele quarto" quer dizer sair da parede de
+    blocos e caçar numa lista de 24; a ficha traz o quarto e o próximo passo dele
+    para debaixo do dedo. Mesmo `_estado_dos_quartos` das outras telas: um
+    retrato só, sem dois números diferentes para a mesma coisa.
+    """
+    for linha in _estado_dos_quartos(dia)["linhas"]:
+        if linha["uh"].pk == uh.pk:
+            return linha
+    return None
 
 
 def painel_limpeza(dia=None):

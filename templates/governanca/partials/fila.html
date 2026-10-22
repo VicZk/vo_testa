@@ -9,6 +9,8 @@ e nada que ela não vá tocar com a mão ocupada. O `fila=1` de cada formulário
 Sem JavaScript continua funcionando: todo formulário tem `action` e `method`, e a
 view redireciona para a fila quando o pedido não vem do HTMX.
 {% endcomment %}
+{% include "governanca/partials/desfazer.html" %}
+
 {% if fila %}
   <ol class="gov-fila" hx-target="#gov-fila" hx-swap="innerHTML" hx-indicator="#gov-fila">
     {% for q in fila %}
