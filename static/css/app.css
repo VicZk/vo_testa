@@ -5751,6 +5751,12 @@ body.escala-dragging .escala-drop { cursor: copy; }
      cobre mais que isso. 10px entre caixas é o mínimo que separa na prática. */
   .filtros, .subnav, .gov-ciclo, .ronda-grupo, .acoes-quarto,
   .corredor-legenda, .gov-fila-acoes { gap: 10px; }
+  /* Linhas do plano do dia: cada uma abre a ficha de um quarto, e encostadas
+     uma na outra o dedo pega a de baixo na borda. Mesma folga dos outros
+     alvos — os grupos têm poucas linhas, então a altura que isso custa é nada
+     perto de abrir o quarto errado. */
+  .gov-chegadas { gap: 10px; }
+  .gov-chegadas li { border-top: none; }
 
   /* ─── Texto legível sem zoom ───
      O rótulo de dado (11,8px em MAIÚSCULAS), a cápsula de estado (11,2px) e a
