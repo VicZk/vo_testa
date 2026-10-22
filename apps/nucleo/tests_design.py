@@ -539,6 +539,20 @@ class DesenhadoParaODedoTests(TestCase):
         self.assertEqual([u for _, u in alturas], ["vh", "dvh"],
                          "o dvh tem de vir DEPOIS do vh (plano B primeiro)")
 
+    def test_a_linha_do_plano_e_o_alvo_inteiro(self):
+        """O alvo é a LINHA, não o número: como link de texto ele encolhia ao
+        conteúdo (43 px de largura a 390 px) e o dedo tinha de acertar a palavra."""
+        bloco = re.search(r"\n\.gov-chegada-quarto \{([^}]*)\}", self.css)
+        self.assertIsNotNone(bloco)
+        self.assertIn("display: flex", bloco.group(1))
+        altura = re.search(r"min-height: (\d+)px", bloco.group(1))
+        self.assertIsNotNone(altura, "a linha do plano precisa de piso de altura")
+        self.assertGreaterEqual(int(altura.group(1)), 44)
+        # O conteúdo da linha é que divide o espaço; o link ocupa a largura toda.
+        tpl = (Path(settings.BASE_DIR) / "templates" / "governanca"
+               / "visao.html").read_text(encoding="utf-8")
+        self.assertIn("gov-chegada-nome", tpl)
+
     def test_so_quem_e_alvo_cresce_para_44px(self):
         """A legenda do corredor da Governança filtra (é botão); a do painel do
         núcleo é `<span>`. Inchar texto que ninguém toca é espaço perdido."""
