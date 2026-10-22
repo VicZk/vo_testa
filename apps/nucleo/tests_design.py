@@ -985,6 +985,26 @@ class FlutuantesTests(TestCase):
         for sel in (".pt-wrap input", ".pay input", ".voltar-site"):
             self.assertIn(sel, corpo, sel)
 
+    def test_o_modal_tambem_fica_fora_do_conteudo(self):
+        """O `.modal-caixa` é filho do `.modal-overlay`, que é `position: fixed`
+        fora do `.conteudo` — e ali está a ação mais repetida da recepção. Medido
+        a 390px, a janela de "Nova reserva" saía com campos de 40 a 42px e os
+        rótulos de "Usa o sofá-cama"/"Cobrar ISS" com 19px de altura.
+
+        A caixa de marcar fica FORA da regra de altura de propósito: com largura
+        e altura fixas, o `min-height` esticaria o desenho em vez da área de
+        toque — quem aciona ali é o rótulo."""
+        corpo = "\n".join(
+            re.findall(r"@media \(pointer: coarse\), \(max-width: 820px\) \{([\s\S]*?)\n\}",
+                       self.css))
+        campos = re.search(
+            r"(\.modal-caixa input:not\(\[type=\"checkbox\"\]\):not\(\[type=\"radio\"\]\),"
+            r"[^}]*\})", corpo)
+        self.assertIsNotNone(campos, "o campo do modal ficou sem a regra de toque")
+        self.assertIn("min-height: 44px", campos.group(1))
+        self.assertIn(".modal-caixa .check-inline", corpo,
+                      "o rótulo da caixa de marcar do modal ficou sem alvo")
+
 
 class MenuDoSiteTests(TestCase):
     """O menu do celular do site tinha os mesmos buracos do menu do CRM: fechado

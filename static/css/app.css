@@ -5726,6 +5726,24 @@ body.escala-dragging .escala-drop { cursor: copy; }
   .login-cartao input, .pay input, .pay select {
     min-height: 44px;
   }
+  /* O modal também mora fora do `.conteudo` (é filho do `.modal-overlay`, que é
+     `position: fixed`), e ali está a ação mais repetida da recepção: a janela de
+     "Nova reserva" saía com campos de 40 a 42px. Vale para TODO modal do CRM.
+     Caixa de marcar fica de fora: com largura e altura fixas, o `min-height`
+     esticaria o DESENHO (vira um retângulo), e quem aciona ali é o rótulo. */
+  .modal-caixa input:not([type="checkbox"]):not([type="radio"]),
+  .modal-caixa select, .modal-caixa textarea {
+    min-height: 44px;
+  }
+  /* E o alvo da caixa de marcar é o RÓTULO que a embrulha. Fora do modal ele
+     já vinha com 44px de tabela (o input esticado pela regra do `.conteudo`
+     empurrava a linha); dentro, nada o alcançava e "Usa o sofá-cama" ou
+     "Cobra ISS" viravam alvos de 19px de altura. */
+  .modal-caixa .check-inline,
+  .modal-caixa label:has(> input[type="checkbox"]),
+  .modal-caixa label:has(> input[type="radio"]) {
+    min-height: 44px; display: inline-flex; align-items: center;
+  }
   /* Link que ocupa a linha inteira (voltar, "esqueci minha senha") vira alvo de
      44px. Link no MEIO de uma frase fica de fora de propósito: crescer a caixa
      dele quebraria o parágrafo, e a WCAG 2.5.8 isenta o alvo inline. */
