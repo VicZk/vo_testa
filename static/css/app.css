@@ -5838,7 +5838,10 @@ body.escala-dragging .escala-drop { cursor: copy; }
   /* <summary> é o botão que abre o painel (ação sensível, período
      personalizado) e media 20px. Cresce por dentro: mexer no `display` apagaria
      o triângulo de abrir. */
-  .conteudo summary { padding-block: .85rem; }
+  /* `.modal-caixa` junto: a gaveta mora fora do `.conteudo`, e é lá que está o
+     "Mais opções" da nova reserva — 39px, o único alvo curto que sobrou dentro
+     dela depois que a gaveta encostou embaixo. */
+  .conteudo summary, .modal-caixa summary { padding-block: .85rem; }
   .botao-primario, .botao-mini { display: inline-flex; align-items: center; justify-content: center; }
   .modal-fechar, .toast-x { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
   .conteudo input, .conteudo select, .conteudo textarea { min-height: 44px; }

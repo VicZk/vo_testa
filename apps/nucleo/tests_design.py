@@ -1103,6 +1103,11 @@ class FlutuantesTests(TestCase):
         self.assertIn("min-height: 44px", campos.group(1))
         self.assertIn(".modal-caixa .check-inline", corpo,
                       "o rótulo da caixa de marcar do modal ficou sem alvo")
+        # O <summary> entrou junto quando o modal virou gaveta encostada embaixo:
+        # o "Mais opções" da nova reserva media 39px, e a regra do `.conteudo`
+        # não alcança quem mora fora dele.
+        self.assertIn(".modal-caixa summary", corpo,
+                      "o <summary> da gaveta ficou sem alvo de toque")
 
 
 class MenuDoSiteTests(TestCase):
