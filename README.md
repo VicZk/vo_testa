@@ -840,7 +840,13 @@ Toda tela do CRM nasce no design system; nada de estilo paralelo nem cor fixa no
   `flex-wrap` (`.colunas-2-1`), grades em `minmax(min(Npx, 100%), 1fr)`, e o corredor de
   quartos e a tabela de Pessoas por container query. Tabela larga rola dentro do próprio invólucro
   (`.tabela-rol`, criado pelo `static/js/tabela-rol.js`). Alvo de toque ≥ 44 px no
-  ponteiro grosso, inclusive no portal, no pagamento e no login.
+  ponteiro grosso, inclusive no portal, no pagamento, no login e dentro dos modais.
+  Controle pequeno que mora dentro de outra coisa (chip, célula, linha) segue a seção
+  "Polimento mobile" do `app.css`: a caixa de toque cresce, o desenho fica onde está.
+- **Nada fixo por cima do conteúdo:** o aviso de cookies reserva a própria altura no
+  fim da página (`--aviso-cookies-altura`); com o menu do site aberto, aviso e botões
+  flutuantes saem da frente; no celular, o WhatsApp só aparece depois da escolha dos
+  cookies.
 - **Portal do hóspede e página de pagamento:** carregam o `static/css/base.css`, um
   recorte do `app.css` com os componentes necessários às telas públicas.
   O recorte é GERADO: edite só o `app.css` e rode `python manage.py gerar_base_css`;

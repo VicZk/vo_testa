@@ -9,6 +9,50 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 22/10/2026 — Polimento do celular: o dedo acerta, nada flutua por cima, o site cabe na mão (`246e590` a `d532dc7`, merge `3bf4f7c`, `486f501`)
+
+Pedido do dono, testando no celular: "só tem que polir a interface no mobile e tudo —
+até a homepage tem ícone com overlap". Feito por um agente numa cópia separada do
+código, medido com o navegador em toque emulado (320, 390, 768, 821 com o menu aberto e
+1440) e revisado antes do merge.
+
+**O que melhorou**
+- **Homepage:** na primeira visita pelo celular, o botão do WhatsApp subia por cima do
+  aviso de cookies e caía no canto do "Ver Disponibilidade". Agora ele espera a escolha
+  e volta depois.
+- **O aviso de cookies não come mais o fim das páginas:** reserva a própria altura,
+  então o formulário de proposta da home, o "Perdeu o código?" e o "Voltar ao site" de
+  Minha reserva aparecem. Com o menu do site aberto, aviso e botões flutuantes saem da
+  frente (o aviso cobria o "Fazer Reserva").
+- **O caminho inteiro da reserva cabe no dedo:** campos e botão do hero, cartões de
+  /quartos/, lotação do passo 1, "Reservar" e "Alterar datas" do passo 2, camas do
+  passo 3, calendário e links do rodapé com 44 px.
+- **No CRM:**
+  - os controles pequenos dentro de chips e células: os 56 "+" e "×" da grade da
+    Escala, abas de Tarefas, Responder/Enviar dos recados, ações do relatório do
+    Marketing, nome do produto no Estoque;
+  - os campos da "Nova reserva" e dos outros modais;
+  - na lista de reservas e de vendas, a linha inteira abre o registro;
+  - a porta do corredor perdeu o vão vazio (a 390 px, de 26 para 5 px).
+- A bolinha de iniciais dos recados mostrava o login inteiro escrito por cima do
+  cartão; agora mostra duas letras.
+- LPs: FAQ e "Inscrever outra pessoa" com 44 px, sem mexer no HTML do design.
+
+**O que foi modificado**
+- `static/css/app.css` (seção "Polimento mobile" e o bloco de alvos de toque, tudo
+  dentro de `@media (pointer: coarse), (max-width: 820px)`), `static/js/consentimento.js`
+  e `componentes/consentimento.html`, parciais e passos de reserva do site,
+  `views_lp.py` (CSS injetado nas LPs), `reservas/lista.html`, `loja/vendas.html`,
+  `logbook_ocorrencia.html`.
+
+**Como foi testado**
+- E2E do site com 5 casos novos (folga do aviso, WhatsApp fora dos créditos e do
+  formulário da primeira tela, 44 px no caminho da reserva, menu aberto sem nada por
+  cima), `tests_design` com o contrato de toque, `ToqueNasLPsTests`; desktop conferido
+  a 1440 px sem mudança.
+
+---
+
 ## 22/10/2026 — Varredura do CRM no celular e limites de tentativa com o prazo certo (`ba026c7`, `f26b04e`)
 
 Uma varredura automática passou por 168 telas do CRM a 390 px com toque, procurando
