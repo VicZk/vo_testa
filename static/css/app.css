@@ -3503,9 +3503,10 @@ div.porta.dica[data-dica] { cursor: default; }
 .combo-input:focus { border-color: var(--lampiao); box-shadow: 0 0 0 3px color-mix(in srgb, var(--lampiao) 18%, transparent); }
 .combo-lista {
   position: absolute; z-index: 40; top: calc(100% + 4px); left: 0; right: 0;
-  /* Nunca mais alta que metade da tela: no celular deitado, 320px fixos já
-     nasciam saindo embaixo. */
-  max-height: min(320px, 46vh); overflow-y: auto;
+  /* Nunca mais alta que metade da tela (no celular deitado, 320px fixos já
+     nasciam saindo embaixo) nem que o espaço que sobra no painel em que o combo
+     mora — `--combo-max`, medido por `posicionar()` no base.html. */
+  max-height: min(320px, 46vh, var(--combo-max, 320px)); overflow-y: auto;
   background: var(--superficie); border: 1px solid var(--fio); border-radius: var(--raio);
   box-shadow: var(--sombra-3); padding: 0 .3rem .3rem;
 }

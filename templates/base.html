@@ -58,8 +58,28 @@
           const campo = this.$el.querySelector(".combo-input");
           if (!campo) return;
           const r = campo.getBoundingClientRect();
-          const abaixo = window.innerHeight - r.bottom;
-          this.$el.classList.toggle("combo-acima", abaixo < 200 && r.top > abaixo);
+          // O espaço que a lista tem é a parte VISÍVEL da tela (no celular o teclado
+          // encolhe o visualViewport; no iOS o innerHeight não muda) recortada por
+          // todo ancestral que corta o que passa dele — o carrinho do PDV, a janela
+          // da nova reserva. Medindo só a tela, a lista abria para baixo e o painel
+          // a cortava pela metade.
+          const vv = window.visualViewport;
+          let topo = vv ? vv.offsetTop : 0;
+          let base = vv ? vv.offsetTop + vv.height : window.innerHeight;
+          for (let p = this.$el.parentElement; p && p !== document.body; p = p.parentElement) {
+            const s = getComputedStyle(p);
+            if (/(auto|scroll|hidden|clip)/.test(s.overflowY)) {
+              const pr = p.getBoundingClientRect();
+              topo = Math.max(topo, pr.top);
+              base = Math.min(base, pr.bottom);
+            }
+          }
+          const abaixo = base - r.bottom, acima = r.top - topo;
+          const paraCima = abaixo < 200 && acima > abaixo;
+          this.$el.classList.toggle("combo-acima", paraCima);
+          // E nunca mais alta que o espaço do lado escolhido (o CSS lê a variável).
+          const sobra = Math.max(120, (paraCima ? acima : abaixo) - 12);
+          this.$el.style.setProperty("--combo-max", sobra + "px");
         },
         casaFiltro(it, f) { return it.nome.toLowerCase().includes(f); },
         get grupos() {

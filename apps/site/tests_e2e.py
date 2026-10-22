@@ -490,3 +490,58 @@ class DicasE2ETests(_BaseE2E):
         self.assertLess(abs(b["cy"] - (caixa["y"] + caixa["height"] / 2)), 2)
         self.assertIsNone(item.get_attribute("title"))
 
+
+
+@unittest.skipUnless(_PLAYWRIGHT_OK, "playwright não instalado (ver docstring)")
+class ComboNoPainelE2ETests(_BaseE2E):
+    """No celular, a lista do combo (cliente do PDV) cabe no painel em que o campo mora.
+
+    O `posicionar()` media só a tela: no PDV o campo fica no fim do painel do carrinho
+    (que rola sozinho), a lista abria para baixo com 320 px e o painel a cortava pela
+    metade — o "dropdown com sobreposição" que o dono viu no celular."""
+
+    def setUp(self):
+        super().setUp()
+        from apps.nucleo.models import (
+            Hospede,
+            LocalEstoque,
+            ModuloContratado,
+            Pessoa,
+            Usuario,
+        )
+        from apps.nucleo.modulos import Modulo
+        # O flush das outras E2E apaga os seeds de migração: módulos e o depósito da Loja
+        # (sem ele o PDV mostra só o aviso de configurar, sem o carrinho).
+        for modulo in (Modulo.ESTOQUE, Modulo.LOJA):
+            ModuloContratado.objects.update_or_create(codigo=modulo, defaults={"ativo": True})
+        LocalEstoque.objects.get_or_create(nome="Depósito da Loja", defaults={"modulo": "loja"})
+        for i in range(12):
+            Hospede.objects.create(pessoa=Pessoa.objects.create(nome=f"Ana Hóspede {i:02d}"))
+        Usuario.objects.create_superuser(username="combo", password="forte-123-abc")
+
+    def test_lista_do_cliente_no_pdv_cabe_no_carrinho(self):
+        p = self.page
+        p.set_viewport_size({"width": 390, "height": 844})
+        p.goto(self.url("/crm/entrar/"))
+        p.fill("input[name=username]", "combo")
+        p.fill("input[name=password]", "forte-123-abc")
+        p.press("input[name=password]", "Enter")
+        p.wait_for_load_state("networkidle")
+        p.goto(self.url("/crm/loja/"))
+        p.wait_for_load_state("networkidle")
+        campo = p.locator(".pdv-painel .combo-input").first
+        campo.scroll_into_view_if_needed()
+        campo.click()
+        campo.type("Ana", delay=20)
+        p.wait_for_timeout(300)
+        medida = p.evaluate("""() => {
+          const lista = document.querySelector('.pdv-painel .combo-lista');
+          const painel = document.querySelector('.pdv-painel');
+          const l = lista.getBoundingClientRect(), r = painel.getBoundingClientRect();
+          return {topo: l.top, base: l.bottom, alto: l.height,
+                  painel_topo: r.top, painel_base: r.bottom, tela: innerHeight};
+        }""")
+        self.assertGreater(medida["alto"], 100, medida)                    # abriu de verdade
+        self.assertLessEqual(medida["base"], medida["painel_base"] + 1, medida)
+        self.assertGreaterEqual(medida["topo"], medida["painel_topo"] - 1, medida)
+        self.assertLessEqual(medida["base"], medida["tela"] + 1, medida)
