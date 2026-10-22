@@ -60,21 +60,36 @@ def _contexto_quadro(usuario=None):
     }
 
 
-def _resposta_acao(request, aviso="", tipo="success"):
-    """Resposta das ações do painel.
+def _contexto_fila(usuario):
+    """A fila da camareira — o trecho que o HTMX troca a cada toque dela."""
+    from apps.nucleo.models import modulo_ativo
 
-    Com HTMX devolve só o quadro (a linha E os contadores dos chips mudam juntos,
-    sem recarregar a página) e manda o aviso em toast pelo HX-Trigger. Sem HTMX
-    (ou sem JS) segue o caminho antigo: mensagem + redirect. `tipo="error"` fica
-    na tela até alguém fechar — divergência da ronda não pode passar batida.
+    dados = services.minha_fila(usuario)
+    dados["tem_manutencao"] = modulo_ativo(Modulo.MANUTENCAO)
+    return dados
+
+
+def _resposta_acao(request, aviso="", tipo="success"):
+    """Resposta das ações da Governança.
+
+    Com HTMX devolve só o trecho que mudou (o quadro da lista, ou a fila da
+    camareira quando a ação partiu do celular dela — o `fila=1` do formulário) e
+    manda o aviso em toast pelo HX-Trigger. Sem HTMX (ou sem JS) segue o caminho
+    antigo: mensagem + redirect para a tela de onde a ação saiu. `tipo="error"`
+    fica na tela até alguém fechar — divergência da ronda não pode passar batida.
     """
+    da_fila = request.POST.get("fila") == "1"
     if not request.headers.get("HX-Request"):
         if aviso:
             {"error": messages.error, "warning": messages.warning}.get(
                 tipo, messages.success)(request, aviso)
-        return redirect("governanca:quartos")
-    resposta = render(request, "governanca/partials/quadro.html",
-                      _contexto_quadro(request.user))
+        return redirect("governanca:minha_fila" if da_fila else "governanca:quartos")
+    if da_fila:
+        resposta = render(request, "governanca/partials/fila.html",
+                          _contexto_fila(request.user))
+    else:
+        resposta = render(request, "governanca/partials/quadro.html",
+                          _contexto_quadro(request.user))
     if aviso:
         resposta["HX-Trigger"] = json.dumps({"aviso": {"texto": aviso, "tipo": tipo}})
     return resposta
@@ -110,6 +125,50 @@ def quartos(request):
         "filtro_inicial": estado if estado in StatusLimpeza.Situacao.values else "",
     })
     return render(request, "governanca/quartos.html", contexto)
+
+
+@requer_modulo(Modulo.GOVERNANCA)
+def minha_fila(request):
+    """A fila da camareira, feita para o celular dela: os quartos DELA, na ordem
+    de atacar, com um botão grande por quarto. A lista de quartos continua sendo
+    a mesa da supervisora."""
+    return render(request, "governanca/fila.html", _contexto_fila(request.user))
+
+
+@requer_modulo(Modulo.GOVERNANCA)
+def reportar(request, pk):
+    """"Reportar problema": a camareira acha o chuveiro pingando e abre a ordem de
+    serviço dali mesmo, sem sair da fila.
+
+    Quem cria a OS é a Manutenção, pelo service público dela — a Governança não
+    importa models de lá, e sem o módulo ativo o botão nem aparece. A OS nasce
+    SEM bloquear o quarto: quem decide tirar a unidade de operação é a Manutenção,
+    não a camareira.
+    """
+    from apps.nucleo.models import modulo_ativo
+
+    uh = get_object_or_404(UH, pk=pk)
+    if request.method != "POST":
+        gabarito = ("governanca/partials/reportar_modal.html"
+                    if request.headers.get("HX-Request")
+                    else "governanca/reportar.html")
+        return render(request, gabarito, {"uh": uh})
+    if not modulo_ativo(Modulo.MANUTENCAO):
+        return _resposta_acao(request, "Módulo Manutenção desligado — avise a "
+                                       "recepção.", tipo="warning")
+    descricao = (request.POST.get("descricao") or "").strip()
+    if not descricao:
+        return _resposta_acao(request, "Descreva o problema para abrir o chamado.",
+                              tipo="warning")
+    from apps.manutencao import services as manutencao
+
+    manutencao.abrir_os(
+        request.user, uh=uh,
+        titulo=f"Problema no {uh.numero} (governança)",
+        descricao=descricao,
+    )
+    return _resposta_acao(request, f"Chamado aberto para o {uh.numero}. "
+                                   "A manutenção foi avisada.")
 
 
 @requer_modulo(Modulo.GOVERNANCA)

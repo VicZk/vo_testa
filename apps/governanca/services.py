@@ -306,11 +306,14 @@ def rotulo_do_estado(situacao, ocupacao=None) -> str:
     return SITUACAO_SIMPLES.get(situacao, situacao)
 
 
-def explicar_estado(situacao, tarefa, status, ocupacao=None) -> str:
+def explicar_estado(situacao, tarefa, status, ocupacao=None, *, com_fila=True) -> str:
     """Uma frase curta dizendo POR QUE o quarto está neste estado e o que falta.
 
     É o que ensina o fluxo a quem pega o sistema pela primeira vez: a tela não diz
     só «Limpo», diz «Limpo às 11:05 por Maria — falta a supervisora conferir».
+
+    `com_fila=False` corta o "Na fila de Maria": na fila da própria Maria, dizer o
+    nome dela em cada cartão é ruído.
     """
     quando = f" às {timezone.localtime(status.atualizado_em):%H:%M}" if status.atualizado_em else ""
     quem = _quem(getattr(status, "atualizado_por", None))
@@ -318,6 +321,8 @@ def explicar_estado(situacao, tarefa, status, ocupacao=None) -> str:
         motivo = _MOTIVO_DA_FAXINA.get(tarefa.origem if tarefa else "", "")
         if tarefa and tarefa.origem == "reprovada" and tarefa.observacoes:
             motivo = f"Devolvido para limpar: {tarefa.observacoes.rstrip('.')}."
+        if not com_fila:
+            return motivo.strip()
         fila = (f" Na fila de {_quem(tarefa.camareira)}." if tarefa and tarefa.camareira
                 else " Ninguém começou ainda.")
         return (motivo + fila).strip()
@@ -403,6 +408,9 @@ def _estado_dos_quartos(dia=None) -> dict:
             # assim e o que falta — é o que ensina o fluxo a quem está começando.
             "situacao_label": rotulo_do_estado(status.situacao, ocupacao),
             "explicacao": explicar_estado(status.situacao, tarefa, status, ocupacao),
+            # O registro cru vai junto: quem quiser outra frase sobre o MESMO
+            # estado (a fila da camareira monta a dela) não refaz a consulta.
+            "status": status,
             "tarefa": tarefa,
             "atualizado_em": status.atualizado_em,
             "conferencia": conf,
@@ -708,6 +716,57 @@ def distribuir_fila(operador, dia=None) -> dict:
             )
     return {"atribuidas": len(atribuidas), "equipe": len(equipe),
             "motivo": "", "detalhe": atribuidas}
+
+
+# ───────────────── A fila da camareira (o celular dela, no corredor) ─────────────────
+#
+# A lista de quartos é a mesa da supervisora: cinco colunas, três botões de ronda,
+# um `<select>` por linha. No corredor, de celular, a camareira quer outra coisa —
+# os quartos DELA, na ordem de atacar, com UM botão grande por quarto.
+
+
+def minha_fila(usuario, dia=None) -> dict:
+    """Os quartos desta camareira hoje, na ordem do plano do dia.
+
+    Quarto bloqueado pela Manutenção não entra: enquanto o técnico não devolve, a
+    faxina não acontece, e ocupar a primeira linha da fila com ele é mandar a
+    camareira bater numa porta fechada. Concluídas de hoje ficam no fim, como
+    recibo do que ela já entregou.
+    """
+    dados = _estado_dos_quartos(dia)
+    fila, feitas = [], []
+    for linha in dados["linhas"]:
+        tarefa = linha["tarefa"]
+        if not tarefa or tarefa.camareira_id != usuario.pk or linha["bloqueado"]:
+            continue
+        fila.append({
+            **_quarto_no_plano(linha),
+            "tarefa": tarefa,
+            # Sem o "Na fila de Maria": na fila da própria Maria isso é ruído.
+            "explicacao": explicar_estado(linha["situacao"], tarefa, linha["status"],
+                                          linha["ocupacao"], com_fila=False),
+            "fazendo": tarefa.status == TarefaGovernanca.Status.EM_ANDAMENTO,
+            "tipo": tarefa.get_tipo_display(),
+            "observacoes": tarefa.observacoes,
+            "grupo": prioridade_do_quarto(linha),
+        })
+    fila.sort(key=lambda q: (_ORDEM_PLANO.get(q["grupo"], 9),
+                             not q["fazendo"],          # o que já começou, no alto
+                             _ORDEM_LIMPEZA.get(q["situacao"], 9),
+                             q["uh"].numero))
+    feitas = list(
+        TarefaGovernanca.objects
+        .filter(camareira=usuario, status=TarefaGovernanca.Status.CONCLUIDA,
+                concluida_em__date=dados["dia"])
+        .select_related("uh").order_by("-concluida_em")
+    )
+    return {
+        "dia": dados["dia"],
+        "fila": fila,
+        "fazendo": next((q for q in fila if q["fazendo"]), None),
+        "feitas": feitas,
+        "hora_checkin": _hora_do_checkin(),
+    }
 
 
 def carga_das_camareiras(dia=None) -> list:

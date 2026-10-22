@@ -9,6 +9,8 @@ urlpatterns = [
     # ferramenta de quem está trabalhando, mora em /quartos/.
     path("", views.painel, name="painel"),
     path("quartos/", views.quartos, name="quartos"),
+    # A fila da camareira: a mesma informação da lista, no formato do celular dela.
+    path("minha-fila/", views.minha_fila, name="minha_fila"),
     path("discrepancias/", views.discrepancias, name="discrepancias"),
     path("faxina/nova/", views.nova_tarefa, name="nova_tarefa"),
     path("fila/distribuir/", views.distribuir, name="distribuir"),
@@ -16,4 +18,5 @@ urlpatterns = [
     path("quarto/<int:pk>/status/", views.status_marcar, name="status_marcar"),
     path("quarto/<int:pk>/ronda/", views.ronda, name="ronda"),
     path("quarto/<int:pk>/devolver/", views.devolver, name="devolver"),
+    path("quarto/<int:pk>/problema/", views.reportar, name="reportar"),
 ]

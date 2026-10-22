@@ -1730,3 +1730,202 @@ class DistribuirAFilaTests(QuemLimpaVemDaEscalaTests):
         self.assertIsNotNone(trilha)
         self.assertEqual(trilha.usuario_id, self.user.pk)
         self.assertEqual(trilha.detalhe["quartos"], 5)
+
+
+class MinhaFilaTests(RondaBase):
+    """A fila da camareira, no celular dela: os quartos DELA, na ordem de atacar,
+    um botão grande por quarto."""
+
+    def setUp(self):
+        super().setUp()
+        self.uh3 = UH.objects.create(numero="Quarto 03", tipo=self.tipo)
+        self.maria = self._camareira("Maria", "maria")
+        self.joana = self._camareira("Joana", "joana")
+        self.client.login(username="maria", password="senha-forte-123")
+
+    def _camareira(self, nome, username):
+        """Camareira de verdade: login com o módulo Governança, não superusuária."""
+        usuario = Usuario.objects.create_user(
+            username=username, password="senha-forte-123", first_name=nome)
+        usuario.modulos.set(ModuloContratado.objects.filter(codigo=Modulo.GOVERNANCA))
+        return usuario
+
+    def _para(self, uh, camareira, **kw):
+        tarefa = services.abrir_faxina(uh, usuario=self.user, **kw)
+        tarefa.camareira = camareira
+        tarefa.save(update_fields=["camareira"])
+        return tarefa
+
+    def _chegada_hoje(self, uh, nome="Quem chega"):
+        from apps.reservas.models import Reserva
+        return Reserva.objects.create(
+            uh=uh, hospede=Pessoa.objects.create(nome=nome),
+            checkin=self.hoje, checkout=self.hoje + timedelta(days=2),
+            status=Reserva.Status.CONFIRMADA, valor_diaria=Decimal("200"),
+            criado_por=self.user)
+
+    def test_so_os_quartos_dela(self):
+        self._para(self.uh, self.maria)
+        self._para(self.uh2, self.joana)
+        fila = services.minha_fila(self.maria)["fila"]
+        self.assertEqual([q["uh"].numero for q in fila], ["Quarto 01"])
+
+    def test_a_ordem_e_a_do_plano_do_dia(self):
+        """Chegada de hoje antes do quarto que ninguém espera."""
+        self._para(self.uh2, self.maria)            # vago sujo
+        self._chegada_hoje(self.uh3)
+        self._para(self.uh3, self.maria)            # chegada hoje
+        fila = services.minha_fila(self.maria)["fila"]
+        self.assertEqual([q["uh"].numero for q in fila], ["Quarto 03", "Quarto 02"])
+
+    def test_o_que_ela_ja_comecou_fica_no_alto(self):
+        self._para(self.uh, self.maria)
+        comecada = self._para(self.uh2, self.maria)
+        services.iniciar_tarefa(comecada, self.maria)
+        dados = services.minha_fila(self.maria)
+        self.assertEqual(dados["fila"][0]["uh"].numero, "Quarto 02")
+        self.assertTrue(dados["fila"][0]["fazendo"])
+        self.assertEqual(dados["fazendo"]["uh"].numero, "Quarto 02")
+
+    def test_quarto_bloqueado_nao_entra_na_fila(self):
+        """Enquanto o técnico não devolve, a faxina não acontece — mandar a
+        camareira bater numa porta fechada é pior que não mostrar."""
+        self._para(self.uh, self.maria)
+        self.uh.status = UH.Status.BLOQUEADA
+        self.uh.save(update_fields=["status"])
+        self.assertEqual(services.minha_fila(self.maria)["fila"], [])
+
+    def test_o_que_ela_entregou_hoje_aparece_como_recibo(self):
+        tarefa = self._para(self.uh, self.maria)
+        services.concluir_tarefa(tarefa, self.maria)
+        dados = services.minha_fila(self.maria)
+        self.assertEqual(dados["fila"], [])
+        self.assertEqual([t.uh.numero for t in dados["feitas"]], ["Quarto 01"])
+
+    def test_a_tela_abre_com_um_botao_por_quarto(self):
+        self._para(self.uh, self.maria)
+        r = self.client.get(reverse("governanca:minha_fila"))
+        self.assertEqual(r.status_code, 200)
+        self.assertTemplateUsed(r, "governanca/fila.html")
+        corpo = r.content.decode()
+        self.assertIn("Começar", corpo)
+        self.assertNotIn("Terminei", corpo)
+
+    def test_comecar_e_terminar_pela_fila_sem_sair_dela(self):
+        tarefa = self._para(self.uh, self.maria)
+        r = self.client.post(reverse("governanca:tarefa_acao", args=[tarefa.pk]),
+                             {"acao": "iniciar", "fila": "1"}, HTTP_HX_REQUEST="true")
+        self.assertTemplateUsed(r, "governanca/partials/fila.html")
+        self.assertIn("Terminei", r.content.decode())
+        r = self.client.post(reverse("governanca:tarefa_acao", args=[tarefa.pk]),
+                             {"acao": "concluir", "fila": "1"}, HTTP_HX_REQUEST="true")
+        tarefa.refresh_from_db()
+        self.assertEqual(tarefa.status, TarefaGovernanca.Status.CONCLUIDA)
+        self.assertIn("Já entreguei hoje", r.content.decode())
+
+    def test_sem_javascript_volta_para_a_fila_e_nao_para_a_lista(self):
+        tarefa = self._para(self.uh, self.maria)
+        r = self.client.post(reverse("governanca:tarefa_acao", args=[tarefa.pk]),
+                             {"acao": "iniciar", "fila": "1"})
+        self.assertRedirects(r, reverse("governanca:minha_fila"))
+
+    def test_a_acao_da_supervisora_continua_voltando_para_a_lista(self):
+        tarefa = self._para(self.uh, self.maria)
+        r = self.client.post(reverse("governanca:tarefa_acao", args=[tarefa.pk]),
+                             {"acao": "iniciar"})
+        self.assertRedirects(r, reverse("governanca:quartos"))
+
+    def test_fila_vazia_explica_de_onde_vem_quarto(self):
+        corpo = self.client.get(reverse("governanca:minha_fila")).content.decode()
+        self.assertIn("Nenhum quarto na sua fila agora", corpo)
+
+    def test_o_motivo_da_devolucao_viaja_para_a_fila(self):
+        services.definir_status(self.uh, StatusLimpeza.Situacao.LIMPA, self.user)
+        services.reprovar_inspecao(self.uh, self.user, "pó no armário")
+        tarefa = TarefaGovernanca.objects.filter(uh=self.uh, origem="reprovada").first()
+        tarefa.camareira = self.maria
+        tarefa.save(update_fields=["camareira"])
+        self.assertContains(self.client.get(reverse("governanca:minha_fila")),
+                            "pó no armário")
+
+    def test_a_fila_dela_nao_repete_o_nome_dela(self):
+        """"Na fila de Maria Aparecida" em cada cartão da fila da Maria é ruído."""
+        self._para(self.uh, self.maria, origem="checkout")
+        fila = services.minha_fila(self.maria)["fila"]
+        self.assertIn("O hóspede fez check-out", fila[0]["explicacao"])
+        self.assertNotIn("Na fila de", fila[0]["explicacao"])
+        # Na lista da supervisora, que mostra a casa toda, o nome continua.
+        linha = next(ln for ln in services.painel_limpeza()["linhas"]
+                     if ln["uh"].pk == self.uh.pk)
+        self.assertIn("Na fila de Maria", linha["explicacao"])
+
+    def test_exige_o_modulo(self):
+        ModuloContratado.objects.filter(codigo=Modulo.GOVERNANCA).update(ativo=False)
+        self.assertEqual(
+            self.client.get(reverse("governanca:minha_fila")).status_code, 404)
+
+
+class ReportarProblemaTests(RondaBase):
+    """A camareira acha o chuveiro pingando e abre a OS dali mesmo."""
+
+    def setUp(self):
+        super().setUp()
+        self.maria = Usuario.objects.create_user(
+            username="maria", password="senha-forte-123", first_name="Maria")
+        self.maria.modulos.set(ModuloContratado.objects.filter(
+            codigo__in=[Modulo.GOVERNANCA, Modulo.MANUTENCAO]))
+        tarefa = services.abrir_faxina(self.uh, usuario=self.user)
+        tarefa.camareira = self.maria
+        tarefa.save(update_fields=["camareira"])
+        self.client.login(username="maria", password="senha-forte-123")
+
+    def _ordens(self):
+        from apps.manutencao.models import OrdemServico
+        return OrdemServico.objects.all()
+
+    def test_abre_ordem_de_servico_na_manutencao(self):
+        r = self.client.post(reverse("governanca:reportar", args=[self.uh.pk]),
+                             {"descricao": "chuveiro pingando", "fila": "1"},
+                             HTTP_HX_REQUEST="true")
+        self.assertTemplateUsed(r, "governanca/partials/fila.html")
+        ordem = self._ordens().get()
+        self.assertEqual(ordem.uh_id, self.uh.pk)
+        self.assertIn("chuveiro pingando", ordem.descricao)
+        self.assertEqual(ordem.criado_por_id, self.maria.pk)
+
+    def test_a_os_nao_tira_o_quarto_de_operacao(self):
+        """Quem decide bloquear a unidade é a Manutenção, não a camareira."""
+        self.client.post(reverse("governanca:reportar", args=[self.uh.pk]),
+                         {"descricao": "lâmpada queimada", "fila": "1"})
+        self.uh.refresh_from_db()
+        self.assertFalse(self._ordens().get().bloqueia_uh)
+        self.assertEqual(self.uh.status, UH.Status.ATIVA)
+
+    def test_sem_descricao_nao_abre_chamado(self):
+        r = self.client.post(reverse("governanca:reportar", args=[self.uh.pk]),
+                             {"descricao": "  ", "fila": "1"}, HTTP_HX_REQUEST="true")
+        self.assertEqual(self._ordens().count(), 0)
+        self.assertIn("Descreva o problema",
+                      json.loads(r["HX-Trigger"])["aviso"]["texto"])
+
+    def test_com_htmx_abre_o_modal_da_casa_e_sem_js_a_pagina(self):
+        r = self.client.get(reverse("governanca:reportar", args=[self.uh.pk]),
+                            HTTP_HX_REQUEST="true")
+        self.assertTemplateUsed(r, "governanca/partials/reportar_modal.html")
+        r = self.client.get(reverse("governanca:reportar", args=[self.uh.pk]))
+        self.assertTemplateUsed(r, "governanca/reportar.html")
+
+    def test_sem_o_modulo_manutencao_o_botao_some_e_o_post_explica(self):
+        ModuloContratado.objects.filter(codigo=Modulo.MANUTENCAO).update(ativo=False)
+        corpo = self.client.get(reverse("governanca:minha_fila")).content.decode()
+        self.assertNotIn("Reportar problema", corpo)
+        r = self.client.post(reverse("governanca:reportar", args=[self.uh.pk]),
+                             {"descricao": "torneira", "fila": "1"},
+                             HTTP_HX_REQUEST="true")
+        self.assertEqual(self._ordens().count(), 0)
+        self.assertIn("Manutenção desligado",
+                      json.loads(r["HX-Trigger"])["aviso"]["texto"])
+
+    def test_com_o_modulo_ativo_o_botao_aparece_na_fila(self):
+        self.assertContains(self.client.get(reverse("governanca:minha_fila")),
+                            "Reportar problema")

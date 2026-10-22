@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% comment %}«Minha fila»: a tela da camareira, feita para o celular dela no
+corredor. A lista de quartos é a mesa da supervisora — cinco colunas, três botões
+de ronda, um seletor por linha; aqui é um cartão por quarto, na ordem de atacar,
+com um botão grande que diz o que vai acontecer.{% endcomment %}
+
+{% block titulo %}Minha fila — Governança{% endblock %}
+
+{% block conteudo %}
+<p class="pagina-eyebrow letreiro">Hospedagem · Governança</p>
+<div class="pagina-cabecalho">
+  <h1>Minha fila</h1>
+  <div class="acoes bloco-plano">
+    <a href="{% url 'governanca:quartos' %}" class="botao-neutro">Ver a casa toda</a>
+  </div>
+</div>
+<p class="subtitulo">
+  {% if fazendo %}
+    Você está no <strong>{{ fazendo.uh.numero }}</strong>. Quando acabar, toque em «Terminei».
+  {% elif fila %}
+    {{ fila|length }} quarto{{ fila|pluralize }} com você, do mais urgente para o resto{% if hora_checkin %} — o primeiro hóspede entra às {{ hora_checkin|time:"H:i" }}{% endif %}.
+  {% else %}
+    Nada com você agora.
+  {% endif %}
+</p>
+
+{% include "governanca/partials/abas.html" %}
+
+<div id="gov-fila">
+  {% include "governanca/partials/fila.html" %}
+</div>
+{% endblock %}
