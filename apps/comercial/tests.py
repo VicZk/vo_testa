@@ -1949,6 +1949,9 @@ class SitePropostaTests(TestCase):
 
 class PaginaCaptacaoTests(TestCase):
     def setUp(self):
+        from django.core.cache import cache
+
+        cache.clear()
         self.op = Usuario.objects.create_superuser(username="com", password="senha-forte-123")
 
     def _pagina(self, **extra):
@@ -2028,13 +2031,13 @@ class PaginaCaptacaoTests(TestCase):
         self.assertEqual(str(op.checkin_previsto), "2026-11-14")
         self.assertEqual(str(op.checkout_previsto), "2026-11-16")
 
-    def test_post_limita_pessoas_a_8(self):
+    def test_post_recusa_pessoas_acima_de_8_sem_reduzir_o_grupo(self):
         pag = self._pagina()
-        self.client.post(reverse("captacao:publica", args=["promo-lp"]), {
+        resposta = self.client.post(reverse("captacao:publica", args=["promo-lp"]), {
             "nome": "Grupo Grande", "telefone": "49988887777", "pessoas": "20",
         })
-        op = Oportunidade.objects.filter(pagina_captacao=pag).first()
-        self.assertEqual(op.hospedes, 8)
+        self.assertIn("pessoas", resposta.context["form"].errors)
+        self.assertFalse(Oportunidade.objects.filter(pagina_captacao=pag).exists())
 
     def test_faq_parseia_pares(self):
         pag = self._pagina(faq_texto="P: Aceita pet?\nR: Sim.\n\nP: Tem café?\nR: Tem.")

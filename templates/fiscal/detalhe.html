@@ -15,7 +15,7 @@
 
 <div class="colunas colunas-2-1">
   <section class="painel-bloco">
-    <dl class="ficha">
+    <dl class="ficha ficha-fiscal">
       <div><dt>Natureza</dt><dd>{{ doc.get_natureza_display }}</dd></div>
       <div><dt>Descrição</dt><dd>{{ doc.descricao }}</dd></div>
       <div><dt>Valor</dt><dd><strong>{{ doc.valor|intcomma_brl }}</strong></dd></div>
@@ -24,7 +24,7 @@
         <div><dt>IBS ({{ doc.ibs_aliquota|floatformat:"-2" }}%)</dt><dd class="num">{{ doc.ibs_valor|intcomma_brl }}</dd></div>
       {% endif %}
       {% if doc.tomador %}<div><dt>Tomador</dt><dd>{{ doc.tomador.nome }}</dd></div>{% endif %}
-      <div><dt>Gateway</dt><dd>{{ doc.gateway|default:"—" }} · {{ doc.gateway_id|default:"—" }}</dd></div>
+      <div><dt>Emissão</dt><dd>{% if doc.gateway == 'simulado' %}Documento de teste{% else %}{{ doc.gateway|default:"—" }}{% endif %}{% if doc.gateway_id %} · {{ doc.gateway_id }}{% endif %}</dd></div>
       {% if doc.numero %}<div><dt>Número/série</dt><dd>{{ doc.numero }} / {{ doc.serie }}</dd></div>{% endif %}
       {% if doc.chave %}<div><dt>Chave</dt><dd><small>{{ doc.chave }}</small></dd></div>{% endif %}
       {% if doc.motivo_rejeicao %}<div><dt>Motivo</dt><dd>{{ doc.motivo_rejeicao }}</dd></div>{% endif %}
@@ -49,9 +49,12 @@
       <ul class="timeline">
         {% for e in doc.eventos.all %}
           <li><strong>{{ e.tipo }}</strong> <small>{{ e.criado_em|date:"d/m H:i" }}</small></li>
+        {% empty %}
+          <li>Nenhum evento registrado.</li>
         {% endfor %}
       </ul>
     </div>
   </section>
 </div>
+<style>.ficha-fiscal dd { min-width:0; overflow-wrap:anywhere; }</style>
 {% endblock %}

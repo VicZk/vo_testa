@@ -6,10 +6,12 @@ posta JSON no endpoint do CRM e cai no funil (capturar_lead_site).
 import base64
 import hashlib
 import json
+import logging
 import re
 from pathlib import Path
 
 from django.conf import settings
+from django.db import transaction
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.template.loader import render_to_string
@@ -22,6 +24,9 @@ from django.views.decorators.http import require_POST
 from apps.nucleo.ratelimit import janela_atual, somar
 
 from . import services
+from .forms_lead import ContatoLeadForm
+
+logger = logging.getLogger(__name__)
 
 _LP_PATH = Path(settings.BASE_DIR) / "LPs" / "LP_Fundador" / "LP_Fundador.html"
 _LP_CACHE = {"html": None}
@@ -194,11 +199,19 @@ def _receber_lead_lp(request, *, slug, origem_padrao, mensagem):
     """Lead de uma LP (JSON) → funil. Igual para todas as LPs: anti-robô silencioso,
     limite por IP, validação do WhatsApp, captura com o consentimento que a pessoa
     marcou (sem o campo, não é consentimento) e o evento Lead na Conversions API
-    (dedupe com o Pixel pelo event_id). Best-effort: nunca quebra a página."""
+    (dedupe com o Pixel pelo event_id). Só confirma depois da gravação."""
     try:
         dados = json.loads(request.body or b"{}")
     except (ValueError, TypeError):
         return JsonResponse({"ok": False, "erro": "json inválido"}, status=400)
+
+    campos_texto = ("nome", "email", "whatsapp", "whats", "empresa", "origem",
+                    "event_id", "fbp", "fbc")
+    if not isinstance(dados, dict) or any(
+        dados.get(campo) is not None and not isinstance(dados[campo], str)
+        for campo in campos_texto
+    ) or (dados.get("rastreio") is not None and not isinstance(dados["rastreio"], dict)):
+        return JsonResponse({"ok": False, "erro": "dados inválidos"}, status=400)
 
     # Anti-bot silencioso: honeypot preenchido ou envio instantâneo → finge sucesso
     # (não revela a defesa) e descarta sem criar lead nem chamar a CAPI.
@@ -225,6 +238,11 @@ def _receber_lead_lp(request, *, slug, origem_padrao, mensagem):
     whats = (dados.get("whatsapp") or dados.get("whats") or "").strip()
     if not nome or not (email or whats):
         return JsonResponse({"ok": False, "erro": "dados incompletos"}, status=400)
+    contato = ContatoLeadForm({"nome": nome, "email": email, "telefone": whats})
+    if not contato.is_valid():
+        erro = next(iter(contato.errors.values()))[0]
+        return JsonResponse({"ok": False, "erro": erro}, status=400)
+    nome, email = contato.cleaned_data["nome"], contato.cleaned_data["email"]
     if whats:
         from django.core.exceptions import ValidationError
 
@@ -240,14 +258,19 @@ def _receber_lead_lp(request, *, slug, origem_padrao, mensagem):
     origem.setdefault("origem_form", dados.get("origem") or origem_padrao)
     user_agent = request.META.get("HTTP_USER_AGENT", "")
     try:
-        services.capturar_lead_site(
-            nome=nome, email=email, telefone=whats,
-            tipo_interesse=(pagina.tipo_interesse if pagina else "hospedagem"),
-            pagina=pagina, mensagem=mensagem,
-            origem=origem, aceita_email=dados.get("consent") is True,
-            ip=ip, user_agent=user_agent)
-    except Exception:  # noqa: BLE001 — captação pública nunca estoura
-        pass
+        with transaction.atomic():
+            lead = services.capturar_lead_site(
+                nome=nome, email=email, telefone=whats,
+                tipo_interesse=(pagina.tipo_interesse if pagina else "hospedagem"),
+                pagina=pagina, mensagem=mensagem,
+                origem=origem, aceita_email=dados.get("consent") is True,
+                ip=ip, user_agent=user_agent)
+            if lead is None:
+                raise RuntimeError("captação indisponível")
+    except Exception as erro:  # noqa: BLE001 — erro visível, dados preservados na página
+        logger.error("Falha na captação da LP %s (%s)", slug, type(erro).__name__)
+        return JsonResponse({"ok": False, "erro": "Não conseguimos registrar agora. Tente novamente."},
+                            status=503)
 
     # Conversions API (Meta) pelo servidor — dedupe com o Pixel via event_id.
     try:

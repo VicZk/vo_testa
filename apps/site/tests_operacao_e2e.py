@@ -10,6 +10,7 @@ import unittest
 from datetime import timedelta
 from decimal import Decimal
 from pathlib import Path
+from unittest.mock import patch
 
 from django.core.cache import cache
 from django.test import override_settings
@@ -33,6 +34,103 @@ if _PLAYWRIGHT_OK:
 )
 class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
     LOCALE = "pt-BR"
+
+    def test_telas_acesso_mostram_formulario_com_e_sem_sessao(self):
+        p = self.page
+        paginas = [("login", [], "Entrar no sistema"),
+                   ("senha_esqueci", [], "Esqueci minha senha"),
+                   ("senha_enviada", [], "Confira seu e-mail"),
+                   ("senha_trocada", [], "Senha trocada"),
+                   ("password_reset_confirm", ["invalido", "invalido"], "Link expirado")]
+        for conectado in (True, False):
+            if not conectado:
+                p.context.clear_cookies()
+            for nome, args, titulo in paginas:
+                for largura in (320, 390, 821, 1440):
+                    with self.subTest(conectado=conectado, pagina=nome, largura=largura):
+                        p.set_viewport_size({"width": largura, "height": 844})
+                        p.goto(self.url(reverse(nome, args=args)))
+                        expect(p.get_by_role("heading", name=titulo, exact=True)).to_be_visible()
+                        p.wait_for_function("['.login-pagina', '.login-cartao'].every(s => getComputedStyle(document.querySelector(s)).opacity === '1')", timeout=6000)
+                        self.assertLessEqual(p.evaluate("document.documentElement.scrollWidth"), largura + 1)
+                        if nome == "senha_esqueci" and largura in (390, 1440) and conectado:
+                            self._foto(f"senha-recuperacao-{largura}.png")
+
+    def test_lps_so_confirmam_apos_gravar_e_permitem_corrigir_falha(self):
+        from apps.comercial.models import Oportunidade, PaginaCaptacao
+
+        p = self.page
+        p.context.clear_cookies()
+        paginas = [("fundador", "fundador"), ("fundador_2", "fundador-2"),
+                   ("inauguracao", "inauguracao_31_10_2026")]
+        for numero, (nome, slug) in enumerate(paginas):
+            pagina = PaginaCaptacao.objects.create(
+                nome=f"LP fictícia QA {numero}", slug=slug, status="publicada", criado_por=self.op
+            )
+            for largura in (320, 390, 1440):
+                with self.subTest(pagina=nome, largura=largura):
+                    cache.clear()
+                    p.set_viewport_size({"width": largura, "height": 844})
+                    p.goto(self.url(reverse(f"lp:{nome}")), wait_until="domcontentloaded")
+                    if p.get_by_role("button", name="Recusar", exact=True).is_visible():
+                        p.get_by_role("button", name="Recusar", exact=True).click()
+                    form = p.locator("#formInaug" if nome == "inauguracao" else "#form-lista")
+                    identidade = f"Contato LP QA {nome} {largura}"
+                    telefone = f"49999{numero}{largura:04d}1"
+                    form.locator("input[name=nome]").fill(identidade)
+                    form.locator("input[name=whats]").fill(telefone)
+                    if nome == "fundador":
+                        form.locator("input[name=email]").fill(f"qa-{largura}@example.invalid")
+                    form.locator("input[type=checkbox]").check()
+                    enviar = form.locator("button").first
+                    erro = form.locator("#formAlert" if nome == "inauguracao" else ".lp-captacao-erro")
+                    endpoint = self.url(reverse(f"lp:{nome}_lead"))
+                    # Tempo mínimo real do antirrobô; não desliga a defesa para o teste.
+                    p.wait_for_timeout(1700)
+                    with patch("apps.comercial.services.capturar_lead_site", side_effect=RuntimeError), p.expect_response(endpoint, timeout=6000) as resposta:
+                        enviar.click()
+                    self.assertEqual(resposta.value.status, 503)
+                    expect(erro).to_be_visible()
+                    expect(erro).to_be_focused()
+                    expect(form.locator("input[name=nome]")).to_have_value(identidade)
+                    expect(enviar).to_be_enabled()
+                    self.assertFalse(Oportunidade.objects.filter(pessoa__nome=identidade).exists())
+                    self._foto(f"lp-{nome}-erro-{largura}.png")
+                    # HTTP 200 sem confirmação do CRM também deve manter o formulário.
+                    p.route(endpoint, lambda rota: rota.fulfill(status=200, json={"ok": False}))
+                    with p.expect_response(endpoint):
+                        enviar.click()
+                    expect(erro).to_be_visible()
+                    expect(enviar).to_be_enabled()
+                    p.unroute(endpoint)
+                    form.locator("input[name=whats]").fill("20999990000")
+                    with p.expect_response(endpoint) as invalido:
+                        enviar.click()
+                    self.assertEqual(invalido.value.status, 400)
+                    expect(erro).to_contain_text("DDD 20 inválido")
+                    expect(enviar).to_be_enabled()
+                    self.assertFalse(Oportunidade.objects.filter(pessoa__nome=identidade).exists())
+                    if largura == 390:
+                        self._foto(f"lp-{nome}-dados-invalidos-390.png")
+                    form.locator("input[name=whats]").fill(telefone)
+                    with p.expect_response(endpoint):
+                        enviar.click(click_count=2)
+                    sucesso = p.locator("#ticketTitle" if nome == "inauguracao" else "#sucesso")
+                    if nome == "inauguracao":
+                        p.wait_for_function("document.querySelector('#card3d').classList.contains('flipped') && document.body.classList.contains('confirmado')", timeout=6000)
+                    expect(sucesso).to_be_visible()
+                    expect(sucesso).to_be_focused()
+                    if nome == "inauguracao":
+                        caixa = sucesso.bounding_box()
+                        self.assertGreaterEqual(caixa["y"], 80)
+                        self.assertLessEqual(caixa["y"] + caixa["height"], 844)
+                    lead = Oportunidade.objects.get(pessoa__nome=identidade)
+                    self.assertEqual(lead.pagina_captacao, pagina)
+                    self.assertEqual("".join(c for c in lead.pessoa.telefone if c.isdigit()), telefone)
+                    self.assertTrue(lead.pessoa.aceita_whatsapp)
+                    self.assertLessEqual(p.evaluate("document.documentElement.scrollWidth"), largura + 1)
+                    self._foto(f"lp-{nome}-sucesso-{largura}.png")
+                    p.evaluate("localStorage.removeItem('vt_inaug_conf')")
 
     def setUp(self):
         super().setUp()
@@ -160,9 +258,10 @@ class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
             self.page.evaluate("""async () => {
                 await document.fonts.ready;
                 if (document.activeViewTransition) await document.activeViewTransition.finished;
-                const transicoes = document.getAnimations().filter(a =>
-                    ['ct-sai', 'ct-entra'].includes(a.animationName)
-                    || a.effect?.pseudoElement?.includes('view-transition'));
+                const transicoes = document.getAnimations().filter(a => {
+                    const tempo = a.effect?.getComputedTiming();
+                    return tempo && Number.isFinite(tempo.endTime) && tempo.endTime <= 3000;
+                });
                 await Promise.all(transicoes.map(a => a.finished.catch(() => {})));
                 await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
             }""")
@@ -173,6 +272,121 @@ class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
     def abrir(self, nome, *args):
         self.page.set_viewport_size({"width": 390, "height": 844})
         self.page.goto(self.url(reverse(nome, args=args)))
+
+    def test_grupo_adiciona_quarto_faz_checkin_e_recebe_pelas_telas(self):
+        from apps.reservas.models import PagamentoConta, Reserva
+        from apps.reservas.services import criar_grupo
+
+        grupo = criar_grupo(
+            rotulo="Família QA", titular=self.guest, checkin=self.today,
+            checkout=self.today + timedelta(days=2), usuario=self.op,
+        )
+        p = self.page
+        self.abrir("reservas:grupo_detalhe", grupo.pk)
+        p.get_by_label("Quarto", exact=True).select_option(str(self.room.pk))
+        p.get_by_label("Hóspede do quarto", exact=True).fill(self.guest.nome)
+        p.get_by_role("option", name=self.guest.nome, exact=True).click()
+        self.enviar("Adicionar quarto")
+        reserva = Reserva.objects.get(grupo=grupo)
+        self.assertEqual(reserva.uh_id, self.room.pk)
+        self.enviar("Confirmar grupo")
+        with override_settings(FNRH_BLOQUEAR_CHECKIN=False):
+            self.enviar("Check-in do grupo")
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.status, Reserva.Status.HOSPEDADA)
+        receber = p.get_by_role("form", name="Receber pagamento do grupo")
+        receber.get_by_label("Forma de pagamento").select_option(str(self.cash.pk))
+        receber.get_by_label("Valor recebido (R$)").fill("120,00")
+        receber.get_by_label("Observação (opcional)").fill("Recebimento fictício QA")
+        self.enviar("Registrar recebimento")
+        self._foto("grupo-recebimento-390.png", full_page=True)
+        expect(p.get_by_text("Recebimento do folio registrado.", exact=True)).to_be_visible()
+        pagamento = PagamentoConta.objects.get(conta=grupo.folio)
+        self.assertEqual(pagamento.valor, Decimal("120"))
+        self.assertEqual(pagamento.movimento_caixa.valor, Decimal("120"))
+        self.assertEqual(grupo.folio.saldo(), Decimal("480"))
+
+    def test_grupo_fiscal_e_captacao_cabem_com_campos_utilizaveis(self):
+        from apps.fiscal.models import DocumentoFiscal
+        from apps.reservas.services import criar_grupo
+
+        grupo = criar_grupo(
+            rotulo="Famílias QA", titular=self.guest,
+            checkin=self.today + timedelta(days=20),
+            checkout=self.today + timedelta(days=22), usuario=self.op,
+        )
+        fiscal = DocumentoFiscal.objects.create(
+            tipo="nfse", natureza="servico", descricao="Documento fictício QA",
+            valor="300", gateway="simulado", chave="1234567890" * 4 + "1234", criado_por=self.op,
+        )
+        p = self.page
+        rotas = (("reservas:grupo_detalhe", grupo.pk, "grupo"),
+                 ("fiscal:detalhe", fiscal.pk, "fiscal"),
+                 ("captacao:publica", self.pagina.slug, "captacao"))
+        for rota, chave, nome in rotas:
+            for largura in (320, 390, 821, 1440):
+                with self.subTest(tela=nome, largura=largura):
+                    p.set_viewport_size({"width": largura, "height": 844})
+                    p.goto(self.url(reverse(rota, args=[chave])), wait_until="networkidle")
+                    self.assertLessEqual(p.evaluate("document.documentElement.scrollWidth"), largura + 1)
+                    if nome == "grupo":
+                        for campo in p.locator(".grupo-form input:visible, .grupo-form select").all():
+                            caixa = campo.bounding_box()
+                            self.assertGreaterEqual(caixa["width"], 180)
+                            self.assertLessEqual(caixa["x"] + caixa["width"], largura)
+                    if nome == "fiscal":
+                        chave_fiscal = p.get_by_text(fiscal.chave, exact=True).bounding_box()
+                        self.assertLessEqual(chave_fiscal["x"] + chave_fiscal["width"], largura)
+                    if nome == "captacao":
+                        aceitar = p.locator("input[name=consent]").bounding_box()
+                        self.assertLessEqual(aceitar["width"], 24)
+                        self.assertGreaterEqual(aceitar["width"], 18)
+                        for campo in p.locator(".datas input").all():
+                            self.assertGreaterEqual(campo.bounding_box()["width"], 180)
+                    self._foto(f"{nome}-final-{largura}.png", full_page=True)
+
+    def test_captacao_publica_corrige_datas_preserva_campos_e_atribui_campanha(self):
+        from apps.comercial.models import Campanha, Oportunidade
+
+        campanha = Campanha.objects.create(
+            nome="Férias de novembro QA", codigo="novembro-qa", provedor="outro",
+            pagina_captacao=self.pagina, criado_por=self.op,
+        )
+        p = self.page
+        p.context.clear_cookies()
+        p.set_viewport_size({"width": 320, "height": 844})
+        url = self.url(reverse("captacao:publica", args=[self.pagina.slug])) + "?utm_campaign=novembro-qa&utm_source=qa"
+        p.goto(url, wait_until="networkidle")
+        p.get_by_role("button", name="Recusar", exact=True).click()
+        p.get_by_label("Seu nome", exact=True).fill("Contato público fictício QA")
+        p.get_by_label("WhatsApp (com DDD)", exact=True).fill("(49) 99999-1234")
+        p.get_by_label("E-mail (opcional)", exact=True).fill("publico-qa@example.invalid")
+        inicio = self.today + timedelta(days=14)
+        p.get_by_label("Entrada", exact=True).fill(inicio.isoformat())
+        p.get_by_label("Saída", exact=True).fill((inicio - timedelta(days=1)).isoformat())
+        p.get_by_label("Quantas pessoas?", exact=True).select_option("4")
+        p.locator("input[name=consent]").check()
+        # O antirrobô de produção exige dois segundos de preenchimento real.
+        p.wait_for_timeout(2100)
+        with p.expect_navigation():
+            p.locator(".form button[type=submit]").click()
+        expect(p.get_by_text("A saída precisa ser depois da entrada.", exact=True)).to_be_visible()
+        expect(p.get_by_label("Seu nome", exact=True)).to_have_value("Contato público fictício QA")
+        expect(p.locator("input[name=consent]")).to_be_checked()
+        self.assertFalse(Oportunidade.objects.filter(pagina_captacao=self.pagina).exists())
+        self._foto("captacao-erro-320.png", full_page=True)
+        p.get_by_label("Saída", exact=True).fill((inicio + timedelta(days=2)).isoformat())
+        p.wait_for_timeout(2100)
+        with p.expect_navigation():
+            p.locator(".form button[type=submit]").click()
+        expect(p.get_by_role("heading", name="Recebemos o seu contato! 🥂")).to_be_visible()
+        lead = Oportunidade.objects.get(pagina_captacao=self.pagina)
+        self.assertEqual(lead.campanha_id, campanha.pk)
+        self.assertEqual(lead.hospedes, 4)
+        self.assertEqual(lead.checkin_previsto, inicio)
+        self.assertEqual(lead.checkout_previsto, inicio + timedelta(days=2))
+        self.assertTrue(lead.pessoa.aceita_email)
+        self.assertTrue(lead.pessoa.aceita_whatsapp)
 
     def enviar(self, nome):
         with self.page.expect_navigation():

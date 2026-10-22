@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from io import BytesIO
@@ -7,6 +8,7 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
+from django.db import transaction
 from django.db.models import Count, Sum
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -33,6 +35,7 @@ from .forms import (
     PerdaForm,
     RespostaRapidaForm,
 )
+from .forms_captacao import CaptacaoPublicaForm
 from .forms_lead import ContatoLeadForm, MoverLeadForm, NovoLeadForm
 from .models import (
     AtividadeComercial,
@@ -45,6 +48,7 @@ from .models import (
 )
 
 Usuario = get_user_model()
+logger = logging.getLogger(__name__)
 
 # Parâmetros de rastreio de anúncio capturados na Página de Captação (Fase A).
 RASTREIO_KEYS = (
@@ -774,6 +778,10 @@ def captacao_publica(request, slug):
     eh_blueprint = pagina.tema == PaginaCaptacao.Tema.BLUEPRINT
     template = "comercial/captacao_blueprint.html" if eh_blueprint else "comercial/captacao_publica.html"
     extra = {"estacoes": ESTACOES_BLUEPRINT} if eh_blueprint else {}
+    form = CaptacaoPublicaForm(
+        request.POST if request.method == "POST" else None,
+        tipo_interesse=pagina.tipo_interesse,
+    )
 
     enviado = request.GET.get("ok") == "1"
     if request.method == "POST":
@@ -784,40 +792,36 @@ def captacao_publica(request, slug):
         if parece_robo(request.POST) or limite_excedido(
                 request, "captacao_publica", limite=8, janela_seg=3600):
             return redirect(f"{pagina.get_absolute_url()}?ok=1")
-        nome = (request.POST.get("nome") or "").strip()
-        telefone = (request.POST.get("telefone") or "").strip()
-        email = (request.POST.get("email") or "").strip()
-        checkin = _data(request.POST.get("checkin"))
-        checkout = _data(request.POST.get("checkout"))
-        try:
-            pessoas = max(1, min(8, int(request.POST.get("pessoas") or 2)))
-        except (TypeError, ValueError):
-            pessoas = 2
         origem = {k: (request.POST.get(k) or "").strip() for k in RASTREIO_KEYS}
         origem["referer"] = request.META.get("HTTP_REFERER", "")
         origem["landing_url"] = request.build_absolute_uri(pagina.get_absolute_url())
-        if nome and telefone:
-            if checkin and checkout and checkout <= checkin:
-                checkout = None  # ignora saída inválida (funil aceita só a entrada)
+        if form.is_valid():
+            dados = form.cleaned_data
             try:
-                services.capturar_lead_site(
-                    nome=nome, telefone=telefone, email=email,
-                    tipo_interesse=pagina.tipo_interesse, pagina=pagina,
-                    hospedes=pessoas, checkin=checkin, checkout=checkout,
-                    mensagem=f"Lista de espera — {pagina.nome}", origem=origem,
-                    aceita_email=(request.POST.get("consent") or "") == "on",
-                )
-            except Exception:
-                pass  # best-effort: nunca quebra a página pública do lead
-            return redirect(f"{pagina.get_absolute_url()}?ok=1")
+                with transaction.atomic():
+                    lead = services.capturar_lead_site(
+                        nome=dados["nome"], telefone=dados["telefone"], email=dados["email"],
+                        tipo_interesse=pagina.tipo_interesse, pagina=pagina,
+                        hospedes=dados["pessoas"], checkin=dados["checkin"], checkout=dados["checkout"],
+                        mensagem=f"Lista de espera — {pagina.nome}", origem=origem,
+                        aceita_email=dados["consent"],
+                    )
+                    if lead is None:
+                        raise ValidationError("Captação indisponível.")
+            except Exception as erro:
+                # A fronteira pública continua utilizável; nunca anuncia sucesso sem gravação.
+                logger.error("Falha ao registrar contato da página %s (%s)", pagina.pk, type(erro).__name__)
+                form.add_error(None, "Não foi possível receber seu contato agora. Seus dados continuam abaixo; tente novamente.")
+            else:
+                return redirect(f"{pagina.get_absolute_url()}?ok=1")
         return render(request, template,
-                      {"pagina": pagina, "erro": "Preencha nome e WhatsApp.",
+                      {"pagina": pagina, "form": form,
                        "rastreio": {k: request.POST.get(k, "") for k in RASTREIO_KEYS}, **extra})
 
     services.registrar_visita_pagina(pagina)
     rastreio = {k: request.GET.get(k, "") for k in RASTREIO_KEYS}
     return render(request, template,
-                  {"pagina": pagina, "enviado": enviado, "rastreio": rastreio, **extra})
+                  {"pagina": pagina, "form": form, "enviado": enviado, "rastreio": rastreio, **extra})
 
 
 # ─────────────────── WhatsApp no funil (MVP) + Respostas Rápidas ───────────────────

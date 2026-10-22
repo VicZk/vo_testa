@@ -4,6 +4,15 @@
 {% block titulo %}{{ grupo.rotulo }} — Grupo — CRM Vô Testa{% endblock %}
 
 {% block conteudo %}
+<style>
+.grupo-form { display:flex; flex-wrap:wrap; gap:1rem; align-items:end; max-width:none; }
+.grupo-form .campo { flex:1 1 220px; min-width:0; margin:0; }
+.grupo-form .combo { min-width:0; }
+.grupo-form .acoes { flex:1 0 100%; }
+.grupo-form button { white-space:normal; }
+.grupo-form.form-cartao { padding:0; border:0; box-shadow:none; }
+.grupo-form .campo-qtd { width:100%; }
+</style>
 <p class="pagina-eyebrow letreiro">Reservas · Grupo</p>
 <div class="pagina-cabecalho">
   <h1>{{ grupo.rotulo }} <span class="selo">{{ grupo.situacao_display }}</span></h1>
@@ -29,7 +38,8 @@
 
 <!-- Folio-mãe: as diárias de todos os quartos -->
 <div class="cartao">
-  <h2>Folio do grupo (diárias)</h2>
+  <h2>Conta do grupo · Diárias</h2>
+  <p class="ajuda">Receba aqui as diárias dos quartos. O consumo permanece na conta de cada quarto.</p>
   <p>
     Diárias + colchão: <strong>{{ resumo.diarias|intcomma_brl }}</strong> ·
     pago: {{ resumo.folio_pago|intcomma_brl }} ·
@@ -37,34 +47,36 @@
     · {{ resumo.folio.get_status_display }}
   </p>
   {% if resumo.folio.aberta and not grupo.encerrado_em %}
-    <form method="post" action="{% url 'reservas:grupo_receber_folio' grupo.pk %}" class="barra-busca">
+    <form method="post" action="{% url 'reservas:grupo_receber_folio' grupo.pk %}" class="form-cartao grupo-form" aria-label="Receber pagamento do grupo">
       {% csrf_token %}
-      <select name="forma" required>
+      <div class="campo"><label for="grupo-forma">Forma de pagamento</label><select id="grupo-forma" name="forma" required>
         {% for f in formas %}<option value="{{ f.pk }}">{{ f.nome }}</option>{% endfor %}
-      </select>
-      <input type="text" name="valor" class="mascara-reais" inputmode="numeric" placeholder="0,00" required>
-      <input type="text" name="observacao" placeholder="Observação (opcional)">
-      <button class="botao-primario">Receber no folio</button>
+      </select></div>
+      <div class="campo"><label for="grupo-valor">Valor recebido (R$)</label><input id="grupo-valor" type="text" name="valor" class="mascara-reais" inputmode="numeric" placeholder="0,00" required></div>
+      <div class="campo"><label for="grupo-parcelas">Parcelas (1 para à vista)</label><input id="grupo-parcelas" type="number" name="parcelas" min="1" value="1" required></div>
+      <div class="campo"><label for="grupo-autorizacao">Autorização do cartão (opcional)</label><input id="grupo-autorizacao" type="text" name="autorizacao" maxlength="40"></div>
+      <div class="campo"><label for="grupo-observacao">Observação (opcional)</label><input id="grupo-observacao" type="text" name="observacao" maxlength="120"></div>
+      <div class="acoes"><button class="botao-primario">Registrar recebimento</button></div>
     </form>
     {% if faturar %}
-    <form method="post" action="{% url 'reservas:grupo_faturar' grupo.pk %}" class="barra-busca">
+    <form method="post" action="{% url 'reservas:grupo_faturar' grupo.pk %}" class="form-cartao grupo-form">
       {% csrf_token %}
-      <input type="text" name="valor" class="mascara-reais" inputmode="numeric" value="{{ faturar.valor }}" required aria-label="Valor faturado">
-      <input type="date" name="vencimento" value="{{ faturar.vencimento|date:'Y-m-d' }}" required aria-label="Vencimento">
-      <button class="botao-neutro">Faturar para {{ grupo.titular.nome }}</button>
+      <div class="campo"><label for="grupo-faturado">Valor faturado (R$)</label><input id="grupo-faturado" type="text" name="valor" class="mascara-reais" inputmode="numeric" value="{{ faturar.valor }}" required></div>
+      <div class="campo"><label for="grupo-vencimento">Vencimento</label><input id="grupo-vencimento" type="date" name="vencimento" value="{{ faturar.vencimento|date:'Y-m-d' }}" required></div>
+      <div class="acoes"><button class="botao-neutro">Faturar para {{ grupo.titular.nome }}</button></div>
     </form>
     {% endif %}
     {% if grupo.titular %}
-    <form method="post" action="{% url 'reservas:grupo_sinal' grupo.pk %}" class="barra-busca">
+    <form method="post" action="{% url 'reservas:grupo_sinal' grupo.pk %}" class="form-cartao grupo-form">
       {% csrf_token %}
-      <input type="text" name="valor" class="mascara-reais" inputmode="numeric" placeholder="Valor do sinal">
-      <select name="metodo">
+      <div class="campo"><label for="grupo-sinal">Valor do sinal (R$)</label><input id="grupo-sinal" type="text" name="valor" class="mascara-reais" inputmode="numeric" placeholder="0,00" required></div>
+      <div class="campo"><label for="grupo-metodo">Como cobrar</label><select id="grupo-metodo" name="metodo">
         <option value="pix">Pix</option>
         <option value="cartao">Cartão</option>
         <option value="boleto">Boleto</option>
         <option value="link">Link</option>
-      </select>
-      <button class="botao-neutro">Gerar sinal (Pagamentos)</button>
+      </select></div>
+      <div class="acoes"><button class="botao-neutro">Gerar cobrança do sinal</button></div>
     </form>
     {% endif %}
   {% endif %}
@@ -76,7 +88,7 @@
 </div>
 <table class="tabela">
   <thead>
-    <tr><th>Quarto</th><th>Hóspede</th><th>Lotação</th><th>Status</th><th>Consumo</th><th>Saldo quarto</th><th></th></tr>
+    <tr><th>Quarto</th><th>Hóspede</th><th>Lotação</th><th>Status</th><th class="num">Consumo</th><th class="num">Saldo quarto</th><th></th></tr>
   </thead>
   <tbody>
     {% for q in resumo.quartos %}
@@ -86,8 +98,8 @@
         <td>{{ q.reserva.hospede.nome }}</td>
         <td>{{ q.reserva.adultos }}A{% if q.reserva.criancas %} + {{ q.reserva.criancas }}C{% endif %}</td>
         <td><span class="selo mapa-cor-{{ q.reserva.status }}">{{ q.reserva.get_status_display }}</span></td>
-        <td>{{ q.consumo|intcomma_brl }}</td>
-        <td>{{ q.saldo|intcomma_brl }}</td>
+        <td class="num">{{ q.consumo|intcomma_brl }}</td>
+        <td class="num">{{ q.saldo|intcomma_brl }}</td>
         <td>
           {% if not grupo.encerrado_em %}{% if q.reserva.status == 'pre_reserva' or q.reserva.status == 'confirmada' %}
           <form method="post" action="{% url 'reservas:grupo_remover_quarto' grupo.pk q.reserva.pk %}"
@@ -109,30 +121,33 @@
 <div class="cartao bloco-respiro">
   <h3>Adicionar quarto</h3>
   {% if quartos_livres %}
-  <form method="post" action="{% url 'reservas:grupo_adicionar_quarto' grupo.pk %}" class="barra-busca">
+  <form method="post" action="{% url 'reservas:grupo_adicionar_quarto' grupo.pk %}" class="form-cartao grupo-form" aria-label="Adicionar quarto ao grupo">
     {% csrf_token %}
-    <select name="uh" required>
+    <div class="campo"><label for="grupo-quarto">Quarto</label><select id="grupo-quarto" name="uh" required>
       <option value="">Quarto livre…</option>
       {% for uh in quartos_livres %}
         <option value="{{ uh.pk }}">{{ uh.numero }} — {{ uh.tipo.nome }} (acomoda {{ uh|lotacao_uh }})</option>
       {% endfor %}
-    </select>
+    </select></div>
+    <div class="campo"><label for="id_hospede">Hóspede do quarto</label>
     {% include "componentes/combo_pessoa.html" with dados=hospedes_data dados_id="hospede-grupo-data" campo="hospede" placeholder="Hóspede do quarto…" %}
-    <input type="number" name="adultos" min="1" value="2" title="Adultos" class="campo-qtd">
-    <input type="number" name="criancas" min="0" value="0" title="Crianças" class="campo-qtd">
-    <button class="botao-primario">Adicionar</button>
+    </div>
+    <div class="campo"><label for="grupo-adultos">Adultos</label><input id="grupo-adultos" type="number" name="adultos" min="1" value="2"></div>
+    <div class="campo"><label for="grupo-criancas">Crianças</label><input id="grupo-criancas" type="number" name="criancas" min="0" value="0"></div>
+    <div class="acoes"><button class="botao-primario">Adicionar quarto</button></div>
   </form>
   {% else %}
   <p class="vazio">Nenhum quarto livre no período do grupo.</p>
   {% endif %}
 </div>
 
-<div class="acoes bloco-respiro">
-  <form method="post" action="{% url 'reservas:grupo_cancelar' grupo.pk %}" class="barra-busca"
+<div class="cartao bloco-respiro">
+  <h3>Cancelar o grupo</h3>
+  <form method="post" action="{% url 'reservas:grupo_cancelar' grupo.pk %}" class="form-cartao grupo-form"
         onsubmit="return confirm('Cancelar o grupo inteiro?')">
     {% csrf_token %}
-    <input type="text" name="motivo" placeholder="Motivo do cancelamento" required>
-    <button class="botao-neutro">Cancelar grupo</button>
+    <div class="campo"><label for="grupo-motivo">Motivo do cancelamento</label><input id="grupo-motivo" type="text" name="motivo" required></div>
+    <div class="acoes"><button class="botao-neutro">Cancelar grupo</button></div>
   </form>
 </div>
 {% endif %}

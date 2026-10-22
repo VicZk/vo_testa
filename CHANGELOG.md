@@ -9,6 +9,33 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 22/10/2026 — Captação com confirmação real, grupos no celular e acesso visível
+
+**O que melhorou**
+- A conta de grupos tem campos identificados, colunas adaptáveis e orientação
+  sobre diárias e consumo. O recebimento inclui as parcelas exigidas pelo
+  formulário; adicionar quarto, confirmar, fazer entrada e receber foi exercitado.
+- A captação pública preserva os campos e informa erros de contato, datas e
+  quantidade. Uma falha ao gravar deixa a pessoa tentar novamente e desfaz
+  registros parciais.
+- As três páginas de campanha conferem a resposta do CRM antes da confirmação.
+  Falhas mantêm o formulário e o foco no aviso; a página de inauguração grava
+  também quando servida pelo endereço da VPS. A confirmação aparece na área visível.
+- Entrada e recuperação de senha aparecem mesmo com uma sessão já aberta.
+  A chave longa do documento fiscal passa a quebrar linha no celular.
+
+**O que foi modificado**
+- Formulários públicos, fronteiras de captação, HTML oficial das três LPs,
+  contexto das telas de acesso e detalhes de Reservas/Fiscal.
+- Regressões de gravação, rollback, validação, acesso e interação com as páginas.
+  A matriz adicional passou em 132 combinações, completando 660 combinações
+  de tela e largura. A suíte completa passou nos 1.849 testes, sem pulos;
+  a configuração local e os resultados focados estão descritos no relatório.
+- Nenhum model ou migration alterado. Evidências e limites da validação em
+  `docs/REVISAO_USABILIDADE_2026-10-22.md`.
+
+---
+
 ## 22/10/2026 — Formulários utilizáveis no celular e pedidos do hóspede funcionando
 
 **O que melhorou**

@@ -1013,7 +1013,11 @@ const Agenda = (function(){
     form.setAttribute('inert', ''); back.removeAttribute('inert');
     alinharPicote();
     document.body.classList.add('confirmado');
-    if (animar) setTimeout(() => $('#ticketTitle').focus({ preventScroll: true }), 700);
+    if (animar) setTimeout(() => {
+      const titulo = $('#ticketTitle');
+      titulo.scrollIntoView({ block: 'center', behavior: 'instant' });
+      titulo.focus({ preventScroll: true });
+    }, 700);
   }
   const salvo = store.get('vt_inaug_conf');
   if (salvo && salvo.nome) mostrarConvite(salvo, false);
@@ -1051,9 +1055,14 @@ const Agenda = (function(){
     $('.btn-label', btn).textContent = 'Enviando...';
     setIcone('gear-six', true);
     try {
-      if (PROD && CONFIG.CRM_ENDPOINT) {
+      if (/^https?:$/.test(location.protocol) && CONFIG.CRM_ENDPOINT) {
         const r = await fetch(CONFIG.CRM_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const resultado = await r.json();
+        if (!r.ok || resultado.ok !== true) {
+          const falha = new Error('Envio não confirmado.');
+          if (r.status === 400 && typeof resultado.erro === 'string') falha.mensagemUsuario = resultado.erro;
+          throw falha;
+        }
       } else {
         console.info('[modo demonstração] lead que seria enviado:', dados);
         await new Promise(r => setTimeout(r, 900));
@@ -1066,7 +1075,10 @@ const Agenda = (function(){
       console.error(err);
       btn.disabled = false;
       alerta.innerHTML = 'Não conseguimos registrar agora. Tente de novo em instantes ou fale com a gente no <a href="https://www.instagram.com/pousadavotesta" target="_blank" rel="noopener">Instagram</a>.';
+      if (err.mensagemUsuario) alerta.textContent = err.mensagemUsuario + ' Confira o preenchimento e tente novamente.';
       alerta.classList.add('on');
+      alerta.tabIndex = -1;
+      alerta.focus();
     } finally {
       enviando = false;
       if (!card.classList.contains('flipped')) { $('.btn-label', btn).textContent = 'Quero participar'; }

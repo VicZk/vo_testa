@@ -866,10 +866,18 @@ if(form && whats){
     if(consentWrap) consentWrap.classList.remove('invalid');
   }
 
+  const erroEnvio = document.createElement('p');
+  erroEnvio.className = 'lp-captacao-erro';
+  erroEnvio.setAttribute('role', 'alert');
+  erroEnvio.tabIndex = -1;
+  erroEnvio.hidden = true;
+  form.appendChild(erroEnvio);
+
   let enviando = false, enviado = false;
   form.addEventListener('submit', async e=>{
     e.preventDefault();
     if(enviando || enviado) return;   // trava contra clique repetido / reenvio
+    erroEnvio.hidden = true;
     clearErr();
     let ok = true, foco = null;
 
@@ -898,10 +906,16 @@ if(form && whats){
     if(botao){ botao.disabled = true; botao.textContent = 'Enviando…'; }
     try{
       if(CONFIG.CRM_ENDPOINT){
-        await fetch(CONFIG.CRM_ENDPOINT,{
+        const resposta = await fetch(CONFIG.CRM_ENDPOINT,{
           method:'POST', headers:{'Content-Type':'application/json'},
           body:JSON.stringify(dados)
         });
+        const resultado = await resposta.json();
+        if(!resposta.ok || resultado.ok !== true){
+        const falha = new Error('Envio não confirmado.');
+        if(resposta.status === 400 && typeof resultado.erro === 'string') falha.mensagemUsuario = resultado.erro;
+        throw falha;
+      }
       } else {
         console.log('[modo demonstração] lead capturado:', dados);
       }
@@ -913,7 +927,9 @@ if(form && whats){
     }catch(err){
       console.error(err);
       if(botao){ botao.disabled = false; botao.textContent = 'Quero minha vaga de fundador'; }
-      alert('Não foi possível enviar agora. Tente de novo em instantes.');
+      erroEnvio.textContent = err.mensagemUsuario ? err.mensagemUsuario + ' Confira o preenchimento e tente novamente.' : 'Não conseguimos registrar agora. Seus dados continuam preenchidos. Tente novamente.';
+      erroEnvio.hidden = false;
+      erroEnvio.focus();
     }finally{
       enviando = false;
     }

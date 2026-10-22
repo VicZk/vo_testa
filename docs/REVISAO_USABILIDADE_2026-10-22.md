@@ -1,6 +1,6 @@
 # Revisão de usabilidade — 22/10/2026
 
-Revisão em andamento na fork `VicZk/vo_testa`, branch `dev`. Cada entrega passa
+Revisão executada na fork `VicZk/vo_testa`, branch `dev`. Cada entrega passa
 por testes antes de commit, push e publicação no ambiente da Pousada em
 `viczk.cloud/votesta`. O trabalho anterior foi integrado antes desta revisão.
 
@@ -12,8 +12,10 @@ salvamento, recuperação de erros e detalhes apresentados quando necessários.
 
 - Base local isolada com dados fictícios e perfis de gestão, atendimento,
   marketing e camareira. Envios externos e pagamentos reais não integram esses testes.
-- Inspeção e interação por Computer Use, complementadas por testes reproduzíveis
-  de navegador e testes Django contra PostgreSQL 16.
+- Inspeção inicial e interação por Computer Use. A conexão deixou de responder
+  durante o trabalho e a reconferência manual continua pendente. As rodadas
+  seguintes usam testes reproduzíveis de navegador, capturas inspecionadas
+  visualmente e testes Django contra PostgreSQL 16.
 - Larguras: 320, 390, 821 com menu aberto e 1440 px. Conferência de sobreposição,
   rolagem, teclado, alterações pendentes e preferência por movimento reduzido.
 - A indicação de uma tela como inspecionada registra observação desta revisão;
@@ -28,15 +30,15 @@ salvamento, recuperação de erros e detalhes apresentados quando necessários.
 | Marketing | Calendário, ocupação, relatório, peças, orçamento e aprovação | Layouts inspecionados nas quatro larguras; calendário vazio e tooltip corrigidos; regras cobertas pela suíte do módulo |
 | Comercial | Novo lead, contato existente, origem da campanha, filtros e movimentação | Implementado; 18 testes de cadastro/integração e sete cenários de navegador aprovados |
 | Comercial | Tarefas, cotação, comparação de quartos e conversão em reserva | Layouts inspecionados; comparação e envio de proposta por e-mail exercitados no navegador; conversão coberta nos testes de serviço |
-| Navegação e acesso | Menu, busca, entrada por perfil e troca de telas | Matriz de larguras e regressões existentes do menu; perfil exclusivo da camareira e foco dos diálogos exercitados |
+| Navegação e acesso | Menu, busca, entrada por perfil e troca de telas | Matriz de larguras e regressões do menu; perfil da camareira, foco dos diálogos e cinco telas de acesso com/sem sessão exercitados |
 | Governança | Minha fila, iniciar/terminar limpeza e relato de problema | Falhas reproduzidas e corrigidas; quatro cenários com perfil de camareira aprovados no navegador automatizado |
-| Reservas | Mapa, criação, alteração, grupos, entrada, saída, conta e FNRH | Telas inspecionadas; reserva pública ponta a ponta na suíte de navegador; disponibilidade, conta e FNRH cobertas na suíte Django |
+| Reservas | Mapa, criação, alteração, grupos, entrada, saída, conta e FNRH | Telas inspecionadas; reserva pública e grupo com quarto, entrada e recebimento na suíte de navegador; disponibilidade, conta e FNRH na suíte Django |
 | Operação | Manutenção, escala e lavanderia | Layouts inspecionados; conclusão de manutenção com custo e ciclo da lavanderia com cobrança testados no navegador |
 | Vendas | Loja, restaurante, comanda e recebimento | Venda com clique repetido e comanda exercitadas; totais, movimentos de caixa e estoque conferidos no banco de teste |
 | Estoque | Consulta, entrada, saída, transferência e inventário | Layouts inspecionados; transferência recusada e corrigida, dados preservados e ajuste para zero exercitados no navegador |
-| Financeiro | Caixa, contas, conciliação, auditoria e relatórios | Telas de entrada inspecionadas; relatórios individuais em conferência; regras financeiras na suíte Django |
-| Cadastros | Pessoas, quartos, tarifas, funcionários e logbook | Layouts inspecionados; seleção dos dias da temporada exercitada; fichas preenchidas em conferência |
-| Área pública | Site, reserva, portal, pré check-in, pagamento e landing pages | Layouts inspecionados; portal e pagamento simulado exercitados sem login; origem externa rejeitada; páginas de campanha restantes em conferência |
+| Financeiro | Caixa, contas, conciliação, auditoria e relatórios | Telas e relatórios individuais inspecionados nas quatro larguras; regras financeiras na suíte Django |
+| Cadastros | Pessoas, quartos, tarifas, funcionários e logbook | Layouts e fichas preenchidas inspecionados; seleção dos dias da temporada exercitada |
+| Área pública | Site, reserva, portal, pré check-in, pagamento e landing pages | Portal e pagamento simulado exercitados sem login; origem externa rejeitada; captação dinâmica e três LPs exercitadas com falha e nova tentativa |
 
 ## Entrega 1 — Campanhas
 
@@ -217,3 +219,89 @@ Capturas automatizadas conferidas visualmente: [comparação no celular](evidenc
 [estoque com erro preservado](evidencias/usabilidade-2026-10-22/estoque-recusa-390.png),
 [pedidos do portal](evidencias/usabilidade-2026-10-22/portal-pedidos-390.png) e
 [total da venda](evidencias/usabilidade-2026-10-22/loja-venda-390.png).
+
+Publicação confirmada: commit `9391d539586e6336d5d2bf3eea9405e858fa5b04`,
+[CI aprovado](https://github.com/VicZk/vo_testa/actions/runs/39736970766), aplicação
+ativada às 04:09:59 de 22/10 (Brasília) e saudável na conferência seguinte.
+Os hashes do CSS, da view de estoque e do template do portal coincidem entre
+checkout, imagem construída e container ativo. Não há migrations pendentes;
+saúde e login públicos responderam 200 após a partida. O banco permaneceu
+saudável, com o mesmo horário de inicialização. Backup conferido por catálogo e
+SHA-256, com imagem anterior preservada para retorno.
+
+## Entrega 5 — Grupos, captação pública e telas de acesso
+
+A matriz adicional reuniu 33 telas ou estados: todos os relatórios disponíveis,
+fichas preenchidas, inventário, grupo, documento fiscal com chave de 44 dígitos,
+captação pública, três LPs, privacidade e recuperação de senha. Foram 132
+combinações nas quatro larguras, aprovadas em 141,011 s. Somadas à matriz anterior,
+são 660 combinações de tela e largura. Há rotas que mostram a mesma página; este
+número não significa 165 fluxos de escrita distintos.
+
+A inspeção encontrou formulários de grupo ultrapassando 320, 390 e 821 px,
+chave fiscal ultrapassando 320 px e formulário público excedendo 320 px.
+As colunas dos grupos agora se organizam pelo espaço disponível, com rótulos
+visíveis e explicação de onde entram diárias e consumo. O teste de recebimento
+revelou também a ausência do campo de parcelas exigido pelo servidor. O fluxo
+completo adiciona um quarto, confirma o grupo, registra a entrada e recebe
+R$ 120 de R$ 600; o caixa recebe R$ 120 e a conta termina com R$ 480 de saldo.
+A chave fiscal quebra linha dentro de sua ficha.
+
+Na captação pública, campos de data deixam de empurrar a página, o consentimento
+usa uma caixa de seleção com texto ao lado e os campos têm rótulos permanentes.
+Telefone, e-mail, limites e datas são validados antes da gravação. Dados inválidos
+continuam preenchidos com o erro correspondente. O consentimento descreve os
+dois canais efetivamente concedidos pelo serviço: e-mail e WhatsApp.
+
+Uma falha simulada depois de criar o contato reproduziu o falso sucesso da
+captação. A fronteira pública agora usa transação, desfaz a gravação parcial e
+mostra o erro. O retorno sem oportunidade também não confirma a inscrição.
+A origem da campanha, datas, pessoas e aceite são conferidos após a correção.
+As respostas silenciosas de antirrobô e limite de abuso continuam cobertas.
+
+As três LPs oficiais também ignoravam falhas de gravação: o servidor retornava
+sucesso e ainda tentava enviar o evento de conversão. Agora devolve falha e só
+envia esse evento após salvar. O navegador exige HTTP bem-sucedido e `ok: true`,
+preserva os campos, libera nova tentativa e foca o aviso. O teste cobre erro 503,
+HTTP 200 com `ok: false`, DDD inválido com explicação do servidor, correção e
+clique repetido em 320, 390 e 1440 px.
+Na inauguração, a condição de domínio fazia a página da VPS usar demonstração;
+o envio passou a ocorrer em páginas servidas por HTTP/HTTPS. A medição mantém
+seu controle de consentimento. Ao confirmar, o título fica visível abaixo do
+cabeçalho fixo e recebe o foco depois da virada do cartão.
+
+As telas de recuperação ficavam vazias quando o usuário já estava conectado:
+o template-base escolhia o conteúdo interno, enquanto a tela definia somente o
+conteúdo público. As cinco views de acesso agora informam seu contexto ao base.
+Os testes conferem título e largura com e sem sessão, além do fluxo existente
+de redefinição e da resposta a e-mail desconhecido.
+
+Validações focadas: 17 testes iniciais de grupo/captação; 33 testes de LPs,
+falhas e recuperação; dois cenários de navegador em 87,342 s. A rodada final
+das três LPs, incluindo a confirmação visível e o erro de DDD, passou em
+43,731 s. Os 146 testes de design e captação passaram em 27,053 s após adequar
+os rótulos ao componente compartilhado. A suíte completa final passou:
+1.849 testes em 396,152 s, sem falhas ou pulos. Ruff e migrations passaram;
+12 blocos JavaScript das LPs tiveram sintaxe conferida.
+As capturas aguardam o fim das animações finitas de entrada antes de serem
+inspecionadas. Nenhum model ou migration foi alterado nesta entrega.
+
+A repetição integral local usa um arquivo temporário de configuração com
+`MD5PasswordHasher` apenas para senhas fictícias, conforme a orientação de
+[aceleração de testes do Django](https://docs.djangoproject.com/en/6.0/topics/testing/overview/#password-hashing).
+Essa configuração não integra o repositório nem o deploy; o CI executa os
+hashers configurados no projeto. A rodada anterior com os hashers do projeto
+executou os mesmos 1.849 casos e apontou somente a convenção de rótulos,
+corrigida e revalidada. Os arquivos finais coincidem com os da cópia testada.
+
+Capturas automatizadas inspecionadas: [formulários do grupo](evidencias/usabilidade-2026-10-22/grupo-final-390.png),
+[recebimento e saldo](evidencias/usabilidade-2026-10-22/grupo-recebimento-390.png),
+[detalhe fiscal](evidencias/usabilidade-2026-10-22/fiscal-final-390.png),
+[correção da data na captação](evidencias/usabilidade-2026-10-22/captacao-erro-320.png),
+[telefone inválido na LP](evidencias/usabilidade-2026-10-22/lp-fundador-dados-invalidos-390.png),
+[falha preservada no Fundador II](evidencias/usabilidade-2026-10-22/lp-fundador_2-erro-390.png),
+[falha na inauguração](evidencias/usabilidade-2026-10-22/lp-inauguracao-erro-390.png),
+[confirmação no celular](evidencias/usabilidade-2026-10-22/lp-inauguracao-sucesso-390.png),
+[confirmação no desktop](evidencias/usabilidade-2026-10-22/lp-inauguracao-sucesso-1440.png),
+[recuperação no celular](evidencias/usabilidade-2026-10-22/senha-recuperacao-390.png) e
+[recuperação no desktop](evidencias/usabilidade-2026-10-22/senha-recuperacao-1440.png).

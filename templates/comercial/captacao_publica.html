@@ -1,4 +1,4 @@
-{% load static %}<!DOCTYPE html>
+{% load static nucleo_extras %}<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -96,9 +96,19 @@
   .captura{background:linear-gradient(180deg,var(--musgo),#233a31);color:var(--pergaminho);text-align:center}
   .captura h2{color:#fff}.captura .sub{color:rgba(239,219,178,.8)}
   .form{max-width:460px;margin:24px auto 0;display:grid;gap:12px}
-  .form input,.form select{padding:15px 16px;border:none;border-radius:12px;font-family:inherit;font-size:15px;background:#fff;color:var(--noturno);width:100%}
+  .form input:not([type=checkbox]),.form select{padding:15px 16px;border:none;border-radius:12px;font-family:inherit;font-size:16px;background:#fff;color:var(--noturno);width:100%;min-width:0}
   .form label{display:flex;flex-direction:column;gap:6px;text-align:left;font-size:13px;color:rgba(239,219,178,.9)}
-  .form .datas{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .form .datas{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(180px,100%),1fr));gap:12px}
+  .form label{min-width:0}
+  .form .campo-publico{display:grid;gap:6px;text-align:left;min-width:0}
+  .form .lp-aceite{flex-direction:row;align-items:flex-start;min-height:44px;font-size:14px;line-height:1.5}
+  .form .lp-aceite input[type=checkbox]{width:20px;height:20px;flex:0 0 20px;margin-top:2px;accent-color:var(--lampiao)}
+  .form .errorlist,.erro .errorlist{list-style:none;text-align:left;font-size:14px;color:var(--pergaminho);font-weight:700}
+  .form :focus-visible{outline:3px solid var(--lampiao);outline-offset:3px}
+  .btn{max-width:100%;text-align:center;justify-content:center;overflow-wrap:anywhere}
+  .wrap>*{min-width:0;overflow-wrap:anywhere}
+  .captura{scroll-margin-top:120px}
+  @media(prefers-reduced-motion:reduce){.pulse{animation:none}.btn{transition:none}}
   .form input[type=date]{min-height:52px}
   .form .btn{width:100%;justify-content:center}
   .captura small{display:block;margin-top:14px;opacity:.8;font-size:13px}
@@ -106,7 +116,7 @@
   .ok h3{color:#fff;font-weight:900;font-size:24px;margin-bottom:8px}
   .erro{max-width:460px;margin:12px auto 0;background:rgba(179,38,30,.15);border:1px solid #e88;border-radius:10px;padding:10px;color:#ffd}
   footer{background:var(--noturno);color:rgba(239,219,178,.7);text-align:center;padding:44px 24px;font-size:14px}
-  footer img{height:52px;margin-bottom:14px}
+  footer img{height:52px;width:auto;max-width:100%;object-fit:contain;margin-bottom:14px}
   footer .frase{opacity:.6;margin-top:10px;font-style:italic}
   .faq{background:var(--pergaminho)}
   .faq .item{max-width:760px;margin:0 auto;border-bottom:1px solid rgba(79,44,29,.15)}
@@ -249,35 +259,28 @@ gtag('js',new Date());gtag('config','{{ pagina.google_tag_id }}');
       </div>
     {% else %}
       <p class="sub">Deixe seu contato e garanta prioridade na Tarifa de Fundador. A gente te chama para reservar antes de abrir ao público.</p>
-      {% if erro %}<div class="erro">{{ erro }}</div>{% endif %}
+      {% if form.errors %}<div class="erro" role="alert" id="captacao-erros" tabindex="-1">Confira os campos abaixo. {{ form.non_field_errors }}</div>{% endif %}
       <form class="form" method="post" action="{{ pagina.get_absolute_url }}">
         {% csrf_token %}
         {% for k, v in rastreio.items %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
-        <input type="text" name="nome" placeholder="Seu nome" required>
-        <input type="tel" name="telefone" placeholder="WhatsApp (com DDD)" required>
-        <input type="email" name="email" placeholder="E-mail (opcional)">
+        <div class="campo-publico">{{ form.nome|rotulo }}{{ form.nome }}{{ form.nome.errors }}</div>
+        <div class="campo-publico">{{ form.telefone|rotulo }}{{ form.telefone }}{{ form.telefone.errors }}</div>
+        <div class="campo-publico">{{ form.email|rotulo }}{{ form.email }}{{ form.email.errors }}</div>
         <div class="datas">
-          <label>Entrada<input type="date" name="checkin" min="{% now 'Y-m-d' %}"></label>
-          <label>Saída<input type="date" name="checkout" min="{% now 'Y-m-d' %}"></label>
+          <div class="campo-publico">{{ form.checkin|rotulo }}{{ form.checkin }}{{ form.checkin.errors }}</div>
+          <div class="campo-publico">{{ form.checkout|rotulo }}{{ form.checkout }}{{ form.checkout.errors }}</div>
         </div>
-        <label class="pessoas-lbl">Quantas pessoas?
-          <select name="pessoas">
-            <option value="1">1 pessoa</option>
-            <option value="2" selected>2 pessoas</option>
-            <option value="3">3 pessoas</option>
-            <option value="4">4 pessoas</option>
-            <option value="5">5 pessoas</option>
-            <option value="6">6 pessoas</option>
-            <option value="7">7 pessoas</option>
-            <option value="8">8 pessoas</option>
-          </select>
-        </label>
+        <div class="pessoas-lbl"><label for="{{ form.pessoas.id_for_label }}">{{ form.pessoas.label }}</label>
+          {{ form.pessoas }}{{ form.pessoas.errors }}
+        </div>
         <label class="lp-aceite">
-          <input type="checkbox" name="consent" value="on">{% load nucleo_extras %}{% campos_antirrobo %}
-          <span>Aceito receber novidades e ofertas da Pousada Vô Testa por e-mail. Posso cancelar quando quiser.</span>
+          {{ form.consent }}
+          <span>Quero receber novidades e ofertas da Pousada Vô Testa por e-mail e WhatsApp. Posso cancelar quando quiser.</span>
         </label>
+        {% load nucleo_extras %}{% campos_antirrobo %}
         <button class="btn pulse" type="submit">{{ pagina.cta_texto }}</button>
       </form>
+      {% if form.errors %}<script>document.getElementById('captacao-erros').focus();</script>{% endif %}
       <small>Sem compromisso — é só para te avisar em primeira mão.</small>
     {% endif %}
   </div>

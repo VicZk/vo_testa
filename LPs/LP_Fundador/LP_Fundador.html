@@ -379,7 +379,7 @@ footer .links a:hover{color:var(--lampiao)}
         <p class="form-help">Sem compromisso. É só para avisar você em primeira mão.</p>
       </form>
 
-      <div class="sucesso" id="sucesso" role="status">
+      <div class="sucesso" id="sucesso" role="status" tabindex="-1">
         <h3>Pronto. Você chegou primeiro.</h3>
         <p>Assim que os valores e os pacotes de fundador forem definidos, você é dos primeiros a saber — antes de qualquer anúncio.</p>
       </div>
@@ -598,8 +598,18 @@ function clearErr(){
   consentWrap.classList.remove('invalid');
 }
 
+const erroEnvio = document.createElement('p');
+erroEnvio.className = 'lp-captacao-erro';
+erroEnvio.setAttribute('role', 'alert');
+erroEnvio.tabIndex = -1;
+erroEnvio.hidden = true;
+form.appendChild(erroEnvio);
+let enviando = false, enviado = false;
+
 form.addEventListener('submit', async e=>{
   e.preventDefault();
+  if(enviando || enviado) return;
+  erroEnvio.hidden = true;
   clearErr();
   let ok = true, foco = null;
 
@@ -624,22 +634,38 @@ form.addEventListener('submit', async e=>{
                   empresa:(document.getElementById('empresa')||{}).value||'',
                   ms: Date.now() - FORM_T0 };
 
+  enviando = true;
+  const botao = form.querySelector('button[type=submit]');
+  const textoBotao = botao?.textContent;
+  if(botao){ botao.disabled = true; botao.textContent = 'Enviando…'; }
   try{
     if(CONFIG.CRM_ENDPOINT){
-      await fetch(CONFIG.CRM_ENDPOINT,{
+      const resposta = await fetch(CONFIG.CRM_ENDPOINT,{
         method:'POST', headers:{'Content-Type':'application/json'},
         body:JSON.stringify(dados)
       });
+      const resultado = await resposta.json();
+      if(!resposta.ok || resultado.ok !== true){
+        const falha = new Error('Envio não confirmado.');
+        if(resposta.status === 400 && typeof resultado.erro === 'string') falha.mensagemUsuario = resultado.erro;
+        throw falha;
+      }
     } else {
       console.log('[modo demonstração] lead capturado:', dados);
     }
     if(window.gtag){ gtag('event','generate_lead',{ variant: window.__abCTA || '' }); }
     if(window.fbq){ fbq('track','Lead',{ content_name:'LP Fundador' },{ eventID: eventId }); }
+    enviado = true;
     document.getElementById('captura').classList.add('enviado');
     document.getElementById('sucesso').focus?.();
   }catch(err){
     console.error(err);
-    alert('Não foi possível enviar agora. Tente de novo em instantes.');
+    if(botao){ botao.disabled = false; botao.textContent = textoBotao; }
+    erroEnvio.textContent = err.mensagemUsuario ? err.mensagemUsuario + ' Confira o preenchimento e tente novamente.' : 'Não conseguimos registrar agora. Seus dados continuam preenchidos. Tente novamente.';
+    erroEnvio.hidden = false;
+    erroEnvio.focus();
+  }finally{
+    enviando = false;
   }
 });
 </script>
