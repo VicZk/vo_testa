@@ -9,6 +9,18 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 22/10/2026: textos contidos nos cartões e contagem utilizável no celular
+
+- O aviso de limpeza dispensada quebra dentro da porta do quarto; os cartões
+  da governança se ajustam ao espaço disponível. A lista em tablet mantém
+  a altura necessária para as informações e ações de cada quarto.
+- O inventário mostra produto, saldo, campo de contagem e diferença juntos
+  no celular. Erros preservam o valor digitado e o filtro da lista.
+- A tela Safrapay distingue configuração local de homologação. A exportação
+  de exemplos não cria cobranças, grava arquivos nem aciona o gateway ativo.
+- Regressões de navegador verificam os limites reais dos textos em seis
+  larguras, incluindo avisos, campos e detalhes técnicos expandidos.
+
 ## 22/10/2026: Day Pass por turno e formulários que preservam o preenchimento
 
 - Visitas às áreas comuns têm agenda, lotação por pessoa, regra explícita para

@@ -35,6 +35,82 @@ if _PLAYWRIGHT_OK:
 class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
     LOCALE = "pt-BR"
 
+    def test_safrapay_configuracao_expandida_cabe_nos_cartoes(self):
+        p = self.page
+        for largura in (320, 390, 414, 768, 821, 1440):
+            with self.subTest(largura=largura):
+                p.set_viewport_size({"width": largura, "height": 900})
+                p.goto(self.url(reverse("pagamentos:safrapay")), wait_until="networkidle")
+                p.get_by_text("Referência de configuração", exact=True).click()
+                expect(p.get_by_role("button", name="Baixar exemplos de integração")).to_be_visible()
+                self.assertLessEqual(p.evaluate("document.documentElement.scrollWidth"), largura + 1)
+                vazamentos = p.evaluate("""() => {
+                    const falhas=[];
+                    document.querySelectorAll('.conteudo .cartao').forEach(caixa=>{
+                        const limite=caixa.getBoundingClientRect();
+                        const walker=document.createTreeWalker(caixa,NodeFilter.SHOW_TEXT);
+                        let node;
+                        while(node=walker.nextNode()){
+                            if(!node.textContent.trim()||!node.parentElement.getClientRects().length)continue;
+                            const range=document.createRange();range.selectNodeContents(node);
+                            for(const r of range.getClientRects()){
+                                if(r.width&&(r.left<limite.left-2||r.right>limite.right+2||r.bottom>limite.bottom+2)){
+                                    falhas.push(node.textContent.trim());break;
+                                }
+                            }
+                        }
+                    });return falhas;
+                }""")
+                self.assertFalse(vazamentos, vazamentos)
+                if largura in (320, 821, 1440):
+                    self._foto(f"fase6-safrapay-{largura}.png", full_page=True)
+
+    def test_contagem_invalida_preserva_valor_e_filtros_ate_corrigir(self):
+        from apps.nucleo.models import Inventario, ItemInventario
+
+        self.product.nome = "Água mineral com gás em garrafa retornável de 500 mililitros QA"
+        self.product.save(update_fields=["nome"])
+        inv = Inventario.objects.create(local=self.shop, criado_por=self.op)
+        item = ItemInventario.objects.create(
+            inventario=inv, produto=self.product, saldo_sistema=20,
+            quantidade_contada=20,
+        )
+        p = self.page
+        for largura in (320, 390, 414, 768, 821, 1440):
+            with self.subTest(largura=largura):
+                p.set_viewport_size({"width": largura, "height": 844})
+                p.goto(self.url(reverse("estoque:inventario", args=[inv.pk])))
+                entrada = p.get_by_role("spinbutton", name=f"Contagem de {self.product.nome}", exact=True)
+                limites = entrada.bounding_box()
+                self.assertGreaterEqual(limites["x"], 0)
+                self.assertLessEqual(limites["x"] + limites["width"], largura)
+                self.assertGreaterEqual(limites["width"], 80)
+                self.assertTrue(p.locator(".est-tabela-contagem").evaluate("el=>el.scrollWidth<=el.clientWidth+1"))
+                if largura in (320, 821):
+                    p.locator(".est-tabela-contagem").scroll_into_view_if_needed()
+                    self._foto(f"fase6-inventario-campos-{largura}.png")
+        p.set_viewport_size({"width": 390, "height": 844})
+        p.goto(self.url(reverse("estoque:inventario", args=[inv.pk])))
+        campo = p.get_by_role("spinbutton", name=f"Contagem de {self.product.nome}", exact=True)
+        p.get_by_label("Buscar na lista").fill("Água")
+        campo.fill("1000000000")
+        p.get_by_role("button", name="Salvar contagem", exact=True).click()
+        expect(p.locator("[data-erros-envio]")).to_contain_text("Contagem inválida")
+        expect(campo).to_have_value("1000000000")
+        expect(p.get_by_label("Buscar na lista")).to_have_value("Água")
+        item.refresh_from_db()
+        self.assertFalse(item.contado)
+        self.assertEqual(saldo(self.product, self.shop), Decimal("20"))
+        self._foto("fase6-inventario-erro-390.png")
+        campo.fill("18")
+        p.get_by_role("button", name="Salvar contagem", exact=True).click()
+        expect(p.locator("[data-erros-envio]")).to_have_count(0)
+        expect(p.get_by_label("Buscar na lista")).to_have_value("")
+        item.refresh_from_db()
+        self.assertTrue(item.contado)
+        self.assertEqual(item.quantidade_contada, Decimal("18"))
+        self.assertEqual(saldo(self.product, self.shop), Decimal("20"))
+
     def test_daypass_configuracao_reserva_recebimento_acesso_e_consumo(self):
         from apps.daypass.models import TurnoDayPass, VisitaDayPass
         from apps.restaurante.models import Comanda
@@ -326,6 +402,37 @@ class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
         p.goto(self.url(reverse("governanca:minha_fila")))
         expect(p.get_by_text("Limpeza dispensada hoje", exact=True)).to_be_visible()
         self._foto("governanca-preferencia-390.png")
+        p.emulate_media(reduced_motion="reduce")
+        for nome in ("governanca:painel", "governanca:quartos", "governanca:minha_fila"):
+            for largura in (320, 390, 414, 768, 821, 1440):
+                with self.subTest(tela=nome, largura=largura):
+                    p.set_viewport_size({"width": largura, "height": 900})
+                    p.goto(self.url(reverse(nome)), wait_until="networkidle")
+                    if nome == "governanca:painel":
+                        p.locator(".corredor-gov").scroll_into_view_if_needed()
+                    self._foto(f"fase6-limpeza-dispensada-{nome.split(':')[-1]}-{largura}.png")
+                    excedentes = p.evaluate("""() => {
+                        const problemas=[];
+                        for (const caixa of document.querySelectorAll('.porta-gov,.gov-fila-item,.tabela-cartoes tbody tr')) {
+                            const limite=caixa.getBoundingClientRect();
+                            if (!limite.width || !limite.height) continue;
+                            for (const el of caixa.querySelectorAll('*')) {
+                                const r=el.getBoundingClientRect();
+                                if (!r.width || !r.height || getComputedStyle(el).position==='fixed') continue;
+                                if (r.right>limite.right+1 || r.left<limite.left-1)
+                                    problemas.push({classe:el.className,texto:el.textContent.trim().slice(0,100),largura:r.width,limite:limite.width});
+                                if (el.matches('.porta-flag,.acao-pronta,.aviso')) {
+                                    const texto=document.createRange(); texto.selectNodeContents(el);
+                                    for (const t of texto.getClientRects()) {
+                                        if(t.right>limite.right+1 || t.left<limite.left-1 || t.bottom>limite.bottom+1)
+                                            problemas.push({classe:el.className,texto:el.textContent.trim(),textoDireita:t.right,cartaoDireita:limite.right,textoAbaixo:t.bottom,cartaoAbaixo:limite.bottom});
+                                    }
+                                }
+                            }
+                        }
+                        return problemas;
+                    }""")
+                    self.assertFalse(excedentes, excedentes)
 
     def test_menu_mantem_centro_e_transicao_sem_deslocamento(self):
         p = self.page

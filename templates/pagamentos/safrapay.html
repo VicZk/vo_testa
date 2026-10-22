@@ -1,81 +1,52 @@
 {% extends "base.html" %}
-
 {% block titulo %}Safrapay | Pagamentos{% endblock %}
 
 {% block conteudo %}
-<p class="pagina-eyebrow letreiro">Financeiro · Gateway</p>
+<div class="eleg">
+<p class="pagina-eyebrow letreiro">Financeiro · Pagamentos</p>
 <div class="pagina-cabecalho">
   <h1>Safrapay</h1>
-  {% if safrapay.pronto_para_api %}
-    <span class="selo selo-ok">Pronto para API</span>
-  {% else %}
-    <span class="selo">Fase: evidências (Token ainda não existe)</span>
-  {% endif %}
+  <span class="selo">{% if safrapay.gateway == 'simulado' %}Simulação local{% elif safrapay.pronto_para_api %}Configuração preenchida{% else %}Configuração pendente{% endif %}</span>
 </div>
-<p class="subtitulo">
-  O Token em Developers → Keys <strong>só aparece depois</strong> das evidências de teste.
-  Até lá usamos o sandbox do CRM (<code>simulado</code>) nos três meios e anexamos o JSON no formato da API HML.
-</p>
+<p class="subtitulo">Confira a configuração e prepare a validação dos pagamentos. Credenciais preenchidas não comprovam que a integração foi homologada.</p>
 
-<div class="cartao respiro">
-  <h2 class="letreiro bloco-subtitulo respiro">Gerar evidências agora</h2>
-  <p class="bloco-texto">
-    Cria 3 cobranças de R$&nbsp;10,00 (Pix, cartão, boleto) no sandbox e grava o JSON em
-    <code>evidencias/safrapay/</code> (também baixa no navegador). Coloque os prints em
-    <code>evidencias/safrapay/prints/</code>.
-  </p>
+<section class="cartao respiro">
+  <h2 class="letreiro bloco-subtitulo respiro">Configuração atual</h2>
+  <dl class="ficha">
+    <div><dt>Gateway ativo</dt><dd>{{ safrapay.gateway }}</dd></div>
+    <div><dt>Ambiente</dt><dd>{{ safrapay.ambiente }}</dd></div>
+    <div><dt>Endereço do provedor</dt><dd>{% if safrapay.endereco_ok %}Corresponde ao ambiente{% else %}Precisa de revisão{% endif %}</dd></div>
+    <div><dt>Identificação do estabelecimento</dt><dd>{% if safrapay.id_ok %}Preenchida{% else %}Pendente{% endif %}</dd></div>
+    <div><dt>Credencial de acesso</dt><dd>{% if safrapay.token_ok %}Preenchida{% else %}Pendente{% endif %}</dd></div>
+  </dl>
+  {% if safrapay.avisos %}
+  <ul class="lista-passos compacta bloco-respiro">
+    {% for aviso in safrapay.avisos %}<li>{{ aviso }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+</section>
+
+<section class="cartao respiro">
+  <h2 class="letreiro bloco-subtitulo">Como validar a integração</h2>
+  <ol class="lista-passos">
+    {% for passo in safrapay.processo_homologacao %}<li>{{ passo }}</li>{% endfor %}
+  </ol>
+  {% if request.user.is_staff or request.user.is_superuser %}<p class="bloco-respiro"><a href="{% url 'integracoes' %}" class="botao-neutro">Ver integrações</a></p>{% endif %}
+</section>
+
+<section class="cartao respiro">
+  <h2 class="letreiro bloco-subtitulo respiro">Exemplos para a equipe técnica</h2>
+  <p class="bloco-texto">Baixe exemplos de Pix, cartão e boleto com dados fictícios. O arquivo não cria cobranças, não acessa a Safrapay e não serve como comprovante de homologação.</p>
   <form method="post" action="{% url 'pagamentos:safrapay_evidencias' %}">
     {% csrf_token %}
-    <button type="submit" class="botao-primario">Gerar evidências (Pix + cartão + boleto)</button>
+    <button type="submit" class="botao-neutro">Baixar exemplos de integração</button>
   </form>
-</div>
+  <details class="bloco-respiro">
+    <summary>Referência de configuração</summary>
+    <p class="bloco-texto">A equipe técnica configura <code>PAGAMENTOS_GATEWAY</code>, <code>SAFRAPAY_ENV</code>, <code>SAFRAPAY_GATEWAY_URL</code>, <code>SAFRAPAY_ID</code> e <code>SAFRAPAY_TOKEN</code> no ambiente da instalação. As credenciais não são exibidas nesta tela.</p>
+  </details>
+</section>
 
-<div class="cartao respiro">
-  <h2 class="letreiro bloco-subtitulo respiro">Configuração atual</h2>
-  <table class="tabela">
-    <tbody>
-      <tr><td>Gateway ativo</td><td><code>{{ safrapay.gateway }}</code></td></tr>
-      <tr><td>Ambiente</td><td><code>{{ safrapay.env }}</code> → {{ safrapay.gateway_url }}</td></tr>
-      <tr>
-        <td>ID (<code>SAFRAPAY_ID</code>)</td>
-        <td>{% if safrapay.id_ok %}<span class="selo selo-ok">Preenchido</span>{% else %}<span class="selo">Vazio</span>{% endif %}</td>
-      </tr>
-      <tr>
-        <td>Código de Ativação</td>
-        <td>{% if safrapay.codigo_ativacao_ok %}<span class="selo selo-ok">Preenchido</span>{% else %}<span class="selo">Vazio</span>{% endif %}</td>
-      </tr>
-      <tr>
-        <td>Token (<code>SAFRAPAY_TOKEN</code>)</td>
-        <td>{% if safrapay.token_ok %}<span class="selo selo-ok">Preenchido</span>{% else %}<span class="selo">Aguardando validação</span>{% endif %}</td>
-      </tr>
-    </tbody>
-  </table>
+<p class="bloco-respiro-largo"><a href="{% url 'pagamentos:painel' %}" class="botao-neutro">Voltar aos pagamentos</a></p>
 </div>
-
-{% if safrapay.avisos %}
-<div class="cartao respiro">
-  <h2 class="letreiro bloco-subtitulo">Avisos</h2>
-  <ul class="lista-passos compacta">
-    {% for a in safrapay.avisos %}<li>{{ a }}</li>{% endfor %}
-  </ul>
-</div>
-{% endif %}
-
-<div class="cartao respiro">
-  <h2 class="letreiro bloco-subtitulo">Ordem correta (SafraPay)</h2>
-  <ol class="lista-passos">
-    {% for p in safrapay.processo_homologacao %}<li>{{ p }}</li>{% endfor %}
-  </ol>
-</div>
-
-<div class="cartao respiro">
-  <h2 class="letreiro bloco-subtitulo">Próximos passos (nós)</h2>
-  <ol class="lista-passos">
-    {% for p in safrapay.proximos_passos %}<li>{{ p }}</li>{% endfor %}
-  </ol>
-</div>
-
-<p class="bloco-respiro-largo">
-  <a href="{% url 'pagamentos:painel' %}" class="botao-neutro">← Voltar ao painel</a>
-</p>
 {% endblock %}

@@ -15,7 +15,7 @@
 <p class="subtitulo">
   Cobranças por Pix, cartão, boleto ou link.
   Gateway ativo: <strong>{{ safrapay.gateway }}</strong>
-  {% if safrapay.gateway == 'simulado' %}(sandbox local){% elif safrapay.pronto_para_api %}· API pronta{% else %}· aguardando Token{% endif %}.
+  {% if safrapay.gateway == 'simulado' %}(simulação local){% elif safrapay.pronto_para_api %}· configuração preenchida{% else %}· configuração pendente{% endif %}.
 </p>
 
 <div class="colunas colunas-2-1">

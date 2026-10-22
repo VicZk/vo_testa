@@ -11,10 +11,10 @@ view redireciona para a fila quando o pedido não vem do HTMX.
 {% endcomment %}
 <p class="subtitulo gov-orientacao" role="status" aria-live="polite">
   {% if fazendo %}
-    Você está no <strong>{{ fazendo.uh.numero }}</strong>. Quando acabar a limpeza, toque em «Concluir».
+    Limpeza em andamento: <strong>{{ fazendo.uh.numero }}</strong>. Ao finalizar, selecione «Concluir limpeza».
   {% elif fila %}
     <strong>{{ fila|length }} quarto{{ fila|pluralize }}</strong> na sua fila.
-    Toque em «Começar» no quarto que vai limpar agora.
+    Selecione «Iniciar limpeza» no quarto que será atendido.
   {% elif feitas %}
     Você terminou os quartos da sua fila. Seu trabalho de hoje está registrado abaixo.
   {% else %}
@@ -49,7 +49,7 @@ view redireciona para a fila quando o pedido não vem do HTMX.
               {% csrf_token %}
               <input type="hidden" name="acao" value="concluir">
               <input type="hidden" name="fila" value="1">
-              <button type="submit" class="botao-primario gov-fila-botao">Concluir</button>
+              <button type="submit" class="botao-primario gov-fila-botao">Concluir limpeza</button>
             </form>
           {% else %}
             <form method="post" action="{% url 'governanca:tarefa_acao' q.tarefa.pk %}"
@@ -57,7 +57,7 @@ view redireciona para a fila quando o pedido não vem do HTMX.
               {% csrf_token %}
               <input type="hidden" name="acao" value="iniciar">
               <input type="hidden" name="fila" value="1">
-              <button type="submit" class="botao-primario gov-fila-botao">Começar</button>
+              <button type="submit" class="botao-primario gov-fila-botao">Iniciar limpeza</button>
             </form>
           {% endif %}
           {% if tem_manutencao %}
@@ -81,7 +81,7 @@ view redireciona para a fila quando o pedido não vem do HTMX.
   {% comment %}O que ela já entregou hoje: recibo do próprio trabalho, no fim da
   tela para não disputar espaço com o que ainda falta.{% endcomment %}
   <section class="gov-fila-feitas">
-    <h2>Já entreguei hoje <b>{{ feitas|length }}</b></h2>
+    <h2>Serviços concluídos hoje <b>{{ feitas|length }}</b></h2>
     <p class="gov-fila-dado">
       {% for t in feitas %}<span class="rotulo-dado">{{ t.uh.numero }}{% if t.concluida_em %} · {{ t.concluida_em|date:"H:i" }}{% endif %}</span>{% endfor %}
     </p>

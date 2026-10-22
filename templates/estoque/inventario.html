@@ -18,7 +18,7 @@
 <p class="ajuda">Salve a contagem assim que conferir a prateleira, sem movimentar os produtos durante essa conferência.
   Ao aplicar, o sistema corrige a diferença registrada e preserva vendas e entradas feitas depois.
   Para recontar o mesmo valor, apague o campo, salve e registre a nova contagem.</p>
-<form method="post" x-data="contagemEstoque({{ resumo.total }})">
+<form data-preservar-erros method="post" x-data="contagemEstoque({{ resumo.total }})">
   {% csrf_token %}
 
   <div class="est-contagem-topo">
@@ -63,7 +63,7 @@
     </div>
   </div>
 
-  <table class="tabela est-tabela">
+  <table class="tabela tabela-cartoes est-tabela est-tabela-contagem">
     <thead>
       <tr>
         <th>Produto</th>
@@ -77,21 +77,21 @@
       {% for item in itens %}
         <tr x-data="linhaContagem({{ item.saldo_sistema|unlocalize }}, {{ item.produto.custo_medio|unlocalize }}, '{{ item.produto.nome|escapejs }} {{ item.produto.categoria.nome|escapejs }}', '{% if item.contado %}{{ item.quantidade_contada|campo_num }}{% endif %}')"
             x-init="registrar($data)" x-show="visivel($data)" :class="preenchido && dif !== 0 && 'est-linha-diferenca'">
-          <td>
+          <td class="est-contagem-produto">
             <span class="est-produto-nome">{{ item.produto.nome }}</span>
             <span class="est-produto-meta"><span class="rotulo-dado">{{ item.produto.categoria.nome }}</span></span>
           </td>
-          <td class="num celula-suave">{{ item.saldo_sistema|qtd:item.produto.unidade }}</td>
-          <td class="num">
+          <td class="num celula-suave" data-rotulo="Sistema">{{ item.saldo_sistema|qtd:item.produto.unidade }}</td>
+          <td class="num" data-rotulo="Contado">
             <div class="est-campo-unidade est-campo-contagem">
               <input type="number" step="0.001" min="0" name="item_{{ item.pk }}" x-model="valor"
                      aria-label="Contagem de {{ item.produto.nome }}" inputmode="decimal">
               <span class="est-unidade">{{ item.produto.unidade|unidade_sigla }}</span>
             </div>
           </td>
-          <td class="num est-dif" :class="dif > 0 ? 'est-dif-sobra' : (dif < 0 ? 'est-previa-erro' : '')"
+          <td class="num est-dif" data-rotulo="Diferença" :class="dif > 0 ? 'est-dif-sobra' : (dif < 0 ? 'est-previa-erro' : '')"
               x-text="preenchido ? sinal(dif) + ' {{ item.produto.unidade|unidade_sigla }}' : '—'">—</td>
-          <td class="num celula-suave" x-text="preenchido && dif ? dinheiro(dif * custo) : '—'">—</td>
+          <td class="num celula-suave" data-rotulo="Vale" x-text="preenchido && dif ? dinheiro(dif * custo) : '—'">—</td>
         </tr>
       {% empty %}
         <tr><td colspan="5" class="vazio">Nenhum produto ativo para contar.</td></tr>
@@ -192,23 +192,23 @@
     </div>
   </div>
 
-  <table class="tabela est-tabela">
+  <table class="tabela tabela-cartoes est-tabela est-tabela-contagem">
     <thead>
       <tr><th>Produto</th><th class="num">Sistema</th><th class="num">Contado</th><th class="num">Diferença</th><th class="num">Vale</th></tr>
     </thead>
     <tbody>
       {% for item in itens %}
         <tr class="{% if item.contado and item.diferenca %}est-linha-diferenca{% endif %}">
-          <td>
+          <td class="est-contagem-produto">
             <span class="est-produto-nome">{{ item.produto.nome }}</span>
             {% if not item.contado %}<span class="est-produto-meta"><span class="rotulo-dado">Não contado</span></span>{% endif %}
           </td>
-          <td class="num celula-suave">{{ item.saldo_sistema|qtd:item.produto.unidade }}</td>
-          <td class="num">{% if item.contado %}{{ item.quantidade_contada|qtd:item.produto.unidade }}{% else %}—{% endif %}</td>
-          <td class="num {% if item.contado and item.diferenca < 0 %}est-previa-erro{% elif item.contado and item.diferenca > 0 %}est-dif-sobra{% endif %}">
+          <td class="num celula-suave" data-rotulo="Sistema">{{ item.saldo_sistema|qtd:item.produto.unidade }}</td>
+          <td class="num" data-rotulo="Contado">{% if item.contado %}{{ item.quantidade_contada|qtd:item.produto.unidade }}{% else %}—{% endif %}</td>
+          <td data-rotulo="Diferença" class="num {% if item.contado and item.diferenca < 0 %}est-previa-erro{% elif item.contado and item.diferenca > 0 %}est-dif-sobra{% endif %}">
             {% if item.contado %}{{ item.diferenca|qtd_sinal:item.produto.unidade }}{% else %}—{% endif %}
           </td>
-          <td class="num celula-suave">{% if item.contado and item.diferenca %}{{ item.valor_diferenca|intcomma_brl }}{% else %}—{% endif %}</td>
+          <td class="num celula-suave" data-rotulo="Vale">{% if item.contado and item.diferenca %}{{ item.valor_diferenca|intcomma_brl }}{% else %}—{% endif %}</td>
         </tr>
       {% empty %}
         <tr><td colspan="5" class="vazio">Esta contagem foi fechada sem nenhum produto.</td></tr>

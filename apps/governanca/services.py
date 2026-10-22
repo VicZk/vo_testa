@@ -254,7 +254,7 @@ def frase_de_aprovacao(uh, dia=None) -> str:
 
     "Liberado para a recepção" só vale para quarto VAGO: no ocupado, aprovar é
     dizer que a arrumação do dia está conferida — o hóspede já está lá dentro.
-    Mesma distinção de `rotulo_do_estado` ("Pronto" × "Arrumado"). Uma consulta.
+    Mesma distinção de `rotulo_do_estado` ("Pronto" × "Arrumação concluída"). Uma consulta.
     """
     pms = ocupacao_pms(dia)
     ocupacao = ocupacao_do_quarto((pms or {}).get(uh.pk), sem_base=pms is None)
@@ -378,20 +378,19 @@ CICLO = [
     {
         "cod": StatusLimpeza.Situacao.LIMPA,
         "rotulo": "Aguardando inspeção",
-        "resumo": "A limpeza acabou e falta a supervisora conferir.",
+        "resumo": "Limpeza concluída; aguardando conferência da supervisão.",
         "quem": "Supervisora",
-        "ajuda": "Quarto limpo ainda NÃO está liberado: a supervisora passa, "
-                 "aprova ou devolve para limpar de novo.",
+        "ajuda": "A supervisão aprova o serviço ou solicita uma nova limpeza "
+                 "antes da liberação do quarto.",
     },
     {
         "cod": StatusLimpeza.Situacao.INSPECIONADA,
         "rotulo": "Liberado",
-        "resumo": "Conferido pela supervisora. Vago, pode receber hóspede; "
-                  "ocupado, já está arrumado.",
+        "resumo": "Limpeza liberada. Quartos vagos podem receber hóspedes; "
+                  "quartos ocupados permanecem em atendimento à hospedagem.",
         "quem": "—",
-        "ajuda": "Na hotelaria chama-se «inspecionado». É o único estado em que o "
-                 "quarto está liberado para a recepção entregar a chave. Por isso "
-                 "o quarto que já tem hóspede aparece como «Arrumado».",
+        "ajuda": "A liberação encerra o serviço de limpeza. A recepção também "
+                 "confere a ocupação e os bloqueios antes de realizar o check-in.",
     },
 ]
 SITUACAO_SIMPLES = {e["cod"]: e["rotulo"] for e in CICLO}
@@ -468,11 +467,11 @@ def rotulo_do_estado(situacao, ocupacao=None) -> str:
 
     "Pronto" quer dizer «conferido, pode receber hóspede» — e não serve para um
     quarto que já tem um dentro. Com gente no quarto, limpo e conferido é
-    **Arrumado**: é o serviço do dia feito, não uma unidade vendável. Sem essa
+    **Arrumação concluída**: é o serviço do dia feito, não uma unidade vendável. Sem essa
     distinção a casa cheia mostrava 21 blocos dizendo "pode receber hóspede".
     """
     if situacao == StatusLimpeza.Situacao.INSPECIONADA and _tem_hospede(ocupacao):
-        return "Arrumado"
+        return "Arrumação concluída"
     return SITUACAO_SIMPLES.get(situacao, situacao)
 
 
@@ -518,7 +517,7 @@ def explicar_estado(situacao, tarefa, status, ocupacao=None, *, com_fila=True) -
             return "Sem arrumação registrada hoje."
         falta = ("O hóspede sai hoje. A faxina será criada após o check-out."
                  if ocupacao["cod"] == "sai_hoje" else "O hóspede continua no quarto.")
-        return f"Arrumado{quando}. {falta}"
+        return f"Arrumação concluída{quando}. {falta}"
     # "Pronto" sem ninguém no `atualizado_por` é o estado de nascimento do quarto
     # (banco novo, ou módulo ativado numa casa que já roda): ninguém inspecionou,
     # e a tela não inventa um carimbo que não existe.
@@ -1154,7 +1153,7 @@ def visao_geral(dia=None) -> dict:
             "nivel": "info",
             "rotulo": f"{a_conferir} quarto{s(a_conferir)} ocupado{s(a_conferir)} "
                       "sem ronda hoje",
-            "detalhe": "Ninguém registrou o que viu dentro.",
+            "detalhe": "A ocupação ainda não foi conferida pela equipe hoje.",
             "url": url_quartos,
         })
 

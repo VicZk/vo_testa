@@ -51,9 +51,11 @@ Confirmado que a API aceita o CVV tanto como `securityCode` quanto `cvv` (ambos
   `sessionId`, `chargeId` e status de cada uma.
 - `Resposta_Safrapay_2026-10-01.md` — texto do e-mail de resposta + tabela de IDs.
 
-Regerar a qualquer momento: a tela **Pagamentos → Safrapay → «Gerar evidências»**
-(`gerar_evidencias`) cria Pix + cartão + boleto; a bateria dos 6 cartões foi rodada via
-`GatewaySafrapay` direto na HML.
+**Revisão de 22/10/2026:** a tela **Pagamentos → Safrapay → Baixar exemplos de
+integração** exporta somente estruturas ilustrativas, sem criar cobranças, gravar
+arquivos no servidor ou chamar o provedor. Esses exemplos não regeneram as
+evidências históricas nem comprovam homologação. Ensaios reais devem ser
+executados e conferidos no ambiente do provedor e registrados em Integrações.
 
 **Suíte do projeto:** `manage.py test` → **715 testes OK** (skipped=8) em 01/10/2026,
 incluindo os 39 de `apps.pagamentos` (fluxo da página, JSON do webhook, idempotência,

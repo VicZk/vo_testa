@@ -1075,7 +1075,7 @@ class VisaoGeralTests(GovernancaBase):
         dados = services.visao_geral()
         self.assertEqual(dados["atencao"], [])
         self.assertContains(self.client.get(reverse("governanca:painel")),
-                            "Nada pendente na governança agora")
+                        "Nenhum serviço pendente na governança")
 
     def test_carga_por_camareira_soma_fila_andamento_e_entregue(self):
         maria = Usuario.objects.create_user(
@@ -1407,7 +1407,7 @@ class QuartoOcupadoNaoDizProntoTests(RondaBase):
         self._hospedar(self.uh, sai_em_dias=3)
         services.inspecionar(self.uh, self.user)
         linha = self._linha(self.uh)
-        self.assertEqual(linha["situacao_label"], "Arrumado")
+        self.assertEqual(linha["situacao_label"], "Arrumação concluída")
         self.assertIn("O hóspede continua no quarto", linha["explicacao"])
         self.assertNotIn("Pode receber hóspede", linha["explicacao"])
 
@@ -1420,7 +1420,7 @@ class QuartoOcupadoNaoDizProntoTests(RondaBase):
         self._hospedar(self.uh, sai_em_dias=3)
         StatusLimpeza.objects.filter(uh=self.uh).delete()
         linha = self._linha(self.uh)
-        self.assertEqual(linha["situacao_label"], "Arrumado")
+        self.assertEqual(linha["situacao_label"], "Arrumação concluída")
         self.assertEqual(linha["explicacao"], "Sem arrumação registrada hoje.")
 
     def test_o_estado_do_banco_nao_muda_so_o_rotulo_da_tela(self):
@@ -1832,7 +1832,7 @@ class MinhaFilaTests(RondaBase):
         self.assertEqual(r.status_code, 200)
         self.assertTemplateUsed(r, "governanca/fila.html")
         corpo = r.content.decode()
-        self.assertIn("Começar", corpo)
+        self.assertIn("Iniciar limpeza", corpo)
         self.assertNotIn("Concluir", corpo)
 
     def test_comecar_e_terminar_pela_fila_sem_sair_dela(self):
@@ -1845,7 +1845,7 @@ class MinhaFilaTests(RondaBase):
                              {"acao": "concluir", "fila": "1"}, HTTP_HX_REQUEST="true")
         tarefa.refresh_from_db()
         self.assertEqual(tarefa.status, TarefaGovernanca.Status.CONCLUIDA)
-        self.assertIn("Já entreguei hoje", r.content.decode())
+        self.assertIn("Serviços concluídos hoje", r.content.decode())
 
     def test_sem_javascript_volta_para_a_fila_e_nao_para_a_lista(self):
         tarefa = self._para(self.uh, self.maria)

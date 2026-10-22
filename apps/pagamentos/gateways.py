@@ -522,54 +522,37 @@ class GatewaySafrapay:
 
 
 def status_credenciais() -> dict:
-    """Checklist das chaves Safrapay para a tela do CRM."""
+    """Configuração local; não autentica nem comprova homologação no provedor."""
     gateway = getattr(settings, "PAGAMENTOS_GATEWAY", "simulado")
     env = getattr(settings, "SAFRAPAY_ENV", "hml")
     sid = bool((getattr(settings, "SAFRAPAY_ID", "") or "").strip())
     codigo = bool((getattr(settings, "SAFRAPAY_CODIGO_ATIVACAO", "") or "").strip())
     token = bool((getattr(settings, "SAFRAPAY_TOKEN", "") or "").strip())
+    base = (getattr(settings, "SAFRAPAY_GATEWAY_URL", "") or "").rstrip("/")
+    endereco_ok = base == {"hml": "https://payment-hml.safrapay.com.br", "prod": "https://payment.safrapay.com.br"}.get(env)
     avisos = []
-    if gateway == "safrapay" and not token:
-        avisos.append(
-            "Gateway apontado para safrapay, mas SAFRAPAY_TOKEN está vazio. "
-            "Aguarde liberação no portal Developers → Keys."
-        )
     if not sid:
-        avisos.append("SAFRAPAY_ID ainda não preenchido no .env.")
-    if not codigo:
-        avisos.append("SAFRAPAY_CODIGO_ATIVACAO ainda não preenchido no .env.")
+        avisos.append("Falta a identificação do estabelecimento para o antifraude.")
     if not token:
-        avisos.append(
-            "Token vazio é o esperado agora: a SafraPay só envia o Token "
-            "depois das evidências de teste (Pix, cartão, boleto)."
-        )
-        avisos.append(
-            "ID e Código de Ativação NÃO autenticam a API (teste HML → 401). "
-            "Use o sandbox do CRM (simulado) para gerar o pacote de evidências."
-        )
-    pronto = gateway == "safrapay" and token and sid
+        avisos.append("Falta a credencial de acesso à API. Solicite ao provedor a liberação para o ambiente escolhido.")
+    if not endereco_ok:
+        avisos.append("O endereço do provedor não corresponde ao ambiente escolhido. A integração precisa ser revisada.")
     return {
         "gateway": gateway,
         "env": env,
-        "gateway_url": getattr(settings, "SAFRAPAY_GATEWAY_URL", ""),
+        "gateway_url": base if endereco_ok else "Endereço a revisar",
+        "ambiente": {"hml": "Homologação", "prod": "Produção"}.get(env, "Ambiente a revisar"),
+        "endereco_ok": endereco_ok,
         "id_ok": sid,
         "codigo_ativacao_ok": codigo,
         "token_ok": token,
-        "pronto_para_api": pronto,
+        "pronto_para_api": gateway == "safrapay" and token and sid and endereco_ok,
         "avisos": avisos,
         "processo_homologacao": [
-            "Integração no CRM já cobre Pix, cartão e boleto (provider Safrapay + sandbox).",
-            "Gere o pacote de evidências nesta tela (3 cobranças sandbox + JSON no formato HML).",
-            "Anexe prints + JSON no formulário de integração da SafraPay.",
-            "Faça os testes que eles pedirem (ex.: cartão do titular deles) quando liberarem acesso HML.",
-            "Só então o Token aparece em Developers → Keys.",
-            "Cole SAFRAPAY_TOKEN, PAGAMENTOS_GATEWAY=safrapay, webhook /crm/pagamentos/webhook/.",
-        ],
-        "proximos_passos": [
-            "Manter PAGAMENTOS_GATEWAY=simulado até o Token existir.",
-            "Clicar em «Gerar evidências (Pix + cartão + boleto)» e baixar o JSON.",
-            "Enviar evidências no formulário Safrapay / e-mail de integração.",
-            "Quando o Token chegar: colar no .env e ligar o gateway safrapay em HML.",
+            "Confirme com a Safrapay as credenciais, o ambiente e os meios de pagamento liberados para o estabelecimento.",
+            "Com a configuração completa, realize os testes orientados pelo provedor no ambiente de homologação.",
+            "Confira cobrança, confirmação, conciliação e estorno. Registre o resultado em Configurações → Integrações.",
+            "Ative produção somente após concluir a validação e conferir os retornos na instalação oficial.",
         ],
     }
 

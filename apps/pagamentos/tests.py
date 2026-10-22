@@ -286,6 +286,47 @@ class SafrapayGatewayTests(PagamentosBase):
         self.assertEqual(r.status_code, 200)
         self.assertContains(r, "SAFRAPAY_TOKEN")
 
+    def test_checklist_nao_promete_api_pronta_com_ambiente_invalido(self):
+        from .gateways import status_credenciais
+
+        base = {"PAGAMENTOS_GATEWAY": "safrapay", "SAFRAPAY_ID": "ID-TESTE",
+                "SAFRAPAY_TOKEN": "TOKEN-TESTE", "SAFRAPAY_ENV": "hml",
+                "SAFRAPAY_GATEWAY_URL": "https://payment-hml.safrapay.com.br"}
+        for alteracao, esperado in [({}, True), ({"SAFRAPAY_ID": ""}, False),
+                ({"SAFRAPAY_TOKEN": ""}, False), ({"SAFRAPAY_ENV": "prod"}, False),
+                ({"SAFRAPAY_GATEWAY_URL": "https://example.invalid"}, False),
+                ({"PAGAMENTOS_GATEWAY": "simulado"}, False)]:
+            with self.subTest(alteracao=alteracao), override_settings(**(base | alteracao)):
+                self.assertEqual(status_credenciais()["pronto_para_api"], esperado)
+
+    def test_exportacao_de_exemplos_nao_cria_cobrancas_nem_acessa_gateway(self):
+        from unittest.mock import patch
+
+        self.client.force_login(self.op)
+        antes = (Cobranca.objects.count(), EventoPagamento.objects.count())
+        for gateway in ("simulado", "safrapay"):
+            with self.subTest(gateway=gateway), override_settings(
+                PAGAMENTOS_GATEWAY=gateway, SAFRAPAY_TOKEN="SEGREDO-NAO-EXPORTAR",
+                SAFRAPAY_ID="ID-NAO-EXPORTAR", SAFRAPAY_ENV="prod",
+                SAFRAPAY_GATEWAY_URL="https://payment.safrapay.com.br",
+            ), patch("apps.pagamentos.gateways.urlrequest.urlopen") as rede, patch(
+                "apps.pagamentos.services.criar_cobranca"
+            ) as criar, patch("pathlib.Path.write_text") as gravar:
+                resposta = self.client.post(reverse("pagamentos:safrapay_evidencias"))
+                self.assertEqual(resposta.status_code, 200)
+                dados = resposta.json()
+                self.assertFalse(dados["comprova_homologacao"])
+                self.assertEqual(dados["ambiente"], "hml")
+                self.assertEqual(len(dados["testes"]), 3)
+                self.assertEqual(dados["webhook_esperado"]["url_crm"], reverse("pagamentos:webhook"))
+                self.assertNotContains(resposta, "SEGREDO-NAO-EXPORTAR")
+                self.assertNotContains(resposta, "ID-NAO-EXPORTAR")
+                self.assertIn("no-store", resposta["Cache-Control"])
+                rede.assert_not_called()
+                criar.assert_not_called()
+                gravar.assert_not_called()
+        self.assertEqual((Cobranca.objects.count(), EventoPagamento.objects.count()), antes)
+
     def test_webhook_json_safrapay(self):
         import json
         c = self.cobranca()

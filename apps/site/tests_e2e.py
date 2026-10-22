@@ -668,13 +668,13 @@ class GovernancaFilaE2ETests(_FunilComercialMixin, _BaseE2E):
         p = self.page
         self.assertTrue(p.url.endswith(self.fila_url))
         expect(p.locator(".gov-orientacao")).to_contain_text("1 quarto")
-        p.get_by_role("button", name="Começar", exact=True).click(click_count=2)
-        expect(p.get_by_role("button", name="Concluir", exact=True)).to_be_visible()
-        expect(p.locator(".gov-orientacao")).to_contain_text("Você está no Quarto 21")
-        p.get_by_role("button", name="Concluir", exact=True).click()
+        p.get_by_role("button", name="Iniciar limpeza", exact=True).click(click_count=2)
+        expect(p.get_by_role("button", name="Concluir limpeza", exact=True)).to_be_visible()
+        expect(p.locator(".gov-orientacao")).to_contain_text("Limpeza em andamento: Quarto 21")
+        p.get_by_role("button", name="Concluir limpeza", exact=True).click()
         expect(p.locator(".gov-orientacao")).to_contain_text("Você terminou")
         expect(p.get_by_text("Nenhum quarto na sua fila agora.", exact=True)).to_be_visible()
-        expect(p.get_by_role("heading", name="Já entreguei hoje 1")).to_be_visible()
+        expect(p.get_by_role("heading", name="Serviços concluídos hoje 1")).to_be_visible()
         self.tarefa.refresh_from_db()
         self.assertEqual(self.tarefa.status, "concluida")
 

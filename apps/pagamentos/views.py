@@ -150,33 +150,19 @@ def safrapay(request):
     })
 
 
+@never_cache
 @requer_modulo(Modulo.PAGAMENTOS)
 @require_POST
 def safrapay_evidencias(request):
-    """Gera cobranças sandbox (Pix/cartão/boleto) + JSON no formato API HML."""
+    """Baixa exemplos; nenhuma cobrança é criada, mesmo com gateway real ativo."""
     from django.http import HttpResponse
 
     from .homologacao import gerar_evidencias
 
-    try:
-        pacote = gerar_evidencias(request.user)
-    except ValidationError as erro:
-        messages.error(request, " ".join(erro.messages))
-        return redirect("pagamentos:safrapay")
-    messages.success(
-        request,
-        f"Evidências geradas: cobranças "
-        f"#{pacote['cobrancas_sandbox_crm'][0]['id']}, "
-        f"#{pacote['cobrancas_sandbox_crm'][1]['id']}, "
-        f"#{pacote['cobrancas_sandbox_crm'][2]['id']} "
-        f"(Pix, cartão, boleto). JSON salvo em evidencias/safrapay/ — "
-        f"coloque os prints em evidencias/safrapay/prints/.",
-    )
+    pacote = gerar_evidencias(request.user)
     body = json.dumps(pacote, ensure_ascii=False, indent=2)
     resp = HttpResponse(body, content_type="application/json; charset=utf-8")
-    resp["Content-Disposition"] = (
-        'attachment; filename="safrapay-evidencias-homologacao.json"'
-    )
+    resp["Content-Disposition"] = 'attachment; filename="safrapay-exemplos-integracao.json"'
     return resp
 
 

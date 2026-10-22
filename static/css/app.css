@@ -1102,6 +1102,7 @@ textarea { resize: vertical; }
 .form-cartao input:not([type="checkbox"]),
 .form-cartao select,
 .form-cartao textarea,
+.est-campo-contagem input,
 .barra-busca input,
 .barra-busca select,
 .form-inline input,
@@ -1120,6 +1121,7 @@ textarea { resize: vertical; }
 .form-cartao input:focus,
 .form-cartao select:focus,
 .form-cartao textarea:focus,
+.est-campo-contagem input:focus,
 .barra-busca input:focus,
 .barra-busca select:focus,
 .form-inline input:focus,
@@ -1178,7 +1180,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 .bloco-subtitulo.bloco-subtitulo { margin: 0 0 .6rem; font-size: .85rem; }
 .bloco-subtitulo.respiro { margin-bottom: .8rem; }
 .bloco-texto.bloco-texto { margin: 0 0 1rem; color: var(--tinta-suave); font-size: .9rem; line-height: 1.55; }
-.lista-passos.lista-passos { margin: 0; padding-left: 1.2rem; line-height: 1.65; color: var(--tinta-suave); }
+.lista-passos.lista-passos { margin: 0; padding-left: 1.2rem; line-height: 1.65; color: var(--tinta-suave); overflow-wrap: anywhere; }
 .lista-passos.compacta { padding-left: 1.1rem; }
 .form-inline-largo.form-inline-largo { display: inline-flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
 .form-embutido.form-embutido { display: inline; }
@@ -3346,7 +3348,7 @@ a.modulo-ativo:hover {
 .atencao-alerta .atencao-ponto { background: var(--perigo); }
 .atencao-aviso .atencao-ponto { background: var(--alerta); }
 .atencao-txt { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-.atencao-txt strong { font-size: .88rem; font-weight: 600; color: var(--tinta); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.atencao-txt strong { font-size: .88rem; font-weight: 600; color: var(--tinta); white-space: normal; overflow-wrap: anywhere; }
 .atencao-txt small { font-size: .76rem; color: var(--tinta-suave); }
 .atencao-seta { width: 16px; height: 16px; color: var(--tinta-suave); flex-shrink: 0; }
 
@@ -3434,6 +3436,7 @@ a.modulo-ativo:hover {
    480px, que seguem mandando no celular. */
 @container (max-width: 540px) {
   .corredor { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .corredor.corredor-gov { grid-template-columns: repeat(auto-fit, minmax(min(100%, 7rem), 1fr)); }
 }
 @media (max-width: 720px) {
   /* Celular/tablet pequeno: todas as portas cabem na largura (nenhum quarto fica
@@ -3443,6 +3446,7 @@ a.modulo-ativo:hover {
 }
 @media (max-width: 480px) {
   .corredor { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .corredor.corredor-gov { grid-template-columns: repeat(auto-fit, minmax(min(100%, 7rem), 1fr)); }
 }
 
 .porta {
@@ -3561,9 +3565,10 @@ div.porta.dica[data-dica] { cursor: default; }
 .porta-limp.limpeza-inspecionada { color: #8FCBB0; }
 .porta-flag {
   font-size: .6rem; font-weight: 700; letter-spacing: .02em;
-  text-transform: uppercase; white-space: nowrap;
-  color: var(--lampiao-claro); flex-shrink: 0;
+  text-transform: uppercase; white-space: normal; overflow-wrap: anywhere;
+  color: var(--lampiao-claro); min-width: 0; max-width: 100%; line-height: 1.25;
 }
+.porta-gov .porta-flag { font-size: .75rem; text-transform: none; letter-spacing: 0; }
 /* Alerta (saída atrasada) = selo compacto de ícone, nunca quebra linha */
 .porta-alerta {
   display: inline-flex; align-items: center; justify-content: center;
@@ -6627,6 +6632,16 @@ body.escala-dragging .escala-drop { cursor: copy; }
    ficava com "R$" numa linha e "4,20" na outra. Quando falta espaço, a tabela
    rola dentro do cartão (tabela-rol.js) — que é o jeito da casa. */
 .est-tabela td.num, .est-tabela th.num { white-space: nowrap; }
+@media (max-width: 1024px) {
+  .tabela.est-tabela-contagem { overflow: visible; }
+  .tabela.est-tabela-contagem td.est-contagem-produto {
+    flex-direction: column; align-items: flex-start; gap: .2rem;
+    padding-bottom: .7rem; margin-bottom: .35rem; border-bottom: 1px solid var(--fio);
+    white-space: normal; overflow-wrap: anywhere;
+  }
+  .est-tabela-contagem .est-campo-contagem { flex: 0 1 9rem; min-width: 0; }
+  .tabela.est-tabela-contagem td.num { flex-wrap: wrap; overflow-wrap: anywhere; white-space: normal; }
+}
 
 /* ═══════════════════════════════════════════════════════════════
    USABILIDADE — copiar e mandar pelo WhatsApp
@@ -6980,7 +6995,7 @@ body.escala-dragging .escala-drop { cursor: copy; }
 }
 .botao-ronda:active { transform:none; }
 .mk-pil-acao { border-radius:6px; min-height:44px; }
-@media (min-width:821px) { .tabela-limpeza tbody tr { height:6rem; } }
+@media (min-width:1025px) { .tabela-limpeza tbody tr { height:6rem; } }
 
 /* Turnos e contas de visitantes. */
 .daypass-turnos { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,24rem),1fr)); gap:1.2rem; }
