@@ -1,0 +1,21 @@
+{% comment %}O caminho de volta do último gesto.
+
+No toque, o erro é o toque errado — não a falta de convicção. Em vez de parar a
+pessoa com "tem certeza?" antes de cada aprovação, a tela deixa o "Desfazer" à
+mão depois. Aparece uma vez só (a view consome a oferta).
+
+Parâmetro do include:
+  destino — "painel" quando a barra está na visão geral (o formulário navega de
+            verdade); vazio nas telas que trocam por HTMX.
+{% endcomment %}
+{% if desfazer %}
+<div class="gov-desfazer" role="status">
+  <p><strong>{{ desfazer.quarto }}</strong> {{ desfazer.texto }}</p>
+  <form method="post" action="{% url 'governanca:desfazer_aprovacao' desfazer.uh %}"
+        {% if not destino %}hx-post="{% url 'governanca:desfazer_aprovacao' desfazer.uh %}"{% endif %}>
+    {% csrf_token %}
+    {% if destino %}<input type="hidden" name="voltar" value="{{ destino }}">{% endif %}
+    <button type="submit" class="botao-neutro">Desfazer</button>
+  </form>
+</div>
+{% endif %}

@@ -14,7 +14,7 @@ from .models import ConferenciaOcupacao, StatusLimpeza, TarefaGovernanca
 Usuario = get_user_model()
 
 
-def _contexto_quadro(usuario=None):
+def _contexto_quadro(request, usuario=None):
     """Chips + lista de quartos — o trecho que o HTMX troca a cada ação."""
     dados = services.painel_limpeza()
     contagem = dados["contagem"]
@@ -54,6 +54,8 @@ def _contexto_quadro(usuario=None):
         "sem_login": camareiras["sem_login"],
         # Quartos a limpar que ainda não têm quem limpe — o que o "Distribuir a
         # fila" vai dividir.
+        # A oferta de desfazer o último gesto (consumida uma vez só).
+        "desfazer": _desfazer_pendente(request),
         "sem_camareira": sum(
             1 for ln in dados["linhas"]
             if ln["tarefa"] and not ln["tarefa"].camareira_id and not ln["bloqueado"]
@@ -61,13 +63,32 @@ def _contexto_quadro(usuario=None):
     }
 
 
-def _contexto_fila(usuario):
+def _contexto_fila(request, usuario):
     """A fila da camareira — o trecho que o HTMX troca a cada toque dela."""
     from apps.nucleo.models import modulo_ativo
 
     dados = services.minha_fila(usuario)
     dados["tem_manutencao"] = modulo_ativo(Modulo.MANUTENCAO)
+    dados["desfazer"] = _desfazer_pendente(request)
     return dados
+
+
+def _oferecer_desfazer(request, uh, texto):
+    """Guarda, para a PRÓXIMA tela, a oferta de desfazer o que acabou de ser feito.
+
+    Pela sessão porque a ação pode voltar por HTMX (o quadro) ou por redirect (a
+    ficha do quarto manda de volta para a visão geral) — e nos dois casos a
+    pessoa tem de ver a saída. Em vez de perguntar "tem certeza?" antes, a tela
+    deixa o caminho de volta à mão depois: no toque, o erro é o toque errado, não
+    a falta de convicção.
+    """
+    request.session["gov_desfazer"] = {
+        "uh": uh.pk, "quarto": uh.numero, "texto": texto}
+
+
+def _desfazer_pendente(request):
+    """Consome a oferta de desfazer (uma vez só)."""
+    return request.session.pop("gov_desfazer", None)
 
 
 def _resposta_acao(request, aviso="", tipo="success"):
@@ -92,10 +113,10 @@ def _resposta_acao(request, aviso="", tipo="success"):
         return redirect("governanca:minha_fila" if da_fila else "governanca:quartos")
     if da_fila:
         resposta = render(request, "governanca/partials/fila.html",
-                          _contexto_fila(request.user))
+                          _contexto_fila(request, request.user))
     else:
         resposta = render(request, "governanca/partials/quadro.html",
-                          _contexto_quadro(request.user))
+                          _contexto_quadro(request, request.user))
     if aviso:
         resposta["HX-Trigger"] = json.dumps({"aviso": {"texto": aviso, "tipo": tipo}})
     return resposta
@@ -106,7 +127,9 @@ def painel(request):
     """Visão geral: a casa inteira em blocos coloridos, o progresso do dia, as
     chegadas que dependem de quarto pronto e o que pede ação agora. É a porta de
     entrada do módulo — a lista operacional fica em `quartos`."""
-    return render(request, "governanca/visao.html", services.visao_geral())
+    contexto = services.visao_geral()
+    contexto["desfazer"] = _desfazer_pendente(request)
+    return render(request, "governanca/visao.html", contexto)
 
 
 @requer_modulo(Modulo.GOVERNANCA)
@@ -122,7 +145,7 @@ def quartos(request):
         from apps.reservas.services import montagem_do_dia
         montagem = montagem_do_dia(timezone.localdate())
 
-    contexto = _contexto_quadro(request.user)
+    contexto = _contexto_quadro(request, request.user)
     # A visão geral manda para cá já filtrado ("3 quartos esperando inspeção" abre a
     # lista nesses três); sem `?estado=`, vale a última escolha de quem está usando.
     estado = request.GET.get("estado")
@@ -160,7 +183,7 @@ def minha_fila(request):
     """A fila da camareira, feita para o celular dela: os quartos DELA, na ordem
     de atacar, com um botão grande por quarto. A lista de quartos continua sendo
     a mesa da supervisora."""
-    return render(request, "governanca/fila.html", _contexto_fila(request.user))
+    return render(request, "governanca/fila.html", _contexto_fila(request, request.user))
 
 
 @requer_modulo(Modulo.GOVERNANCA)
@@ -290,11 +313,29 @@ def status_marcar(request, pk):
         aviso = f"{uh.numero} reprovado — voltou para a fila de limpeza."
     elif situacao == StatusLimpeza.Situacao.INSPECIONADA:
         services.inspecionar(uh, request.user)
-        aviso = f"{uh.numero} inspecionado."
+        # Liberar o quarto para a recepção é o gesto mais caro da tela: em vez de
+        # perguntar antes, a próxima tela traz o "Desfazer" à mão. E sem aviso em
+        # cima: a barra já diz o que aconteceu — duas mensagens para o mesmo
+        # gesto é ruído, e o aviso ainda passava por cima do título da página.
+        _oferecer_desfazer(request, uh, services.frase_de_aprovacao(uh))
     elif situacao in StatusLimpeza.Situacao.values:
         services.definir_status(uh, situacao, request.user)
         aviso = f"{uh.numero}: {dict(StatusLimpeza.Situacao.choices)[situacao].lower()}."
     return _resposta_acao(request, aviso)
+
+
+@requer_modulo(Modulo.GOVERNANCA)
+def desfazer_aprovacao(request, pk):
+    """Desfaz o «Aprovar limpeza»: o quarto volta a esperar a supervisora.
+
+    Idempotente — o segundo toque (ou o botão de voltar do navegador) encontra o
+    quarto já fora do aprovado e não faz nada.
+    """
+    if request.method != "POST":
+        return redirect("governanca:quartos")
+    uh = get_object_or_404(UH, pk=pk)
+    services.desfazer_inspecao(uh, request.user)
+    return _resposta_acao(request, f"{uh.numero} voltou para a conferência.")
 
 
 @requer_modulo(Modulo.GOVERNANCA)

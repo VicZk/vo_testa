@@ -975,8 +975,14 @@ class FilaDaCamareiraTests(GovernancaBase):
         tarefa.camareira = self.maria
         tarefa.save(update_fields=["camareira"])
         services.abrir_faxina(self.uh2, usuario=self.user)   # de ninguém
+        from django.test import RequestFactory
+
         from apps.governanca.views import _contexto_quadro
-        ctx = _contexto_quadro(self.maria)
+
+        # O contexto lê a sessão (a oferta de "Desfazer" do último gesto).
+        pedido = RequestFactory().get(reverse("governanca:quartos"))
+        pedido.session = self.client.session
+        ctx = _contexto_quadro(pedido, self.maria)
         minhas = {ln["uh"].numero: ln["minha"] for ln in ctx["linhas"]}
         self.assertTrue(minhas["Quarto 01"])
         self.assertFalse(minhas["Quarto 02"])
@@ -2136,3 +2142,124 @@ class SemHoverTests(RondaBase):
         corpo = self.client.get(reverse("governanca:painel")).content.decode()
         self.assertIn(f'aria-label="{self.uh.numero}:', corpo)
         self.assertIn("Ana Lima", corpo)                  # visível no bloco
+
+
+class DesfazerAprovacaoTests(GovernancaBase):
+    """No toque, o erro é o toque errado — não a falta de convicção.
+
+    Em vez de parar a supervisora com "tem certeza?" antes de cada aprovação, a
+    tela deixa o caminho de volta à mão depois.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="governanta", password="senha-forte-123")
+        self.tarefa = services.abrir_faxina(self.uh, usuario=self.user)
+        services.iniciar_tarefa(self.tarefa, self.user)
+        services.concluir_tarefa(self.tarefa, self.user)
+
+    def _aprovar(self, **extra):
+        return self.client.post(
+            reverse("governanca:status_marcar", args=[self.uh.pk]),
+            {"situacao": StatusLimpeza.Situacao.INSPECIONADA}, **extra)
+
+    def test_aprovar_oferece_o_caminho_de_volta(self):
+        self._aprovar()
+        oferta = self.client.session.get("gov_desfazer")
+        self.assertEqual(oferta["uh"], self.uh.pk)
+        self.assertEqual(oferta["quarto"], self.uh.numero)
+        self.assertIn("liberado para a recepção", oferta["texto"])
+
+    def test_o_quarto_ocupado_nao_e_liberado_para_a_recepcao(self):
+        """Aprovar um quarto com hóspede dentro é conferir a arrumação do dia."""
+        from apps.reservas.models import Reserva
+        Reserva.objects.create(
+            uh=self.uh, hospede=Pessoa.objects.create(nome="Quem está lá"),
+            checkin=timezone.localdate() - timedelta(days=1),
+            checkout=timezone.localdate() + timedelta(days=2),
+            status=Reserva.Status.HOSPEDADA, valor_diaria=Decimal("200"),
+            criado_por=self.user)
+        self._aprovar()
+        texto = self.client.session.get("gov_desfazer")["texto"]
+        self.assertIn("arrumação do dia", texto)
+        self.assertNotIn("recepção", texto)
+
+    def test_a_oferta_aparece_na_tela_e_some_depois(self):
+        self._aprovar()
+        r = self.client.get(reverse("governanca:quartos"))
+        self.assertContains(r, "gov-desfazer")
+        self.assertContains(r, "Desfazer")
+        # Uma vez só: recarregar a tela não deixa a oferta pendurada.
+        self.assertNotContains(self.client.get(reverse("governanca:quartos")),
+                               "gov-desfazer")
+
+    def test_a_visao_geral_tambem_mostra_a_oferta(self):
+        """A ficha do quarto devolve a pessoa para a parede de blocos."""
+        self._aprovar()
+        self.assertContains(self.client.get(reverse("governanca:painel")),
+                            "gov-desfazer")
+
+    def test_desfazer_devolve_o_quarto_para_a_conferencia(self):
+        self._aprovar()
+        self.client.post(reverse("governanca:desfazer_aprovacao", args=[self.uh.pk]))
+        self.assertEqual(services.situacao_uh(self.uh).situacao,
+                         StatusLimpeza.Situacao.LIMPA)
+        self.tarefa.refresh_from_db()
+        self.assertIsNone(self.tarefa.inspecionada_em)
+        self.assertEqual(self.tarefa.status, TarefaGovernanca.Status.CONCLUIDA)
+
+    def test_desfazer_nao_apaga_a_faxina_da_camareira(self):
+        """O veredito volta atrás; a entrega dela continua valendo."""
+        self._aprovar()
+        services.desfazer_inspecao(self.uh, self.user)
+        relatorio = services.relatorio_faxinas(timezone.localdate(),
+                                               timezone.localdate())
+        self.assertEqual(relatorio["total"], 1)
+
+    def test_o_quarto_pode_ser_aprovado_de_novo(self):
+        self._aprovar()
+        services.desfazer_inspecao(self.uh, self.user)
+        services.inspecionar(self.uh, self.user)
+        self.tarefa.refresh_from_db()
+        self.assertIsNotNone(self.tarefa.inspecionada_em)
+        self.assertEqual(services.situacao_uh(self.uh).situacao,
+                         StatusLimpeza.Situacao.INSPECIONADA)
+
+    def test_desfazer_duas_vezes_nao_quebra(self):
+        self._aprovar()
+        services.desfazer_inspecao(self.uh, self.user)
+        services.desfazer_inspecao(self.uh, self.user)   # idempotente
+        self.assertEqual(services.situacao_uh(self.uh).situacao,
+                         StatusLimpeza.Situacao.LIMPA)
+
+    def test_desfazer_quarto_que_nunca_foi_aprovado_nao_mexe_em_nada(self):
+        services.abrir_faxina(self.uh, usuario=self.user)   # volta para sujo
+        services.desfazer_inspecao(self.uh, self.user)
+        self.assertEqual(services.situacao_uh(self.uh).situacao,
+                         StatusLimpeza.Situacao.SUJA)
+
+    def test_fica_na_trilha(self):
+        self._aprovar()
+        services.desfazer_inspecao(self.uh, self.user)
+        self.assertTrue(
+            TrilhaAuditoria.objects.filter(acao="inspecao_desfeita").exists())
+
+    def test_com_htmx_devolve_o_quadro(self):
+        self._aprovar(HTTP_HX_REQUEST="true")
+        r = self.client.post(reverse("governanca:desfazer_aprovacao", args=[self.uh.pk]),
+                             HTTP_HX_REQUEST="true")
+        self.assertTemplateUsed(r, "governanca/partials/quadro.html")
+        self.assertIn("voltou para a conferência",
+                      json.loads(r["HX-Trigger"])["aviso"]["texto"])
+
+    def test_get_nao_desfaz(self):
+        self._aprovar()
+        self.client.get(reverse("governanca:desfazer_aprovacao", args=[self.uh.pk]))
+        self.assertEqual(services.situacao_uh(self.uh).situacao,
+                         StatusLimpeza.Situacao.INSPECIONADA)
+
+    def test_exige_o_modulo(self):
+        ModuloContratado.objects.filter(codigo=Modulo.GOVERNANCA).update(ativo=False)
+        self.assertEqual(
+            self.client.post(reverse("governanca:desfazer_aprovacao",
+                                     args=[self.uh.pk])).status_code, 404)

@@ -148,6 +148,46 @@ def inspecionar(uh, usuario=None):
     return definir_status(uh, StatusLimpeza.Situacao.INSPECIONADA, usuario)
 
 
+def frase_de_aprovacao(uh, dia=None) -> str:
+    """O que a aprovação daquele quarto quer dizer, em uma frase.
+
+    "Liberado para a recepção" só vale para quarto VAGO: no ocupado, aprovar é
+    dizer que a arrumação do dia está conferida — o hóspede já está lá dentro.
+    Mesma distinção de `rotulo_do_estado` ("Pronto" × "Arrumado"). Uma consulta.
+    """
+    pms = ocupacao_pms(dia)
+    ocupacao = ocupacao_do_quarto((pms or {}).get(uh.pk), sem_base=pms is None)
+    if _tem_hospede(ocupacao):
+        return "conferido — arrumação do dia aprovada."
+    return "aprovado e liberado para a recepção."
+
+
+def desfazer_inspecao(uh, usuario=None):
+    """Tira o carimbo de aprovação: o quarto volta para «Limpo», esperando a
+    supervisora. É o «Desfazer» de um toque errado em «Aprovar limpeza».
+
+    Só mexe no veredito — a faxina continua entregue, e a camareira continua com
+    o crédito dela. Não existe «desfazer» equivalente para «Terminei a limpeza»:
+    concluir a faxina avisa a Lavanderia, que recolhe o enxoval do quarto, e esse
+    movimento é um livro-razão (não se apaga). O caminho de volta de lá é
+    «Devolver para limpar», que é o gesto certo e já existe.
+    """
+    status = situacao_uh(uh)
+    if status.situacao != StatusLimpeza.Situacao.INSPECIONADA:
+        return status   # idempotente: já saiu do aprovado (ou nunca esteve)
+    tarefa = (
+        TarefaGovernanca.objects.filter(uh=uh, inspecionada_em__isnull=False,
+                                        reprovada_em__isnull=True)
+        .order_by("-inspecionada_em", "-pk").first()
+    )
+    if tarefa:
+        tarefa.inspecionada_em = None
+        tarefa.inspecionada_por = None
+        tarefa.save(update_fields=["inspecionada_em", "inspecionada_por"])
+    registrar_auditoria(usuario, "inspecao_desfeita", uh, {"quarto": uh.numero})
+    return definir_status(uh, StatusLimpeza.Situacao.LIMPA, usuario)
+
+
 def reprovar_inspecao(uh, usuario=None, motivo=""):
     """Supervisora reprovou: o quarto volta para a fila (nova faxina, origem
     "reprovada") e fica registrado quem reprovou, quando e por quê."""

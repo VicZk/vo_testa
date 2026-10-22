@@ -31,6 +31,8 @@ e as views redirecionam quando o pedido não vem do HTMX.
   {% endif %}
 </div>
 
+{% include "governanca/partials/desfazer.html" %}
+
 {% comment %}Distribuir a fila: um toque no lugar de abrir um `<select>` por quarto.
 Só aparece quando há quarto sem camareira; sem ninguém de turno na Escala o botão
 explica em vez de espalhar faxina pela casa inteira.{% endcomment %}

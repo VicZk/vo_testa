@@ -18,6 +18,8 @@ urlpatterns = [
     # Ficha do quarto: o toque na porta do corredor resolve o quarto ali.
     path("quarto/<int:pk>/", views.quarto, name="quarto"),
     path("quarto/<int:pk>/status/", views.status_marcar, name="status_marcar"),
+    path("quarto/<int:pk>/desfazer-aprovacao/", views.desfazer_aprovacao,
+         name="desfazer_aprovacao"),
     path("quarto/<int:pk>/ronda/", views.ronda, name="ronda"),
     path("quarto/<int:pk>/devolver/", views.devolver, name="devolver"),
     path("quarto/<int:pk>/problema/", views.reportar, name="reportar"),

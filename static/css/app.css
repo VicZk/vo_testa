@@ -1808,6 +1808,20 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 .gov-fila-feitas h2 { font-size: 1rem; margin: 0 0 .3rem; }
 .gov-fila-feitas b { font-variant-numeric: tabular-nums; color: var(--tinta-suave); }
 
+/* O caminho de volta do último gesto: em vez de "tem certeza?" antes, o
+   "Desfazer" à mão depois. Verde porque é a confirmação do que aconteceu — o
+   botão ao lado é a saída, não um alerta. */
+.gov-desfazer {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: .5rem .9rem; margin: 0 0 1rem;
+  padding: .7rem .9rem;
+  background: var(--sucesso-bg); border: 1px solid var(--fio);
+  border-left: 3px solid var(--sucesso);
+  border-radius: var(--raio-p);
+}
+.gov-desfazer p { margin: 0; min-width: 0; font-size: .9rem; }
+.gov-desfazer form { margin: 0; flex: none; }
+
 /* Distribuir a fila: a frase explica o que o botão vai fazer, e as duas coisas
    ficam na mesma linha-base enquanto couberem. */
 .gov-distribuir {
@@ -5756,6 +5770,11 @@ body.escala-dragging .escala-drop { cursor: copy; }
   .conteudo .selo-sleeper, .conteudo .selo-saida_nao_lancada,
   .conteudo .selo-pg-pendente, .conteudo .selo-pg-estornado { font-size: .78rem; }
   .conteudo .pagina-eyebrow { font-size: .75rem; }
+  /* O rótulo do KPI (10,6px) é quem diz o que o número grande significa — sem
+     ele, "4" não quer dizer nada. */
+  .conteudo .indicador-rotulo { font-size: .78rem; }
+  /* O número do quarto na lista abre a ficha dele: é alvo, não texto corrido. */
+  .col-quarto-link { min-height: 44px; display: inline-flex; align-items: center; }
 
   /* ─── Sobreposição vira gaveta de baixo ───
      O modal nasce a 6vh do TOPO: no celular, as ações dele caem no meio da tela,
