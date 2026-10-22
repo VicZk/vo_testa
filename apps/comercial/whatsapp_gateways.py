@@ -2,7 +2,6 @@
 Gateway do WhatsApp (conversa dentro do funil). Plugável por `WHATSAPP_GATEWAY`:
 - **simulado** (default): sem rede — MVP/dev/testes. O envio "funciona" localmente.
 - **cloud**: WhatsApp Business Platform (Meta Cloud API) — envio real (texto + template).
-- **bsp**: via provedor (Twilio/360dialog/Zenvia) — stub.
 
 Ver docs/Marketing/CRM_WhatsApp.md. A janela de 24h e os templates são regra da Meta;
 no simulado o envio é sempre permitido para facilitar o teste. Envio real usa a Graph
@@ -67,16 +66,17 @@ def _api_post(payload: dict) -> dict:
     try:
         with urlrequest.urlopen(req, timeout=15) as resp:
             corpo = json.loads(resp.read().decode("utf-8", "replace"))
-            wamid = ""
-            msgs = corpo.get("messages") or []
-            if msgs:
-                wamid = msgs[0].get("id", "")
+            msgs = corpo.get("messages") if isinstance(corpo, dict) else None
+            if not isinstance(msgs, list) or not msgs or not isinstance(msgs[0], dict):
+                return {"ok": False, "id": "", "erro": "A Meta não confirmou a mensagem."}
+            wamid = msgs[0].get("id")
+            if not isinstance(wamid, str) or not wamid:
+                return {"ok": False, "id": "", "erro": "A Meta não informou o identificador da mensagem."}
             return {"ok": True, "id": wamid}
     except urlerror.HTTPError as e:
-        corpo = e.read().decode("utf-8", "replace")[:300]
-        return {"ok": False, "id": "", "erro": f"HTTP {e.code}: {corpo}"}
-    except Exception as e:  # rede, timeout, etc.
-        return {"ok": False, "id": "", "erro": str(e)[:300]}
+        return {"ok": False, "id": "", "erro": f"A Meta recusou o envio (HTTP {e.code})."}
+    except Exception:  # rede, timeout, etc.
+        return {"ok": False, "id": "", "erro": "Não foi possível confirmar o envio pelo WhatsApp."}
 
 
 def _baixar_media(media_id: str):
@@ -131,43 +131,53 @@ def _upload_media(conteudo: bytes, mime: str, filename: str = "audio.ogg") -> di
     try:
         with urlrequest.urlopen(req, timeout=45) as resp:
             dado = json.loads(resp.read().decode("utf-8", "replace"))
-            return {"ok": True, "id": dado.get("id", "")}
+            identificador = dado.get("id") if isinstance(dado, dict) else None
+            if not isinstance(identificador, str) or not identificador:
+                return {"ok": False, "id": "", "erro": "A Meta não confirmou o recebimento da mídia."}
+            return {"ok": True, "id": identificador}
     except urlerror.HTTPError as e:
-        return {"ok": False, "id": "", "erro": f"HTTP {e.code}: "
-                f"{e.read().decode('utf-8', 'replace')[:300]}"}
-    except Exception as e:  # noqa: BLE001
-        return {"ok": False, "id": "", "erro": str(e)[:300]}
+        return {"ok": False, "id": "", "erro": f"A Meta recusou a mídia (HTTP {e.code})."}
+    except Exception:  # noqa: BLE001
+        return {"ok": False, "id": "", "erro": "Não foi possível confirmar o envio da mídia."}
 
 
 class GatewaySimulado:
     nome = "simulado"
 
     def enviar(self, conversa, texto: str) -> dict:
-        logger.info("WHATSAPP[simulado] texto → %s: %s", conversa.telefone, texto[:60])
+        self._exigir_teste()
+        logger.info("WHATSAPP[simulado] texto sem envio externo")
         return {"ok": True, "id": ""}
 
     def enviar_template(self, telefone: str, template: str, idioma: str = "pt_BR",
                         variaveis=None) -> dict:
-        logger.info("WHATSAPP[simulado] template '%s' → %s vars=%s",
-                    template, telefone, variaveis or [])
+        self._exigir_teste()
+        logger.info("WHATSAPP[simulado] template sem envio externo")
         return {"ok": True, "id": ""}
 
     def baixar_midia(self, media_id: str):
         """Sandbox: sem rede. Devolve (None, '') — o chamador grava só os metadados."""
-        logger.info("WHATSAPP[simulado] baixar_midia %s", media_id)
+        logger.info("WHATSAPP[simulado] mídia sem download externo")
         return None, ""
 
     def upload_midia(self, conteudo: bytes, mime: str, filename: str = "audio.ogg") -> dict:
+        self._exigir_teste()
         logger.info("WHATSAPP[simulado] upload_midia %s (%d bytes)", mime, len(conteudo or b""))
         return {"ok": True, "id": "sim-media"}
 
     def enviar_audio(self, conversa, media_id: str) -> dict:
-        logger.info("WHATSAPP[simulado] áudio → %s (media %s)", conversa.telefone, media_id)
+        self._exigir_teste()
+        logger.info("WHATSAPP[simulado] áudio sem envio externo")
         return {"ok": True, "id": ""}
 
     def enviar_imagem(self, conversa, media_id: str, legenda: str = "") -> dict:
-        logger.info("WHATSAPP[simulado] imagem → %s (media %s)", conversa.telefone, media_id)
+        self._exigir_teste()
+        logger.info("WHATSAPP[simulado] imagem sem envio externo")
         return {"ok": True, "id": ""}
+
+    def _exigir_teste(self):
+        if not (settings.DEBUG or settings.TESTING):
+            raise ValidationError("O envio externo de WhatsApp ainda não está configurado nesta instalação.")
 
 
 class GatewayCloud:
@@ -232,32 +242,7 @@ class GatewayCloud:
         return _api_post(payload)
 
 
-class GatewayBsp:
-    nome = "bsp"
-
-    def enviar(self, conversa, texto: str) -> dict:
-        raise ValidationError(
-            "WhatsApp BSP: integração via provedor (Twilio/360dialog) ainda não "
-            "implementada (stub). Use WHATSAPP_GATEWAY=simulado.")
-
-    def enviar_template(self, telefone: str, template: str, idioma: str = "pt_BR",
-                        variaveis=None) -> dict:
-        raise ValidationError("WhatsApp BSP: template ainda não implementado (stub).")
-
-    def baixar_midia(self, media_id: str):
-        return None, ""
-
-    def upload_midia(self, conteudo: bytes, mime: str, filename: str = "audio.ogg") -> dict:
-        raise ValidationError("WhatsApp BSP: upload de mídia ainda não implementado (stub).")
-
-    def enviar_audio(self, conversa, media_id: str) -> dict:
-        raise ValidationError("WhatsApp BSP: áudio ainda não implementado (stub).")
-
-    def enviar_imagem(self, conversa, media_id: str, legenda: str = "") -> dict:
-        raise ValidationError("WhatsApp BSP: imagem ainda não implementado (stub).")
-
-
-_GATEWAYS = {"simulado": GatewaySimulado, "cloud": GatewayCloud, "bsp": GatewayBsp}
+_GATEWAYS = {"simulado": GatewaySimulado, "cloud": GatewayCloud}
 
 
 def get_whatsapp_gateway():

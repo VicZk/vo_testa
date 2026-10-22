@@ -13,6 +13,10 @@ class EventoInline(admin.TabularInline):
     model = EventoFiscal
     extra = 0
     readonly_fields = ("tipo", "detalhe", "criado_em")
+    can_delete = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(DocumentoFiscal)
@@ -22,3 +26,12 @@ class DocumentoFiscalAdmin(admin.ModelAdmin):
     search_fields = ("numero", "chave", "descricao")
     raw_id_fields = ("tomador", "criado_por")
     inlines = [EventoInline]
+
+    def get_readonly_fields(self, request, obj=None):
+        return [campo.name for campo in self.model._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

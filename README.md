@@ -92,8 +92,9 @@ consultadas nesta revisão. Esta é uma **fork de desenvolvimento**: publicar na
 | Relatórios, Auditoria (pendências, trilha e fechamentos), Conciliação (OFX e cartão) | Implementados |
 | Pagamentos online | Safrapay implementado; ativação em produção a confirmar. Pix direto tem baixa manual |
 | FNRH Digital (envio ao governo) | Integração Serpro escrita; credenciais e homologação precisam ser verificadas no ambiente |
-| Fiscal (NFS-e/NFC-e) | Esqueleto com gateway `simulado`; provedores reais são stubs |
-| NPS, CRM do Hóspede, Canais/OTAs | Proposta / não iniciados |
+| Fiscal (NFS-e/NFC-e) | Focus NFe v2 implementado; cadastro, credenciais e homologação pendentes de configuração |
+| NPS | Pesquisa pós-estadia, resposta por token e painel implementados |
+| CRM do Hóspede, Canais/OTAs | Integração de canais pendente de escolha e configuração do provedor |
 
 Os gateways usam **`simulado`** por padrão, com uma exceção importante de comportamento:
 `EMAIL_GATEWAY=simulado` envia pelo backend do Django e pode usar **SMTP real** se
@@ -419,9 +420,9 @@ Cada integração externa é escolhida por uma variável e sempre começa em `si
 | `PAGAMENTOS_GATEWAY` | `simulado`, `safrapay` | Safrapay pronto para Pix, cartão e boleto (homologação) |
 | `PIX_DIRETO` (flag) | BR Code gerado localmente | Sem PSP: confirmação manual pela recepção |
 | `FNRH_GATEWAY` | `simulado`, `serpro` | Fluxo da API v2 escrito; conferir credenciais e homologação no ambiente |
-| `FISCAL_GATEWAY` | `simulado`, `focus`, `governo` | `focus` e `governo` são stubs |
-| `WHATSAPP_GATEWAY` | `simulado`, `cloud`, `bsp` | Cloud API (Meta) pronta; `bsp` stub |
-| `EMAIL_GATEWAY` | `simulado`, `ses` | `simulado` usa o backend Django (SMTP real se configurado); `ses` é stub |
+| `FISCAL_GATEWAY` | `simulado`, `focus` | Focus NFe v2: emissão, consulta, cancelamento e retorno autenticado; exige homologação |
+| `WHATSAPP_GATEWAY` | `simulado`, `cloud` | Cloud API (Meta), assinatura do webhook e confirmação do identificador de envio |
+| `EMAIL_GATEWAY` | `simulado`, `smtp`, `ses` | SMTP e SES implementados; simulado usa memória e não envia externamente |
 | `MIDIA_GATEWAY` | `simulado`, `meta`, `google` | Meta CAPI pronta; Google stub |
 | `DECISAO_GATEWAY` | `simulado`, `jev` | Piloto de score de lead |
 
@@ -513,7 +514,11 @@ restaurante (lançado na conta), limpeza extra, manutenção, pré-check-in da F
 check-out expresso. Ações registradas em nome do usuário de sistema `_portal`.
 
 **Fiscal.** `DocumentoFiscal` e eventos; emissão a partir da conta separando serviço
-(NFS-e) e consumo (NFC-e); parâmetros do contador em variáveis (código 090101, ISS 4%).
+(NFS-e) e consumo (NFC-e). NFS-e agrupa por código de serviço: diárias usam o código
+configurado; lavanderia e demais serviços exigem classificação explícita. NFC-e usa
+itens de vendas/comandas fechadas e cadastro tributário revisado na tela Fiscal.
+Referências persistidas evitam duplicidade; respostas incertas exigem consulta antes
+de novo envio. [Configuração, limites e homologação](docs/Implementar_fiscal.md).
 
 **Site (`core`).** Vitrine por quarto, busca de disponibilidade, seleção da unidade,
 resumo com a política de cancelamento, pré-reserva com retenção de 30 minutos, cobrança
@@ -679,7 +684,8 @@ Railway em produção). As essenciais:
 | `REDIS_URL` | cache compartilhado em Redis; vazio = tabela no próprio Postgres |
 | `SAFRAPAY_TIMEOUT` | segundos de espera pela Safrapay (padrão 10) |
 | `SENTRY_DSN` | monitoramento de erros no Sentry (sem corpo de requisição nem variáveis locais) |
-| `BACKUP_DIR` | pasta do `backup_banco` quando não há R2 (vazio e sem R2 = backup não roda) |
+| `BACKUP_DIR` | pasta persistente do `backup_banco`; sem destino o comando falha e registra o problema |
+| `BACKUP_R2_*` | cópia externa em bucket privado dedicado, separado da mídia pública |
 | `KIT_CONTINGENCIA_EMAILS` | quem recebe a folha do dia por e-mail, separados por vírgula (vazio = ninguém) |
 | `ROTINAS_MONITOR_FREQUENTES`, `ROTINAS_MONITOR_DIARIAS` | URL de um check do Healthchecks.io por grupo de rotinas: avisa quando o cron para, trava ou falha (vazio = não avisa) |
 | `DB_JIT` | `1` religa o JIT do Postgres (desligado por padrão: deixava telas pequenas lentas) |
@@ -770,7 +776,7 @@ repositório, com as mesmas variáveis do serviço web e o arquivo de configura�
 | diarias | `fechar_dia` | fechamento do dia de ontem (ocupação, chegadas, saídas, no-shows, receita, saldo em aberto) — imutável |
 | diarias | `enviar_conversoes_pendentes` | reenvia conversões de mídia pendentes |
 | diarias | `sincronizar_gastos_midia` | puxa o gasto das plataformas de anúncio |
-| diarias | `backup_banco` | cópia do banco para o R2 (ou `BACKUP_DIR`), apagando as de mais de 30 dias |
+| diarias | `backup_banco` | dump PostgreSQL verificado em `BACKUP_DIR` e/ou R2 privado, com SHA-256 e retenção de 30 dias |
 | diarias | `purgar_trilha` | apaga da trilha o que passou de `TRILHA_RETENCAO_DIAS` (0 = guarda sempre) |
 | diarias | `gerar_arrumacoes` | uma arrumação para cada quarto em que o hóspede continua |
 | diarias | `enviar_kit_contingencia` | manda a folha do dia (kit de contingência) para `KIT_CONTINGENCIA_EMAILS`; vazio = não envia |
@@ -783,8 +789,12 @@ Railway. Configuração dos checks: frequentes com período de 10 min e tolerân
 diárias com o cron `15 6 * * *` (UTC) e tolerância de 1 h.
 
 **Backup:** com R2 ou `BACKUP_DIR` configurado e a rotina agendada,
-`backup_banco` guarda uma cópia diariamente; sem destino configurado, não faz backup.
-A disponibilidade/configuração de backups e PITR no provedor precisa ser conferida.
+`backup_banco` exige `pg_dump`/`pg_restore` compatíveis e destino persistente configurado.
+Grava arquivo e manifesto SHA-256, verifica a cópia e mantém o resultado no painel
+**Operação e integrações**. O modo automático nunca substitui um dump por JSON.
+O R2 precisa de bucket privado próprio (`BACKUP_R2_*`); local e R2 podem ser usados
+simultaneamente. Cópia verificada não substitui ensaio de restauração em banco isolado.
+O mesmo painel distingue configuração presente de ensaio registrado para cada integração.
 O comando usa: `pg_dump` quando disponível, senão JSON compactado
 de todos os dados. Restaurar: `pg_restore --clean --if-exists --no-owner -d
 "$DATABASE_URL" arquivo.dump` ou `python manage.py migrate && python manage.py loaddata

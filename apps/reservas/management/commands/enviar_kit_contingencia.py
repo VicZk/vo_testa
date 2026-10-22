@@ -12,7 +12,7 @@ Roda no grupo "diarias" do `rotinas` (03:15 de Brasília).
 """
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.template.loader import render_to_string
 from django.urls import reverse
 
@@ -63,7 +63,10 @@ class Command(BaseCommand):
         msg.attach_alternative(
             render_to_string("reservas/email/kit_contingencia.html", contexto), "text/html"
         )
-        msg.send()
+        if settings.EMAIL_BACKEND in ("django.core.mail.backends.console.EmailBackend", "django.core.mail.backends.dummy.EmailBackend"):
+            raise CommandError("O kit não foi enviado: configure o servidor de e-mail externo.")
+        if msg.send() != 1:
+            raise CommandError("O servidor não confirmou a aceitação do kit de contingência.")
         self.stdout.write(self.style.SUCCESS(
             f"Kit de contingência de {kit['hoje']:%d/%m/%Y} enviado para "
             f"{len(destinos)} endereço(s)."))

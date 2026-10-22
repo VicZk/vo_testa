@@ -20,8 +20,8 @@
       <div><dt>Descrição</dt><dd>{{ doc.descricao }}</dd></div>
       <div><dt>Valor</dt><dd><strong>{{ doc.valor|intcomma_brl }}</strong></dd></div>
       {% if doc.cbs_valor is not None %}
-        <div><dt>CBS ({{ doc.cbs_aliquota|floatformat:"-2" }}%)</dt><dd class="num">{{ doc.cbs_valor|intcomma_brl }}</dd></div>
-        <div><dt>IBS ({{ doc.ibs_aliquota|floatformat:"-2" }}%)</dt><dd class="num">{{ doc.ibs_valor|intcomma_brl }}</dd></div>
+        <div><dt>Estimativa CBS ({{ doc.cbs_aliquota|floatformat:"-2" }}%)</dt><dd class="num">{{ doc.cbs_valor|intcomma_brl }}</dd></div>
+        <div><dt>Estimativa IBS ({{ doc.ibs_aliquota|floatformat:"-2" }}%)</dt><dd class="num">{{ doc.ibs_valor|intcomma_brl }}</dd></div>
       {% endif %}
       {% if doc.tomador %}<div><dt>Tomador</dt><dd>{{ doc.tomador.nome }}</dd></div>{% endif %}
       <div><dt>Emissão</dt><dd>{% if doc.gateway == 'simulado' %}Documento de teste{% else %}{{ doc.gateway|default:"—" }}{% endif %}{% if doc.gateway_id %} · {{ doc.gateway_id }}{% endif %}</dd></div>
@@ -34,12 +34,20 @@
   </section>
 
   <section>
+    {% if doc.status != 'cancelada' %}<div class="painel-bloco bloco-fim">
+      <h2 class="titulo-topo">Conferir emissão</h2>
+      <form method="post" action="{% url 'fiscal:atualizar' doc.pk %}" class="acoes">{% csrf_token %}
+        <button type="submit" name="acao" value="consultar" class="botao-neutro">Consultar provedor</button>
+        {% if doc.status == 'pendente' or doc.status == 'processando' %}<button type="submit" name="acao" value="reenviar" class="botao-neutro">Reenviar com a mesma referência</button>{% endif %}
+        {% if doc.status == 'rejeitada' and eh_gerente %}<button type="submit" name="acao" value="corrigir" class="botao-neutro">Reenviar cadastro corrigido</button>{% endif %}
+      </form>
+    </div>{% endif %}
     {% if doc.autorizada and eh_gerente %}
       <div class="painel-bloco bloco-fim">
         <h2 class="titulo-topo">Cancelar</h2>
         <form method="post" action="{% url 'fiscal:cancelar' doc.pk %}" class="form-cartao">
           {% csrf_token %}
-          <div class="campo"><label>Motivo</label><input type="text" name="motivo" required></div>
+          <div class="campo"><label for="motivo-fiscal">Motivo</label><input id="motivo-fiscal" type="text" name="motivo" minlength="15" maxlength="255" required></div>
           <div class="acoes"><button type="submit" class="botao-perigo">Cancelar documento</button></div>
         </form>
       </div>

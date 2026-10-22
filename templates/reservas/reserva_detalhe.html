@@ -107,10 +107,7 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
       <a href="{% url 'portal:qr' reserva.pk %}" class="botao-neutro">QR do hóspede</a>
     {% endif %}
     {% if 'fiscal'|modulo_ativo and reserva.conta %}
-      <form method="post" action="{% url 'fiscal:emitir_nfse' %}">
-        {% csrf_token %}<input type="hidden" name="conta_id" value="{{ reserva.conta.pk }}">
-        <button type="submit" class="botao-neutro">Emitir NFS-e</button>
-      </form>
+      <a href="{% url 'fiscal:preparar_conta' reserva.conta.pk %}" class="botao-neutro">Preparar NFS-e</a>
     {% endif %}
 
     {# ── Risco: separado do resto, no fim da barra ───────────────────────── #}

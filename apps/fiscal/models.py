@@ -1,11 +1,7 @@
-"""
-Módulo Fiscal (ESPECIFICACAO §14) — emissão de nota eletrônica com **gateway
-plugável** (mesmo padrão de Pagamentos): SERVIÇO → NFS-e (Nacional); CONSUMO →
-NFC-e (SEFAZ-SC). Provedor real a definir (Focus NFe recomendado; rota grátis pelo
-governo possível). Ver docs/Implementar_fiscal.md.
+"""Documentos fiscais, retrato da emissão e eventos.
 
-Este é o ESQUELETO: o backend `simulado` (sandbox) já funciona ponta a ponta para
-testar o fluxo; `focus` e `governo` são stubs a preencher com credenciais/endpoints.
+Focus NFe v2 implementado para NFS-e Nacional e NFC-e. Simulado não tem validade
+fiscal. Credenciais, classificação e homologação: docs/Implementar_fiscal.md.
 """
 from decimal import Decimal
 
@@ -25,6 +21,8 @@ class ConfigFiscalProduto(models.Model):
     cfop = models.CharField("CFOP", max_length=5, blank=True)
     cst_csosn = models.CharField("CST/CSOSN", max_length=5, blank=True)
     origem = models.CharField("origem", max_length=1, blank=True, default="0")
+    tributos = models.JSONField("parâmetros tributários do produto", default=dict, blank=True,
+        help_text="Campos Focus NFe conferidos pelo contador, incluindo PIS/COFINS e complementos de ICMS/IBS/CBS aplicáveis.")
 
     class Meta:
         verbose_name = "configuração fiscal do produto"
@@ -74,6 +72,10 @@ class DocumentoFiscal(models.Model):
     # Retorno do provedor/fisco.
     gateway = models.CharField("gateway", max_length=20, blank=True)
     gateway_id = models.CharField("id no gateway", max_length=80, blank=True)
+    gateway_ambiente = models.CharField("ambiente do provedor", max_length=80, blank=True)
+    envio_token = models.UUIDField(null=True, blank=True, editable=False)
+    envio_em = models.DateTimeField(null=True, blank=True, editable=False)
+    payload_envio = models.JSONField("dados da emissão", default=dict, blank=True, editable=False)
     numero = models.CharField("número", max_length=30, blank=True)
     serie = models.CharField("série", max_length=10, blank=True)
     chave = models.CharField("chave de acesso", max_length=60, blank=True)
@@ -94,6 +96,13 @@ class DocumentoFiscal(models.Model):
         verbose_name = "documento fiscal"
         verbose_name_plural = "documentos fiscais"
         ordering = ["-criado_em"]
+        constraints = [
+            models.UniqueConstraint(fields=["referencia", "tipo"],
+                condition=~models.Q(referencia="") & ~models.Q(status="cancelada"),
+                name="fiscal_origem_tipo_ativa_unica"),
+            models.UniqueConstraint(fields=["gateway", "gateway_id"],
+                condition=~models.Q(gateway_id=""), name="fiscal_gateway_referencia_unica"),
+        ]
 
     def __str__(self):
         return f"{self.get_tipo_display()} #{self.pk} — {self.get_status_display()}"

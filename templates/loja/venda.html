@@ -44,6 +44,7 @@
   </tfoot>
 </table>
 
+{% include "fiscal/partials/emitir_consumo.html" with origem="venda" registro=venda %}
 {% if eh_gerente and venda.status == 'fechada' and venda.destino == 'caixa' %}
   <details class="acao-sensivel">
     <summary>Cancelar venda (gerência)</summary>

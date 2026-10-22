@@ -40,6 +40,7 @@ GRUPOS = {
         "expirar_reservas",
         "expirar_recibos_site",
         "enviar_fnrh_pendentes",
+        "consultar_fiscal_pendente",
         "gerar_arrumacoes",  # respeita o horário local e a configuração da governança
         "enviar_campanhas_email",
         "reenviar_confirmacoes_site",
@@ -73,7 +74,7 @@ def _avisar_monitor(grupo, execucao, sinal="", relatorio=""):
             pass
     except Exception:  # noqa: BLE001 — o monitor avisa; a rotina segue
         logger.warning("Monitor das rotinas não respondeu (grupo %s, sinal %s).",
-                       grupo, sinal or "fim", exc_info=True)
+                       grupo, sinal or "fim")
 
 
 class Command(BaseCommand):

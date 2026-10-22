@@ -12,8 +12,9 @@ from django.utils import timezone
 
 from apps.nucleo.models import modulo_ativo, registrar_auditoria
 from apps.nucleo.modulos import Modulo
+from apps.nucleo.validadores import decimal_valido, identificador_valido
 
-from .gateways import get_gateway
+from .gateways import ResultadoIncerto, get_gateway
 from .models import Cobranca, EventoPagamento
 
 # Finalidades expostas para outros módulos (evita importar o model lá fora).
@@ -31,30 +32,37 @@ def criar_cobranca(operador, *, valor, metodo, descricao, finalidade=Cobranca.Fi
     e se o processo cair no meio a cobrança local existe para conferir com o provedor.
     Se o provedor recusar, a cobrança fica cancelada com o erro no histórico.
     (Chamada de dentro de outra transação, os blocos viram savepoints dela.)"""
-    valor = Decimal(str(valor or 0))
-    if valor <= 0:
-        raise ValidationError("O valor deve ser positivo.")
+    valor = decimal_valido(valor, minimo=Decimal("0.01"))
+    parcelas = identificador_valido(parcelas, nome="Parcelas")
+    if metodo not in Cobranca.Metodo.values or finalidade not in Cobranca.Finalidade.values or parcelas > 12:
+        raise ValidationError("Método, finalidade ou parcelamento inválido.")
     if not descricao:
         raise ValidationError("Descreva a cobrança.")
+    direto = metodo == Cobranca.Metodo.PIX and getattr(settings, "PIX_DIRETO", False)
+    gw = None if direto else get_gateway()
     with transaction.atomic():
         cobranca = Cobranca.objects.create(
             valor=valor, metodo=metodo, parcelas=int(parcelas or 1),
             descricao=descricao, finalidade=finalidade, pagador=pagador,
             reserva_id=reserva_id or None, grupo_id=grupo_id or None, criado_por=operador,
+            gateway=GATEWAY_PIX_DIRETO if direto else gw.nome,
+            gateway_ambiente="manual" if direto else gw.ambiente,
         )
     try:
         # Pix direto (fora do PSP): gera o BR Code localmente; cartão/boleto seguem no gateway.
-        if metodo == Cobranca.Metodo.PIX and getattr(settings, "PIX_DIRETO", False):
+        if direto:
             dados = _pix_direto(cobranca)
         else:
-            dados = get_gateway().criar_cobranca(cobranca)
+            dados = gw.criar_cobranca(cobranca)
     except Exception as erro:
         with transaction.atomic():
-            cobranca.status = Cobranca.Status.CANCELADO
-            cobranca.save(update_fields=["status"])
+            incerto = isinstance(erro, ResultadoIncerto) or not isinstance(erro, ValidationError)
+            cobranca.status = Cobranca.Status.PENDENTE if incerto else Cobranca.Status.CANCELADO
+            cobranca.conciliacao_pendente = incerto
+            cobranca.save(update_fields=["status", "conciliacao_pendente"])
             EventoPagamento.objects.create(
-                cobranca=cobranca, tipo=EventoPagamento.Tipo.CANCELADA, origem="sistema",
-                detalhe={"erro": str(erro)[:500]},
+                cobranca=cobranca, tipo=EventoPagamento.Tipo.WEBHOOK if incerto else EventoPagamento.Tipo.CANCELADA, origem="sistema",
+                detalhe={"erro": " ".join(erro.messages)[:500] if isinstance(erro, ValidationError) else "Resposta não confirmada pelo provedor.", "conciliar": incerto},
             )
         raise
     with transaction.atomic():
@@ -109,8 +117,9 @@ def confirmar_pagamento(cobranca, usuario=None, origem="webhook"):
     if cobranca.status not in (Cobranca.Status.PENDENTE,):
         raise ValidationError("Cobrança não está pendente.")
     cobranca.status = Cobranca.Status.PAGO
+    cobranca.conciliacao_pendente = False
     cobranca.pago_em = timezone.now()
-    cobranca.save(update_fields=["status", "pago_em"])
+    cobranca.save(update_fields=["status", "pago_em", "conciliacao_pendente"])
     EventoPagamento.objects.create(cobranca=cobranca, tipo="paga", origem=origem)
     _creditar_na_reserva(cobranca)
 
@@ -186,7 +195,7 @@ def _sincronizar_recibo_site(cobranca):
 
 
 @transaction.atomic
-def estornar(cobranca, operador):
+def estornar(cobranca, operador, *, devolucao_confirmada=False, referencia_devolucao=""):
     from apps.nucleo.sistema import travar
     cobranca = travar(cobranca)  # dois cliques em "Estornar" não devolvem duas vezes
     if cobranca.status != Cobranca.Status.PAGO:
@@ -197,15 +206,27 @@ def estornar(cobranca, operador):
         # descobrir que a conta da hospedagem já estava fechada.
         from apps.reservas.services import verificar_estorno_online
         verificar_estorno_online(cobranca.pk)
-    resultado = get_gateway().estornar(cobranca)
+    manual = cobranca.gateway == GATEWAY_PIX_DIRETO
+    if manual:
+        from apps.nucleo.permissoes import eh_gerente
+        referencia_devolucao = str(referencia_devolucao).strip()
+        if not eh_gerente(operador):
+            raise ValidationError("Somente a gerência pode registrar uma devolução manual.")
+        if devolucao_confirmada is not True or not 6 <= len(referencia_devolucao) <= 100:
+            raise ValidationError("Devolva o Pix no banco e informe a referência do comprovante para registrar a devolução integral.")
+        resultado = {"estornado": True, "manual": True, "referencia_devolucao": referencia_devolucao}
+    else:
+        resultado = get_gateway(cobranca).estornar(cobranca)
+    if resultado.get("estornado") is not True:
+        raise ResultadoIncerto("O provedor não confirmou o estorno; o pagamento permanece registrado.")
     cobranca.status = Cobranca.Status.ESTORNADO
     cobranca.save(update_fields=["status"])
     EventoPagamento.objects.create(cobranca=cobranca, tipo="estornada",
-                                   origem="gateway", detalhe=resultado)
+                                   origem="operador" if manual else "gateway", detalhe=resultado)
     if credito_na_reserva:
         from apps.reservas.services import estornar_pagamento_online
         estornar_pagamento_online(cobranca_id=cobranca.pk,
-                                  motivo=f"cobrança #{cobranca.pk} estornada no gateway")
+                                  motivo=f"cobrança #{cobranca.pk}: devolução {'manual conferida' if manual else 'confirmada no provedor'}")
     registrar_auditoria(operador, "estorno_pagamento", cobranca,
                         {"valor": str(cobranca.valor)})
     return cobranca
@@ -218,6 +239,12 @@ def cancelar(cobranca, operador):
     travar(cobranca)
     if cobranca.status != Cobranca.Status.PENDENTE:
         raise ValidationError("Só cobranças pendentes podem ser canceladas.")
+    if cobranca.conciliacao_pendente:
+        raise ValidationError("Consulte o provedor antes de cancelar uma cobrança com resposta pendente.")
+    if cobranca.gateway == "safrapay" and cobranca.gateway_id:
+        info = consultar_cobranca(cobranca)
+        if info.get("status_raw") not in ("Denied", "Canceled"):
+            raise ValidationError("Esta cobrança ainda existe no provedor. Concilie ou cancele no provedor antes de encerrar localmente.")
     cobranca.status = Cobranca.Status.CANCELADO
     cobranca.save(update_fields=["status"])
     EventoPagamento.objects.create(cobranca=cobranca, tipo="cancelada", origem="operador")
@@ -319,20 +346,58 @@ def recebimentos(*, inicio=None, fim=None, metodo="", status="", liquidacao=""):
     return list(qs[:300]), totais
 
 
-def autorizar_cartao_online(cobranca, card: dict, usuario=None, remote_ip=""):
+def consultar_cobranca(cobranca):
+    """Recupera também uma resposta perdida pela referência persistida antes do envio."""
+    gw = get_gateway(cobranca)
+    if not hasattr(gw, "consultar_status"):
+        raise ValidationError("Esta cobrança não possui consulta automática ao provedor.")
+    info = gw.consultar_status(cobranca)
+    with transaction.atomic():
+        atual = Cobranca.objects.select_for_update().get(pk=cobranca.pk)
+        if atual.tentativa_cartao != cobranca.tentativa_cartao:
+            raise ValidationError("A cobrança mudou durante a consulta. Consulte novamente.")
+        campos = []
+        if info.get("gateway_id"):
+            atual.gateway_id = info["gateway_id"]
+            campos.append("gateway_id")
+        if info.get("status_raw") in ("Denied", "Canceled", "Captured"):
+            atual.conciliacao_pendente = False
+            campos.append("conciliacao_pendente")
+        if campos:
+            atual.save(update_fields=campos)
+    return info
+
+
+def autorizar_cartao_online(cobranca, card: dict, usuario=None, remote_ip="", session_id=""):
     """Autoriza o cartão digitado pelo hóspede na página pública e, se aprovado,
     confirma o pagamento. Retorna (ok: bool, mensagem: str). Nunca guarda o PAN:
     o cartão só transita para o gateway — o payload persistido é o do provedor.
     `remote_ip` = IP do hóspede (o antifraude usa)."""
-    if cobranca.metodo != Cobranca.Metodo.CARTAO:
+    if not cobranca.pagamento_cartao:
         return False, "Esta cobrança não é de cartão."
     if cobranca.status != Cobranca.Status.PENDENTE:
         return False, "Cobrança não está pendente."
     if cobranca.vencida:
         return False, "Este link de pagamento expirou."
-    gw = get_gateway()
+    try:
+        gw = get_gateway(cobranca)
+    except ValidationError as erro:
+        return False, " ".join(erro.messages)
     if not hasattr(gw, "autorizar_cartao"):
         return False, "Gateway não suporta autorização de cartão."
+    with transaction.atomic():
+        atual = Cobranca.objects.select_for_update().get(pk=cobranca.pk)
+        if atual.status != Cobranca.Status.PENDENTE or atual.conciliacao_pendente or atual.vencida:
+            return False, "Esta cobrança está em confirmação. Consulte o resultado antes de tentar novamente."
+        if atual.gateway_id and atual.gateway != "simulado" and not atual.tentativa_cartao:
+            return False, "Consulte o resultado da tentativa anterior antes de enviar outro cartão."
+        atual.tentativa_cartao += 1
+        atual.conciliacao_pendente = True
+        atual.gateway_id = ""
+        atual.save(update_fields=["tentativa_cartao", "conciliacao_pendente", "gateway_id"])
+        cobranca = atual
+    if session_id:
+        cobranca.payload = {**cobranca.payload, "session_id": session_id}
     try:
         dados = gw.autorizar_cartao(cobranca, card, remote_ip=remote_ip)
     except ValidationError as erro:
@@ -340,7 +405,11 @@ def autorizar_cartao_online(cobranca, card: dict, usuario=None, remote_ip=""):
             cobranca=cobranca, tipo=EventoPagamento.Tipo.WEBHOOK,
             origem="cartao", detalhe={"erro": " ".join(erro.messages)},
         )
+        if not isinstance(erro, ResultadoIncerto):
+            Cobranca.objects.filter(pk=cobranca.pk, tentativa_cartao=cobranca.tentativa_cartao).update(conciliacao_pendente=False)
         return False, " ".join(erro.messages)
+    except Exception:
+        return False, "Não foi possível confirmar a resposta. Consulte a cobrança antes de tentar novamente."
     # Persiste só o retorno do gateway (sem o cartão cru).
     gid = dados.get("gateway_id")
     if gid:
@@ -362,6 +431,7 @@ def autorizar_cartao_online(cobranca, card: dict, usuario=None, remote_ip=""):
         origem="cartao", detalhe={"status_raw": status_raw, "aprovado": False},
     )
     if status_negado(status_raw):
+        Cobranca.objects.filter(pk=cobranca.pk, tentativa_cartao=cobranca.tentativa_cartao).update(conciliacao_pendente=False)
         return False, "Cartão não autorizado pela operadora. Tente outro cartão."
     return False, ("Não foi possível confirmar o pagamento agora. "
                    "Se o valor foi debitado, ele será conciliado automaticamente.")

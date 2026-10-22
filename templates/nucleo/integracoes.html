@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block titulo %}Operação e integrações | CRM Vô Testa{% endblock %}
+{% block conteudo %}
+<p class="pagina-eyebrow letreiro">Configurações</p>
+<h1>Operação e integrações</h1>
+<p class="subtitulo">Acompanhe os serviços conectados e a continuidade desta instalação.</p>
+<nav class="est-abas" aria-label="Operação"><a class="est-aba" href="#integracoes" aria-current="page">Integrações</a><a class="est-aba" href="#continuidade">Continuidade</a></nav>
+<p class="ajuda">Instalação atual: {{ instalacao }}</p>
+<div id="integracoes" class="op-integracoes">
+{% for item in integracoes %}
+<section class="painel-bloco">
+  <div class="pagina-cabecalho"><h2>{{ item.titulo }}</h2><span class="selo {% if item.ensaio %}selo-limpa{% else %}selo-alerta{% endif %}">{{ item.situacao }}</span></div>
+  <p>{{ item.modo }}{% if item.ambiente %} · {{ item.ambiente }}{% endif %}</p>
+  {% if item.modo == 'simulado' %}<p class="ajuda">Os resultados deste modo são de teste. A ativação exige configurar o provedor e conferir um ensaio.</p>{% endif %}
+  {% if item.pendencias %}<ul>{% for pendencia in item.pendencias %}<li>{{ pendencia }}</li>{% endfor %}</ul>{% endif %}
+  <p>{{ item.orientacao }}</p>
+  {% if item.ensaio_desatualizado %}<p class="mensagem warning">A configuração mudou desde o último ensaio. Repita a conferência antes de operar.</p>{% endif %}
+  {% if item.ensaio %}<p><strong>Conferido por {{ item.ensaio.registrado_por }}</strong> em {{ item.ensaio.realizado_em|date:"d/m/Y H:i" }}.</p><p>{{ item.ensaio.evidencia|linebreaksbr }}</p>{% endif %}
+  {% if item.pronto %}<details><summary>Registrar resultado do ensaio</summary>
+    <form method="post" class="form-cartao">{% csrf_token %}<input type="hidden" name="canal" value="{{ item.codigo }}">
+      <div class="campo"><label for="evidencia-{{ item.codigo }}">Operações conferidas e resultado</label><textarea id="evidencia-{{ item.codigo }}" name="evidencia" rows="3" minlength="20" maxlength="2000" required></textarea><small class="ajuda">Registre a referência do ensaio, sem dados de clientes ou credenciais.</small></div>
+      <label class="marcador"><input type="checkbox" name="confirmado" value="sim" required> Conferi o resultado no provedor e neste sistema.</label>
+      <button class="botao-primario" type="submit">Registrar ensaio</button>
+    </form>
+  </details>{% endif %}
+</section>
+{% endfor %}
+</div>
+<section id="continuidade" class="painel-bloco bloco-fim">
+  <h2>Continuidade da operação</h2>
+  <dl class="ficha">
+    <div><dt>Backup do banco</dt><dd>{% if backup_recente and backup.situacao == 'concluido' %}Última execução concluída{% else %}<strong>Requer atenção</strong>{% endif %}</dd></div>
+    <div><dt>Último backup verificado</dt><dd>{{ backup.ultimo_sucesso|date:"d/m/Y H:i"|default:"Ainda não registrado" }}</dd></div>
+    {% if backup.erro %}<div><dt>Última falha</dt><dd>{{ backup.erro }}</dd></div>{% endif %}
+    <div><dt>Destino persistente local</dt><dd>{{ backup_local|yesno:"Configurado,Pendente" }}</dd></div>
+    <div><dt>Cópia externa privada</dt><dd>{{ backup_externo|yesno:"Configurada,Pendente" }}</dd></div>
+    <div><dt>Alertas das rotinas</dt><dd>{{ monitores|yesno:"Configurados,Pendentes" }}</dd></div>
+    <div><dt>Kit de contingência</dt><dd>{{ kit_configurado|yesno:"Destinatários configurados,Destinatários pendentes" }} · <a href="{% url 'reservas:kit' %}">Abrir versão para impressão</a></dd></div>
+    <div><dt>E-mail de confirmação do site</dt><dd>{{ smtp_configurado|yesno:"SMTP configurado — conferir recebimento,Envio externo pendente" }}</dd></div>
+    {% if pix_manual %}<div><dt>Pix direto</dt><dd>{% if pix_configurado %}Chave configurada; baixa após conferência manual no banco.{% else %}Chave pendente.{% endif %}</dd></div>{% endif %}
+  </dl>
+  <p class="ajuda">Um backup só comprova recuperação depois de restaurado em ambiente isolado. A presença de credenciais não substitui a conferência dos serviços.</p>
+</section>
+<style>.op-integracoes{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,25rem),1fr));gap:1.5rem;margin:1.5rem 0}.op-integracoes>*{min-width:0}.op-integracoes .pagina-cabecalho{flex-wrap:wrap;gap:.75rem}.op-integracoes h2{font-size:1.25rem}.op-integracoes .form-cartao{max-width:none;margin-top:1rem}.op-integracoes summary{min-height:44px;padding:.75rem 0;cursor:pointer}.op-integracoes summary:focus-visible{outline:2px solid currentColor;outline-offset:4px}#continuidade dd{overflow-wrap:anywhere}</style>
+{% endblock %}

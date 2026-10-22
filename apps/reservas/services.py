@@ -1405,13 +1405,13 @@ def resumo_fiscal_conta(conta_id):
     from apps.nucleo.models import NaturezaFiscal
     conta = (
         ContaHospedagem.objects
-        .select_related("reserva__uh", "reserva__hospede")
+        .select_related("reserva__uh", "reserva__hospede", "grupo__titular")
         .filter(pk=conta_id).first()
     )
     if not conta:
         return None
-    if not conta.reserva_id:
-        return None  # folio de grupo: a nota sai pelas contas dos quartos/titular
+    if not conta.reserva_id and not conta.grupo_id:
+        return None
     por_nat = conta.total_por_natureza()  # {"Serviço": x, "Consumo": y}
     # ISS e taxa de turismo entram na conta do hóspede, mas não são serviço prestado
     # pela pousada: saem da base da NFS-e (o ISS não incide sobre ele mesmo).
@@ -1419,8 +1419,8 @@ def resumo_fiscal_conta(conta_id):
     return {
         "conta_id": conta.pk,
         "reserva_id": conta.reserva_id,
-        "uh": conta.reserva.uh.numero,
-        "hospede": conta.reserva.hospede,  # Pessoa (tomador)
+        "uh": conta.reserva.uh.numero if conta.reserva_id else f"Grupo {conta.grupo.rotulo}",
+        "hospede": conta.reserva.hospede if conta.reserva_id else conta.grupo.titular,
         "servico": por_nat.get(NaturezaFiscal.SERVICO.label, Decimal("0.00")) - taxas,
         "consumo": por_nat.get(NaturezaFiscal.CONSUMO.label, Decimal("0.00")),
         "taxas": taxas,

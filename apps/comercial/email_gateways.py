@@ -1,83 +1,91 @@
-"""
-Gateway de e-mail (trilho 1:1 do lead + futura campanha em massa). Plugável por
-`EMAIL_GATEWAY`:
-- **simulado** (default): sem rede — MVP/dev/testes. "Envia" via console backend do
-  Django (imprime no terminal) e devolve um message-id fake.
-- **ses**: Amazon SES (Fase 4) — stub por ora.
-
-Ver docs/Marketing/Gestor_email_leads_funil.md e Gestor_Email_MKT.md. Remetente 1:1 =
-`comercial@pousadavotesta.com.br` (transacional); campanha em massa sairá de
-`news.pousadavotesta.com.br` (SES) — nunca pelo mesmo remetente.
-"""
+"""E-mail simulado sem rede, SMTP e Amazon SES com confirmação de aceitação."""
 from __future__ import annotations
 
-import logging
 import uuid
+from email.utils import parseaddr
+from smtplib import SMTPException
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.mail import EmailMultiAlternatives, get_connection
 
-logger = logging.getLogger(__name__)
+
+def mensagem(*, para, assunto, html, texto, remetente, reply_to=None, headers=None):
+    msg = EmailMultiAlternatives(subject=assunto, body=texto or "", from_email=remetente,
+        to=[para], reply_to=[reply_to] if reply_to else None, headers=headers or {})
+    if html:
+        msg.attach_alternative(html, "text/html")
+    return msg
 
 
 class GatewaySimulado:
-    """Envia pelo EMAIL_BACKEND do Django (console em dev, SMTP se EMAIL_HOST setado).
-
-    Sem provedor externo (não é o SES). Se houver credenciais dedicadas do comercial
-    (EMAIL_COMERCIAL_HOST_USER/PASSWORD), abre uma conexão SMTP própria e envia de fato
-    "de" `comercial@`. Sem elas, cai no remetente global autenticado (ex.: naoresponda@)
-    para não bater no anti-relay do provedor — mantendo o Reply-To no comercial@.
-    """
-
     nome = "simulado"
 
-    def enviar(self, *, para, assunto, html, texto, remetente, reply_to=None,
-               headers=None) -> dict:
-        host_user = getattr(settings, "EMAIL_COMERCIAL_HOST_USER", "")
-        conexao = None
-        de = remetente
-        if host_user:
-            conexao = get_connection(
-                username=host_user,
-                password=getattr(settings, "EMAIL_COMERCIAL_HOST_PASSWORD", ""),
-            )
-        elif getattr(settings, "EMAIL_HOST", ""):
-            # SMTP sem conta dedicada do comercial → usa a conta autenticada global.
-            de = getattr(settings, "DEFAULT_FROM_EMAIL", remetente)
-
-        msg = EmailMultiAlternatives(
-            subject=assunto, body=texto or "", from_email=de, to=[para],
-            reply_to=[reply_to] if reply_to else None, headers=headers or {},
-            connection=conexao,
-        )
-        if html:
-            msg.attach_alternative(html, "text/html")
+    def enviar(self, **dados):
+        if not (settings.DEBUG or settings.TESTING):
+            raise ValidationError("O envio externo de e-mail ainda não está configurado nesta instalação.")
+        # Nunca usa a conexão SMTP global, mesmo que existam credenciais no ambiente.
+        msg = mensagem(**dados)
+        msg.connection = get_connection("django.core.mail.backends.locmem.EmailBackend")
         msg.send(fail_silently=False)
-        mid = f"SIM-{uuid.uuid4().hex[:16].upper()}"
-        logger.info("EMAIL[simulado] → %s | de=%s | %s | %s", para, de, assunto, mid)
-        return {"ok": True, "message_id": mid, "status": "enviado"}
+        return {"ok": True, "message_id": f"SIM-{uuid.uuid4().hex[:16].upper()}", "status": "simulado"}
+
+
+class GatewaySmtp:
+    nome = "smtp"
+
+    def enviar(self, **dados):
+        if not getattr(settings, "EMAIL_HOST", ""):
+            raise ValidationError("Configure o servidor SMTP antes de enviar e-mails.")
+        usuario = settings.EMAIL_COMERCIAL_HOST_USER or settings.EMAIL_HOST_USER
+        senha = settings.EMAIL_COMERCIAL_HOST_PASSWORD if settings.EMAIL_COMERCIAL_HOST_USER else settings.EMAIL_HOST_PASSWORD
+        if usuario and not senha:
+            raise ValidationError("Configure a senha de aplicativo do remetente SMTP.")
+        if not settings.EMAIL_COMERCIAL_HOST_USER:
+            dados["remetente"] = settings.DEFAULT_FROM_EMAIL
+        msg = mensagem(**dados)
+        msg.connection = get_connection("django.core.mail.backends.smtp.EmailBackend",
+            username=usuario, password=senha, timeout=settings.EMAIL_TIMEOUT)
+        try:
+            aceitos = msg.send(fail_silently=False)
+        except (SMTPException, OSError):
+            raise ValidationError("O servidor SMTP não confirmou o envio. Confira a conexão e o remetente configurados.")
+        if aceitos != 1:
+            raise ValidationError("O servidor SMTP não aceitou a mensagem.")
+        return {"ok": True, "message_id": f"SMTP-{uuid.uuid4().hex}", "status": "enviado"}
 
 
 class GatewaySes:
-    """Amazon SES — Fase 4 (exige credenciais + domínio verificado)."""
-
     nome = "ses"
 
-    def enviar(self, *, para, assunto, html, texto, remetente, reply_to=None,
-               headers=None) -> dict:
-        raise ValidationError(
-            "EMAIL_GATEWAY=ses ainda não implementado (Fase 4 — SES real). "
-            "Use EMAIL_GATEWAY=simulado por enquanto.")
+    def enviar(self, **dados):
+        import boto3
+        from botocore.config import Config
+        from botocore.exceptions import BotoCoreError, ClientError
+        if not all((settings.EMAIL_SES_REGION, settings.EMAIL_SES_ACCESS_KEY_ID, settings.EMAIL_SES_SECRET_ACCESS_KEY)):
+            raise ValidationError("Configure região e credenciais do Amazon SES, com remetente verificado.")
+        msg = mensagem(**dados)
+        try:
+            cliente = boto3.client("ses", region_name=settings.EMAIL_SES_REGION,
+                aws_access_key_id=settings.EMAIL_SES_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.EMAIL_SES_SECRET_ACCESS_KEY,
+                config=Config(connect_timeout=10, read_timeout=20, retries={"max_attempts": 0}))
+            resultado = cliente.send_raw_email(Source=parseaddr(msg.from_email)[1], Destinations=msg.to,
+                RawMessage={"Data": msg.message().as_bytes()})
+        except (BotoCoreError, ClientError):
+            raise ValidationError("O Amazon SES não confirmou a aceitação. Confira a identidade do remetente e a situação da conta no provedor.")
+        identificador = resultado.get("MessageId") if isinstance(resultado, dict) else None
+        if not isinstance(identificador, str) or not identificador:
+            raise ValidationError("O Amazon SES não informou o identificador da mensagem.")
+        return {"ok": True, "message_id": identificador, "status": "enviado"}
 
 
-_GATEWAYS = {"simulado": GatewaySimulado, "ses": GatewaySes}
+_GATEWAYS = {"simulado": GatewaySimulado, "smtp": GatewaySmtp, "ses": GatewaySes}
 
 
 def get_email_gateway():
-    nome = getattr(settings, "EMAIL_GATEWAY", "simulado")
+    nome = settings.EMAIL_GATEWAY
     cls = _GATEWAYS.get(nome)
     if cls is None:
-        raise ValidationError(
-            f"EMAIL_GATEWAY desconhecido: {nome!r}. Use: {', '.join(sorted(_GATEWAYS))}.")
+        raise ValidationError("Provedor de e-mail desconhecido. Configure simulado, smtp ou ses.")
     return cls()

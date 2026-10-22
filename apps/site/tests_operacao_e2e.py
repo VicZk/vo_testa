@@ -35,6 +35,88 @@ if _PLAYWRIGHT_OK:
 class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
     LOCALE = "pt-BR"
 
+    def test_fiscal_integracoes_e_devolucao_nas_seis_larguras(self):
+        from apps.fiscal.models import ConfigFiscalProduto, DocumentoFiscal
+        from apps.pagamentos import services as pagamentos
+        p = self.page
+        p.emulate_media(reduced_motion="reduce")
+        self.product.natureza = "consumo"
+        self.product.save(update_fields=["natureza"])
+        self.cobranca.gateway, self.cobranca.gateway_ambiente = "pix_direto", "manual"
+        self.cobranca.save(update_fields=["gateway", "gateway_ambiente"])
+        pagamentos.confirmar_pagamento(self.cobranca, self.op)
+        rotas = [("integracoes", []), ("fiscal:painel", []), ("fiscal:produtos", []),
+                 ("fiscal:produto", [self.product.pk]), ("fiscal:preparar_conta", [self.conta.pk]),
+                 ("pagamentos:detalhe", [self.cobranca.pk]), ("pessoa_editar", [self.guest.pk])]
+        for largura in (320, 390, 821, 1440, 2560, 3440):
+            p.set_viewport_size({"width":largura,"height":900})
+            for nome, args in rotas:
+                with self.subTest(largura=largura, tela=nome):
+                    resposta = p.goto(self.url(reverse(nome, args=args)), wait_until="networkidle")
+                    self.assertEqual(resposta.status, 200)
+                    self.assertLessEqual(p.evaluate("document.documentElement.scrollWidth"), largura+1)
+                    if largura in (320, 1440):
+                        self._foto("fase4-"+nome.replace(":","-")+f"-{largura}.png", full_page=True)
+        p.set_viewport_size({"width":390,"height":900})
+        p.goto(self.url(reverse("fiscal:produto", args=[self.product.pk])))
+        for nome, valor in {"ncm":"22021000", "cfop":"5102", "cst_csosn":"00", "origem":"0", "pis":"01", "cofins":"01", "tributos":"{}"}.items():
+            p.locator(f'[name="{nome}"]').fill(valor)
+        p.locator('[name="conferido"]').check()
+        p.get_by_role("button", name="Salvar cadastro fiscal", exact=True).click()
+        expect(p.get_by_role("heading", name="Cadastro fiscal de produtos", exact=True)).to_be_visible()
+        self.assertEqual(ConfigFiscalProduto.objects.get(produto=self.product).ncm, "22021000")
+        p.goto(self.url(reverse("fiscal:preparar_conta", args=[self.conta.pk])))
+        with override_settings(FISCAL_GATEWAY="simulado"):
+            p.get_by_role("button", name="Emitir NFS-e", exact=True).click()
+            expect(p.get_by_text("Documento de teste", exact=False)).to_be_visible()
+        self.assertEqual(DocumentoFiscal.objects.get(referencia=f"conta:{self.conta.pk}").status, "autorizada")
+        p.goto(self.url(reverse("pagamentos:detalhe", args=[self.cobranca.pk])))
+        p.locator('[name="referencia_devolucao"]').fill("COMPROVANTE-QA-0001")
+        p.locator('[name="devolucao_confirmada"]').check()
+        with patch("apps.pagamentos.services.get_gateway") as gateway:
+            p.get_by_role("button", name="Registrar devolução do Pix", exact=True).click()
+            expect(p.get_by_text("Devolução manual registrada.", exact=True)).to_be_visible()
+        gateway.assert_not_called()
+        self.cobranca.refresh_from_db()
+        self.assertEqual(self.cobranca.status, "estornado")
+
+    def test_checkout_cartao_coleta_endereco_e_sessao_sem_gravar_cartao(self):
+        from apps.pagamentos import services as pagamentos
+        from apps.pagamentos.models import Cobranca
+        p = self.page
+        p.emulate_media(reduced_motion="reduce")
+        cartao = Cobranca.objects.create(valor="20", metodo="link", descricao="Pagamento QA",
+            gateway="safrapay", gateway_ambiente="ambiente-ficticio", criado_por=self.op, pagador=self.guest)
+        p.route("https://safrastatic-a.akamaihd.net/**", lambda rota: rota.fulfill(
+            content_type="application/javascript", body="window.onSafrapayAntifraudReady({setCredentials:function(){},getSessionId:function(){return 'sessao-qa';}});"))
+        with override_settings(SAFRAPAY_ID="estabelecimento-qa", SAFRAPAY_ENV="hml"):
+            for largura in (320, 390, 821, 1440, 2560, 3440):
+                p.set_viewport_size({"width":largura,"height":900})
+                p.goto(self.url(reverse("pagamentos:pagar", args=[cartao.token])))
+                expect(p.locator('[name="session_id"]')).to_have_value("sessao-qa")
+                self.assertLessEqual(p.evaluate("document.documentElement.scrollWidth"), largura+1)
+                self.assertEqual(p.locator('.pay-confianca').count(), 1)
+                for linha in p.locator('.card-form .linha').all():
+                    bases = linha.locator('input').evaluate_all('els => els.map(e => e.getBoundingClientRect().bottom)')
+                    self.assertLessEqual(max(bases)-min(bases), 1)
+                if largura in (320, 1440):
+                    self._foto(f"fase4-cartao-{largura}.png", full_page=True)
+            p.set_viewport_size({"width":390,"height":900})
+            dados = {"nome":"Pessoa QA", "numero":"4111111111111111", "validade":"1230", "cvv":"123", "documento":"11144477735", "logradouro":"Rua de Teste", "numero_endereco":"10", "bairro":"Bairro QA", "cidade":"Itá", "uf":"SC", "cep":"89760000"}
+            for nome, valor in dados.items():
+                p.locator(f'[name="{nome}"]').fill(valor)
+            def confirmar(cobranca, card, **kwargs):
+                self.assertEqual(kwargs["session_id"], "sessao-qa")
+                self.assertEqual(card["billingAddress"]["street"], "Rua de Teste")
+                pagamentos.confirmar_pagamento(cobranca, self.op)
+                return True, "Pagamento aprovado."
+            with patch("apps.pagamentos.services.autorizar_cartao_online", side_effect=confirmar) as autorizar:
+                p.get_by_role("button", name="Pagar R$ 20,00", exact=True).click()
+                expect(p.get_by_text("Pagamento confirmado. Obrigado!", exact=False)).to_be_visible()
+                self.assertEqual(autorizar.call_count, 1)
+        cartao.refresh_from_db()
+        self.assertNotIn("4111111111111111", str(cartao.payload))
+
     def test_pesquisa_pos_estadia_recebe_opiniao_e_equipe_registra_acompanhamento(self):
         from apps.nps.models import RespostaNPS
         from apps.reservas.models import Reserva

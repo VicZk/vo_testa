@@ -1548,15 +1548,21 @@ class RotinasAgendadasTests(TestCase):
     """`rotinas` roda as tarefas de um grupo, isolando falhas."""
 
     def test_grupos_rodam_os_comandos_de_verdade(self):
-        # Sem mock: garante que todo nome listado em GRUPOS existe e roda num banco vazio.
+        # Sem destino, o backup deve fazer a rotina diaria falhar explicitamente.
         from io import StringIO
+        from unittest.mock import patch
 
         from django.core.management import call_command
+        from django.core.management.base import CommandError
 
-        for grupo in ("frequentes", "diarias"):
+        with patch.dict("os.environ", {"BACKUP_DIR":""}), override_settings(
+                BACKUP_R2_BUCKET="", BACKUP_R2_ENDPOINT_URL="",
+                BACKUP_R2_ACCESS_KEY_ID="", BACKUP_R2_SECRET_ACCESS_KEY=""):
             saida = StringIO()
-            call_command("rotinas", "--grupo", grupo, stdout=saida)
-            self.assertIn(f"do grupo {grupo} concluída(s)", saida.getvalue())
+            call_command("rotinas", "--grupo", "frequentes", stdout=saida)
+            self.assertIn("do grupo frequentes concluída(s)", saida.getvalue())
+            with self.assertRaisesMessage(CommandError, "Rotinas com falha: backup_banco"):
+                call_command("rotinas", "--grupo", "diarias", stdout=StringIO())
 
     def test_falha_de_uma_tarefa_nao_impede_as_outras(self):
         from io import StringIO
@@ -1728,14 +1734,18 @@ class BackupDoBancoTests(TestCase):
             self.assertFalse(velho.exists())
             self.assertEqual(len(list(Path(pasta).glob("crm-*"))), 1)
 
-    def test_sem_destino_configurado_so_avisa(self):
+    def test_sem_destino_configurado_falha_e_registra_estado(self):
         import os
         from unittest import mock
 
+        from django.core.management.base import CommandError
+
+        from .models import EstadoBackup
         with mock.patch.dict(os.environ, {}, clear=False):
             os.environ.pop("BACKUP_DIR", None)
-            saida = self._rodar()
-        self.assertIn("Backup não feito", saida)
+            with self.assertRaisesMessage(CommandError, "Backup não feito"):
+                self._rodar()
+        self.assertEqual(EstadoBackup.objects.get(pk=1).situacao, "falha")
 
     def test_r2_envia_com_prefixo_e_apaga_antigos(self):
         from datetime import timedelta
@@ -1747,19 +1757,25 @@ class BackupDoBancoTests(TestCase):
         from .management.commands import backup_banco
 
         cliente = mock.MagicMock()
+        def receber(arquivo, bucket, chave, ExtraArgs):
+            from pathlib import Path
+            cliente.head_object.return_value = {"ContentLength":Path(arquivo).stat().st_size,
+                "Metadata":ExtraArgs["Metadata"]}
+        cliente.upload_file.side_effect = receber
         cliente.get_paginator.return_value.paginate.return_value = [{"Contents": [
-            {"Key": "backups/2026/08/crm-velho.json.gz",
+            {"Key": "backups/2026/08/crm-20260801-000000.json.gz",
              "LastModified": timezone.now() - timedelta(days=60)},
-            {"Key": "backups/2026/10/crm-novo.json.gz", "LastModified": timezone.now()},
+            {"Key": "backups/2026/10/crm-20261022-000000.json.gz", "LastModified": timezone.now()},
         ]}]
-        with override_settings(USE_R2=True, R2_BUCKET="midia"), \
+        with override_settings(BACKUP_R2_BUCKET="backup-privado", BACKUP_R2_ENDPOINT_URL="https://qa.r2.cloudflarestorage.com",
+                BACKUP_R2_ACCESS_KEY_ID="qa-id", BACKUP_R2_SECRET_ACCESS_KEY="qa-chave", BACKUP_R2_PRIVADO=True), \
                 mock.patch.object(backup_banco, "_cliente_r2", return_value=cliente):
             saida = self._rodar("--formato", "json")
         chave = cliente.upload_file.call_args.args[2]
         self.assertTrue(chave.startswith("backups/"))
-        self.assertIn("r2://midia/backups/", saida)
+        self.assertIn("verificado em r2", saida)
         cliente.delete_objects.assert_called_once_with(
-            Bucket="midia", Delete={"Objects": [{"Key": "backups/2026/08/crm-velho.json.gz"}]})
+            Bucket="backup-privado", Delete={"Objects": [{"Key": "backups/2026/08/crm-20260801-000000.json.gz"}]})
 
 
 class AuditoriaSemCustoExtraTests(TestCase):

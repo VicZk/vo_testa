@@ -2062,7 +2062,10 @@ class AjustesPequenosReservasTests(ReservasTestsBase):
     def test_resumo_fiscal_de_folio_de_grupo_nao_quebra(self):
         grupo = services.criar_grupo(rotulo="Evento", titular=self.hospede, checkin=HOJE,
                                      checkout=HOJE + timedelta(days=1), usuario=self.usuario)
-        self.assertIsNone(services.resumo_fiscal_conta(grupo.folio.pk))
+        resumo = services.resumo_fiscal_conta(grupo.folio.pk)
+        self.assertEqual(resumo["hospede"], self.hospede)
+        self.assertEqual(resumo["servico"], Decimal("0"))
+        self.assertEqual(resumo["uh"], "Grupo Evento")
 
 
 class ValidacaoNosServicosTests(ReservasTestsBase):

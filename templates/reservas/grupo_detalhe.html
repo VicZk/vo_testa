@@ -45,6 +45,7 @@
     pago: {{ resumo.folio_pago|intcomma_brl }} ·
     saldo: <strong>{{ resumo.folio_saldo|intcomma_brl }}</strong>
     · {{ resumo.folio.get_status_display }}
+    {% if 'fiscal'|modulo_ativo %} · <a href="{% url 'fiscal:preparar_conta' resumo.folio.pk %}">Preparar NFS-e do grupo</a>{% endif %}
   </p>
   {% if resumo.folio.aberta and not grupo.encerrado_em %}
     <form method="post" action="{% url 'reservas:grupo_receber_folio' grupo.pk %}" class="form-cartao grupo-form" aria-label="Receber pagamento do grupo">

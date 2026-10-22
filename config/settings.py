@@ -435,9 +435,16 @@ FNRH_API_USER = os.environ.get("FNRH_API_USER", "")
 FNRH_API_SENHA = os.environ.get("FNRH_API_SENHA", "")
 FNRH_CPF_SOLICITANTE = os.environ.get("FNRH_CPF_SOLICITANTE", "")
 
-# Fiscal — gateway plugável: "simulado" (sandbox), "focus" (Focus NFe) ou "governo".
-# Ver docs/Implementar_fiscal.md. Focus/Governo são stubs até ter credenciais/certificado.
+# Fiscal — "simulado" (sem validade fiscal) ou "focus" (Focus NFe v2).
+# Configuração e homologação: docs/Implementar_fiscal.md.
 FISCAL_GATEWAY = os.environ.get("FISCAL_GATEWAY", "simulado")
+FISCAL_FOCUS_URL = os.environ.get("FISCAL_FOCUS_URL", "https://homologacao.focusnfe.com.br")
+FISCAL_FOCUS_TOKEN = os.environ.get("FISCAL_FOCUS_TOKEN", "")
+FISCAL_EMITENTE_CNPJ = os.environ.get("FISCAL_EMITENTE_CNPJ", "")
+FISCAL_MUNICIPIO_IBGE = os.environ.get("FISCAL_MUNICIPIO_IBGE", "")
+FISCAL_DPS_SERIE = os.environ.get("FISCAL_DPS_SERIE", "")
+FISCAL_DPS_NUMERO_INICIAL = os.environ.get("FISCAL_DPS_NUMERO_INICIAL", "1")
+FISCAL_NFSE_COMPLEMENTOS = os.environ.get("FISCAL_NFSE_COMPLEMENTOS", "{}")
 
 # Mídia/Impulsionamento — gateway de conversões (Fase B do Gestor de Impulsionamento):
 # "simulado" (sem rede, dev/testes) / "meta" (Conversions API) / "google" (Offline Import).
@@ -451,16 +458,14 @@ GOOGLE_ADS_CUSTOMER_ID = os.environ.get("GOOGLE_ADS_CUSTOMER_ID", "")
 GOOGLE_ADS_CONVERSION_ACTION = os.environ.get("GOOGLE_ADS_CONVERSION_ACTION", "")
 
 # WhatsApp — conversa dentro do funil (ver docs/Marketing/CRM_WhatsApp.md):
-# "simulado" (MVP, sem rede) / "cloud" (Meta Cloud API) / "bsp" (provedor). Sem número
-# real, manter WHATSAPP_GATEWAY=simulado.
+# "simulado" (somente testes, sem rede) / "cloud" (Meta Cloud API).
 WHATSAPP_GATEWAY = os.environ.get("WHATSAPP_GATEWAY", "simulado")
 WHATSAPP_CLOUD_TOKEN = os.environ.get("WHATSAPP_CLOUD_TOKEN", "")
 WHATSAPP_CLOUD_PHONE_ID = os.environ.get("WHATSAPP_CLOUD_PHONE_ID", "")
 WHATSAPP_VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN", "")
 WHATSAPP_API_VERSION = os.environ.get("WHATSAPP_API_VERSION", "v21.0")
 WHATSAPP_WABA_ID = os.environ.get("WHATSAPP_WABA_ID", "")  # gestão de templates (futuro)
-# App Secret do app da Meta — se definido, o webhook exige a assinatura
-# X-Hub-Signature-256 (recomendado em produção). Vazio = sem checagem (dev/simulado).
+# App Secret obrigatório para validar X-Hub-Signature-256 do provedor real.
 WHATSAPP_APP_SECRET = os.environ.get("WHATSAPP_APP_SECRET", "")
 # Template aprovado na Meta p/ reabrir conversa fora da janela de 24h (botão "Reabrir
 # conversa" no lead). Variável nomeada {{nome_cliente}}. Trocar aqui ao renomear/versionar
@@ -541,6 +546,13 @@ ROTINAS_MONITOR = {
     "diarias": os.environ.get("ROTINAS_MONITOR_DIARIAS", ""),
 }
 
+# Backups usam bucket privado próprio; nunca reutilizam o bucket público da mídia.
+BACKUP_R2_BUCKET = os.environ.get("BACKUP_R2_BUCKET", "")
+BACKUP_R2_ENDPOINT_URL = os.environ.get("BACKUP_R2_ENDPOINT_URL", "")
+BACKUP_R2_ACCESS_KEY_ID = os.environ.get("BACKUP_R2_ACCESS_KEY_ID", "")
+BACKUP_R2_SECRET_ACCESS_KEY = os.environ.get("BACKUP_R2_SECRET_ACCESS_KEY", "")
+BACKUP_R2_PRIVADO = os.environ.get("BACKUP_R2_PRIVADO", "0") == "1"
+
 # Kit de contingência (reservas:kit): quem recebe a folha do dia por e-mail, para ter o
 # retrato no celular quando a internet da pousada cair. Vazio (padrão) = não envia nada.
 KIT_CONTINGENCIA_EMAILS = [
@@ -577,8 +589,11 @@ LEAD_BOAS_VINDAS_MAX_DIA = int(os.environ.get("LEAD_BOAS_VINDAS_MAX_DIA", "100")
 GEOIP_CITY_DB = os.environ.get("GEOIP_CITY_DB", "")
 
 # E-mail do Comercial — gateway plugável (docs/Marketing/Gestor_email_leads_funil.md).
-# simulado (default): usa o EMAIL_BACKEND acima (console em dev). ses: Amazon SES (Fase 4).
+# Simulado nunca usa SMTP. Selecione smtp ou ses explicitamente para envio real.
 EMAIL_GATEWAY = os.environ.get("EMAIL_GATEWAY", "simulado")
+EMAIL_SES_REGION = os.environ.get("EMAIL_SES_REGION", "")
+EMAIL_SES_ACCESS_KEY_ID = os.environ.get("EMAIL_SES_ACCESS_KEY_ID", "")
+EMAIL_SES_SECRET_ACCESS_KEY = os.environ.get("EMAIL_SES_SECRET_ACCESS_KEY", "")
 # Remetente do trilho 1:1 (proposta/resumo pedidos pelo cliente) — caixa monitorada.
 EMAIL_COMERCIAL_FROM = os.environ.get(
     "EMAIL_COMERCIAL_FROM", "Pousada Vô Testa <comercial@pousadavotesta.com.br>"

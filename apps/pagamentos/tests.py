@@ -34,6 +34,12 @@ class PagamentosBase(TestCase):
         base.update(kw)
         return services.criar_cobranca(self.op, **base)
 
+    def marcar_real(self, cobranca):
+        from .gateways import GatewaySafrapay
+        cobranca.gateway = "safrapay"
+        cobranca.gateway_ambiente = GatewaySafrapay().ambiente
+        cobranca.save(update_fields=["gateway", "gateway_ambiente"])
+
 
 class CobrancaTests(PagamentosBase):
     def test_criar_gera_dados_do_gateway(self):
@@ -165,7 +171,7 @@ class WebhookTests(PagamentosBase):
         # página pública abre sem login
         r = self.client.get(reverse("pagamentos:pagar", args=[c.token]))
         self.assertEqual(r.status_code, 200)
-        self.assertContains(r, "voltar ao site")
+        self.assertContains(r, "Voltar ao site")
         self.client.post(reverse("pagamentos:pagar_simular", args=[c.token]))
         c.refresh_from_db()
         self.assertEqual(c.status, Cobranca.Status.PAGO)
@@ -239,11 +245,16 @@ class SafrapayGatewayTests(PagamentosBase):
         recusa (750). Marca padrão da BIN homologada = Mastercard (2)."""
         from .gateways import GatewaySafrapay
         c = self.cobranca(metodo="cartao", valor=Decimal("15.00"))
+        c.pagador = Pessoa.objects.create(nome="Pessoa QA", email="qa@example.invalid",
+            documento="11144477735", telefone="49999990000", endereco="Rua QA",
+            numero="10", bairro="Bairro QA", cidade="Itá", uf="SC", cep="89760000")
         gw = GatewaySafrapay()
         gw._access_token = lambda: "TESTE"
         capturado = {}
 
         def fake_http(method, path, headers=None, body=None, timeout=30):
+            if path.startswith("/v2/Card/Bin"):
+                return 200, {"success":True, "cardBrand":"MasterCard"}
             capturado["path"] = path
             capturado["body"] = body
             return 200, {"charge": {"id": "X", "chargeStatus": "Authorized",
@@ -261,7 +272,7 @@ class SafrapayGatewayTests(PagamentosBase):
         self.assertIn("address", charge["customer"])              # endereço do cliente
         self.assertIn("phone", charge["customer"])                # telefone forçado
         card_out = charge["transactions"][0]["card"]
-        self.assertEqual(card_out["brand"], 2)                    # Mastercard
+        self.assertEqual(card_out["brand"], "MasterCard")  # identificação do provedor
         self.assertIn("billingAddress", card_out)
         self.assertIs(card_out["isPrivateLabel"], False)
         self.assertTrue(card_out["cardholderDocument"])
@@ -316,6 +327,7 @@ class SafrapayGatewayTests(PagamentosBase):
         pendente (ex.: Pix não pago), NÃO confirma — sem confirmar no escuro."""
         from unittest.mock import patch
         c = self.cobranca()  # criada no simulado
+        self.marcar_real(c)
         with override_settings(PAGAMENTOS_GATEWAY="safrapay"), patch(
             "apps.pagamentos.gateways.GatewaySafrapay.consultar_status",
             return_value={"status_raw": "PreAuthorized"},
@@ -328,6 +340,7 @@ class SafrapayGatewayTests(PagamentosBase):
         """No gateway real, 'Já paguei' confirma quando o status verdadeiro é pago."""
         from unittest.mock import patch
         c = self.cobranca()
+        self.marcar_real(c)
         with override_settings(PAGAMENTOS_GATEWAY="safrapay"), patch(
             "apps.pagamentos.gateways.GatewaySafrapay.consultar_status",
             return_value={"status_raw": "Captured"},
@@ -343,6 +356,7 @@ class SafrapayGatewayTests(PagamentosBase):
 
         from django.test import override_settings
         c = self.cobranca()
+        self.marcar_real(c)
         with override_settings(PAGAMENTOS_GATEWAY="safrapay"):
             r = self.client.post(
                 reverse("pagamentos:webhook"),
@@ -363,6 +377,7 @@ class SafrapayGatewayTests(PagamentosBase):
 
         from django.test import override_settings
         c = self.cobranca()
+        self.marcar_real(c)
         with override_settings(PAGAMENTOS_GATEWAY="safrapay"):
             r = self.client.post(
                 reverse("pagamentos:webhook"),
@@ -498,6 +513,7 @@ class WebhookSegurancaTests(PagamentosBase):
     def test_webhook_forjado_nao_confirma_no_gateway_real(self):
         from unittest.mock import patch
         c = self.cobranca()
+        self.marcar_real(c)
         c.gateway_id = "VT-REAL-1"
         c.save(update_fields=["gateway_id"])
         # Atacante manda status=paid; o provedor diz que está pendente.
@@ -516,6 +532,7 @@ class WebhookSegurancaTests(PagamentosBase):
     def test_webhook_confirma_quando_provedor_confirma(self):
         from unittest.mock import patch
         c = self.cobranca()
+        self.marcar_real(c)
         c.gateway_id = "VT-REAL-2"
         c.save(update_fields=["gateway_id"])
         with override_settings(PAGAMENTOS_GATEWAY="safrapay"), patch(
@@ -761,9 +778,19 @@ class PaginaPublicaPagarTests(PagamentosBase):
         cfg = ConfiguracaoSite.load()
         cfg.whatsapp = "5549999990000"
         cfg.save()
-        cartao = self.html(metodo="cartao")
+        c = self.cobranca(metodo="cartao")
+        self.marcar_real(c)
+        with self.settings(PAGAMENTOS_GATEWAY="safrapay"):
+            cartao = self.client.get(
+                reverse("pagamentos:pagar", args=[c.token])
+            ).content.decode()
         self.assertIn("não guarda o número do seu cartão", cartao)
         self.assertIn("wa.me/5549999990000", cartao)
+        self.assertEqual(cartao.count('class="pay-confianca"'), 1)
+        simulado = self.html(metodo="cartao")
+        self.assertIn("Demonstração sem cobrança de valor real", simulado)
+        self.assertIn("wa.me/5549999990000", simulado)
+        self.assertNotIn("processado pela operadora", simulado)
         # No Pix não há cartão: a frase some, o contato da recepção fica.
         pix = self.html(metodo="pix")
         self.assertNotIn("não guarda o número do seu cartão", pix)
@@ -773,6 +800,7 @@ class PaginaPublicaPagarTests(PagamentosBase):
         """Com gateway real a captura de cartão aparece; a máscara e a bandeira
         vêm junto (os `name` seguem numero/validade — o backend não muda)."""
         c = self.cobranca(metodo="cartao")
+        self.marcar_real(c)
         with self.settings(PAGAMENTOS_GATEWAY="safrapay"):
             html = self.client.get(
                 reverse("pagamentos:pagar", args=[c.token])

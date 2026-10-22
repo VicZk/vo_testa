@@ -1396,6 +1396,8 @@ class LancamentoConta(models.Model):
     natureza = models.CharField(
         "natureza fiscal", max_length=10, choices=NaturezaFiscal.choices
     )
+    codigo_servico_fiscal = models.CharField("código nacional do serviço", max_length=6, blank=True,
+        help_text="Classificação conferida pelo responsável fiscal. Diárias usam o código de hospedagem configurado.")
     descricao = models.CharField("descrição", max_length=200)
     observacoes = models.TextField("detalhes do consumo", blank=True)
     quantidade = models.DecimalField(

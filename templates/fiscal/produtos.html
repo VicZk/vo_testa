@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block titulo %}Cadastro fiscal de produtos | CRM Vô Testa{% endblock %}
+{% block conteudo %}
+<a href="{% url 'fiscal:painel' %}" class="voltar">Notas fiscais</a>
+<p class="pagina-eyebrow letreiro">Fiscal</p>
+<h1>Cadastro fiscal de produtos</h1>
+<p class="subtitulo">Cadastre os códigos de cada produto com o responsável fiscal para preparar a emissão de NFC-e.</p>
+<form method="get" class="filtros bloco-fim"><div class="campo"><label for="busca-produto">Buscar produto</label><input id="busca-produto" name="q" value="{{ busca }}" maxlength="120"></div><button class="botao-neutro">Buscar</button></form>
+<div class="tabela-rolagem"><table class="tabela"><thead><tr><th>Produto</th><th>NCM</th><th>CFOP</th><th>CST/CSOSN</th><th>Cadastro</th></tr></thead><tbody>
+{% for produto in pagina %}<tr><td><a href="{% url 'fiscal:produto' produto.pk %}">{{ produto.nome }}</a>{% if not produto.ativo %}<small>Inativo</small>{% endif %}</td><td>{{ produto.config_fiscal.ncm|default:"Pendente" }}</td><td>{{ produto.config_fiscal.cfop|default:"—" }}</td><td>{{ produto.config_fiscal.cst_csosn|default:"—" }}</td><td><a class="botao-neutro" href="{% url 'fiscal:produto' produto.pk %}">Editar<span class="sr-only"> {{ produto.nome }}</span></a></td></tr>
+{% empty %}<tr><td colspan="5" class="vazio">Nenhum produto encontrado.</td></tr>{% endfor %}
+</tbody></table></div>
+{% if pagina.has_other_pages %}<nav class="acoes" aria-label="Paginação">{% if pagina.has_previous %}<a class="botao-neutro" href="?q={{ busca|urlencode }}&amp;page={{ pagina.previous_page_number }}">Anterior</a>{% endif %}<span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>{% if pagina.has_next %}<a class="botao-neutro" href="?q={{ busca|urlencode }}&amp;page={{ pagina.next_page_number }}">Próxima</a>{% endif %}</nav>{% endif %}
+{% endblock %}

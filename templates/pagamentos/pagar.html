@@ -39,7 +39,10 @@
       border-radius: var(--raio-p); transition: border-color .15s, box-shadow .15s;
     }
     .card-form input:focus { outline: none; border-color: var(--lampiao); box-shadow: 0 0 0 3px color-mix(in srgb, var(--lampiao) 25%, transparent); }
-    .card-form .linha { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+    .card-form .linha { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: .7rem; align-items: end; }
+    .card-form .linha > * { min-width: 0; }
+    .card-form fieldset { min-width: 0; border: 0; border-top: 1px solid var(--fio); margin: 1.5rem 0 0; padding: .8rem 0 0; }
+    .card-form legend { padding: 0 .5rem 0 0; font-size: .85rem; font-weight: 600; }
     .card-seguro { font-size: .72rem; color: var(--tinta-suave); margin-top: .8rem; display: flex; align-items: center; gap: .35rem; justify-content: center; }
     /* Número do cartão com a bandeira dentro do campo: a pessoa confirma que
        digitou o cartão certo antes de enviar (reconhecimento, não memória). */
@@ -77,6 +80,13 @@
     .pay-enviar { width: 100%; margin-top: 1rem; }
     .card-form .pay-enviar { margin-top: 1.1rem; }
     .pay-rodape { margin-top: 1rem; font-size: .78rem; }
+    @media (max-width: 400px) {
+      body { padding: 1rem; }
+      .pay { padding: 1.25rem; }
+      .cc-num-wrap input { padding-right: .8rem; }
+      .cc-bandeira { position: static; transform: none; display: none; }
+      .cc-bandeira.vista { display: inline-block; margin-top: .35rem; }
+    }
   </style>
 </head>
 <body>
@@ -112,6 +122,11 @@
       <div class="acoes">
         <a href="{% url 'core:home' %}" class="botao-neutro">Voltar ao site</a>
       </div>
+    {% elif sandbox and not simulacao_permitida %}
+      <p class="subtitulo">Este link é de demonstração e não recebe pagamentos. Solicite à pousada um meio de pagamento ativo.</p>
+    {% elif cobranca.conciliacao_pendente %}
+      <p class="subtitulo" role="status">Estamos aguardando a confirmação do pagamento. Consulte o resultado antes de tentar pagar novamente.</p>
+      <form method="post" action="{% url 'pagamentos:pagar_simular' cobranca.token %}">{% csrf_token %}<button type="submit" class="botao-primario">Consultar pagamento</button></form>
     {% elif cobranca.status == 'pendente' %}
       {% if cobranca.metodo == 'pix' and cobranca.pix_copia_cola %}
         {% if qr_svg %}
@@ -135,11 +150,12 @@
         {% endif %}
       {% endif %}
 
-      {% if cobranca.metodo == 'cartao' and not sandbox %}
+      {% if cobranca.pagamento_cartao and not sandbox %}
         {# Captura do cartão — crédito à vista. O número só transita para o gateway. #}
         <p class="subtitulo">Pague com cartão de crédito.</p>
         <form method="post" action="{% url 'pagamentos:pagar_cartao' cobranca.token %}" class="card-form" data-verificar>
           {% csrf_token %}
+          <input type="hidden" name="session_id" id="sessao-antifraude">
           <label for="cc-nome">Nome impresso no cartão</label>
           <input type="text" id="cc-nome" name="nome" autocomplete="cc-name" required>
           <label for="cc-num">Número do cartão</label>
@@ -162,8 +178,18 @@
                      maxlength="4" placeholder="123" required>
             </div>
           </div>
-          <label for="cc-doc">CPF do titular</label>
-          <input type="text" id="cc-doc" name="documento" inputmode="numeric" placeholder="Somente números">
+          <label for="cc-doc">CPF/CNPJ do titular</label>
+          <input type="text" id="cc-doc" name="documento" inputmode="numeric" maxlength="18" value="{{ cobranca.pagador.documento }}" placeholder="Somente números" required>
+          <fieldset>
+            <legend>Endereço de cobrança do titular</legend>
+            <label for="cc-rua">Logradouro</label><input id="cc-rua" name="logradouro" autocomplete="billing address-line1" maxlength="120" value="{{ cobranca.pagador.endereco }}" required>
+            <div class="linha"><div><label for="cc-numero-endereco">Número ou S/N</label><input id="cc-numero-endereco" name="numero_endereco" maxlength="20" value="{{ cobranca.pagador.numero }}" required></div>
+            <div><label for="cc-cep">CEP</label><input id="cc-cep" name="cep" autocomplete="billing postal-code" inputmode="numeric" maxlength="9" value="{{ cobranca.pagador.cep }}" required></div></div>
+            <label for="cc-bairro">Bairro</label><input id="cc-bairro" name="bairro" maxlength="80" value="{{ cobranca.pagador.bairro }}" required>
+            <div class="linha"><div><label for="cc-cidade">Cidade</label><input id="cc-cidade" name="cidade" autocomplete="billing address-level2" maxlength="60" value="{{ cobranca.pagador.cidade }}" required></div>
+            <div><label for="cc-uf">UF</label><input id="cc-uf" name="uf" autocomplete="billing address-level1" maxlength="2" value="{{ cobranca.pagador.uf }}" required></div></div>
+            <label for="cc-complemento">Complemento (opcional)</label><input id="cc-complemento" name="complemento" autocomplete="billing address-line2" maxlength="100" value="{{ cobranca.pagador.complemento }}">
+          </fieldset>
           <button type="submit" class="botao-primario pay-enviar">
             <span class="btn-label">Pagar {{ cobranca.valor|intcomma_brl }}</span>
             <span class="btn-spin" aria-hidden="true"></span>
@@ -172,7 +198,7 @@
         </form>
         {% include "pagamentos/_confianca.html" %}
       {% else %}
-        {% if cobranca.metodo == 'cartao' %}
+        {% if cobranca.pagamento_cartao %}
           <p class="subtitulo">Pagamento com cartão (sandbox). Confirme abaixo para simular a aprovação.</p>
         {% endif %}
         <form method="post" action="{% url 'pagamentos:pagar_simular' cobranca.token %}" data-verificar>
@@ -190,9 +216,9 @@
           <p class="subtitulo pay-rodape">Após pagar, clique no botão acima para consultar a confirmação do banco. Isso pode levar alguns instantes.</p>
         {% endif %}
       {% endif %}
-      {% if cobranca.metodo != 'cartao' or sandbox %}{% include "pagamentos/_confianca.html" %}{% endif %}
+      {% if not cobranca.pagamento_cartao or sandbox %}{% include "pagamentos/_confianca.html" %}{% endif %}
       <div class="acoes">
-        <a href="{% url 'core:home' %}" class="botao-neutro">Cancelar e voltar ao site</a>
+        <a href="{% url 'core:home' %}" class="botao-neutro">Voltar ao site</a>
       </div>
     {% else %}
       <p class="subtitulo">Esta cobrança está {{ cobranca.get_status_display|lower }}.</p>
@@ -202,6 +228,19 @@
     {% endif %}
   </div>
 
+  {% if antifraude_merchant and antifraude_sdk and cobranca.pagamento_cartao and cobranca.pendente %}
+  {{ antifraude_merchant|json_script:"antifraude-estabelecimento" }}
+  <script>
+    window.onSafrapayAntifraudReady = function (sdk) {
+      try {
+        sdk.setCredentials(JSON.parse(document.getElementById('antifraude-estabelecimento').textContent));
+        var campo = document.getElementById('sessao-antifraude');
+        if (campo) campo.value = sdk.getSessionId();
+      } catch (e) { /* O servidor impede autorização sem uma sessão em produção. */ }
+    };
+  </script>
+  <script src="{{ antifraude_sdk }}" async></script>
+  {% endif %}
   <script>
     // Tap-to-copy com confirmação + háptico (causalidade + multimodal, §13).
     document.querySelectorAll('.pix-copia').forEach(function (btn) {

@@ -2368,10 +2368,10 @@ class EmailLeadTests(TestCase):
         self.assertEqual(mail.outbox[0].to, ["daniela@ex.com"])
         self.assertTrue(AtividadeComercial.objects.filter(
             oportunidade=self.op, tipo=AtividadeComercial.Tipo.SISTEMA,
-            descricao__startswith="enviou e-mail").exists())
+        descricao__startswith="simulou e-mail").exists())
 
     @override_settings(EMAIL_GATEWAY="ses")
-    def test_gateway_ses_stub_vira_erro_sem_derrubar(self):
+    def test_gateway_ses_sem_credenciais_vira_erro_sem_derrubar(self):
         from .models import EnvioEmail
         d = services.montar_proposta_email(self.op)
         envio = services.enviar_email(

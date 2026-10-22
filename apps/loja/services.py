@@ -147,6 +147,8 @@ def cancelar_venda(venda, usuario, motivo):
     venda = travar(venda)  # dois cancelamentos juntos não devolvem o estoque 2×
     if venda.status != Venda.Status.FECHADA:
         raise ValidationError("Esta venda não está aberta para cancelamento.")
+    from apps.fiscal.consumo import conferir_cancelamento
+    conferir_cancelamento("venda", venda.pk)
     if not motivo.strip():
         raise ValidationError("Informe o motivo do cancelamento.")
     if venda.destino == Venda.Destino.CONTA:

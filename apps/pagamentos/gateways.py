@@ -7,12 +7,14 @@ Abstração de gateway de pagamento.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import uuid
 from decimal import Decimal
 from urllib import error as urlerror
 from urllib import request as urlrequest
+from urllib.parse import quote
 
 from django.conf import settings
 from django.core.cache import cache
@@ -24,43 +26,55 @@ logger = logging.getLogger(__name__)
 
 # S-M5: blocos com PII do pagador que NÃO devem ser persistidos em Cobranca.payload
 # (a reconciliação só precisa de id/status/valor/qrCode).
-_CHAVES_PII = {"customer", "card", "cardholder", "cardHolder", "document",
-               "buyer", "payer", "holder", "billingAddress", "address"}
+_CHAVES_PII = {"customer", "card", "cardholder", "document", "buyer", "payer", "holder",
+               "billingaddress", "address", "cardnumber", "securitycode", "cvv", "cvc",
+               "cardholdername", "cardholderdocument", "cpf", "cnpj", "email", "phone",
+               "name", "nome", "telefone", "token", "accesstoken", "access_token"}
 
 
 def _redigir_resposta(data):
     """Remove recursivamente blocos de PII da resposta do provedor antes de salvar."""
     if isinstance(data, dict):
-        return {k: ("[redigido]" if k in _CHAVES_PII else _redigir_resposta(v))
+        return {k: ("[redigido]" if str(k).casefold() in _CHAVES_PII else _redigir_resposta(v))
                 for k, v in data.items()}
     if isinstance(data, list):
         return [_redigir_resposta(i) for i in data]
     return data
 
 
-def _brand_do_cartao(numero: str) -> int:
-    """Código de bandeira SafraPay a partir da BIN (Mastercard=2 confirmado no exemplo
-    de antifraude; demais por prefixo). Default Mastercard se não reconhecer."""
-    n = "".join(c for c in (numero or "") if c.isdigit())
-    if not n:
-        return 2
-    if n[0] == "4":
-        return 1  # Visa
-    if n[:2] in {"34", "37"}:
-        return 3  # Amex
-    if n[:6] in {"606282", "384100", "384140", "384160"}:
-        return 5  # Hipercard
-    if (n[:4] in {"4011", "4312", "4389", "5041", "5066", "5067", "6277", "6362", "6363"}
-            or n[:3] in {"509", "650", "651", "655"}):
-        return 4  # Elo
-    if n[:2] in {"51", "52", "53", "54", "55"} or "2221" <= n[:4] <= "2720":
-        return 2  # Mastercard
-    return 2
+class ResultadoIncerto(ValidationError):
+    """O provedor pode ter processado a operação; consultar antes de repetir."""
+
+
+def _estado_cobranca(charge, valor):
+    """SafraPay usa Authorized na cobrança com transação já Captured.
+
+    Só confirma o valor integral de transações capturadas/pagas e não canceladas.
+    Números de enum de chargeStatus e transactionStatus não são intercambiáveis.
+    """
+    txs = charge.get("transactions")
+    if not isinstance(txs, list) or not txs or not all(isinstance(t, dict) for t in txs):
+        return ""
+    if str(charge.get("chargeStatus", "")).lower() in {"canceled", "cancelled"}:
+        return "Canceled"
+    pago = 0
+    for tx in txs:
+        if status_pago(tx.get("transactionStatus")) is True and tx.get("isCanceled") is not True:
+            quantia = tx.get("amount")
+            if type(quantia) is not int or quantia < 0:
+                return ""
+            pago += quantia
+    if pago == int(valor * 100):
+        return "Captured"
+    if all(status_negado(t.get("transactionStatus")) for t in txs):
+        return "Denied"
+    return "Pending"
 
 
 class GatewaySimulado:
     """Sandbox: gera identificadores/códigos fake e aceita estorno sempre."""
     nome = "simulado"
+    ambiente = "simulado"
 
     def criar_cobranca(self, cobranca) -> dict:
         gid = f"SIM-{uuid.uuid4().hex[:16].upper()}"
@@ -74,7 +88,7 @@ class GatewaySimulado:
             dados["pix_copia_cola"] = (
                 f"00020126VOTESTA{gid}5204000053039865802BR6009SAOPAULO62070503***6304SIM"
             )
-        elif cobranca.metodo == cobranca.Metodo.CARTAO:
+        elif cobranca.metodo in (cobranca.Metodo.CARTAO, cobranca.Metodo.LINK):
             dados["payload"]["checkout_url"] = reverse("pagamentos:pagar", args=[cobranca.token])
             dados["payload"]["instrucao"] = "Sandbox: use «Já paguei» para simular o cartão."
         elif cobranca.metodo == cobranca.Metodo.BOLETO:
@@ -106,7 +120,12 @@ class GatewaySafrapay:
     POST /v2/charge/pix (ou outros). Token vazio no portal = conta sem API liberada.
     """
     nome = "safrapay"
-    CACHE_TOKEN = "safrapay_access_token"  # noqa: S105 — nome da chave de cache, não um segredo
+
+    @property
+    def ambiente(self):
+        cred = self._credenciais()
+        estabelecimento = hashlib.sha256(cred["merchant_id"].encode()).hexdigest()[:16]
+        return f"{cred['base']}#{estabelecimento}"
 
     def _credenciais(self):
         token = (getattr(settings, "SAFRAPAY_TOKEN", "") or "").strip()
@@ -130,6 +149,9 @@ class GatewaySafrapay:
             )
         if not cred["base"]:
             raise ValidationError("Safrapay: SAFRAPAY_GATEWAY_URL não configurada.")
+        esperado = {"hml": "https://payment-hml.safrapay.com.br", "prod": "https://payment.safrapay.com.br"}
+        if cred["base"] != esperado.get(settings.SAFRAPAY_ENV):
+            raise ValidationError("Safrapay: o endereço oficial deve corresponder ao ambiente hml ou prod.")
         return cred
 
     def _http(self, method, path, *, headers=None, body=None, timeout=None):
@@ -137,6 +159,8 @@ class GatewaySafrapay:
         # worker, e o gunicorn (timeout 60 s) não mata o processo no meio da cobrança.
         timeout = timeout or getattr(settings, "SAFRAPAY_TIMEOUT", 10)
         cred = self._exigir_token()
+        altera_cobranca = path in ("/v2/charge/pix", "/v2/charge/boleto", "/v2/charge/authorization") or path.startswith("/v2/charge/cancelation/")
+        erro_incerto = ResultadoIncerto if altera_cobranca else ValidationError
         url = f"{cred['base']}{path}"
         data = None
         hdrs = {"Accept": "application/json", "User-Agent": "CRM-Vo-Testa/1.0"}
@@ -151,33 +175,32 @@ class GatewaySafrapay:
                 raw = resp.read().decode("utf-8", "replace")
                 status = resp.status
         except urlerror.HTTPError as exc:
-            raw = exc.read().decode("utf-8", "replace")
-            logger.warning("Safrapay HTTP %s %s → %s %s", method, path, exc.code, raw[:400])
-            try:
-                detalhe = json.loads(raw) if raw else {}
-            except json.JSONDecodeError:
-                detalhe = {"raw": raw[:500]}
-            raise ValidationError(
-                f"Safrapay recusou a requisição ({exc.code}). "
-                f"Detalhe: {detalhe.get('message') or detalhe.get('erro') or raw[:200]}"
-            ) from exc
+            logger.warning("Safrapay: requisição %s recusada, HTTP %s", method, exc.code)
+            classe = erro_incerto if exc.code >= 500 or exc.code in (408, 409, 429) else ValidationError
+            raise classe(f"Safrapay recusou a requisição (HTTP {exc.code}). Confira a operação no provedor.") from exc
         except urlerror.URLError as exc:
-            raise ValidationError(f"Safrapay indisponível: {exc.reason}") from exc
+            raise erro_incerto("Safrapay indisponível. Consulte a cobrança antes de tentar novamente.") from exc
         except OSError as exc:
             # Tempo esgotado ou conexão caída durante a leitura não viram URLError.
-            logger.warning("Safrapay %s %s sem resposta: %s", method, path, exc)
-            raise ValidationError("Safrapay não respondeu a tempo. Tente de novo.") from exc
+            logger.warning("Safrapay: requisição %s sem resposta", method)
+            raise erro_incerto("Safrapay não respondeu a tempo. Consulte a cobrança antes de tentar novamente.") from exc
         try:
-            return status, json.loads(raw) if raw else {}
+            corpo = json.loads(raw) if raw else {}
         except json.JSONDecodeError as exc:
-            logger.warning("Safrapay %s %s devolveu não-JSON: %s", method, path, raw[:400])
-            raise ValidationError("Safrapay devolveu uma resposta inválida.") from exc
+            logger.warning("Safrapay: resposta sem JSON válido")
+            raise erro_incerto("Safrapay devolveu uma resposta inválida.") from exc
+        if not isinstance(corpo, dict):
+            raise erro_incerto("Safrapay devolveu uma resposta inválida.")
+        if corpo.get("success") is False:
+            raise ValidationError("Safrapay não aceitou a operação. Confira o cadastro e o resultado no provedor.")
+        return status, corpo
 
     def _access_token(self) -> str:
-        cached = cache.get(self.CACHE_TOKEN)
+        cred = self._exigir_token()
+        chave = "safrapay_token:" + hashlib.sha256((self.ambiente + cred["token"]).encode()).hexdigest()
+        cached = cache.get(chave)
         if cached:
             return cached
-        cred = self._exigir_token()
         # Autenticação: Merchant Token cru no header Authorization → accessToken.
         # (Testado 200 em HML; o esquema bcrypt+CNPJ da doc não é o usado.)
         _status, data = self._http(
@@ -191,7 +214,7 @@ class GatewaySafrapay:
                 "Confira o Merchant Token no portal HML."
             )
         # JWT típico ~ hours; cache conservador 50 min
-        cache.set(self.CACHE_TOKEN, token, timeout=50 * 60)
+        cache.set(chave, token, timeout=50 * 60)
         return token
 
     def _centavos(self, valor) -> int:
@@ -202,14 +225,19 @@ class GatewaySafrapay:
         doc = "".join(
             c for c in (getattr(pagador, "documento", "") or "") if c.isdigit()
         )
-        return doc[:14] or "11144477735"  # CPF válido de teste p/ HML
+        from apps.nucleo.validadores import validar_documento
+        validar_documento(doc)
+        if len(doc) not in (11, 14):
+            raise ValidationError("Complete o CPF ou CNPJ válido do pagador antes da cobrança.")
+        return doc
 
     def _telefone(self, cobranca) -> dict:
-        """Telefone no formato Safrapay; fallback de HML se o pagador não tiver."""
+        """Telefone efetivamente informado pelo pagador."""
         phone = "".join(c for c in (getattr(cobranca.pagador, "telefone", "") or "") if c.isdigit())
-        if len(phone) < 10:
-            # Sem telefone do pagador: o comercial da pousada (público), nunca o de alguém.
-            phone = getattr(settings, "PAGAMENTOS_TELEFONE_PADRAO", "4920550005")
+        if phone.startswith("55") and len(phone) in (12, 13):
+            phone = phone[2:]
+        if len(phone) not in (10, 11):
+            raise ValidationError("Complete o telefone brasileiro do pagador, com DDD.")
         return {
             "countryCode": "55",
             "areaCode": phone[-11:-9] if len(phone) >= 11 else phone[:2],
@@ -219,11 +247,16 @@ class GatewaySafrapay:
 
     def _customer(self, cobranca, *, exigir_contato=False) -> dict:
         pagador = cobranca.pagador
+        if not pagador or not pagador.nome.strip() or not pagador.email:
+            raise ValidationError("Complete nome, documento e e-mail do pagador antes da cobrança.")
+        doc = self._documento(cobranca)
+        from django.core.validators import validate_email
+        validate_email(pagador.email)
         customer = {
-            "name": (pagador.nome if pagador else "Cliente")[:120],
-            "email": (getattr(pagador, "email", None) or "nao-informado@pousadavotesta.com.br"),
-            "documentType": 1,  # CPF
-            "document": self._documento(cobranca),
+            "name": pagador.nome[:120],
+            "email": pagador.email,
+            "documentType": 1 if len(doc) == 11 else 2,
+            "document": doc,
         }
         phone = "".join(c for c in (getattr(pagador, "telefone", "") or "") if c.isdigit())
         if len(phone) >= 10 or exigir_contato:
@@ -231,21 +264,30 @@ class GatewaySafrapay:
         return customer
 
     def _endereco(self, cobranca) -> dict:
-        """Endereço do pagador (boleto e antifraude do cartão). `Pessoa` guarda o
-        logradouro em texto livre (`endereco`) + cidade/uf/cep; número/bairro não são
-        estruturados, então vão como S/N/Centro. Fallback da pousada se ausente."""
+        """Endereço cadastrado, sem substituir dados faltantes pelos da pousada."""
         pagador = cobranca.pagador
         cep = "".join(c for c in (getattr(pagador, "cep", "") or "") if c.isdigit())
+        campos = ("endereco", "numero", "bairro", "cidade", "uf")
+        if not pagador or any(not getattr(pagador, c, "").strip() for c in campos) or len(cep) != 8:
+            raise ValidationError("Complete endereço, número (ou S/N), bairro, cidade, UF e CEP do pagador.")
         return {
-            "street": (getattr(pagador, "endereco", "") or "Rota do Sol")[:120],
-            "number": "S/N",
-            "neighborhood": "Centro",
-            "city": (getattr(pagador, "cidade", "") or "Itá")[:60],
-            "state": (getattr(pagador, "uf", "") or "SC")[:2],
-            "zipCode": (cep or "89760000")[:8],
-            "complement": "",
+            "street": pagador.endereco[:120], "number": pagador.numero,
+            "neighborhood": pagador.bairro, "city": pagador.cidade[:60],
+            "state": pagador.uf.upper(), "zipCode": cep, "complement": pagador.complemento,
             "country": "BR",
         }
+
+    def _endereco_cartao(self, cobranca, card):
+        endereco = card.get("billingAddress") or self._endereco(cobranca)
+        campos = ("street", "number", "neighborhood", "city", "state", "zipCode")
+        if not isinstance(endereco, dict) or any(not isinstance(endereco.get(c), str) or not endereco[c].strip() for c in campos):
+            raise ValidationError("Preencha o endereço de cobrança completo do titular do cartão.")
+        cep = "".join(c for c in endereco["zipCode"] if c.isdigit())
+        uf = endereco["state"].strip().upper()
+        if len(cep) != 8 or uf not in "AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO".split():
+            raise ValidationError("Confira a UF e o CEP do endereço de cobrança.")
+        return {**{c:endereco[c].strip()[:120] for c in campos}, "state":uf, "zipCode":cep,
+            "complement":str(endereco.get("complement", ""))[:100], "country":"BR"}
 
     def _metadata(self, cobranca) -> list:
         return [
@@ -256,21 +298,21 @@ class GatewaySafrapay:
 
     def _parse_charge(self, data, *, merchant_charge_id) -> tuple[str, dict]:
         charge = data.get("charge") or data
+        if not isinstance(charge, dict):
+            raise ResultadoIncerto("Safrapay: resposta de cobrança inválida.")
         gid = str(charge.get("id") or data.get("id") or "")
         if not gid:
-            raise ValidationError("Safrapay: cobrança sem id na resposta.")
+            raise ResultadoIncerto("Safrapay: cobrança sem id na resposta.")
+        if charge.get("merchantChargeId") not in (None, merchant_charge_id):
+            raise ResultadoIncerto("Safrapay: a referência retornada pertence a outra cobrança.")
         return gid, charge
 
     def criar_cobranca(self, cobranca) -> dict:
         self._exigir_token()
         if cobranca.metodo == cobranca.Metodo.PIX:
             return self._criar_pix(cobranca)
-        if cobranca.metodo == cobranca.Metodo.CARTAO:
-            # Sem cartão ainda: cria pendente e espera o hóspede digitar na página
-            # pública (autorizar_cartao). Com cartão no payload (evidência HML),
-            # autoriza direto.
-            if (cobranca.payload or {}).get("card"):
-                return self._criar_cartao(cobranca)
+        if cobranca.metodo in (cobranca.Metodo.CARTAO, cobranca.Metodo.LINK):
+            # O link só abre o formulário. A emissão não autoriza cartão algum.
             return {
                 "gateway": self.nome,
                 "gateway_id": "",
@@ -282,9 +324,6 @@ class GatewaySafrapay:
             }
         if cobranca.metodo == cobranca.Metodo.BOLETO:
             return self._criar_boleto(cobranca)
-        if cobranca.metodo == cobranca.Metodo.LINK:
-            # Link = checkout hospedado; usa autorização com redirecionamento quando Token existir.
-            return self._criar_cartao(cobranca, como_link=True)
         raise ValidationError(f"Safrapay: método '{cobranca.metodo}' não suportado.")
 
     def autorizar_cartao(self, cobranca, card: dict, remote_ip: str = "") -> dict:
@@ -296,12 +335,15 @@ class GatewaySafrapay:
         payload["card"] = card
         if remote_ip:
             payload["remote_ip"] = remote_ip
+        original = cobranca.payload
         cobranca.payload = payload
-        return self._criar_cartao(cobranca)
+        try:
+            return self._criar_cartao(cobranca)
+        finally:
+            cobranca.payload = original
 
     def _criar_pix(self, cobranca) -> dict:
-        access = self._access_token()
-        merchant_charge_id = f"VT-{cobranca.pk or uuid.uuid4().hex[:8]}"
+        merchant_charge_id = cobranca.referencia_provedor
         body = {
             "charge": {
                 "merchantChargeId": merchant_charge_id,
@@ -313,6 +355,7 @@ class GatewaySafrapay:
                 "source": 1,
             }
         }
+        access = self._access_token()
         _status, data = self._http(
             "POST", "/v2/charge/pix",
             headers={"Authorization": f"Bearer {access}"},
@@ -331,37 +374,34 @@ class GatewaySafrapay:
             "payload": {"safrapay": _redigir_resposta(data), "merchantChargeId": merchant_charge_id},
         }
 
-    def _criar_cartao(self, cobranca, *, como_link=False) -> dict:
-        """Crédito à vista (autoCapture) com o pacote completo de ANTIFRAUDE.
-
-        O antifraude SafraPay recusa transações sem dados completos: exige
-        `sessionId`, `customer` com telefone+endereço, e no cartão `brand`,
-        `billingAddress`, `cardholderDocument` e `isPrivateLabel`; `remoteIp` no
-        topo. Sem UI, o default usa um cartão HOMOLOGADO (não o 4111 genérico,
-        que o antifraude reprova)."""
-        access = self._access_token()
-        merchant_charge_id = f"VT-{cobranca.pk or uuid.uuid4().hex[:8]}"
+    def _criar_cartao(self, cobranca) -> dict:
+        """Autoriza apenas o cartão informado e a sessão real do SDK antifraude."""
+        merchant_charge_id = cobranca.referencia_provedor
         payload = cobranca.payload or {}
-        card = dict(payload.get("card") or {
-            "cardholderName": "CLIENTE HOMOLOGACAO",
-            "cardNumber": "5502091221618516",  # Mastercard HOMOLOGADO (tabela SafraPay HML)
-            "expirationMonth": 12,
-            "expirationYear": 2034,
-            "securityCode": "123",
-        })
-        endereco = self._endereco(cobranca)
-        card.setdefault("cardholderDocument", self._documento(cobranca))
-        card.setdefault("brand", _brand_do_cartao(str(card.get("cardNumber", ""))))
+        card = dict(payload.get("card") or {})
+        if not card:
+            raise ValidationError("Informe os dados do cartão para autorizar o pagamento.")
+        endereco = self._endereco_cartao(cobranca, card)
+        from apps.nucleo.validadores import validar_documento
+        card["cardholderDocument"] = validar_documento(card.get("cardholderDocument") or self._documento(cobranca))
         card.setdefault("billingAddress", endereco)
         card.setdefault("isPrivateLabel", False)
         customer = self._customer(cobranca, exigir_contato=True)  # força telefone
         customer["address"] = endereco
+        sessao = str(payload.get("session_id") or "")
+        if settings.SAFRAPAY_ENV == "prod" and not sessao:
+            raise ValidationError("A sessão de segurança do pagamento não foi iniciada. Recarregue a página.")
+        access = self._access_token()
+        _, bin_info = self._http("GET", "/v2/Card/Bin?bin=" + quote(str(card.get("cardNumber", ""))[:8]),
+            headers={"Authorization": f"Bearer {access}"})
+        bandeira = bin_info.get("cardBrand")
+        if not isinstance(bandeira, (str, int)) or str(bandeira).lower() in ("", "0", "undefined"):
+            raise ValidationError("A operadora não identificou a bandeira deste cartão.")
+        card["brand"] = bandeira
         body = {
             "charge": {
                 "merchantChargeId": merchant_charge_id,
-                # sessionId: fingerprint do antifraude. Em HML aceita UUID; em produção,
-                # idealmente vem do JS de device fingerprint da SafraPay na página.
-                "sessionId": payload.get("session_id") or str(uuid.uuid4()),
+                "sessionId": sessao or str(uuid.uuid4()),
                 "customer": customer,
                 "transactions": [{
                     "card": card,
@@ -371,9 +411,7 @@ class GatewaySafrapay:
                     "installmentType": 0,
                     "autoCapture": True,
                 }],
-                "metadata": self._metadata(cobranca) + (
-                    [{"key": "modo", "value": "link"}] if como_link else []
-                ),
+                "metadata": self._metadata(cobranca),
                 "source": 1,
             }
         }
@@ -385,9 +423,7 @@ class GatewaySafrapay:
             body=body,
         )
         gid, charge = self._parse_charge(data, merchant_charge_id=merchant_charge_id)
-        txs = charge.get("transactions") if isinstance(charge.get("transactions"), list) else []
-        tx0 = txs[0] if txs else {}
-        status_raw = charge.get("chargeStatus") or tx0.get("transactionStatus") or ""
+        status_raw = _estado_cobranca(charge, cobranca.valor)
         return {
             "gateway": self.nome,
             "gateway_id": gid,
@@ -401,12 +437,12 @@ class GatewaySafrapay:
         }
 
     def _criar_boleto(self, cobranca) -> dict:
-        access = self._access_token()
-        merchant_charge_id = f"VT-{cobranca.pk or uuid.uuid4().hex[:8]}"
+        merchant_charge_id = cobranca.referencia_provedor
         # Boleto exige vencimento, telefone, e endereço do sacado.
         vencimento = (timezone.now() + timezone.timedelta(days=3)).date().isoformat()
         customer = self._customer(cobranca, exigir_contato=True)
         customer["address"] = self._endereco(cobranca)
+        access = self._access_token()
         body = {
             "charge": {
                 "merchantChargeId": merchant_charge_id,
@@ -438,7 +474,7 @@ class GatewaySafrapay:
             "gateway_id": gid,
             "expira_em": timezone.now() + timezone.timedelta(days=3),
             "payload": {
-                "safrapay": data,
+                "safrapay": _redigir_resposta(data),
                 "merchantChargeId": merchant_charge_id,
                 "linha_digitavel": linha,
                 "barcode": barcode,
@@ -453,19 +489,24 @@ class GatewaySafrapay:
         1ª transação) — usado p/ confirmar pagamento sem depender do webhook
         (útil em localhost, onde o webhook do gateway não chega)."""
         access = self._access_token()
-        if not cobranca.gateway_id:
-            raise ValidationError("Cobrança sem id no gateway para consultar.")
+        caminho = (f"/v2/charge/{quote(cobranca.gateway_id, safe='')}" if cobranca.gateway_id
+            else f"/v2/charge?merchantChargeId={quote(cobranca.referencia_provedor)}")
         _status, data = self._http(
-            "GET", f"/v2/charge/{cobranca.gateway_id}",
+            "GET", caminho,
             headers={"Authorization": f"Bearer {access}"},
         )
-        charge = data.get("charge") or data
-        txs = charge.get("transactions") if isinstance(charge.get("transactions"), list) else []
-        tx0 = txs[0] if txs else {}
-        status_raw = charge.get("chargeStatus") or tx0.get("transactionStatus") or ""
-        return {"status_raw": status_raw, "charge": charge, "raw": data}
+        gid, charge = self._parse_charge(data, merchant_charge_id=cobranca.referencia_provedor)
+        if cobranca.gateway_id and gid != cobranca.gateway_id:
+            raise ResultadoIncerto("Safrapay: o identificador retornado pertence a outra cobrança.")
+        if not cobranca.gateway_id and charge.get("merchantChargeId") != cobranca.referencia_provedor:
+            raise ResultadoIncerto("Safrapay: referência não confirmada pelo provedor.")
+        return {"status_raw": _estado_cobranca(charge, cobranca.valor), "gateway_id": gid,
+            "charge": _redigir_resposta(charge), "raw": _redigir_resposta(data)}
 
     def estornar(self, cobranca) -> dict:
+        anterior = self.consultar_status(cobranca)
+        if anterior["status_raw"] == "Canceled":
+            return {"estornado": True, "gateway_id": cobranca.gateway_id}
         access = self._access_token()
         if not cobranca.gateway_id:
             raise ValidationError("Cobrança sem id no gateway para estornar.")
@@ -474,7 +515,10 @@ class GatewaySafrapay:
             headers={"Authorization": f"Bearer {access}"},
             body={},
         )
-        return {"estornado": True, "gateway_id": cobranca.gateway_id, "resposta": data}
+        confirmado = self.consultar_status(cobranca)
+        if confirmado["status_raw"] != "Canceled":
+            raise ResultadoIncerto("Estorno ainda não confirmado pela Safrapay. Consulte o provedor antes de repetir.")
+        return {"estornado": True, "gateway_id": cobranca.gateway_id}
 
 
 def status_credenciais() -> dict:
@@ -536,7 +580,7 @@ _GATEWAYS = {
 }
 
 
-def get_gateway():
+def get_gateway(cobranca=None):
     nome = getattr(settings, "PAGAMENTOS_GATEWAY", "simulado")
     cls = _GATEWAYS.get(nome)
     if cls is None:
@@ -544,7 +588,10 @@ def get_gateway():
             f"Gateway de pagamento desconhecido: {nome!r}. "
             f"Use um de: {', '.join(sorted(_GATEWAYS))}."
         )
-    return cls()
+    gw = cls()
+    if cobranca and (cobranca.gateway != gw.nome or cobranca.gateway_ambiente != gw.ambiente):
+        raise ValidationError("A cobrança pertence a outro provedor, estabelecimento ou ambiente. Concilie a origem antes de operar.")
+    return gw
 
 
 # Mapa de status do provedor (SafraPay/Aditum) — compartilhado por webhook, consulta e

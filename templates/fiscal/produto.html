@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block titulo %}Fiscal de {{ produto.nome }} | CRM Vô Testa{% endblock %}
+{% block conteudo_classe %}conteudo-formulario{% endblock %}
+{% block conteudo %}
+<a class="voltar" href="{% url 'fiscal:produtos' %}">Cadastro fiscal de produtos</a>
+<p class="pagina-eyebrow letreiro">Fiscal</p><h1>{{ produto.nome }}</h1>
+<p class="subtitulo">Use a classificação informada pelo responsável fiscal. Alterações serão usadas nas próximas emissões.</p>
+<form method="post" class="form-cartao">{% csrf_token %}
+{% if form.non_field_errors %}<div class="mensagem error">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+<h2 class="grupo-campos">Classificação do produto</h2>
+<div class="form-grade">
+{% include "reservas/partials/campo.html" with campo=form.ncm %}
+{% include "reservas/partials/campo.html" with campo=form.cfop %}
+{% include "reservas/partials/campo.html" with campo=form.cst_csosn %}
+{% include "reservas/partials/campo.html" with campo=form.origem %}
+{% include "reservas/partials/campo.html" with campo=form.pis %}
+{% include "reservas/partials/campo.html" with campo=form.cofins %}
+{% include "reservas/partials/campo.html" with campo=form.tributos classe="col-2" %}
+{% include "reservas/partials/campo.html" with campo=form.conferido classe="col-2" %}
+</div><div class="acoes"><button type="submit" class="botao-primario">Salvar cadastro fiscal</button><a class="botao-neutro" href="{% url 'fiscal:produtos' %}">Cancelar</a></div>
+</form>
+{% endblock %}

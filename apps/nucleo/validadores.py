@@ -5,6 +5,21 @@ from decimal import Decimal, InvalidOperation
 from django.core.exceptions import ValidationError
 
 
+def validar_documento(valor):
+    """CPF/CNPJ numérico com dígitos verificadores, para os provedores brasileiros."""
+    doc = re.sub(r"[.\-/\s]", "", str(valor or ""))
+    if not doc.isascii() or not doc.isdigit() or len(doc) not in (11, 14) or len(set(doc)) == 1:
+        raise ValidationError("Informe um CPF ou CNPJ válido do pagador.")
+    base = doc[:-2]
+    for pesos in ((range(10, 1, -1), range(11, 1, -1)) if len(doc) == 11 else
+                  ((5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2), (6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2))):
+        resto = sum(int(n) * p for n, p in zip(base, pesos, strict=True)) % 11
+        base += str(0 if resto < 2 else 11 - resto)
+    if base != doc:
+        raise ValidationError("Informe um CPF ou CNPJ válido do pagador.")
+    return doc
+
+
 def decimal_valido(valor, *, nome="Valor", minimo=Decimal("0"),
                    maximo=Decimal("99999999.99"), casas=2):
     """Valida antes de calcular: rejeita NaN, infinito, expoentes e precisão excessiva."""

@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from apps.nucleo.models import ModuloContratado, Pessoa, TrilhaAuditoria
@@ -99,15 +99,19 @@ class NfseDaDiariaTests(TestCase):
         self.assertEqual(DocumentoFiscal.objects.filter(tipo="nfse").count(), 1)
 
 
+@override_settings(FISCAL_WEBHOOK_TOKEN="qa-fiscal-webhook", FISCAL_FOCUS_TOKEN="qa-token",
+                   FISCAL_EMITENTE_CNPJ="26003246000100", FISCAL_FOCUS_URL="https://homologacao.focusnfe.com.br")
 class WebhookFocusTests(TestCase):
     def setUp(self):
         self.op = Usuario.objects.create_superuser(username="fisc", password="senha-forte-123")
+        self.client.defaults["HTTP_AUTHORIZATION"] = "qa-fiscal-webhook"
 
     def _doc_processando(self, ref):
+        from .focus import GatewayFocus
         doc = DocumentoFiscal.objects.create(
             tipo=DocumentoFiscal.Tipo.NFSE, natureza="servico",
             status=DocumentoFiscal.Status.PROCESSANDO, descricao="Diária",
-            valor=Decimal("400"), gateway="focus", gateway_id=ref, criado_por=self.op,
+            valor=Decimal("400"), gateway="focus", gateway_id=ref, gateway_ambiente=GatewayFocus().ambiente, criado_por=self.op,
         )
         return doc
 
@@ -127,7 +131,7 @@ class WebhookFocusTests(TestCase):
         self.assertEqual(doc.status, DocumentoFiscal.Status.AUTORIZADA)
         self.assertEqual(doc.numero, "42")
         self.assertEqual(doc.pdf_url, "https://focusnfe.s3.amazonaws.com/danfse.pdf")
-        self.assertEqual(doc.xml_url, "/notas/nfse.xml")
+        self.assertEqual(doc.xml_url, "https://homologacao.focusnfe.com.br/notas/nfse.xml")
 
     def test_webhook_ref_desconhecida_404(self):
         r = self.client.post(reverse("fiscal:webhook"), data={"ref": "nao-existe"},

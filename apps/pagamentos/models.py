@@ -49,7 +49,10 @@ class Cobranca(models.Model):
                               default=Status.PENDENTE)
     # Dados devolvidos pelo gateway.
     gateway = models.CharField("gateway", max_length=30, blank=True)
+    gateway_ambiente = models.CharField("ambiente e estabelecimento de origem", max_length=100, blank=True)
     gateway_id = models.CharField("id no gateway", max_length=80, blank=True)
+    conciliacao_pendente = models.BooleanField("aguardando consulta ao provedor", default=False)
+    tentativa_cartao = models.PositiveIntegerField(default=0, editable=False)
     pix_copia_cola = models.TextField("Pix copia-e-cola", blank=True)
     expira_em = models.DateTimeField("expira em", null=True, blank=True)
     payload = models.JSONField("payload do gateway", default=dict, blank=True)
@@ -94,6 +97,15 @@ class Cobranca(models.Model):
     @property
     def pendente(self) -> bool:
         return self.status == self.Status.PENDENTE
+
+    @property
+    def referencia_provedor(self):
+        sufixo = f"-{self.tentativa_cartao}" if self.tentativa_cartao else ""
+        return f"VT-{self.pk}{sufixo}"
+
+    @property
+    def pagamento_cartao(self):
+        return self.metodo in (self.Metodo.CARTAO, self.Metodo.LINK)
 
 
 class EventoPagamento(models.Model):

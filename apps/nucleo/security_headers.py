@@ -23,11 +23,12 @@ logger = logging.getLogger("csp")
 _DIRETIVAS = [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net "
-    "https://cdnjs.cloudflare.com https://www.googletagmanager.com https://connect.facebook.net",
+    "https://cdnjs.cloudflare.com https://www.googletagmanager.com https://connect.facebook.net https://safrastatic-a.akamaihd.net https://h.online-metrix.net",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' data: https://fonts.gstatic.com",
     "img-src 'self' data: https:",
-    "connect-src 'self' https://www.google-analytics.com https://graph.facebook.com",
+    "connect-src 'self' https://www.google-analytics.com https://graph.facebook.com "
+    "https://payment.safrapay.com.br https://payment-hml.safrapay.com.br https://h.online-metrix.net",
     "frame-src 'self' https:",          # tour 360º (Kuula/Matterport/Street View) + GTM
     "object-src 'none'",
     "base-uri 'self'",

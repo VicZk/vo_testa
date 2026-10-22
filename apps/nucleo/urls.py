@@ -1,11 +1,12 @@
 from django.urls import path
 
-from . import views
+from . import integracoes, views
 
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
     path("busca/", views.busca_global, name="busca_global"),
     path("configuracoes/modulos/", views.modulos_central, name="modulos_central"),
+    path("configuracoes/integracoes/", integracoes.painel, name="integracoes"),
     # Funcionários (RH) — Pessoal + acesso deriva daqui (substitui Equipe & Acessos)
     path("funcionarios/", views.funcionarios, name="funcionarios"),
     path("funcionarios/novo/", views.funcionario_novo, name="funcionario_novo"),

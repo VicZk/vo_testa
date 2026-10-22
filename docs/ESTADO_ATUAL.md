@@ -43,9 +43,9 @@ unidades de day use ativas. Os cadastros efetivos da instalação determinam a o
 | Safrapay | Pix/cartão/boleto, diagnóstico de credenciais, timeout e tratamento de falhas | Evidências HML não comprovam liberação ou liquidação em produção |
 | Pix direto | Código Pix gerado localmente e baixa manual | Não há webhook de confirmação desse Pix |
 | FNRH Digital / Serpro | Adapter real e reenvio de pendências | Credenciais, códigos de cadastro e homologação precisam de validação |
-| Fiscal | Documento/itens, telas, campos tributários e simulador | `focus` e `governo` lançam `NotImplementedError`; credenciais não implementam o provider |
-| WhatsApp | Cloud API, mídia, webhook e estados; BSP é stub | WABA, número, token, templates e entrega real dependem da conta |
-| E-mail | Backend Django, comunicação 1:1 e campanhas | `EMAIL_GATEWAY=simulado` pode enviar por SMTP real; SES é stub |
+| Fiscal (atualização 22/10) | Focus NFe v2, NFS-e por classificação de serviço e NFC-e de vendas/comandas; consulta, reenvio e cancelamento confirmados | Credenciais e homologação real pendentes; modo simulado não tem validade fiscal |
+| WhatsApp (atualização 22/10) | Cloud API, mídia, webhook assinado e estados; provedores BSP indisponíveis | WABA, número, token, templates e entrega real dependem da conta |
+| E-mail (atualização 22/10) | SMTP, SES e simulador sem envio externo | Envio exige provedor real configurado; aceitação não comprova entrega |
 | Mídia paga | Meta CAPI e recursos de campanhas; Google é stub | Permissões, credenciais e resultados externos não foram conferidos |
 | Decisão comercial | Simulador determinístico e adapter JEV | Contrato e disponibilidade do serviço externo precisam ser validados |
 | R2, backup e monitor | Implementações opcionais por configuração | O código não comprova ativação nem restauração bem-sucedida de backup |

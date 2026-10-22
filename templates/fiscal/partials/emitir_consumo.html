@@ -1,0 +1,17 @@
+{% load nucleo_extras %}
+{% if 'fiscal'|modulo_ativo and request.user|pode_modulo:'fiscal' and registro.status == 'fechada' %}
+<section class="painel-bloco">
+  <h2 class="titulo-topo">Documento fiscal do consumo</h2>
+  <form method="post" action="{% url 'fiscal:emitir_consumo' origem registro.pk %}" class="form-cartao">{% csrf_token %}
+    {% if registro.forma_pagamento.tipo == 'pix' and registro.destino != 'conta' %}
+    <div class="campo"><label for="pix-modalidade-fiscal">Como o Pix foi recebido?</label>
+      <select id="pix-modalidade-fiscal" name="pix_modalidade" required>
+        <option value="">Selecione</option><option value="20">Chave ou QR fixo (Pix estático)</option>
+        <option value="17">Cobrança com QR dinâmico</option><option value="23">Pix automático</option>
+      </select>
+    </div>{% endif %}
+    <button type="submit" class="botao-neutro">Emitir ou consultar NFC-e</button>
+    <p class="ajuda">Exige habilitação fiscal e códigos dos produtos conferidos. Repetir esta ação consulta o mesmo documento.</p>
+  </form>
+</section>
+{% endif %}

@@ -18,6 +18,7 @@
 
 <div class="pdv" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
   <section class="pdv-produtos">
+    {% include "fiscal/partials/emitir_consumo.html" with origem="comanda" registro=comanda %}
     {% if comanda.aberta %}
       <p class="subtitulo">Escolha o produto, a quantidade e os detalhes de preparo.</p>
       <label class="campo">Buscar no cardápio<input type="search" placeholder="Nome do produto…" oninput="document.querySelectorAll('.pdv-produto').forEach(el => el.hidden = !el.textContent.toLocaleLowerCase('pt-BR').includes(this.value.toLocaleLowerCase('pt-BR')))"></label>

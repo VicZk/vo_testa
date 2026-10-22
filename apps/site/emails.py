@@ -107,6 +107,8 @@ def _anexar_imagens(msg: EmailMultiAlternatives) -> None:
 def enviar_confirmacao(reserva, *, fail_silently=True) -> bool:
     """Envia a confirmação da reserva ao hóspede. Por padrão não quebra o fluxo
     de reserva (fail_silently): se o e-mail falhar, a reserva já está registrada."""
+    if settings.EMAIL_BACKEND in ("django.core.mail.backends.console.EmailBackend", "django.core.mail.backends.dummy.EmailBackend"):
+        return False
     email = getattr(reserva.hospede, "email", "")
     if not email:
         return False
@@ -123,8 +125,7 @@ def enviar_confirmacao(reserva, *, fail_silently=True) -> bool:
         render_to_string("site/emails/confirmacao.html", ctx), "text/html"
     )
     _anexar_imagens(msg)
-    msg.send(fail_silently=fail_silently)
-    return True
+    return msg.send(fail_silently=fail_silently) == 1
 
 
 def registrar_confirmacao(reserva) -> bool:

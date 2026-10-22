@@ -18,7 +18,7 @@ from apps.nucleo.ratelimit import limite_excedido
 from apps.nucleo.seletores import pessoas_agrupadas
 
 from . import services
-from .gateways import get_gateway, status_credenciais
+from .gateways import status_credenciais
 from .gateways import status_pago as _status_pago
 from .models import Cobranca, EventoPagamento
 
@@ -212,6 +212,7 @@ def detalhe(request, pk):
             reverse("pagamentos:pagar", args=[cobranca.token])
         ),
         "telefone_destino": _telefone_do_pagador(cobranca),
+        "simulacao_permitida": _simulacao_permitida(cobranca),
     })
 
 
@@ -236,11 +237,11 @@ def simular(request, pk):
     """Simula o webhook do gateway confirmando o pagamento — SÓ no sandbox.
     Fora do sandbox confirmar no escuro burlaria a fonte da verdade (o PSP): a
     confirmação real vem do webhook/consulta de status. Barra por conta própria."""
-    if getattr(settings, "PAGAMENTOS_GATEWAY", "simulado") != "simulado":
+    cobranca = get_object_or_404(Cobranca, pk=pk)
+    if not _simulacao_permitida(cobranca):
         messages.error(request, "Confirmação manual só no sandbox. Em produção o "
                                  "pagamento é confirmado pelo provedor (webhook/consulta).")
         return redirect("pagamentos:detalhe", pk=pk)
-    cobranca = get_object_or_404(Cobranca, pk=pk)
     try:
         services.confirmar_pagamento(cobranca, request.user, origem="simulado")
         messages.success(request, "Pagamento confirmado (sandbox).")
@@ -279,12 +280,15 @@ def cancelar(request, pk):
 
 
 @requer_gerencia
+@requer_modulo(Modulo.PAGAMENTOS)
 @require_POST
 def estornar(request, pk):
     cobranca = get_object_or_404(Cobranca, pk=pk)
     try:
-        services.estornar(cobranca, request.user)
-        messages.success(request, "Cobrança estornada.")
+        services.estornar(cobranca, request.user,
+            devolucao_confirmada=request.POST.get("devolucao_confirmada") == "1",
+            referencia_devolucao=request.POST.get("referencia_devolucao", ""))
+        messages.success(request, "Devolução manual registrada." if cobranca.gateway == "pix_direto" else "Cobrança estornada.")
     except ValidationError as erro:
         messages.error(request, " ".join(erro.messages))
     return redirect("pagamentos:detalhe", pk=pk)
@@ -292,10 +296,31 @@ def estornar(request, pk):
 
 # ───────── Público (link de pagamento) + webhook do gateway ─────────
 
+def _simulacao_permitida(cobranca):
+    return bool(cobranca.gateway == "simulado" and settings.PAGAMENTOS_GATEWAY == "simulado"
+        and (settings.DEBUG or settings.TESTING))
+
+
+@requer_modulo(Modulo.PAGAMENTOS)
+@require_POST
+def consultar(request, pk):
+    cobranca = get_object_or_404(Cobranca, pk=pk)
+    try:
+        info = services.consultar_cobranca(cobranca)
+        if _status_pago(info.get("status_raw")) is True:
+            services.confirmar_pagamento(cobranca, request.user, origem="consulta")
+            messages.success(request, "Pagamento confirmado no provedor e registrado.")
+        else:
+            messages.info(request, "Consulta concluída. O provedor ainda não confirma o pagamento integral.")
+    except ValidationError as erro:
+        messages.error(request, " ".join(erro.messages))
+    return redirect("pagamentos:detalhe", pk=pk)
+
+
 def pagar(request, token):
     """Página pública do link de pagamento (sem login)."""
     cobranca = get_object_or_404(Cobranca, token=token)
-    sandbox = getattr(settings, "PAGAMENTOS_GATEWAY", "simulado") == "simulado"
+    sandbox = cobranca.gateway == "simulado"
     qr_svg = ""
     if (cobranca.metodo == Cobranca.Metodo.PIX and cobranca.pix_copia_cola
             and cobranca.status == Cobranca.Status.PENDENTE and not cobranca.vencida):
@@ -304,6 +329,10 @@ def pagar(request, token):
         "cobranca": cobranca,
         "url_recibo_site": _url_recibo_site(cobranca),
         "sandbox": sandbox,
+        "simulacao_permitida": _simulacao_permitida(cobranca),
+        "antifraude_merchant": settings.SAFRAPAY_ID if cobranca.gateway == "safrapay" else "",
+        "antifraude_sdk": f"https://safrastatic-a.akamaihd.net/safrapay/sdk/{settings.SAFRAPAY_ENV}/safrapay-antifraud-v1.0.0.js"
+            if cobranca.gateway == "safrapay" and settings.SAFRAPAY_ENV in ("hml", "prod") else "",
         "pix_direto": cobranca.gateway == services.GATEWAY_PIX_DIRETO,
         "qr_svg": qr_svg,
     })
@@ -349,7 +378,8 @@ def pagar_cartao(request, token):
     except (ValueError, AttributeError):
         messages.error(request, "Validade inválida. Use MM/AA.")
         return redirect("pagamentos:pagar", token=token)
-    if len(numero) < 13 or len(cvv) < 3 or not nome:
+    hoje = timezone.localdate()
+    if not 13 <= len(numero) <= 19 or len(cvv) not in (3, 4) or not nome or not 1 <= mes_i <= 12 or (ano_i, mes_i) < (hoje.year, hoje.month):
         messages.error(request, "Confira os dados do cartão.")
         return redirect("pagamentos:pagar", token=token)
     card = {
@@ -361,10 +391,16 @@ def pagar_cartao(request, token):
     }
     if doc:
         card["cardholderDocument"] = doc
+    if any(request.POST.get(c) for c in ("logradouro", "numero_endereco", "bairro", "cidade", "uf", "cep")):
+        card["billingAddress"] = {"street":request.POST.get("logradouro", ""),
+            "number":request.POST.get("numero_endereco", ""), "neighborhood":request.POST.get("bairro", ""),
+            "city":request.POST.get("cidade", ""), "state":request.POST.get("uf", ""),
+            "zipCode":request.POST.get("cep", ""), "complement":request.POST.get("complemento", "")}
     xff = request.META.get("HTTP_X_FORWARDED_FOR", "")
     ip = (xff.split(",")[0].strip() if xff else request.META.get("REMOTE_ADDR", ""))
     ok, msg = services.autorizar_cartao_online(
-        cobranca, card, usuario=cobranca.criado_por, remote_ip=ip)
+        cobranca, card, usuario=cobranca.criado_por, remote_ip=ip,
+        session_id=request.POST.get("session_id", "")[:100])
     cobranca.refresh_from_db()
     if ok and cobranca.status == Cobranca.Status.PAGO:
         destino = _url_recibo_site(cobranca)
@@ -375,7 +411,7 @@ def pagar_cartao(request, token):
         # S-M4: não vazar o detalhe cru do provedor na página pública (oráculo p/
         # card-testing + info da integração) — genérico pro hóspede, detalhe só no log.
         logger.warning("Autorização de cartão falhou (cobrança %s): %s", cobranca.pk, msg)
-        messages.error(request, "Não foi possível autorizar o cartão. Confira os dados ou tente outro cartão.")
+        messages.error(request, "Não foi possível confirmar o pagamento. Consulte o resultado antes de uma nova tentativa.")
     return redirect("pagamentos:pagar", token=token)
 
 
@@ -395,7 +431,7 @@ def pagar_simular(request, token):
     if cobranca.vencida:
         messages.error(request, "Este link de pagamento expirou. Fale com a pousada.")
         return redirect("pagamentos:pagar", token=token)
-    gateway = getattr(settings, "PAGAMENTOS_GATEWAY", "simulado")
+    gateway = cobranca.gateway
     if cobranca.gateway == services.GATEWAY_PIX_DIRETO:
         # Pix fora do PSP: não há como consultar o pagamento. Só registra o aviso do
         # hóspede; a recepção confere o extrato e confirma o recebimento manualmente.
@@ -409,15 +445,14 @@ def pagar_simular(request, token):
                 "Recebemos o seu aviso! Assim que confirmarmos o Pix na conta, "
                 "sua reserva é liberada.",
             )
-    elif gateway == "simulado":
+    elif gateway == "simulado" and _simulacao_permitida(cobranca):
         try:
             services.confirmar_pagamento(cobranca, cobranca.criado_por, origem="link_publico")
         except ValidationError:
             pass
     elif cobranca.status == Cobranca.Status.PENDENTE:
         try:
-            gw = get_gateway()
-            info = gw.consultar_status(cobranca) if hasattr(gw, "consultar_status") else {}
+            info = services.consultar_cobranca(cobranca)
             status_raw = info.get("status_raw")
             EventoPagamento.objects.create(
                 cobranca=cobranca, tipo=EventoPagamento.Tipo.WEBHOOK,
@@ -495,7 +530,7 @@ def webhook(request):
     # S-A4: valores de liquidação do corpo só são confiáveis no sandbox local/testes;
     # em produção a liquidação entra por conferência manual / relatório do provedor.
     sandbox = (getattr(settings, "PAGAMENTOS_WEBHOOK_CONFIA_CORPO", False)
-               and getattr(settings, "PAGAMENTOS_GATEWAY", "simulado") == "simulado")
+               and _simulacao_permitida(cobranca))
     liq = _extrair_liquidacao(body) if sandbox else None
     if liq and cobranca.status == Cobranca.Status.PAGO:
         try:
@@ -507,19 +542,18 @@ def webhook(request):
 
     # Decisão de confirmar: sandbox confia no corpo (não há provedor); produção
     # consulta a fonte da verdade e ignora o status do corpo.
-    gateway = getattr(settings, "PAGAMENTOS_GATEWAY", "simulado")
+    gateway = cobranca.gateway
     if gateway == "simulado":
         # S-A4: o webhook é público e o corpo é forjável. Confiar no corpo SÓ no sandbox
         # local/testes. Em produção-simulado a confirmação legítima vem do link do hóspede
         # (pagar_simular, autenticado por token opaco) ou da recepção — nunca deste webhook.
-        if not getattr(settings, "PAGAMENTOS_WEBHOOK_CONFIA_CORPO", False):
+        if not sandbox:
             return _json({"ok": True, "status": cobranca.status,
                           "ignorado": "webhook não confirma por corpo em produção"})
         pago = True if status_gw in (None, "") else (_status_pago(status_gw) is True)
     else:
         try:
-            gw = get_gateway()
-            info = gw.consultar_status(cobranca) if hasattr(gw, "consultar_status") else {}
+            info = services.consultar_cobranca(cobranca)
             pago = _status_pago(info.get("status_raw")) is True
         except ValidationError:
             pago = False  # não deu p/ verificar → não confirma

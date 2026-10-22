@@ -21,6 +21,7 @@ from .cadastros import (
     Temporada,
     TipoUH,
 )
+from .continuidade import EnsaioIntegracao, EstadoBackup
 from .estoque import (
     CategoriaProduto,
     Inventario,
@@ -59,6 +60,8 @@ from .logbook import ComentarioLogbook, EntradaLogbook
 from .usuarios import ModuloContratado, Usuario, modulo_ativo, modulos_ativos
 
 __all__ = [
+    "EnsaioIntegracao",
+    "EstadoBackup",
     "UH",
     "Agencia",
     "ConfiguracaoReservas",

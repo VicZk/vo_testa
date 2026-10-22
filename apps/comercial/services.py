@@ -1546,7 +1546,8 @@ def _processar_envio_email(envio_id, para, assunto, html, texto, remetente, repl
         op = Oportunidade.objects.filter(pk=oportunidade_id).first()
         user = Usuario.objects.filter(pk=usuario_id).first() if usuario_id else None
         if op:
-            _log_evento(op, user, f"enviou e-mail: {assunto}")
+            acao = "simulou e-mail" if envio.message_id.startswith("SIM-") else "enviou e-mail"
+            _log_evento(op, user, f"{acao}: {assunto}")
 
 
 def _envio_email_em_thread(*args):

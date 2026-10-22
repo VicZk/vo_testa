@@ -11,6 +11,7 @@
   {% if gateway == 'simulado' %}<strong>Modo de teste: os documentos não têm valor fiscal.</strong>
   {% else %}<span class="selo">Integração: {{ gateway }}</span>{% endif %}
 </p>
+{% if eh_gerente %}<div class="acoes bloco-fim"><a class="botao-neutro" href="{% url 'fiscal:produtos' %}">Cadastro fiscal de produtos</a><a class="botao-neutro" href="{% url 'integracoes' %}">Configuração e ensaios</a></div>{% endif %}
 
 <table class="tabela">
   <thead>
@@ -33,7 +34,8 @@
   </tbody>
 </table>
 
-<p class="ficha-texto opcional">
-  A emissão fiscal real ainda não está disponível neste sistema. Para emitir uma nota válida, use o procedimento fiscal adotado pela pousada.
-</p>
+<div class="ficha-texto opcional">
+  {{ configuracao.mensagem }}
+  {% if configuracao.pendencias %}<ul>{% for pendencia in configuracao.pendencias %}<li>{{ pendencia }}</li>{% endfor %}</ul>{% endif %}
+</div>
 {% endblock %}

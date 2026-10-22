@@ -1,194 +1,99 @@
-# Implementar Fiscal — CRM Pousada Vô Testa
+# Emissão fiscal — CRM Pousada Vô Testa
 
-Guia do módulo Fiscal e registro do planejamento de emissão eletrônica.
-**Revisão do código em 21/10/2026:** models, telas, eventos e simulador existem;
-os providers `focus` e `governo` continuam stubs com `NotImplementedError`.
+Estado do código em 22/10/2026. O adaptador Focus NFe v2 está implementado para
+NFS-e Nacional e NFC-e. A operação real depende do cadastro do emitente no
+provedor, credenciais, parâmetros revisados e ensaio no ambiente escolhido.
+Testes automatizados com respostas controladas não comprovam homologação fiscal.
 
-Os dados contábeis, preços de fornecedores e referências normativas abaixo são
-**históricos de julho/2026**, preservados sem revalidação nesta revisão.
-Confirme parâmetros e requisitos com o contador/provedor antes de configurar emissão.
-Veja o [Estado atual](ESTADO_ATUAL.md) e o [checklist](Checklist_contador.md).
+## Configuração
 
-> **Município:** Itá/SC · **Última atualização:** julho/2026
+Escolha `FISCAL_GATEWAY=focus`. O modo `simulado` produz documentos de demonstração
+sem validade fiscal. Integração direta com o governo e outros provedores não estão
+disponíveis neste código; nomes desconhecidos geram erro explícito.
 
----
+| Variável | Uso |
+| --- | --- |
+| `FISCAL_FOCUS_URL` | `https://homologacao.focusnfe.com.br` ou `https://api.focusnfe.com.br` |
+| `FISCAL_FOCUS_TOKEN` | Token do emitente e ambiente; não incluir em código, relatórios ou prints |
+| `FISCAL_EMITENTE_CNPJ` | CNPJ do emitente cadastrado no provedor |
+| `FISCAL_MUNICIPIO_IBGE` | Município de emissão e prestação no perfil disponível |
+| `FISCAL_DPS_SERIE` | Série exclusiva deste sistema, entre 1 e 49999 |
+| `FISCAL_DPS_NUMERO_INICIAL` | Início da faixa reservada; o número usa a base mais o ID do documento menos um |
+| `FISCAL_NFSE_CODIGO_SERVICO` | Código nacional de seis dígitos para hospedagem |
+| `FISCAL_NFSE_COMPLEMENTOS` | Objeto JSON de complementos revisados pelo responsável fiscal |
+| `FISCAL_NFCE_HABILITADA` | Padrão 0; habilitar após cadastro do emitente, IE, CSC e certificado no provedor |
+| `FISCAL_WEBHOOK_TOKEN` | Segredo do header `Authorization` no retorno para `/crm/fiscal/webhook/` |
 
-## 0. Dados confirmados pelo contador (jul/2026) ✅
+O perfil NFS-e disponível usa Lucro Presumido, operação tributável sem retenção e
+prestação no município configurado. Outros enquadramentos precisam de adaptação
+validada; não basta alterar um rótulo. Dados históricos de julho de 2026 indicavam
+hospedagem `090101`, ISS de 4% e IE ainda pendente. Esses dados não foram reconfirmados
+com o contador nesta implementação. Confira o [checklist contábil](Checklist_contador.md).
 
-**Empresa:** POUSADA VO TESTA LTDA · CNPJ **26.003.246/0001-00** · Inscrição Municipal
-**4829** · **sem Inscrição Estadual** · Rod SC 155, Km 129, Lago Azul, **Itá/SC** ·
-CNAE **55.10-8-01 (Hotéis)** · Natureza 206-2 (Ltda) · Porte ME ·
-Contador **Escritório Contábil Itá Ltda**.
+A URL, o CNPJ emitente e o provedor ficam vinculados ao documento. Trocar o ambiente não permite
+consultar ou cancelar documentos antigos no ambiente novo. O token pode ser
+rotacionado para a mesma conta; confira a identidade do emitente ao fazer isso.
 
-- **Regime tributário:** **Lucro Presumido** → usar **CST** (não CSOSN).
-- **NFS-e:** Itá emite pelo **Emissor Nacional (Portal Nacional)** ✅.
-- **NFS-e — hospedagem/diária:** código de serviço **`090101 — HOSPEDAGEM EM HOTELARIA`**;
-  **ISS 4%**; **sem retenção**; **sem benefício/regime especial**.
-  *(Lavanderia, quando entrar, é outro item da LC 116 — pedir ao contador.)*
-- **NFC-e:** **BLOQUEADA por ora** — a empresa **não tem Inscrição Estadual**; sem IE não
-  há habilitação de NFC-e nem CSC. Setor de constituição providenciando a IE. A **série**
-  não é definida pelo escritório (o sistema usa série 1 por padrão).
-- **Produtos revendidos:** o contador precisa da **relação com NCM** → template em
-  `docs/Produtos_para_NCM.md` (a pousada completa; o contador preenche os códigos).
+## NFS-e da conta
 
-**Prioridade registrada em julho/2026:** preparar a NFS-e de hospedagem e resolver
-os requisitos da NFC-e. Além de credenciais/documentos e parâmetros atualizados,
-a homologação pelo CRM exige **implementar um provider fiscal real**.
+Na reserva ou no grupo, use **Preparar NFS-e**. As diárias usam a classificação
+configurada para hospedagem. Lavanderia e demais serviços exigem classificação
+explícita pela gerência, conferida com o responsável fiscal. O sistema agrupa os
+lançamentos por código e emite uma nota por grupo. Produtos de consumo não entram
+nessa nota. Taxas da conta não são automaticamente tratadas como hospedagem.
 
----
+Descontos são distribuídos entre os grupos e itens em centavos, mantendo o total.
+A emissão guarda os IDs dos lançamentos, valores, classificação e dados enviados.
+Classificações ficam bloqueadas quando já existe documento não cancelado para a conta.
+O cadastro do tomador deve conter nome e CPF/CNPJ. O sistema não inventa documento.
 
-## 1. Situação atual (o que já existe no CRM)
+## NFC-e de venda ou comanda
 
-O alicerce fiscal **já está pronto**: a 4ª "veia" transversal do sistema classifica
-**toda linha** vendável e **todo lançamento de conta** como:
+A origem deve estar fechada. Use **Cadastro fiscal de produtos**, no painel Fiscal,
+para preencher NCM, CFOP, CST/CSOSN, origem, PIS, COFINS e complementos orientados pelo
+contador. Campos obrigatórios incompletos impedem envio. A gerência precisa confirmar
+a conferência dos dados; isso não substitui validação tributária pelo responsável.
 
-- **SERVIÇO** → diária/hospedagem, lavanderia do hóspede, taxas, day use → **NFS-e** (ISS)
-- **CONSUMO** → produtos de loja/restaurante; o módulo Frigobar foi removido.
+A emissão usa os itens e valores da venda/comanda, sem repetir baixa de estoque nem
+recebimento. Descontos são rateados. Para Pix é necessário selecionar a modalidade
+fiscal efetivamente usada; venda na conta usa pagamento posterior. NFC-e desabilitada
+impede emissão. A política de bloquear a própria venda sem NFC-e continua configurável
+por `FISCAL_BLOQUEAR_VENDA_SEM_NFCE`.
 
-Isso é obrigatório desde a fase 1 (`NaturezaFiscal.SERVICO | CONSUMO`, sem default), justamente
-para permitir documentos separados. O fluxo local/simulado existe; falta o adapter
-real de emissão. Campos IBS/CBS no código não representam homologação tributária.
+Alterações no cadastro do produto só afetam novas emissões. Para rejeição corrigível,
+a gerência pode revisar o cadastro e **Reenviar cadastro corrigido**: o sistema consulta
+o provedor, exige rejeição confirmada, preserva a referência e valida que o total da
+origem não mudou. Denegação não é tratada como rejeição corrigível.
 
----
+## Falhas, retorno e cancelamento
 
-## 2. Os dois documentos que a pousada precisa
+Cada emissão recebe uma referência persistida antes da chamada externa. Uma restrição
+no banco impede duas notas ativas do mesmo tipo para a mesma origem. Chamadas concorrentes
+são protegidas por reivindicação da operação. O envio de rede ocorre fora da trava da conta.
 
-| Natureza | Documento | Órgão | Padrão |
-|---|---|---|---|
-| **Serviço** (diária, lavanderia) | **NFS-e** | Prefeitura (ISS) | **NFS-e Nacional** (Emissor Nacional) |
-| **Consumo** (restaurante, loja, frigobar) | **NFC-e** (consumidor) / NF-e (B2B) | SEFAZ-SC (ICMS) | padrão estadual consolidado |
+Se houver timeout, não crie outra nota: consulte o documento. O reenvio usa a mesma
+referência e consulta o provedor antes de enviar. Webhook exige autenticação e aplica
+transições válidas; status autorizado precisa de número ou chave retornado. Erros de
+rede não exibem dados pessoais nem o corpo bruto da resposta.
 
----
+O cancelamento exige motivo, chamada ao provedor e confirmação posterior por consulta.
+Sem confirmação, a nota permanece registrada. Venda/comanda com documento fiscal ativo
+não pode ser cancelada antes da conciliação fiscal. Documento emitido não pode ser
+reescrito ou apagado pelo Admin. Valores IBS/CBS mostrados pelo CRM são estimativas;
+a apuração e o documento autorizado devem ser conferidos com o responsável fiscal.
 
-## 3. Mudança-chave: NFS-e Nacional (a partir de 01/07/2026)
+## Ensaio antes da operação
 
-Desde **1º/07/2026**, os municípios de SC emitem NFS-e **exclusivamente pelo Emissor
-Nacional** (Portal Nacional da NFS-e, infraestrutura federal), por força da **Reforma
-Tributária** (EC 132/2023 + **LC 214/2025**). O sistema municipal antigo deixa de emitir;
-a apuração do ISS continua na prefeitura, mas a **nota sai no padrão nacional único**.
+1. Configure emitente, certificado, município, série e credenciais de homologação no provedor.
+2. Confira cadastro de tomador, códigos dos serviços e tributação de produtos.
+3. Emita uma NFS-e de hospedagem e, se habilitada, uma NFC-e de venda/comanda.
+4. Confira total, itens, tomador, XML/PDF e situação no painel do provedor.
+5. Ensaie rejeição, consulta após resposta perdida, reenvio sem duplicação e cancelamento.
+6. Registre o resultado em **Operação e integrações**, sem CPF, chaves ou dados de cartão.
+7. Ao mudar credenciais/ambiente, repita o ensaio; o registro anterior fica desatualizado.
 
-**Impacto positivo:** some o risco "o provedor cobre o sistema específico de Itá?".
-Com o padrão nacional, o layout é o mesmo para todos os municípios — basta o provedor
-falar **NFS-e Nacional**.
+O painel distingue configuração presente de ensaio declarado. Não realiza emissão de
+teste automaticamente nem afirma que o fisco autorizou uma operação sem retorno válido.
 
-⚠️ **Confirmar com contador/prefeitura:** se **Itá já concluiu a adesão/integração** ao
-Emissor Nacional (em SC, 295 municípios aderiram; ~120 ainda integravam no início de 2026).
-Em julho/2026 é provável que já esteja ativo — confirmar por telefonema/contador.
-
-⚠️ **Reforma Tributária (transição 2026–2033):** CBS (federal) + IBS (estadual/municipal)
-vão substituir PIS/COFINS/ICMS/ISS. O padrão nacional da NFS-e já nasce preparado.
-O módulo deve mirar **padrão nacional / CBS-IBS**, com o **contador** definindo o regime
-na transição.
-
----
-
-## 4. O que é preciso ter (fora do software)
-
-1. **Contador da pousada** — peça-chave. Define: regime tributário (Simples? Presumido?),
-   código de serviço (lista LC 116), alíquota de ISS, CFOP/CST/CSOSN e NCM dos produtos,
-   e a situação na transição CBS/IBS.
-2. **Certificado Digital A1 (e-CNPJ)** — arquivo `.pfx`, validade 1 ano. Assina o XML.
-   Usar **A1** (não A3/token) — funciona em servidor/API.
-3. **Inscrições ativas** — Estadual (SEFAZ) e Municipal (Prefeitura de Itá).
-4. **CSC (Código de Segurança do Contribuinte)** — solicitado na SEFAZ-SC (QR da NFC-e).
-
----
-
-## 5. Serviço necessário (provedor fiscal)
-
-Recomendação: **não construir o motor do zero** (schemas XML, assinatura, webservices,
-contingência, atualizações legais constantes). Integrar um **provedor fiscal** via API —
-mesmo padrão do módulo de Pagamentos (gateway plugável, sandbox → produção).
-
-O provedor deve emitir **os dois**: **NFS-e Nacional** + **NFC-e SEFAZ-SC**.
-
-| Provedor | Observação |
-|---|---|
-| **PlugNotas** (Tecnospeed) | Boa cobertura, NFS-e Nacional + NFC-e, sandbox generoso. **1ª recomendação.** |
-| **Focus NFe** | API simples e bem documentada. Ótima 2ª opção. |
-| NFE.io / eNotas / WebmaniaBR | Alternativas — comparar preço. |
-
-Obs.: a NFS-e Nacional tem **API pública** e **emissor web gratuito**. Para volume baixo dá
-pra emitir NFS-e **manualmente de graça** no portal; para **integração automática** ao CRM
-(nota saindo no check-out), o provedor resolve NFS-e + NFC-e num só lugar.
-
-### 5.1 Comparativo de preços (levantado em jul/2026)
-
-| Provedor | Preço | Transparência | Observação |
-|---|---|---|---|
-| **Focus NFe** — Plano Solo | **R$ 89,90/mês** · 1 CNPJ · **100 notas incluídas** · **R$ 0,10/nota adicional** · 30 dias grátis | ✅ preço público | Emite NF-e / **NFS-e (Nacional)** / NFC-e / CT-e / MDF-e num só plano. **Recomendado pela previsibilidade.** |
-| **PlugNotas** | **não publicado no site** (modelo por consumo/créditos; valor na Área do Cliente / comercial) | ⚠️ opaco | Forte em cobertura de cidades; exige criar conta/contatar pra saber o preço. |
-| **Governo (direto)** | **R$ 0** (só o A1) | ✅ | NFS-e no `nfse.gov.br` (grátis) + NFC-e SEFAZ-SC. Grátis, porém todo o esforço/risco de integração é seu. |
-
-**Dimensionamento (pousada 24 quartos):** ~1 NFS-e por check-out + NFC-e das vendas
-(restaurante/loja/frigobar) pode **passar de 100 notas/mês em alta temporada**. No Focus,
-excedente a R$ 0,10 cada (ex.: 300 notas ≈ R$ 110/mês) — barato e previsível.
-
-**Decisão de custo:** os ~R$ 90/mês pagam **conveniência + automação** (principalmente a
-NFC-e). A **NFS-e** ainda pode ser emitida **de graça** no `nfse.gov.br`. Por isso o módulo
-tem **gateway plugável** (`focus` × `governo` × `simulado`) — dá pra começar grátis e trocar
-depois sem retrabalho. **Escolha inicial sugerida: Focus NFe** (teste grátis 30 dias).
-
----
-
-## 6. Custos (aproximados — confirmar com o fornecedor)
-
-| Item | Custo |
-|---|---|
-| Certificado A1 (e-CNPJ) | ~R$ 130–250/ano — único gasto para começar |
-| Provedor (NFS-e Nacional + NFC-e) | ~R$ 50–150/mês (volume pequeno) ou por nota |
-| Emissor Nacional / CSC / inscrições | **Grátis** |
-| Homologação (testes / sandbox) | **~R$ 0** |
-
-**Custo mínimo para começar:** homologação ~R$ 0 + A1 (~R$ 150). Só se paga o provedor
-ao virar **produção**.
-
----
-
-## 7. Implementação atual e trabalho pendente
-
-| Parte | Estado do código |
-|---|---|
-| `ConfigFiscalProduto` | Cadastro fiscal de produto |
-| `DocumentoFiscal` / `EventoFiscal` | Documento, itens/payload, status e eventos |
-| Telas e services | Preparação, emissão/cancelamento pelo gateway e acompanhamento |
-| `FISCAL_GATEWAY=simulado` | Fluxo de desenvolvimento e testes |
-| `FISCAL_GATEWAY=focus` / `governo` | Stubs; falta integrar o provider e tratar seu contrato real |
-| Campos tributários | Estrutura de dados; preenchimento e envio precisam de validação fiscal |
-
-Cancelamento, contingência e demais operações no ambiente autorizado devem ser
-homologados conforme o provider implementado. Não inferir suporte real pela
-existência de botões ou respostas do simulador.
-
----
-
-## 8. Passos para proceder
-
-1. **Contador:** confirmar (a) regime tributário e (b) se **Itá já está no Emissor Nacional**.
-2. **Certificado A1** (se ainda não tiver).
-3. Abrir conta de **homologação** no PlugNotas ou Focus NFe (grátis).
-4. **Implementar o provider real** no `apps/fiscal` existente, com payload/retorno,
-   autenticação, idempotência, falhas e parâmetros conferidos com o contador.
-5. **Homologação:** emitir notas de teste (1 NFS-e de diária, 1 NFC-e do restaurante),
-   validar retorno/DANFE/QR/cancelamento.
-6. **Virada para produção** — primeiras notas reais conferidas com o contador.
-
----
-
-## 9. Decisões / pendências
-
-- [ ] Regime tributário da pousada (contador).
-- [ ] Confirmar adesão de Itá/SC ao Emissor Nacional de NFS-e (contador/prefeitura).
-- [ ] Certificado A1 disponível?
-- [ ] Provedor fiscal escolhido (PlugNotas × Focus NFe).
-- [ ] Cadastro fiscal por produto/serviço (códigos do contador).
-
----
-
-## Fontes (julho/2026)
-
-- NFS-e via Emissor Nacional a partir de 01/07/2026 — Município de Itajaí: <https://nfse.itajai.sc.gov.br/>
-- 120 municípios de SC ainda integrando a NFS-e nacional — Blog do Prisco:
-  <https://www.blogdoprisco.com.br/120-municipios-de-sc-ainda-nao-concluiram-a-integracao-da-nfs-e-nacional-e-podem-sofrer-bloqueios-de-transferencias-de-recursos-ja-em-janeiro-de-2026/>
-- NFS-e Nacional — Espaço Legislação (TOTVS): <https://espacolegislacao.totvs.com/nfs-e-nacional/>
-- Adesão NFS-e Nacional (Tecnospeed): <https://blog.tecnospeed.com.br/adesao-nfs-e-nacional-novos-municipios/>
+Contratos de referência: [NFS-e Nacional](https://doc.focusnfe.com.br/reference/emitir_dps_nacional)
+e [NFC-e](https://doc.focusnfe.com.br/reference/emitir_nfce).

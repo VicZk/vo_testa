@@ -69,7 +69,7 @@ class PessoaForm(forms.ModelForm):
         model = Pessoa
         fields = [
             "nome", "tipo", "documento", "email", "telefone",
-            "endereco", "cidade", "uf", "cep", "observacoes", "ativo",
+            "endereco", "numero", "bairro", "complemento", "cidade", "uf", "cep", "observacoes", "ativo",
         ]
         widgets = {
             "observacoes": forms.Textarea(attrs={"rows": 3}),

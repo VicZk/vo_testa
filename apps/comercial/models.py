@@ -1000,6 +1000,11 @@ class EnvioEmail(models.Model):
     def __str__(self):
         return f"{self.email}: {self.assunto[:40]}"
 
+    def get_status_display(self):
+        if self.message_id.startswith("SIM-"):
+            return "Simulado — sem envio externo"
+        return self.Status(self.status).label
+
 
 class TemplateEmail(models.Model):
     """E-mail salvo e reutilizável (assunto + corpo com variáveis).

@@ -15,6 +15,7 @@
 
 <div class="colunas colunas-2-1">
   <section class="painel-bloco">
+    {% if cobranca.conciliacao_pendente %}<p class="mensagem warning">A resposta do provedor ainda precisa ser conferida. Consulte esta cobrança antes de criar outra para o mesmo pagamento.</p>{% endif %}
     <dl class="ficha">
       <div><dt>Valor</dt><dd><strong>{{ cobranca.valor|intcomma_brl }}</strong>{% if cobranca.metodo == 'cartao' and cobranca.parcelas > 1 %} em {{ cobranca.parcelas }}×{% endif %}</dd></div>
       <div><dt>Método</dt><dd>{{ cobranca.get_metodo_display }}</dd></div>
@@ -42,11 +43,13 @@
             <button type="submit" class="botao-primario botao-largo">Confirmar recebimento do Pix</button>
           </form>
           <p class="subtitulo subtitulo-colado">Pix direto (sem gateway). Confirme só depois de ver o valor na conta da pousada.</p>
-        {% else %}
+        {% elif simulacao_permitida %}
           <form method="post" action="{% url 'pagamentos:simular' cobranca.pk %}">
             {% csrf_token %}
             <button type="submit" class="botao-primario botao-largo">Simular pagamento (sandbox)</button>
           </form>
+        {% elif cobranca.gateway == 'safrapay' %}
+          <form method="post" action="{% url 'pagamentos:consultar' cobranca.pk %}">{% csrf_token %}<button type="submit" class="botao-primario botao-largo">Consultar no provedor</button></form>
         {% endif %}
         <form method="post" action="{% url 'pagamentos:cancelar' cobranca.pk %}" class="bloco-respiro-curto">
           {% csrf_token %}
@@ -55,7 +58,12 @@
       {% elif cobranca.paga and eh_gerente %}
         <form method="post" action="{% url 'pagamentos:estornar' cobranca.pk %}">
           {% csrf_token %}
-          <button type="submit" class="botao-perigo botao-largo">Estornar</button>
+          {% if cobranca.gateway == 'pix_direto' %}
+          <p class="ajuda">Devolva o valor integral no banco antes de registrar aqui. Este registro atualiza a conta da hospedagem.</p>
+          <div class="campo"><label for="referencia-devolucao">Referência do comprovante de devolução</label><input id="referencia-devolucao" name="referencia_devolucao" minlength="6" maxlength="100" required autocomplete="off"></div>
+          <label class="check-inline bloco-fim"><input type="checkbox" name="devolucao_confirmada" value="1" required><span>Conferi a devolução integral no banco.</span></label>
+          <button type="submit" class="botao-perigo botao-largo">Registrar devolução do Pix</button>
+          {% else %}<button type="submit" class="botao-perigo botao-largo">Estornar no provedor</button>{% endif %}
         </form>
       {% else %}
         <p class="subtitulo">Sem ações disponíveis neste status.</p>

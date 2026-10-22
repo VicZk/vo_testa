@@ -1,0 +1,29 @@
+{% extends "base.html" %}{% load moeda %}
+{% block titulo %}Preparar NFS-e | Fiscal{% endblock %}
+{% block conteudo %}
+<a class="voltar" href="{% url 'fiscal:painel' %}">Notas fiscais</a>
+<p class="pagina-eyebrow letreiro">Fiscal · Conta #{{ conta.pk }}</p>
+<h1>Preparar notas de serviço</h1>
+<p class="subtitulo">Confira o enquadramento de cada serviço. Cada código gera uma nota, com os descontos rateados entre os serviços.</p>
+{% if conta.aberta %}<p class="mensagem warning">Esta conta ainda está aberta. Alterações de valor após a emissão exigem conciliação ou cancelamento da nota anterior.</p>{% endif %}
+<section class="painel-bloco bloco-fim">
+  <h2>Classificação dos serviços</h2>
+  <p class="ajuda">Use os códigos nacionais conferidos pelo responsável fiscal. Impostos e taxas separados na conta não entram neste agrupamento.</p>
+  <form method="post">{% csrf_token %}
+  <div class="tabela-responsiva"><table class="tabela"><thead><tr><th>Lançamento</th><th>Valor</th><th>Código nacional</th></tr></thead><tbody>
+  {% for item in dados.revisao %}<tr><td>{{ item.linha.descricao }}</td><td>{{ item.linha.valor|intcomma_brl }}</td><td>
+  {% if item.diaria %}{{ item.codigo }} · Hospedagem{% elif eh_gerente %}<label class="sr-only" for="codigo-{{ item.linha.pk }}">Código de {{ item.linha.descricao }}</label><input id="codigo-{{ item.linha.pk }}" name="codigo-{{ item.linha.pk }}" value="{{ item.codigo }}" pattern="[0-9]{6}" maxlength="6" inputmode="numeric" required>{% else %}{{ item.codigo|default:"Classificação pendente" }}{% endif %}
+  </td></tr>{% empty %}<tr><td colspan="3">Não há serviços nesta conta.</td></tr>{% endfor %}
+  </tbody></table></div>
+  {% if eh_gerente and dados.revisao %}<label class="marcador"><input type="checkbox" name="conferido" value="sim" required> Conferi os códigos com o responsável fiscal.</label><button class="botao-neutro" type="submit">Salvar classificação</button>{% endif %}
+  </form>
+</section>
+<section class="painel-bloco bloco-fim"><h2>Documentos por serviço</h2>
+{% if dados.pendentes %}<p class="mensagem warning">A emissão fica disponível após classificar todos os serviços da conta.</p>{% endif %}
+<div class="tabela-responsiva"><table class="tabela"><thead><tr><th>Código</th><th>Base</th><th>Desconto</th><th>Valor da nota</th><th>Ação</th></tr></thead><tbody>
+{% for grupo in dados.grupos %}<tr><td>{{ grupo.codigo|default:"Pendente" }}</td><td>{{ grupo.bruto|intcomma_brl }}</td><td>{{ grupo.desconto|intcomma_brl }}</td><td>{{ grupo.valor|intcomma_brl }}</td><td>
+{% if grupo.documento %}<a class="botao-neutro" href="{% url 'fiscal:detalhe' grupo.documento.pk %}">Consultar nota</a>
+{% elif not dados.pendentes and grupo.valor > 0 %}<form method="post" action="{% url 'fiscal:emitir_nfse' %}">{% csrf_token %}<input type="hidden" name="conta_id" value="{{ conta.pk }}"><input type="hidden" name="codigo_servico" value="{{ grupo.codigo }}"><button class="botao-primario" type="submit">Emitir NFS-e</button></form>{% endif %}
+</td></tr>{% empty %}<tr><td colspan="5">Sem valores para emissão.</td></tr>{% endfor %}
+</tbody></table></div></section>
+{% endblock %}
