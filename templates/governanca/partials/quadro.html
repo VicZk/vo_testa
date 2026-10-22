@@ -40,6 +40,10 @@ explica em vez de espalhar faxina pela casa inteira.{% endcomment %}
     <strong>{{ sem_camareira }}</strong> quarto{{ sem_camareira|pluralize }} na fila sem quem limpe.
     {% if tem_escala %}
       Dividir entre as {{ de_turno|length }} de turno hoje, equilibrando a carga.
+    {% elif sem_login %}
+      {# Escalada sem login no CRM não é "ninguém de turno": a correção é outra. #}
+      {{ sem_login|join:", " }} {{ sem_login|pluralize:"está,estão" }} de turno hoje,
+      mas sem login no CRM — ligue o login na ficha do funcionário para poder distribuir.
     {% else %}
       Ninguém de turno hoje na Escala — escolha quem limpa em cada linha.
     {% endif %}

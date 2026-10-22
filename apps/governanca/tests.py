@@ -1962,3 +1962,51 @@ class QuartoBloqueadoTests(RondaBase):
         self.assertIn("Em manutenção — fora de operação", linha)
         self.assertNotIn("pronto para o hóspede", linha)
         self.assertNotIn("Pedir nova limpeza", linha)
+
+
+class EscaladaSemLoginTests(GovernancaBase):
+    """Escalada hoje mas sem login no CRM: a tarefa é de um usuário, então não há
+    a quem atribuir — e "ninguém de turno hoje" seria mentira."""
+
+    def setUp(self):
+        super().setUp()
+        from datetime import time
+
+        from apps.escala.models import Turno
+        from apps.escala.services import atribuir
+        from apps.nucleo.models import Funcionario, Pessoa
+
+        self.hoje = timezone.localdate()
+        turno = Turno.objects.create(nome="Diurno", setor="governanca",
+                                     inicio=time(7, 0), fim=time(15, 0))
+        self.sem_login = Funcionario.objects.create(
+            pessoa=Pessoa.objects.create(nome="Rita Camareira"), cargo="Camareira")
+        atribuir(turno, self.sem_login, self.hoje, self.user)
+        services.abrir_faxina(self.uh, usuario=self.user)
+        self.client.login(username="governanta", password="senha-forte-123")
+
+    def test_a_escala_sabe_quem_e_mas_nao_ha_login(self):
+        quem = services.camareiras_do_dia()
+        self.assertEqual(quem["de_turno"], [])
+        self.assertEqual(quem["sem_login"], ["Rita Camareira"])
+
+    def test_distribuir_nomeia_a_causa_certa(self):
+        resultado = services.distribuir_fila(self.user)
+        self.assertEqual(resultado["motivo"], "sem_login")
+        r = self.client.post(reverse("governanca:distribuir"), HTTP_HX_REQUEST="true")
+        texto = json.loads(r["HX-Trigger"])["aviso"]["texto"]
+        self.assertIn("Rita Camareira", texto)
+        self.assertIn("sem login no CRM", texto)
+        self.assertNotIn("Ninguém de turno", texto)
+
+    def test_a_tela_diz_o_que_fazer(self):
+        corpo = self.client.get(reverse("governanca:quartos")).content.decode()
+        self.assertIn("Rita Camareira", corpo)
+        self.assertIn("ligue o login na ficha do funcionário", corpo)
+        self.assertNotIn("Distribuir a fila", corpo)
+
+    def test_com_o_login_ligado_passa_a_distribuir(self):
+        self.sem_login.usuario = Usuario.objects.create_user(
+            username="rita", password="senha-forte-123", first_name="Rita")
+        self.sem_login.save(update_fields=["usuario"])
+        self.assertEqual(services.distribuir_fila(self.user)["atribuidas"], 1)

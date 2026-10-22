@@ -637,12 +637,17 @@ def plano_do_dia(dia=None) -> dict:
 
 
 def camareiras_do_dia(dia=None) -> dict:
-    """`{"de_turno": [...], "outras": [...], "tem_escala": bool}` — quem limpa.
+    """`{"de_turno", "outras", "tem_escala", "sem_login"}` — quem limpa.
 
     `de_turno` vem da Escala (setor Governança) por interface pública; `outras`
     é o resto dos usuários ativos, que continua disponível para o caso de alguém
     cobrir fora da escala. Sem o módulo Escala, `de_turno` vem vazio e a tela cai
     na lista de sempre.
+
+    `sem_login` são as pessoas escaladas hoje que **não têm login no CRM**: a
+    tarefa é de um usuário, então não há a quem atribuir. Vale a pena nomear —
+    "ninguém de turno hoje" seria mentira, e a correção é ligar o login na ficha
+    do funcionário, não mexer na escala.
     """
     from django.contrib.auth import get_user_model
 
@@ -650,18 +655,23 @@ def camareiras_do_dia(dia=None) -> dict:
     from apps.nucleo.modulos import Modulo
 
     dia = dia or timezone.localdate()
-    de_turno = []
+    de_turno, sem_login = [], []
     if modulo_ativo(Modulo.ESCALA):
-        from apps.escala.services import usuarios_de_turno
+        from apps.escala.services import de_turno as escalados
 
-        de_turno = usuarios_de_turno(dia, setor="governanca")
+        for func in escalados(dia, setor="governanca"):
+            if func.usuario_id and func.usuario.is_active:
+                de_turno.append(func.usuario)
+            else:
+                sem_login.append(func.pessoa.nome)
     ids = {u.pk for u in de_turno}
     outras = [
         u for u in get_user_model().objects.filter(is_active=True)
         .order_by("first_name", "username")
         if u.pk not in ids
     ]
-    return {"de_turno": de_turno, "outras": outras, "tem_escala": bool(de_turno)}
+    return {"de_turno": de_turno, "outras": outras, "tem_escala": bool(de_turno),
+            "sem_login": sem_login}
 
 
 def distribuir_fila(operador, dia=None) -> dict:
@@ -679,9 +689,13 @@ def distribuir_fila(operador, dia=None) -> dict:
     from django.db.models import Count
 
     dia = dia or timezone.localdate()
-    equipe = camareiras_do_dia(dia)["de_turno"]
+    quem = camareiras_do_dia(dia)
+    equipe = quem["de_turno"]
     if not equipe:
-        return {"atribuidas": 0, "equipe": 0, "motivo": "sem_turno"}
+        # Escalada sem login no CRM não é "ninguém de turno": a correção é outra.
+        motivo = "sem_login" if quem["sem_login"] else "sem_turno"
+        return {"atribuidas": 0, "equipe": 0, "motivo": motivo,
+                "sem_login": quem["sem_login"]}
 
     dados = _estado_dos_quartos(dia)
     pendentes = [

@@ -51,6 +51,7 @@ def _contexto_quadro(usuario=None):
         "de_turno": camareiras["de_turno"],
         "camareiras": camareiras["outras"],
         "tem_escala": camareiras["tem_escala"],
+        "sem_login": camareiras["sem_login"],
         # Quartos a limpar que ainda não têm quem limpe — o que o "Distribuir a
         # fila" vai dividir.
         "sem_camareira": sum(
@@ -225,6 +226,16 @@ def distribuir(request):
     if request.method != "POST":
         return redirect("governanca:quartos")
     resultado = services.distribuir_fila(request.user)
+    if resultado["motivo"] == "sem_login":
+        nomes = ", ".join(resultado["sem_login"])
+        return _resposta_acao(
+            request,
+            f"{nomes} está de turno hoje, mas sem login no CRM — ligue o login na "
+            "ficha do funcionário para poder distribuir."
+            if len(resultado["sem_login"]) == 1 else
+            f"{nomes} estão de turno hoje, mas sem login no CRM — ligue o login na "
+            "ficha de cada um para poder distribuir.",
+            tipo="warning")
     if resultado["motivo"] == "sem_turno":
         return _resposta_acao(
             request,
