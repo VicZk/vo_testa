@@ -433,6 +433,21 @@ class CorredorLegivelTests(TestCase):
                / "corredor.html").read_text(encoding="utf-8")
         self.assertNotIn("hospede.nome|truncatechars", tpl)
 
+    def test_no_toque_a_porta_tem_a_altura_do_conteudo(self):
+        """A proporção 4/5 é gesto de tela grande. No dedo ela virava vão morto:
+        26px entre a data e o dinheiro num cartão de 130px a 390px, e 66px num
+        de 169px no tablet de 1024px — 39% do cartão vazio, com 24 quartos para
+        rolar. No mouse a porta continua porta."""
+        coarse = "\n".join(
+            re.findall(r"@media \(pointer: coarse\), \(max-width: 820px\) \{([\s\S]*?)\n\}",
+                       self.css))
+        bloco = re.search(r"\.corredor \.porta \{([^}]*)\}", coarse)
+        self.assertIsNotNone(bloco, "a porta ficou sem a regra de toque")
+        self.assertIn("aspect-ratio: auto", bloco.group(1))
+        # e a proporção segue valendo fora dali
+        fora = re.search(r"\n\.porta \{([^}]*)\}", self.css)
+        self.assertIn("aspect-ratio: 4 / 5", fora.group(1))
+
     def test_ouro_nao_vira_texto_sobre_claro(self):
         """--lampiao sobre branco dá 2,11:1; como texto, usa-se --lampiao-tinta."""
         for regra in (".sit-chegada", ".pdv-contador"):

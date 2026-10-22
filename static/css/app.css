@@ -6333,3 +6333,16 @@ body.escala-dragging .escala-drop { cursor: copy; }
    template já manda só as iniciais; isto é o cinto de segurança para o dia em
    que um valor vier maior. */
 .lb-avatar, .lb-av, .fx-av, .avatar { overflow: hidden; }
+
+/* ---- Corredor de quartos: a porta sem o vão morto no toque ----
+   A porta é desenhada na proporção 4/5 (gesto de porta), e no dedo isso vira
+   altura sobrando: medido em 390 px, 26 px de vão entre a data e o dinheiro num
+   cartão de 130 px; no tablet de 1024 px, 66 px num de 169 px — 39% do cartão
+   vazio, e os 24 quartos pedindo rolagem à toa. A recepção lê este mapa de pé,
+   com o celular na mão: o que importa é quarto, hóspede, data e saldo juntos.
+   No mouse a proporção fica como está (o corredor é o herói da tela grande). */
+@media (pointer: coarse), (max-width: 820px) {
+  .corredor .porta { aspect-ratio: auto; min-height: 0; }
+  /* Sem a proporção mandando na altura, o respiro volta pelo padding. */
+  .corredor .porta { padding-bottom: 7px; }
+}
