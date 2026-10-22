@@ -217,8 +217,13 @@ ativação/homologação externa; o que entrou depois está no [CHANGELOG](CHANG
 - **Governança:** tarefas, arrumação, inspeção opcional, ronda e discrepâncias. A
   entrada é a visão geral da casa (`governanca:painel`); a lista de trabalho é
   `governanca:quartos`, com o ciclo de `services.CICLO` (fonte única dos rótulos da
-  tela: "Pronto" = inspecionado) e um próximo passo por quarto. `abrir_faxina` e
-  `iniciar_tarefa` travam a linha e são seguros a toque duplo.
+  tela: "Pronto" = inspecionado; "Arrumado" com hóspede dentro) e um próximo passo por
+  quarto; plano do dia por prioridade; "Minha fila" da camareira
+  (`governanca:minha_fila`), com "Reportar problema" pela `manutencao.abrir_os`;
+  "Distribuir a fila" entre quem está de turno (`escala.services.usuarios_de_turno`).
+  `abrir_faxina` e `iniciar_tarefa` travam a linha e são seguros a toque duplo. Uso
+  principal em tablet e celular: desenhar a partir do toque. Quem só tem a Governança
+  entra direto na Minha fila (`APRESENTACAO["url_pessoal"]`, lido pelo dashboard).
 - **Estoque:** telas em cinco abas sobre o motor do núcleo; entrada, saída e
   transferência com `chave` de envio (idempotência, como a `Venda.chave`), fornecedor
   na entrada e inventário que aplica só o contado.

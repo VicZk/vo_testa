@@ -1285,7 +1285,22 @@ divergências), `governanca:discrepancias` (aba Discrepâncias), `nova_tarefa` (
 `iniciar=1`, abre e já começa a faxina num toque), `tarefa_acao` (atribuir camareira /
 iniciar / concluir / inspecionar / reprovar), `status_marcar`, `ronda` (registra a
 conferência do quarto; HTMX devolve só o quadro), `devolver` (o formulário de "Devolver
-para limpar": modal da casa com HTMX, página própria sem JS; grava pelo `status_marcar`).
+para limpar": modal da casa com HTMX, página própria sem JS; grava pelo `status_marcar`),
+`minha_fila` (aba Minha fila, a tela da camareira no celular: `services.minha_fila(usuario)`
+na ordem de prioridade, um cartão por quarto com "Começar"/"Terminei"; quarto bloqueado
+fica fora), `reportar` (`quarto/<pk>/problema/`: modal ou página que abre a OS pela
+`manutencao.abrir_os`) e `distribuir` (`fila/distribuir/`, POST: `services.distribuir_fila`
+divide os quartos a limpar sem camareira entre quem está de turno
+(`escala.usuarios_de_turno()`), equilibrado e na ordem do plano do dia; quarto que já tem
+camareira não é tocado. Sem ninguém de turno não distribui: a tela diz o motivo — ninguém
+escalado, ou escalada sem login no CRM).
+
+A visão geral e a lista vêm de `services.plano_do_dia(dia)` (chegadas de hoje → saídas de
+hoje → ocupados a arrumar → o resto, com a hora do check-in e o tempo que sobra) e do
+retrato da ocupação por quarto (`ocupacao_pms`, que lê `reservas.ocupacao_por_uh`): vago, ocupado, chega hoje, sai
+hoje, bloqueado. Com hóspede dentro, o estado inspecionado aparece como "Arrumado", não
+"Pronto"; em manutenção, nunca "pode receber hóspede". Quarto sem registro de limpeza
+nasce "Pronto" (default `inspecionada`, migração `governanca.0004`).
 
 ### Regras de negócio
 

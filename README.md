@@ -359,7 +359,8 @@ Peças que todo módulo usa:
 
 - **Catálogo** (`apps/nucleo/modulos.py`): o enum `Modulo` (17 códigos), `DEPENDENCIAS`
   (ex.: Governança exige Reservas; Loja exige Estoque) e `APRESENTACAO` (grupo do menu,
-  ordem, rota principal; módulo sem rota aparece como "em construção").
+  ordem, rota principal, e `url_pessoal` quando o módulo tem uma entrada de quem
+  opera — a Minha fila da camareira; módulo sem rota aparece como "em construção").
 - **Ativação** (`ModuloContratado`): uma linha por módulo, gerida na **Central de
   Módulos** (`/crm/configuracoes/modulos/`), que respeita as dependências.
 - **Áreas-core** (`apps/nucleo/areas.py`): permissões do que não é módulo (quartos,
@@ -376,6 +377,9 @@ Peças que todo módulo usa:
 Usuários, módulos e áreas de cada funcionário são concedidos a partir da tela
 **Funcionários** (`/crm/funcionarios/`), que substituiu a antiga "Equipe & Acessos". A
 sidebar, a paleta ⌘K e o dashboard se montam conforme o acesso de quem está logado.
+Quem não tem nenhum bloco do dashboard (nem Reservas, Estoque, Financeiro, Logbook ou
+gerência) entra direto no módulo dele quando só tem um — a camareira na Minha fila —, ou
+vê um cartão por módulo quando tem vários.
 
 ### 4.4 Como os módulos conversam
 
@@ -530,9 +534,15 @@ documento fiscal (a NFC-e sai pelo Fiscal).
 rouparia interna como livro-razão de enxoval (limpa, em uso, suja, lavando). O mesmo
 cupom de 80 mm serve de comprovante na recepção da roupa e de recibo na entrega.
 
-**Governança.** A entrada é "Como está a casa": os quartos em blocos pintados pelo
-estado da limpeza, o progresso do dia ("22 de 24 prontos", com a hora do check-in), o que
-pede ação agora, as chegadas de hoje e a carga de cada camareira. A aba Quartos é a
+**Governança** (pensada para tablet e celular). A entrada é "Como está a casa": os
+quartos em blocos com o número e o estado na frente e quem está dentro (vago, ocupado,
+chega hoje, sai hoje, bloqueado, com o hóspede), o progresso do dia ("22 de 24 prontos",
+com a hora do check-in), o que pede ação agora, o **plano do dia** na ordem de atacar
+(chegadas, saídas, ocupados a arrumar, o resto — e se dá tempo) e a carga de cada
+camareira. A camareira tem a **Minha fila** no celular: um cartão por quarto, na ordem de
+prioridade, com "Começar"/"Terminei" e "Reportar problema" (abre OS na Manutenção). Quem
+está de turno na Escala aparece primeiro no seletor de quem limpa, e "Distribuir a fila"
+divide os quartos a limpar entre essas pessoas. Quarto nunca mexido nasce "Pronto". A aba Quartos é a
 lista de trabalho: o ciclo **A limpar › Em limpeza › Limpo › Pronto** à vista (e
 filtrando), uma frase por linha dizendo por que o quarto está ali e **um** botão por
 quarto com o nome do que acontece ("Começar limpeza", "Terminei a limpeza", "Aprovar

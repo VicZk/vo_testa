@@ -3222,6 +3222,15 @@ a.modulo-ativo:hover {
 
 /* Precisa de atenção */
 .atencao-secao { margin: 1.4rem 0 .2rem; }
+/* Visão geral de quem não tem nenhum bloco dela: os módulos dele, no cartão-atalho
+   dos Relatórios (a decisão é de views.dashboard). A grade divide pelo espaço. */
+.atalhos-modulos {
+  display: grid; gap: .85rem; margin: 1.2rem 0;
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+}
+.atalhos-modulos .atalho-titulo { display: block; }
+.atalhos-modulos .cartao-descricao { display: block; margin-top: .2rem; }
+.atalhos-modulos .cartao-atalho:active { transform: scale(.99); }
 .secao-cabecalho { display: flex; align-items: center; gap: .55rem; margin-bottom: .85rem; }
 .secao-cabecalho h2 { margin: 0; }
 .secao-contagem {
@@ -5707,7 +5716,9 @@ body.escala-dragging .escala-drop { cursor: copy; }
      regra geral acima) deixavam «Aprovar limpeza» mais baixo que «Devolver para
      limpar», lado a lado no tablet. */
   .botao-ronda, .acoes-quarto .botao-mini,
-  .acoes-quarto .botao-primario, .acoes-quarto .botao-neutro {
+  .acoes-quarto .botao-primario, .acoes-quarto .botao-neutro,
+  /* A legenda do corredor da Governança também filtra a lista: é botão, não enfeite. */
+  .chip-legenda-link {
     min-height: 44px;
   }
   /* O menu é o controle mais tocado do sistema no celular, e era o que tinha
