@@ -16,7 +16,8 @@
   </thead>
   <tbody>
     {% for v in vendas %}
-      <tr class="{% if v.status == 'cancelada' %}linha-alerta{% endif %}">
+      <tr class="linha-clique {% if v.status == 'cancelada' %}linha-alerta{% endif %}"
+          onclick="location.href='{% url 'loja:venda' v.pk %}'">
         <td><a href="{% url 'loja:venda' v.pk %}">#{{ v.pk }}</a></td>
         <td>{{ v.criado_em|date:"d/m/Y H:i" }}</td>
         <td>{% if v.destino == 'conta' %}Conta — {{ v.conta_ref }}{% else %}{{ v.forma_pagamento.nome|default:"—" }}{% endif %}</td>
