@@ -5717,8 +5717,10 @@ body.escala-dragging .escala-drop { cursor: copy; }
      limpar», lado a lado no tablet. */
   .botao-ronda, .acoes-quarto .botao-mini,
   .acoes-quarto .botao-primario, .acoes-quarto .botao-neutro,
-  /* A legenda do corredor da Governança também filtra a lista: é botão, não enfeite. */
-  .chip-legenda-link {
+  /* A legenda do corredor também filtra a lista: é botão, não enfeite — e vale
+     para a legenda inteira, não só a da Governança (o corredor da recepção tem a
+     dele, com os mesmos chips). */
+  .chip-legenda {
     min-height: 44px;
   }
   /* O menu é o controle mais tocado do sistema no celular, e era o que tinha
@@ -5735,8 +5737,6 @@ body.escala-dragging .escala-drop { cursor: copy; }
      cobre mais que isso. 10px entre caixas é o mínimo que separa na prática. */
   .filtros, .subnav, .gov-ciclo, .ronda-grupo, .acoes-quarto,
   .corredor-legenda, .gov-fila-acoes { gap: 10px; }
-  /* A legenda do corredor também filtra a lista: é controle, não enfeite. */
-  .chip-legenda { min-height: 44px; }
 
   /* ─── Texto legível sem zoom ───
      O rótulo de dado (11,8px em MAIÚSCULAS), a cápsula de estado (11,2px) e a
