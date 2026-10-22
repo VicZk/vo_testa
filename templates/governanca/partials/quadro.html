@@ -13,21 +13,21 @@ Sem JavaScript tudo continua funcionando: os formulários têm `action` e `metho
 e as views redirecionam quando o pedido não vem do HTMX.
 {% endcomment %}
 <div class="gov-ciclo">
+  {% comment %}Sem `title`: num tablet não existe hover, e o que ele dizia (o
+  resumo de cada estado) está por extenso no «Como funciona» logo acima — a dica
+  era a ÚNICA forma de saber, que é justamente o que não pode.{% endcomment %}
   <button type="button" class="chip-limpeza" :class="f==='todas' && 'ativo'"
-          :aria-pressed="f==='todas'" @click="filtrar('todas')"
-          title="Todos os quartos, em qualquer estado">Todos <b>{{ linhas|length }}</b></button>
+          :aria-pressed="f==='todas'" @click="filtrar('todas')">Todos <b>{{ linhas|length }}</b></button>
   <span class="gov-ciclo-seta" aria-hidden="true">›</span>
   {% for e in ciclo %}
     <button type="button" class="chip-limpeza chip-{{ e.cod }}" :class="f==='{{ e.cod }}' && 'ativo'"
-            :aria-pressed="f==='{{ e.cod }}'" @click="filtrar('{{ e.cod }}')"
-            title="{{ e.resumo }} {{ e.ajuda }}"><span class="ponto"></span>{{ e.rotulo }} <b>{{ e.n }}</b></button>
+            :aria-pressed="f==='{{ e.cod }}'" @click="filtrar('{{ e.cod }}')"><span class="ponto"></span>{{ e.rotulo }} <b>{{ e.n }}</b></button>
     {% if not forloop.last %}<span class="gov-ciclo-seta" aria-hidden="true">›</span>{% endif %}
   {% endfor %}
   {% if meus %}
     {# A camareira no corredor quer a fila dela, não o andar inteiro. #}
     <button type="button" class="chip-limpeza chip-meus" :class="soMeus && 'ativo'"
-            :aria-pressed="soMeus" @click="alternarMeus()"
-            title="Mostrar só os quartos que estão com você">Só os meus <b>{{ meus }}</b></button>
+            :aria-pressed="soMeus" @click="alternarMeus()">Só os meus <b>{{ meus }}</b></button>
   {% endif %}
 </div>
 
@@ -88,8 +88,12 @@ aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% e
       supervisora ia buscar no mapa ao lado: "Sai hoje · Ana Lima". O TIPO do
       quarto é dado secundário e foi para a dica — ocupava a linha de baixo e
       nunca mudava nada do que fazer agora.{% endcomment %}
-      <td data-rotulo="Quarto" class="col-quarto dica" data-dica="- {{ ln.uh.numero }}&#10;- {{ ln.uh.tipo.nome }}{% if ln.ocupacao.ajuda %}&#10;- {{ ln.ocupacao.ajuda }}{% endif %}">
-        <strong>{{ ln.uh.numero }}</strong>
+      {% comment %}Sem dica de hover: num tablet ela não existe, e era a única
+      forma de saber o tipo do quarto. O tipo mora agora na ficha do quarto (um
+      toque no número), que é onde se pergunta por ele.{% endcomment %}
+      <td data-rotulo="Quarto" class="col-quarto">
+        <a href="{% url 'governanca:quarto' ln.uh.pk %}?voltar=quartos" class="col-quarto-link"
+           hx-get="{% url 'governanca:quarto' ln.uh.pk %}?voltar=quartos" hx-target="#modal-conteudo">{{ ln.uh.numero }}</a>
         {% if ln.ocupacao.rotulo %}
           <span class="gov-ocupacao">
             <span class="rotulo-dado">{{ ln.ocupacao.rotulo }}</span>{% if ln.ocupacao.hospede %}<span class="rotulo-dado gov-ocupacao-nome">{{ ln.ocupacao.hospede }}</span>{% endif %}{% if ln.ocupacao.cod == 'sai_hoje' and ln.ocupacao.chegada %}<span class="rotulo-dado">Chega outro</span>{% endif %}
@@ -116,8 +120,9 @@ aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% e
             <form method="post" action="{% url 'governanca:ronda' ln.uh.pk %}"
                   hx-post="{% url 'governanca:ronda' ln.uh.pk %}">
               {% csrf_token %}<input type="hidden" name="visto" value="{{ cod }}">
+              {# `aria-label` em vez de `title`: o leitor de tela ouve a forma longa, e no toque ninguém depende de hover (o glossário do «Como funciona» explica «com mala» e «sem mala»). #}
               <button type="submit" class="botao-ronda{% if ln.conferencia.visto == cod %} marcado{% endif %}"
-                      title="{{ longo }}"
+                      aria-label="{{ ln.uh.numero }}: {{ longo }}"
                       aria-pressed="{% if ln.conferencia.visto == cod %}true{% else %}false{% endif %}">{{ curto }}</button>
             </form>
           {% endfor %}
@@ -162,62 +167,12 @@ aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% e
         {% endif %}
       </td>
 
-      {% comment %}UMA ação principal por quarto, nomeada pelo que acontece. As
-      secundárias são `.botao-mini` na mesma linha-base — nada de alturas
-      diferentes brigando (era a queixa do dono).{% endcomment %}
+      {% comment %}UMA ação principal por quarto, nomeada pelo que acontece — o
+      mesmo bloco da ficha do quarto (partials/acoes_quarto.html), para não
+      existirem dois "próximos passos" para o mesmo estado.{% endcomment %}
       <td class="col-acao" data-rotulo="Próximo passo">
         <div class="acoes-quarto">
-        {% comment %}Quarto em reparo não tem próximo passo da governança: ele
-        oferecia "Pedir nova limpeza" e dizia "pronto para o hóspede".{% endcomment %}
-        {% if ln.bloqueado %}
-          <span class="acao-pronta">Em manutenção — fora de operação</span>
-
-        {% elif ln.situacao == 'suja' %}
-          {% if ln.tarefa %}
-            <form method="post" action="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}" hx-post="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}">
-              {% csrf_token %}<input type="hidden" name="acao" value="iniciar">
-              <button type="submit" class="botao-primario">Começar limpeza</button>
-            </form>
-          {% else %}
-            {# Sem faxina na fila: abrir e começar é um gesto só. #}
-            <form method="post" action="{% url 'governanca:nova_tarefa' %}" hx-post="{% url 'governanca:nova_tarefa' %}">
-              {% csrf_token %}<input type="hidden" name="uh" value="{{ ln.uh.pk }}">
-              <input type="hidden" name="tipo" value="faxina_completa">
-              <input type="hidden" name="iniciar" value="1">
-              <button type="submit" class="botao-primario">Começar limpeza</button>
-            </form>
-          {% endif %}
-
-        {% elif ln.situacao == 'em_limpeza' %}
-          {% if ln.tarefa %}
-            <form method="post" action="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}" hx-post="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}">
-              {% csrf_token %}<input type="hidden" name="acao" value="concluir">
-              <button type="submit" class="botao-primario">Terminei a limpeza</button>
-            </form>
-          {% else %}
-            <form method="post" action="{% url 'governanca:status_marcar' ln.uh.pk %}" hx-post="{% url 'governanca:status_marcar' ln.uh.pk %}">
-              {% csrf_token %}<input type="hidden" name="situacao" value="limpa">
-              <button type="submit" class="botao-primario">Terminei a limpeza</button>
-            </form>
-          {% endif %}
-
-        {% elif ln.situacao == 'limpa' %}
-          <form method="post" action="{% url 'governanca:status_marcar' ln.uh.pk %}" hx-post="{% url 'governanca:status_marcar' ln.uh.pk %}">
-            {% csrf_token %}<input type="hidden" name="situacao" value="inspecionada">
-            <button type="submit" class="botao-primario">Aprovar limpeza</button>
-          </form>
-          {# Link de verdade: com JS abre o modal da casa; sem JS, abre a página. #}
-          <a href="{% url 'governanca:devolver' ln.uh.pk %}" class="botao-mini"
-             hx-get="{% url 'governanca:devolver' ln.uh.pk %}" hx-target="#modal-conteudo">Devolver para limpar</a>
-
-        {% elif ln.situacao == 'inspecionada' %}
-          <span class="acao-pronta">Nada a fazer — pronto para o hóspede</span>
-          <form method="post" action="{% url 'governanca:nova_tarefa' %}" hx-post="{% url 'governanca:nova_tarefa' %}">
-            {% csrf_token %}<input type="hidden" name="uh" value="{{ ln.uh.pk }}">
-            <input type="hidden" name="tipo" value="faxina_completa">
-            <button type="submit" class="botao-mini">Pedir nova limpeza</button>
-          </form>
-        {% endif %}
+          {% include "governanca/partials/acoes_quarto.html" with ln=ln sheet=False %}
         </div>
       </td>
     </tr>

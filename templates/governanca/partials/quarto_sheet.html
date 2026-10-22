@@ -1,0 +1,16 @@
+{% comment %}Gaveta do quarto: um toque na porta do corredor e o quarto está
+aqui, com o próximo passo ao alcance do polegar (no celular e no tablet a
+sobreposição encosta embaixo — ver o @media de ponteiro grosso no app.css).
+
+Os formulários daqui NAVEGAM de verdade (sem HTMX): a pessoa veio da parede de
+blocos e quer vê-la atualizada depois de agir.{% endcomment %}
+<header class="modal-cabecalho">
+  <h2>{{ uh.numero }}</h2>
+  <button type="button" class="modal-fechar" onclick="fecharModal()" aria-label="Fechar">&times;</button>
+</header>
+<div class="modal-corpo">
+  {% include "governanca/partials/quarto_ficha.html" %}
+</div>
+<div class="modal-acoes acoes-quarto qf-acoes">
+  {% include "governanca/partials/acoes_quarto.html" with ln=ln sheet=True voltar=voltar %}
+</div>

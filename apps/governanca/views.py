@@ -84,6 +84,11 @@ def _resposta_acao(request, aviso="", tipo="success"):
         if aviso:
             {"error": messages.error, "warning": messages.warning}.get(
                 tipo, messages.success)(request, aviso)
+        # A ficha do quarto navega de verdade (ela abre sobre a parede de blocos,
+        # e depois da ação a pessoa quer ver a parede atualizada).
+        voltar = request.POST.get("voltar")
+        if voltar in ("painel", "quartos"):
+            return redirect(f"governanca:{voltar}")
         return redirect("governanca:minha_fila" if da_fila else "governanca:quartos")
     if da_fila:
         resposta = render(request, "governanca/partials/fila.html",
@@ -126,6 +131,28 @@ def quartos(request):
         "filtro_inicial": estado if estado in StatusLimpeza.Situacao.values else "",
     })
     return render(request, "governanca/quartos.html", contexto)
+
+
+@requer_modulo(Modulo.GOVERNANCA)
+def quarto(request, pk):
+    """A ficha de um quarto: como ele está, quem está dentro e o próximo passo.
+
+    É o gesto do tablet: a supervisora toca na porta na parede de blocos e
+    resolve o quarto ali, em vez de sair da visão geral e caçar a linha numa
+    lista de 24. Com HTMX abre na gaveta da casa; sem JavaScript, como página.
+    """
+    uh = get_object_or_404(UH, pk=pk)
+    linha = services.quarto(uh)
+    if linha is None:   # day-use ou quarto inativo: não é da governança
+        return redirect("governanca:quartos")
+    gabarito = ("governanca/partials/quarto_sheet.html"
+                if request.headers.get("HX-Request") else "governanca/quarto.html")
+    # De onde a pessoa veio, para a ação devolvê-la ao mesmo lugar.
+    voltar = request.GET.get("voltar", "")
+    return render(request, gabarito, {
+        "ln": linha, "uh": uh,
+        "voltar": voltar if voltar in ("painel", "quartos") else "",
+    })
 
 
 @requer_modulo(Modulo.GOVERNANCA)

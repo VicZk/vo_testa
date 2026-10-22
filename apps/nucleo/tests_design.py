@@ -443,6 +443,72 @@ class CorredorLegivelTests(TestCase):
         self.assertGreaterEqual(_contraste(achado.group(1), "#FFFFFF"), 4.5)
 
 
+class DesenhadoParaODedoTests(TestCase):
+    """A Governança é usada quase toda no tablet e no celular.
+
+    Alvo de 44px já havia; faltava o resto do que o dedo precisa: FOLGA entre os
+    alvos (as abas e os três botões da ronda ficavam a 6px), texto que se leia a
+    um braço de distância (rótulo de dado a 11,8px em maiúsculas) e a
+    sobreposição encostada embaixo, onde a mão já está.
+    """
+
+    def setUp(self):
+        self.css = CSS.read_text(encoding="utf-8").replace("\r\n", "\n")
+        # O bloco grande de toque é o que traz os alvos do menu (há outro, menor,
+        # só para o mapa de reservas).
+        marca = "@media (pointer: coarse), (max-width: 820px) {"
+        inicio = self.css.index(marca, self.css.index(".sidebar .nav-item") - 3000)
+        # O bloco vai até o fechamento da media query (o "\n}" na coluna 0).
+        self.toque = self.css[inicio:self.css.index("\n}\n", inicio)]
+
+    def test_folga_entre_alvos_vizinhos(self):
+        """44px de alvo colado em 44px de alvo ainda erra: o dedo cobre os dois."""
+        bloco = re.search(r"\n  \.filtros, \.subnav[^{]*\{([^}]*)\}", self.toque)
+        self.assertIsNotNone(bloco, "regra de folga entre alvos não encontrada")
+        self.assertIn("gap: 10px", bloco.group(1))
+        for alvo in (".subnav", ".gov-ciclo", ".ronda-grupo", ".acoes-quarto",
+                     ".gov-fila-acoes"):
+            self.assertIn(alvo, self.toque, alvo)
+
+    def test_texto_de_dado_legivel_sem_zoom(self):
+        """O rótulo de dado carrega o nome do hóspede; a frase de apoio, o porquê.
+
+        Escopo em `.conteudo`: o portal e a página de pagamento ficam fora da
+        casca do CRM e têm o próprio recorte de CSS (base.css) — a regra não pode
+        atravessar para lá de carona.
+        """
+        for regra in (".conteudo .rotulo-dado",
+                      ".conteudo .ajuda, .conteudo .bloco-subtitulo"):
+            bloco = re.search(rf"\n  {re.escape(regra)} \{{([^}}]*)\}}", self.toque)
+            self.assertIsNotNone(bloco, regra)
+            tamanho = re.search(r"font-size: \.(\d+)rem", bloco.group(1))
+            self.assertIsNotNone(tamanho, regra)
+            self.assertGreaterEqual(int(tamanho.group(1)), 80, regra)   # ≥ .80rem
+
+    def test_sobreposicao_encosta_embaixo_no_toque(self):
+        """O modal nasce a 6vh do TOPO: no celular as ações dele caem longe do
+        polegar e disputam altura com o teclado."""
+        overlay = re.search(r"\n  \.modal-overlay \{([^}]*)\}", self.toque)
+        self.assertIsNotNone(overlay)
+        self.assertIn("align-items: flex-end", overlay.group(1))
+        caixa = re.search(r"\n  \.modal-caixa \{([^}]*)\}", self.toque)
+        self.assertIsNotNone(caixa)
+        self.assertIn("max-height", caixa.group(1))
+
+    def test_o_botao_da_gaveta_nao_foge_da_tela(self):
+        acoes = re.search(r"\n  \.modal-acoes \{([^}]*)\}", self.toque)
+        self.assertIsNotNone(acoes)
+        self.assertIn("position: sticky", acoes.group(1))
+        self.assertIn("bottom: 0", acoes.group(1))
+
+    def test_o_aviso_sobe_para_o_topo_no_toque(self):
+        """Embaixo ele caía exatamente sobre o botão da gaveta (e sobre o polegar)."""
+        toasts = re.search(r"\n  \.toasts \{([^}]*)\}", self.toque)
+        self.assertIsNotNone(toasts)
+        self.assertIn("bottom: auto", toasts.group(1))
+        self.assertIn("top:", toasts.group(1))
+
+
 class CorredorDaGovernancaTests(TestCase):
     """O painel escuro da Governança é lido de longe — e dizia a coisa errada.
 

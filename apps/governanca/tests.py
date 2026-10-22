@@ -1008,11 +1008,15 @@ class VisaoGeralTests(GovernancaBase):
         self.assertContains(r, "Como está a casa")
         self.assertContains(r, "corredor-gov")       # a casa em blocos
 
-    def test_uma_porta_por_quarto_levando_para_a_linha_dele(self):
+    def test_uma_porta_por_quarto_abrindo_a_ficha_dele(self):
+        """A porta resolve o quarto ali: no tablet, mandar "ir até a linha" era
+        sair da parede de blocos e caçar numa lista de 24."""
         dados = services.visao_geral()
         self.assertEqual(len(dados["portas"]), 3)
         corpo = self.client.get(reverse("governanca:painel")).content.decode()
-        self.assertIn(f"#quarto-{self.uh.pk}", corpo)
+        ficha = reverse("governanca:quarto", args=[self.uh.pk])
+        self.assertIn(f'href="{ficha}?voltar=painel"', corpo)
+        self.assertIn(f'hx-get="{ficha}?voltar=painel"', corpo)
 
     def test_progresso_do_dia_conta_os_prontos(self):
         services.inspecionar(self.uh, self.user)
@@ -1245,12 +1249,16 @@ class OcupacaoNoQuadroTests(RondaBase):
         self.assertIn("Ocupado", corpo)
         self.assertIn("Ana Lima", corpo)
 
-    def test_o_tipo_do_quarto_vira_dica_e_sai_da_linha(self):
-        """Dado secundário: ocupava a linha de baixo e não muda o que fazer agora."""
+    def test_o_tipo_do_quarto_sai_da_linha_e_vai_para_a_ficha(self):
+        """Dado secundário: ocupava a linha de baixo e não muda o que fazer agora.
+        Não vira dica de hover — num tablet isso seria sumir."""
         self._hospedar(self.uh)
         corpo = self.client.get(reverse("governanca:quartos")).content.decode()
-        self.assertIn(f"- {self.uh.tipo.nome}", corpo)        # está na dica
+        self.assertNotIn(f"- {self.uh.tipo.nome}", corpo)
         self.assertNotIn(f'<small class="ajuda">{self.uh.tipo.nome}</small>', corpo)
+        self.assertContains(
+            self.client.get(reverse("governanca:quarto", args=[self.uh.pk])),
+            self.uh.tipo.nome)
 
     def test_a_visao_geral_resume_a_casa_por_ocupacao(self):
         self._hospedar(self.uh, sai_em_dias=0)                # sai hoje
@@ -1326,10 +1334,14 @@ class BlocoDoQuartoTests(RondaBase):
         self.assertIn('class="porta-estado"', corpo)
         self.assertIn("A limpar", corpo)
 
-    def test_o_tipo_do_quarto_sai_do_bloco_e_fica_na_dica(self):
+    def test_o_tipo_do_quarto_sai_do_bloco_e_vai_para_a_ficha(self):
+        """Dado secundário. Na dica ele seria invisível no tablet — foi para a
+        ficha do quarto, que abre com um toque na porta."""
         corpo = self._corpo()
         self.assertNotIn('class="porta-nome"', corpo)       # era o maior texto
-        self.assertIn(f"- {self.tipo.nome}", corpo)         # está na dica
+        self.assertNotIn(f"- {self.tipo.nome}", corpo)      # não é só no hover
+        ficha = self.client.get(reverse("governanca:quarto", args=[self.uh.pk]))
+        self.assertContains(ficha, self.tipo.nome)
 
     def test_quem_esta_no_quarto_aparece_no_bloco(self):
         self._hospedar(self.uh, nome="Ana Lima")
@@ -2010,3 +2022,117 @@ class EscaladaSemLoginTests(GovernancaBase):
             username="rita", password="senha-forte-123", first_name="Rita")
         self.sem_login.save(update_fields=["usuario"])
         self.assertEqual(services.distribuir_fila(self.user)["atribuidas"], 1)
+
+
+class FichaDoQuartoTests(RondaBase):
+    """Um toque na porta resolve o quarto ali.
+
+    No tablet, "ir até a linha daquele quarto" queria dizer sair da parede de
+    blocos e caçar numa lista de 24 — e tudo o que a porta sabia (tipo, motivo,
+    hóspede) só existia na dica de hover, que no toque não existe.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="governanta", password="senha-forte-123")
+
+    def _ficha(self, uh=None, htmx=False, **kw):
+        extra = {"HTTP_HX_REQUEST": "true"} if htmx else {}
+        return self.client.get(
+            reverse("governanca:quarto", args=[(uh or self.uh).pk]), kw, **extra)
+
+    def test_a_ficha_traz_o_que_so_existia_na_dica(self):
+        self._hospedar(self.uh, nome="Ana Lima")
+        services.abrir_faxina(self.uh, usuario=self.user, origem="checkout")
+        r = self._ficha()
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, self.uh.numero)
+        self.assertContains(r, "A limpar")
+        self.assertContains(r, self.tipo.nome)            # tipo do quarto
+        self.assertContains(r, "Ana Lima")                # quem está no quarto
+        self.assertContains(r, "O hóspede fez check-out")  # o porquê
+
+    def test_a_ficha_traz_o_proximo_passo_do_quarto(self):
+        services.abrir_faxina(self.uh, usuario=self.user)
+        self.assertContains(self._ficha(), "Começar limpeza")
+        services.definir_status(self.uh, StatusLimpeza.Situacao.LIMPA, self.user)
+        r = self._ficha()
+        self.assertContains(r, "Aprovar limpeza")
+        self.assertContains(r, "Devolver para limpar")
+
+    def test_com_htmx_abre_a_gaveta_e_sem_js_a_pagina(self):
+        r = self._ficha(htmx=True)
+        self.assertTemplateUsed(r, "governanca/partials/quarto_sheet.html")
+        self.assertTemplateUsed(r, "governanca/partials/quarto_ficha.html")
+        self.assertTemplateUsed(self._ficha(), "governanca/quarto.html")
+
+    def test_a_acao_da_ficha_navega_e_volta_para_onde_a_pessoa_estava(self):
+        """Ela veio da parede de blocos e quer vê-la atualizada depois de agir."""
+        tarefa = services.abrir_faxina(self.uh, usuario=self.user)
+        r = self.client.post(reverse("governanca:tarefa_acao", args=[tarefa.pk]),
+                             {"acao": "iniciar", "voltar": "painel"})
+        self.assertRedirects(r, reverse("governanca:painel"))
+        tarefa.refresh_from_db()
+        self.assertEqual(tarefa.status, TarefaGovernanca.Status.EM_ANDAMENTO)
+
+    def test_voltar_so_aceita_tela_da_governanca(self):
+        tarefa = services.abrir_faxina(self.uh, usuario=self.user)
+        r = self.client.post(reverse("governanca:tarefa_acao", args=[tarefa.pk]),
+                             {"acao": "iniciar", "voltar": "http://exemplo.invalido/"})
+        self.assertRedirects(r, reverse("governanca:quartos"))
+
+    def test_o_formulario_da_ficha_nao_usa_htmx(self):
+        """Ela navega de verdade: a gaveta sai e a parede de blocos se refaz."""
+        services.abrir_faxina(self.uh, usuario=self.user)
+        corpo = self._ficha(voltar="painel").content.decode()
+        inicio = corpo.index('name="acao"')
+        trecho = corpo[max(0, inicio - 400):inicio]
+        self.assertNotIn("hx-post", trecho)
+        self.assertIn('name="voltar" value="painel"', corpo)
+
+    def test_day_use_nao_tem_ficha_na_governanca(self):
+        from apps.nucleo.models import TipoUH
+        day = TipoUH.objects.create(nome="Dia na pousada", tarifa_base=Decimal("90"),
+                                    modalidade=TipoUH.Modalidade.DAY_USE)
+        uh = UH.objects.create(numero="DAY-77", tipo=day)
+        self.assertRedirects(self._ficha(uh), reverse("governanca:quartos"))
+
+    def test_a_linha_da_lista_abre_a_ficha(self):
+        corpo = self.client.get(reverse("governanca:quartos")).content.decode()
+        self.assertIn(reverse("governanca:quarto", args=[self.uh.pk]), corpo)
+
+    def test_exige_o_modulo(self):
+        ModuloContratado.objects.filter(codigo=Modulo.GOVERNANCA).update(ativo=False)
+        self.assertEqual(self._ficha().status_code, 404)
+
+    def test_quarto_bloqueado_diz_que_nao_ha_passo(self):
+        self.uh.status = UH.Status.BLOQUEADA
+        self.uh.save(update_fields=["status"])
+        r = self._ficha()
+        self.assertContains(r, "Em manutenção — fora de operação")
+        self.assertNotContains(r, "Começar limpeza")
+
+
+class SemHoverTests(RondaBase):
+    """Nada que só exista no hover: no tablet ele não existe."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="governanta", password="senha-forte-123")
+
+    def test_os_chips_do_ciclo_nao_dependem_de_title(self):
+        """O que o `title` dizia está por extenso no «Como funciona» da tela."""
+        corpo = self.client.get(reverse("governanca:quartos")).content.decode()
+        self.assertNotIn('title="O quarto precisa de limpeza', corpo)
+        self.assertIn("Entra aqui sozinho quando o hóspede faz check-out", corpo)
+
+    def test_os_botoes_da_ronda_dizem_o_longo_por_aria_label(self):
+        corpo = self.client.get(reverse("governanca:quartos")).content.decode()
+        self.assertNotIn('title="Ocupado (com bagagem)"', corpo)
+        self.assertIn("Ocupado (com bagagem)", corpo)     # aria-label
+
+    def test_a_porta_anuncia_estado_e_ocupacao_sem_hover(self):
+        self._hospedar(self.uh, nome="Ana Lima")
+        corpo = self.client.get(reverse("governanca:painel")).content.decode()
+        self.assertIn(f'aria-label="{self.uh.numero}:', corpo)
+        self.assertIn("Ana Lima", corpo)                  # visível no bloco

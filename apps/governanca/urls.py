@@ -15,6 +15,8 @@ urlpatterns = [
     path("faxina/nova/", views.nova_tarefa, name="nova_tarefa"),
     path("fila/distribuir/", views.distribuir, name="distribuir"),
     path("tarefa/<int:pk>/", views.tarefa_acao, name="tarefa_acao"),
+    # Ficha do quarto: o toque na porta do corredor resolve o quarto ali.
+    path("quarto/<int:pk>/", views.quarto, name="quarto"),
     path("quarto/<int:pk>/status/", views.status_marcar, name="status_marcar"),
     path("quarto/<int:pk>/ronda/", views.ronda, name="ronda"),
     path("quarto/<int:pk>/devolver/", views.devolver, name="devolver"),

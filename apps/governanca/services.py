@@ -434,6 +434,21 @@ def _estado_dos_quartos(dia=None) -> dict:
     return {"dia": dia, "sem_base": pms is None, "linhas": linhas, "pms": pms}
 
 
+def quarto(uh, dia=None):
+    """A linha de UM quarto, no mesmo formato da lista — a ficha que abre ao
+    tocar numa porta do corredor ou no número na lista.
+
+    No tablet, "ir até a linha daquele quarto" quer dizer sair da parede de
+    blocos e caçar numa lista de 24; a ficha traz o quarto e o próximo passo dele
+    para debaixo do dedo. Mesmo `_estado_dos_quartos` das outras telas: um
+    retrato só, sem dois números diferentes para a mesma coisa.
+    """
+    for linha in _estado_dos_quartos(dia)["linhas"]:
+        if linha["uh"].pk == uh.pk:
+            return linha
+    return None
+
+
 def painel_limpeza(dia=None):
     """Tela única de Governança: uma linha por quarto FÍSICO (day-use fora), com o
     status de limpeza + a tarefa ativa (se houver), ordenada por urgência. Substitui

@@ -119,12 +119,16 @@ A barra mostra a casa inteira repartida pelos quatro estados.{% endcomment %}
         <p class="gov-plano-titulo"><span class="gov-plano-ponto" aria-hidden="true"></span>{{ g.rotulo }} <b>{{ g.quartos|length }}</b></p>
         <p class="ajuda">{{ g.resumo }}</p>
         <ul class="gov-chegadas">
+          {% comment %}A linha inteira é o alvo (não só o número): no tablet o
+          dedo acerta o quarto, e o toque abre a ficha dele com o próximo
+          passo — o mesmo gesto da porta no corredor.{% endcomment %}
           {% for q in g.quartos %}
             <li>
-              <a href="{% url 'governanca:quartos' %}#quarto-{{ q.uh.pk }}" class="gov-chegada-quarto">
-                {{ q.uh.numero }}{% if q.hospede %}<small class="ajuda">{{ q.hospede }}</small>{% endif %}
+              <a href="{% url 'governanca:quarto' q.uh.pk %}?voltar=painel" class="gov-chegada-quarto"
+                 hx-get="{% url 'governanca:quarto' q.uh.pk %}?voltar=painel" hx-target="#modal-conteudo">
+                <span class="gov-chegada-nome">{{ q.uh.numero }}{% if q.hospede %}<small class="ajuda">{{ q.hospede }}</small>{% endif %}</span>
+                <span class="selo selo-{{ q.situacao }}">{{ q.rotulo }}</span>
               </a>
-              <span class="selo selo-{{ q.situacao }}">{{ q.rotulo }}</span>
             </li>
           {% endfor %}
         </ul>

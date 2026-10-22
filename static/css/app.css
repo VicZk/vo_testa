@@ -1633,15 +1633,53 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 .gov-plano-grupo .ajuda { margin-top: .15rem; }
 .gov-plano-sobra { margin-top: 1rem; padding-top: .8rem; border-top: 1px solid var(--fio); }
 
+/* ───────── Ficha do quarto (gaveta no toque, página sem JavaScript) ─────────
+   O que a porta do corredor guardava na dica mora aqui, escrito: no tablet não
+   existe hover, e "ir até a linha do quarto" queria dizer sair da parede de
+   blocos e caçar numa lista de 24. */
+.qf-cartao { max-width: 34rem; }
+.qf-estado { margin: 0; }
+.qf-estado .selo { font-size: 1rem; font-weight: 650; }
+.qf-porque { margin: .4rem 0 0; color: var(--tinta-suave); }
+.qf-dados { margin: 1.1rem 0 0; display: grid; gap: .5rem .9rem; }
+.qf-dados dt {
+  font-size: .68rem; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--tinta-suave);
+}
+.qf-dados dd { margin: .1rem 0 0; font-weight: 600; }
+.qf-divergencia, .qf-recado {
+  margin: 1rem 0 0; padding: .55rem .7rem; border-radius: var(--raio-p);
+  font-size: .88rem; background: var(--alerta-bg); color: var(--alerta);
+}
+.qf-divergencia .selo { margin-right: .4rem; }
+/* O próximo passo ocupa a largura: é o motivo de a ficha estar aberta, e no
+   celular ele cai onde o polegar já está (a gaveta encosta embaixo). */
+.qf-acoes { margin-top: 1.2rem; justify-content: stretch; }
+.qf-acoes form { flex: 1 1 12rem; display: flex; }
+.qf-acoes form .botao-primario, .qf-acoes form .botao-neutro,
+.qf-acoes > .botao-neutro { flex: 1; justify-content: center; }
+.qf-acoes .acao-pronta { flex: 1 1 100%; text-align: center; }
+/* O número do quarto na lista abre a ficha dele. */
+.col-quarto-link { font-weight: 700; color: inherit; text-decoration: none; }
+.col-quarto-link:hover { text-decoration: underline; }
+
 /* Chegadas de hoje: uma linha por chegada, quebrando sozinha quando aperta. */
 .gov-chegadas { list-style: none; margin: .6rem 0 0; padding: 0; display: grid; gap: .1rem; }
-.gov-chegadas li {
-  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
-  gap: .3rem .8rem; padding: .55rem 0; border-top: 1px solid var(--fio);
-}
+/* A LINHA inteira é o alvo, não só o número: no tablet o dedo mira o quarto, e
+   o toque abre a ficha dele — o mesmo gesto da porta no corredor. */
+.gov-chegadas li { border-top: 1px solid var(--fio); }
 .gov-chegadas li:first-child { border-top: none; }
-.gov-chegada-quarto { font-weight: 600; text-decoration: none; }
-.gov-chegada-quarto .ajuda { font-weight: 400; }
+.gov-chegada-quarto {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: .3rem .8rem; padding: .7rem .5rem; margin: 0 -.5rem;
+  min-height: 48px;
+  font-weight: 600; text-decoration: none; color: inherit;
+  border-radius: var(--raio-p);
+}
+.gov-chegada-quarto:hover { background: var(--superficie-2); }
+.gov-chegada-quarto:active { background: var(--superficie-2); }
+.gov-chegada-nome { display: flex; flex-direction: column; min-width: 0; }
+.gov-chegada-quarto .ajuda { font-weight: 400; margin-top: .1rem; }
 
 /* Carga das camareiras: a barra compara de relance quem está com o quê. */
 .gov-carga { list-style: none; margin: .4rem 0 0; padding: 0; display: grid; gap: .7rem; }
@@ -5679,6 +5717,62 @@ body.escala-dragging .escala-drop { cursor: copy; }
     min-height: 44px;
   }
   .sidebar button.link, .sidebar-toggle { min-width: 44px; }
+
+  /* ─── Dedo não tem mira: 44px é o alvo, a FOLGA é o que evita o toque errado ───
+     Os alvos já tinham 44px e continuavam difíceis: as abas, os três botões da
+     ronda e o par "Aprovar / Devolver" ficavam a 6px um do outro, e o dedo médio
+     cobre mais que isso. 10px entre caixas é o mínimo que separa na prática. */
+  .filtros, .subnav, .gov-ciclo, .ronda-grupo, .acoes-quarto,
+  .corredor-legenda, .gov-fila-acoes { gap: 10px; }
+  /* A legenda do corredor também filtra a lista: é controle, não enfeite. */
+  .chip-legenda { min-height: 44px; }
+
+  /* ─── Texto legível sem zoom ───
+     O rótulo de dado (11,8px em MAIÚSCULAS), a cápsula de estado (11,2px) e a
+     frase de apoio (11,8px) carregam o nome do hóspede, o estado do quarto e o
+     porquê dele — num tablet a um braço de distância, isso não se lê.
+
+     Escopo em `.conteudo` de propósito: o portal do hóspede e a página de
+     pagamento ficam FORA da casca do CRM e carregam o `base.css`, um recorte
+     gerado deste arquivo. Sem o escopo, estas linhas entravam no recorte (o
+     teste CssDasTelasPublicasTests pega) e mudavam duas telas que não são as
+     desta entrega — elas têm o mesmo problema e merecem a mesma correção, mas
+     como mudança própria. */
+  .conteudo .rotulo-dado { font-size: .82rem; letter-spacing: .04em; }
+  .conteudo .ajuda, .conteudo .bloco-subtitulo { font-size: .82rem; }
+  .conteudo .selo--acao, .conteudo .selo-alerta, .conteudo .selo-perigo,
+  .conteudo .selo-suja, .conteudo .selo-pendente, .conteudo .selo-skip,
+  .conteudo .selo-sleeper, .conteudo .selo-saida_nao_lancada,
+  .conteudo .selo-pg-pendente, .conteudo .selo-pg-estornado { font-size: .78rem; }
+  .conteudo .pagina-eyebrow { font-size: .75rem; }
+
+  /* ─── Sobreposição vira gaveta de baixo ───
+     O modal nasce a 6vh do TOPO: no celular, as ações dele caem no meio da tela,
+     longe do polegar, e a gaveta ainda disputa altura com o teclado. Encostado
+     embaixo, o botão principal fica onde a mão já está. */
+  .modal-overlay { align-items: flex-end; padding: 0; }
+  .modal-caixa {
+    max-width: none; max-height: 88vh; overflow-y: auto;
+    border-radius: var(--raio-g) var(--raio-g) 0 0;
+    border-bottom: none;
+  }
+  .modal-caixa.estreita { max-width: none; }
+  @keyframes modal-entra {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: none; }
+  }
+  /* O botão principal fica GRUDADO no pé da gaveta: num formulário mais alto que
+     a tela, ele saía do campo de visão e a pessoa tinha de rolar a gaveta para
+     achar "Abrir chamado". Os dois ocupam a largura, lado a lado enquanto couber. */
+  .modal-acoes {
+    position: sticky; bottom: 0; z-index: 1;
+    background: var(--superficie);
+    padding-bottom: calc(1.3rem + env(safe-area-inset-bottom, 0px));
+  }
+  .modal-acoes > * { flex: 1 1 10rem; justify-content: center; text-align: center; }
+  /* O aviso sobe para o TOPO: embaixo ele caía exatamente sobre o botão da
+     gaveta (e sobre o polegar). */
+  .toasts { bottom: auto; top: calc(var(--topbar-h, 64px) + .6rem); right: .8rem; left: .8rem; width: auto; }
   /* O botão de recolher e o Sair são posicionados a partir do alvo: com 44px,
      as posições (e a altura do rodapé) se recalculam sozinhas. */
   .sidebar { --alvo: 44px; }
