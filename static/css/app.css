@@ -1656,8 +1656,11 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
    celular ele cai onde o polegar já está (a gaveta encosta embaixo). */
 .qf-acoes { margin-top: 1.2rem; justify-content: stretch; }
 .qf-acoes form { flex: 1 1 12rem; display: flex; }
-.qf-acoes form .botao-primario, .qf-acoes form .botao-neutro,
-.qf-acoes > .botao-neutro { flex: 1; justify-content: center; }
+.qf-acoes form .botao-primario, .qf-acoes form .botao-neutro { flex: 1; justify-content: center; }
+/* O link solto ("Devolver para limpar") tem a mesma base dos formulários: com base
+   zero, ele ficava com a sobra ao lado de "Aprovar limpeza" e quebrava em três linhas
+   no celular. Assim os dois dividem a linha quando cabem e empilham quando não. */
+.qf-acoes > .botao-neutro { flex: 1 1 12rem; justify-content: center; }
 .qf-acoes .acao-pronta { flex: 1 1 100%; text-align: center; }
 /* O número do quarto na lista abre a ficha dele. */
 .col-quarto-link { font-weight: 700; color: inherit; text-decoration: none; }
