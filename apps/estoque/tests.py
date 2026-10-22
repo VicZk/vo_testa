@@ -483,7 +483,7 @@ class MovimentarTests(TelasBase):
             "produto": self.produto.pk, "local": self.loja.pk,
             "quantidade": "5", "tipo": "perda", "observacao": "",
         }, follow=True)
-        recados = [m.message for m in resposta.context["messages"]]
+        recados = resposta.context["form"].non_field_errors()
         self.assertTrue(any("Saldo insuficiente" in m for m in recados), recados)
 
 

@@ -113,4 +113,4 @@ jobs:
           python -m playwright install --with-deps chromium
 
       - name: Testes no navegador
-        run: python manage.py test apps.site.tests_e2e --noinput
+        run: python manage.py test apps.site.tests_e2e apps.site.tests_operacao_e2e --noinput

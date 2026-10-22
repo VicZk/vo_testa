@@ -401,7 +401,7 @@ class CalendarioTests(TestCase):
         # Nenhum comentário de template pode vazar (o {# #} multi-linha renderiza o
         # literal "{#"…"#}" na tela — este guarda pega qualquer um deles).
         self.assertNotIn("{#", html)
-        self.assertIn('data-nome="Influê No Rolê"', html)  # nome instantâneo no toque
+        self.assertIn('data-dica="Influê No Rolê', html)  # balão compartilhado do CRM
 
 
 class RelatorioTests(TestCase):

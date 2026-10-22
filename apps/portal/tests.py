@@ -249,7 +249,7 @@ class AparenciaPortalTests(PortalBase):
         """URL com token: não pode ser indexada nem vazar no Referer."""
         html = self.html()
         self.assertIn('name="robots" content="noindex, nofollow"', html)
-        self.assertIn('name="referrer" content="no-referrer"', html)
+        self.assertIn('name="referrer" content="same-origin"', html)
 
     def test_sem_token_de_cor_inexistente(self):
         """`var(--brasa, …)` nunca existiu: o ícone caía sempre no valor de reserva."""

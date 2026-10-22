@@ -17,9 +17,9 @@
   </div>
 </div>
 
-<form method="get" class="barra-busca">
-  <input type="search" name="q" value="{{ busca }}" placeholder="Buscar por hóspede ou quarto">
-  <select name="status">
+<form method="get" class="barra-busca busca-reservas">
+  <input type="search" name="q" value="{{ busca }}" placeholder="Buscar por hóspede ou quarto" aria-label="Buscar por hóspede ou quarto">
+  <select name="status" aria-label="Situação da reserva">
     <option value="">Todos os status</option>
     {% for valor, rotulo in status_choices %}
       <option value="{{ valor }}" {% if status == valor %}selected{% endif %}>{{ rotulo }}</option>

@@ -441,10 +441,20 @@ def _movimentar(request, operacao):
             messages.success(request, sucesso)
             return redirect("estoque:posicao")
         except ValidationError as erro:
-            messages.error(request, " ".join(erro.messages))
+            form.add_error(None, erro)
 
     saldos = saldos_por_local()
     locais = _locais_ativos()
+    # No erro, a prévia e os seletores reabrem com o que a pessoa informou.
+    # O estado vai por json_script: IDs e valores não são interpolados em JavaScript.
+    movimento_inicial = {
+        campo: form[campo].value()
+        for campo in (
+            "produto", "local", "origem", "destino", "tipo",
+            "quantidade", "custo_unitario", "fornecedor",
+        )
+        if campo in form.fields
+    }
     return render(
         request,
         "estoque/movimentar.html",
@@ -460,9 +470,13 @@ def _movimentar(request, operacao):
             "fornecedores_json": (
                 pessoas_agrupadas(fornecedores()) if operacao == "entrada" else []
             ),
-            "escolhido": inicial.get("produto", ""),
+            "movimento_inicial": movimento_inicial,
+            "escolhido": str(movimento_inicial.get("produto") or ""),
+            "fornecedor_escolhido": str(movimento_inicial.get("fornecedor") or ""),
             # Na transferência, o local que veio no atalho é a ORIGEM.
-            "local_escolhido": inicial.get("local") or inicial.get("origem") or "",
+            "local_escolhido": str(
+                movimento_inicial.get("local") or movimento_inicial.get("origem") or ""
+            ),
         },
     )
 

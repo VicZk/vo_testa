@@ -3593,9 +3593,9 @@ div.porta.dica[data-dica] { cursor: default; }
 
 .pdv { display: grid; grid-template-columns: 1.5fr 1fr; gap: 1.4rem; align-items: start; }
 
-.pdv-produtos-topo { display: flex; align-items: flex-end; gap: 1rem; margin-bottom: 1rem; }
+.pdv-produtos-topo { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1rem; margin-bottom: 1rem; }
 .pdv-busca-wrap {
-  position: relative; flex: 1;
+  position: relative; flex: 1 1 220px; min-width: 0;
 }
 .pdv-busca-wrap .ico { position: absolute; left: .85rem; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--tinta-suave); }
 .pdv-busca {
@@ -3606,7 +3606,7 @@ div.porta.dica[data-dica] { cursor: default; }
 .pdv-busca:focus { border-color: var(--lampiao); box-shadow: 0 0 0 3px color-mix(in srgb, var(--lampiao) 22%, transparent); }
 .pdv-local { display: flex; flex-direction: column; gap: .3rem; }
 .pdv-local .letreiro { font-size: .62rem; color: var(--madeira); }
-.pdv-local .select-wrap select { min-width: 190px; }
+.pdv-local .select-wrap select { min-width: min(190px, 100%); }
 
 .pdv-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(172px, 1fr)); gap: .7rem; }
 .pdv-lista-vazia { grid-column: 1 / -1; color: var(--tinta-suave); padding: 1rem; }
@@ -5627,7 +5627,8 @@ body.escala-dragging .escala-drop { cursor: copy; }
 .quadro-lista.quadro-lista { margin-top: 1.25rem; }
 .cartao-el.bloco-texto { padding: 1.1rem 1.3rem; margin-bottom: 1.2rem; }
 .cartao-el.centrado { text-align: center; }
-.detalhe-2col.detalhe-2col { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; align-items: start; }
+.detalhe-2col.detalhe-2col { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 1rem; align-items: start; }
+.detalhe-2col > * { min-width: 0; }
 .linha-dado.linha-dado { margin: .1rem 0; }
 .bloco-corpo.bloco-corpo { margin: .5rem 0 0; color: var(--tinta-suave); white-space: pre-wrap; }
 .bloco-chamada.bloco-chamada { margin: 0 0 .8rem; }
@@ -6717,3 +6718,28 @@ body.escala-dragging .escala-drop { cursor: copy; }
    dado — ela mede quantos dias a campanha dura sobre a grade do mês. Uma de um
    dia só sai com 22px, e esticá-la para 44 faria a campanha mentir a duração e
    desalinhar da coluna do dia. */
+
+/* Estados vazios usam a largura disponível, sem herdar a largura das colunas. */
+:is(.tabela, .quadro > table):has(> tbody > tr:only-child > :is(.vazio, .vazio-el)[colspan]:only-child) {
+  display:block; width:100%; min-width:0; white-space:normal;
+}
+:is(.tabela, .quadro > table):has(> tbody > tr:only-child > :is(.vazio, .vazio-el)[colspan]:only-child) > :is(thead, colgroup) { display:none; }
+:is(.tabela, .quadro > table):has(> tbody > tr:only-child > :is(.vazio, .vazio-el)[colspan]:only-child) :is(tbody, tr, td) {
+  display:block; width:100%; min-width:0; max-width:100%; position:static;
+  white-space:normal; overflow-wrap:anywhere;
+}
+.busca-reservas { flex-wrap:wrap; }
+.busca-reservas input[type=search] { flex:1 1 260px; min-width:0; }
+.busca-reservas select { flex:1 1 180px; min-width:0; }
+.form-cartao .campo label:has(> input[type=checkbox]) {
+  display:flex; align-items:center; gap:.5rem; min-height:44px; cursor:pointer;
+}
+.form-cartao .campo label > input[type=checkbox] { width:18px; height:18px; min-height:18px; flex:0 0 18px; }
+.modal-caixa:has(> :is(.comparacao-quartos, .email-confirmacao)) { overflow:hidden; }
+:is(.comparacao-quartos, .email-confirmacao) {
+  display:flex; flex-direction:column; min-height:0; max-height:88dvh;
+}
+:is(.comparacao-quartos, .email-confirmacao) > :is(.modal-cabecalho, .modal-acoes) { flex-shrink:0; }
+:is(.comparacao-quartos, .email-confirmacao) > .modal-corpo { min-height:0; overflow:auto; }
+.comparacao-rol { min-width:0; max-width:100%; overflow:auto; overscroll-behavior:contain; }
+.comparacao-rol .pq-cmp-tab { min-width:520px; }

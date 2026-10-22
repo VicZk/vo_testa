@@ -4,20 +4,11 @@
 
 {% block conteudo %}
 <div class="pt-card">
-  <p class="letreiro">NPS</p>
+  <p class="letreiro">Sua opinião</p>
   <h2>Como foi sua estadia?</h2>
   <p class="subtitulo">
-    Em breve você poderá avaliar a pousada numa escala de 0 a 10 por aqui.
+    A avaliação pelo portal ainda não está disponível. Conte à recepção como foi sua experiência.
     Sua opinião ajuda a gente a melhorar o aconchego do Vô Testa.
-  </p>
-  <div class="pt-nps-escala" aria-hidden="true">
-    {% for n in "0123456789"|make_list %}
-      <span class="pt-nps-nota desabilitada">{{ n }}</span>
-    {% endfor %}
-    <span class="pt-nps-nota desabilitada">10</span>
-  </div>
-  <p class="subtitulo pt-nota">
-    Pesquisa registrada para a próxima fase (CRM do Hóspede). Por enquanto só o atalho.
   </p>
   <div class="pt-acoes pt-acoes-rodape">
     <a href="{% url 'portal:home' token %}" class="botao-neutro">Voltar</a>

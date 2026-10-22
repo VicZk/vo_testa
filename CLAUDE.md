@@ -27,7 +27,8 @@ Config por variável de ambiente (`.env` local — ver `.env.example`). `DEBUG=1
 
 O CI roda sozinho: `testes.yml` (ruff, `makemigrations --check` e a suíte contra
 PostgreSQL 16, mais o job "Fluxos no navegador" com Playwright + Chromium —
-`apps/site/tests_e2e.py`, `E2E_OBRIGATORIO=1` —, em todo push da `main`/`dev` e em PR)
+`apps/site/tests_e2e.py` e `apps/site/tests_operacao_e2e.py`, `E2E_OBRIGATORIO=1` —,
+em todo push da `main`/`dev` e em PR)
 e `security.yml` (pip-audit, bandit, ruff de segurança e gitleaks, no push da `main`, em
 PR e toda segunda).
 Rotinas agendadas: `manage.py rotinas --grupo frequentes` (a cada 10 min) e
@@ -123,8 +124,9 @@ desenhar o nosso.
 
 Todo template novo do CRM **nasce** já no design system unificado (visual "Lampião"):
 nunca criar um estilo paralelo nem hard-codear cor/raio/sombra — sempre reusar os
-tokens e as classes-base. Referência viva: `static/css/app.css` (tokens + componentes) e
-o kit `templates/comercial/_estilo_elegante.html` (telas de painel/lista/detalhe). O portal do
+tokens e as classes-base. Referência viva: `static/css/app.css` (tokens + componentes,
+incluindo o kit de painel/lista/detalhe). O antigo `_estilo_elegante.html` está vazio
+e não deve ser incluído. O portal do
 hóspede e a página de pagamento carregam o `static/css/base.css`, recorte GERADO do app.css
 (`manage.py gerar_base_css`, manifesto em `apps/nucleo/css_publico.txt`): edite só o app.css
 e rode o comando — o teste `CssDasTelasPublicasTests` avisa quando o recorte ficou para trás.
@@ -150,7 +152,7 @@ e rode o comando — o teste `CssDasTelasPublicasTests` avisa quando o recorte f
   `{% include "componentes/paginacao.html" with pagina=pagina %}` abaixo da tabela —
   nunca cortar em `[:200]`.
 - **Telas de dashboard/lista/detalhe (padrão Comercial):** envolver em `<div class="eleg">`
-  e `{% include "comercial/_estilo_elegante.html" %}` — herda KPIs, quadro e botões prontos.
+  — herda KPIs, quadro e botões prontos de `app.css`, sem folha adicional.
 - **Tipografia (craft):** números sempre com `font-variant-numeric: tabular-nums`;
   números grandes com tracking negativo (`letter-spacing:-.02em`); rótulos em MAIÚSCULAS
   discretas com leve tracking e tom suave; hierarquia por peso+tamanho, não só tamanho.

@@ -18,6 +18,7 @@
   {% if venda.destino == 'conta' %}lançado na conta: <strong>{{ venda.conta_ref }}</strong>{% else %}pago com <strong>{{ venda.forma_pagamento.nome }}</strong>{% endif %}
   · cliente {{ venda.cliente.nome|default:"avulso" }}
 </p>
+<p class="subtitulo"><strong>Total da venda: {{ venda.total|intcomma_brl }}</strong></p>
 {% if venda.motivo_cancelamento %}
   <div class="mensagem error"><strong>Cancelada:</strong> {{ venda.motivo_cancelamento }}</div>
 {% endif %}
@@ -31,7 +32,7 @@
       <tr>
         <td>{{ i.descricao }}</td>
         <td>{{ i.natureza|capfirst }}</td>
-        <td class="num">{{ i.quantidade }}</td>
+        <td class="num">{{ i.quantidade|floatformat:"-3" }}</td>
         <td class="num">{{ i.preco_unitario|intcomma_brl }}</td>
         <td class="num">{{ i.subtotal|intcomma_brl }}</td>
       </tr>

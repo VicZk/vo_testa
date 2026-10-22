@@ -1,15 +1,11 @@
 {% load static moeda %}
 {# Painel «Quartos para este lead» — parcial recarregável por HTMX. #}
-<div class="pq" id="painel-quartos" x-data="{ editar:false, mostrarTodos:false, sel:[], comparando:false, cmpHtml:'', propostaTexto:'',
+<div class="pq" id="painel-quartos" x-data="{ editar:false, mostrarTodos:false, sel:[], propostaTexto:'',
   fVista:false, fPet:false, fVaranda:false,
   toggle(id){ this.sel.includes(id) ? this.sel=this.sel.filter(x=>x!=id) : (this.sel.length<3 && this.sel.push(id)) },
-  {# Sem checar r.ok, um 403/500 virava a PÁGINA DE ERRO injetada dentro do modal. #}
-  async comparar(){
-    try {
-      const r = await fetch('{% url 'comercial:comparar_quartos' op.pk %}?uhs=' + this.sel.join(','));
-      if (!r.ok) { toast('Não foi possível comparar os quartos (erro ' + r.status + ').', 'error'); return; }
-      this.cmpHtml = await r.text(); this.comparando = true;
-    } catch (e) { toast('Sem conexão com o servidor. Tente de novo.', 'error'); }
+  comparar(){
+    htmx.ajax('GET', '{% url 'comercial:comparar_quartos' op.pk %}?uhs=' + this.sel.join(','),
+      {target:'#modal-conteudo', swap:'innerHTML'});
   },
   async proposta(){
     try {
@@ -226,13 +222,5 @@
     {% endfor %}
   </div>
   {% endif %}
-
-  {# modal de comparação #}
-  <div class="pq-modal" x-show="comparando" x-cloak @click.self="comparando=false">
-    <div class="pq-modal-card">
-      <div class="pq-modal-head"><b>Comparar quartos</b><button type="button" class="pq-modal-x" @click="comparando=false">✕</button></div>
-      <div class="pq-modal-body" x-html="cmpHtml"></div>
-    </div>
-  </div>
 
 </div>

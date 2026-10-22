@@ -25,18 +25,18 @@ salvamento, recuperação de erros e detalhes apresentados quando necessários.
 |---|---|---|
 | Marketing | Criar/cancelar campanha, editar dados e meta, validar, fechar, atualizar quadro | Corrigido; inspeção real do formulário e oito regressões no navegador aprovadas |
 | Interface compartilhada | Modal, rolagem da página e interrupção da animação | Falha de escala reproduzida; motor corrigido e testado em 30 fps, 1 fps e retomada de aba |
-| Marketing | Calendário, ocupação, relatório, peças, orçamento e aprovação | Próxima conferência de fluxo |
+| Marketing | Calendário, ocupação, relatório, peças, orçamento e aprovação | Layouts inspecionados nas quatro larguras; calendário vazio e tooltip corrigidos; regras cobertas pela suíte do módulo |
 | Comercial | Novo lead, contato existente, origem da campanha, filtros e movimentação | Implementado; 18 testes de cadastro/integração e sete cenários de navegador aprovados |
-| Comercial | Tarefas, cotação, comparação de quartos e conversão em reserva | Conferência complementar pendente |
-| Navegação e acesso | Menu, busca, entrada por perfil e troca de telas | Conferência complementar pendente |
+| Comercial | Tarefas, cotação, comparação de quartos e conversão em reserva | Layouts inspecionados; comparação e envio de proposta por e-mail exercitados no navegador; conversão coberta nos testes de serviço |
+| Navegação e acesso | Menu, busca, entrada por perfil e troca de telas | Matriz de larguras e regressões existentes do menu; perfil exclusivo da camareira e foco dos diálogos exercitados |
 | Governança | Minha fila, iniciar/terminar limpeza e relato de problema | Falhas reproduzidas e corrigidas; quatro cenários com perfil de camareira aprovados no navegador automatizado |
-| Reservas | Mapa, criação, alteração, grupos, entrada, saída, conta e FNRH | Conferência pendente |
-| Operação | Manutenção, escala e lavanderia | Conferência pendente |
-| Vendas | Loja, restaurante, comanda, cozinha e recebimento | Conferência pendente |
-| Estoque | Consulta, entrada, saída, transferência e inventário | Conferência pendente |
-| Financeiro | Caixa, contas, conciliação, auditoria e relatórios | Conferência pendente |
-| Cadastros | Pessoas, quartos, tarifas, equipe e logbook | Conferência pendente |
-| Área pública | Site, reserva, portal, pré check-in, pagamento e landing pages | Conferência pendente |
+| Reservas | Mapa, criação, alteração, grupos, entrada, saída, conta e FNRH | Telas inspecionadas; reserva pública ponta a ponta na suíte de navegador; disponibilidade, conta e FNRH cobertas na suíte Django |
+| Operação | Manutenção, escala e lavanderia | Layouts inspecionados; conclusão de manutenção com custo e ciclo da lavanderia com cobrança testados no navegador |
+| Vendas | Loja, restaurante, comanda e recebimento | Venda com clique repetido e comanda exercitadas; totais, movimentos de caixa e estoque conferidos no banco de teste |
+| Estoque | Consulta, entrada, saída, transferência e inventário | Layouts inspecionados; transferência recusada e corrigida, dados preservados e ajuste para zero exercitados no navegador |
+| Financeiro | Caixa, contas, conciliação, auditoria e relatórios | Telas de entrada inspecionadas; relatórios individuais em conferência; regras financeiras na suíte Django |
+| Cadastros | Pessoas, quartos, tarifas, funcionários e logbook | Layouts inspecionados; seleção dos dias da temporada exercitada; fichas preenchidas em conferência |
+| Área pública | Site, reserva, portal, pré check-in, pagamento e landing pages | Layouts inspecionados; portal e pagamento simulado exercitados sem login; origem externa rejeitada; páginas de campanha restantes em conferência |
 
 ## Entrega 1 — Campanhas
 
@@ -117,6 +117,14 @@ Capturas do teste automatizado com dados fictícios:
 [celular de 390 px](evidencias/usabilidade-2026-10-22/lead-390.png) e
 [desktop de 1440 px](evidencias/usabilidade-2026-10-22/lead-1440.png).
 
+Publicação confirmada: commit `d4c5985f039236d63dac01a8575c356c21be86fe`,
+[CI aprovado](https://github.com/VicZk/vo_testa/actions/runs/39731394095), aplicação
+ativada na VPS às 03:15 de 22/10 (Brasília). A imagem ativa e os arquivos foram
+comparados ao código publicado, a migration `comercial.0033` está aplicada e não
+restaram migrations pendentes. Aplicação e banco saudáveis; health check público
+e login responderam 200. Backup validado por catálogo e SHA-256, com a imagem
+anterior preservada. O banco não foi reiniciado.
+
 ## Entrega 3 — Governança
 
 No teste com o perfil exclusivo de camareira, começar uma limpeza mudava o botão
@@ -142,7 +150,14 @@ Capturas automatizadas, inspecionadas visualmente nas quatro larguras:
 [relato no celular](evidencias/usabilidade-2026-10-22/governanca-relato-390.png) e
 [relato no desktop](evidencias/usabilidade-2026-10-22/governanca-relato-1440.png).
 
-## Varredura complementar em andamento
+Publicação confirmada: commit `6a53dce80bf72b8f589aa4fa41caa4c655fe7e45`,
+[CI aprovado](https://github.com/VicZk/vo_testa/actions/runs/39732763951), aplicação
+ativada às 03:32 de 22/10 (Brasília). Imagem e arquivos conferidos, sem migrations
+pendentes, aplicação e banco saudáveis e endpoints públicos de saúde e login com
+HTTP 200. Backup validado por catálogo e SHA-256; imagem anterior preservada.
+O banco não foi reiniciado.
+
+## Entrega 4 — Responsividade e fluxos de operação
 
 A primeira matriz percorreu 95 rotas GET em quatro larguras (380 combinações):
 respostas 200, sem largura excedente na página e sem erro JavaScript. Algumas
@@ -154,4 +169,51 @@ excedente no detalhe de página de captação (320 px) e no editor de e-mail
 (320 e 390 px). Testes de interação reproduziram falha de Escape na comparação
 de quartos e de contenção do foco na confirmação de e-mail. Mensagens de tabelas
 vazias e alguns campos estavam cortados mesmo sem aumentar a largura da página.
-Essas correções integram a próxima entrega.
+Os diálogos passaram a usar o componente compartilhado, com rolagem interna,
+cabeçalho e ações visíveis, retorno de foco e Escape. Os testes conferem também
+a geometria após a animação e o ciclo completo de Tab dentro da confirmação.
+
+O editor de e-mail e o detalhe da página de captação usam colunas que se adaptam
+à largura disponível. Mensagens de tabelas vazias deixam de herdar a largura de
+todas as colunas; buscas e rótulos de checkbox mantêm espaço utilizável. O
+calendário vazio não esconde sua mensagem no fim de uma grade larga. A matriz
+completa foi repetida com essas alterações: 132 rotas × quatro larguras, 528
+combinações aprovadas em 321,847 s, sem erro JavaScript ou largura excedente na página.
+
+O fluxo de transferência reproduziu perda de produto, locais e quantidade
+após saldo insuficiente. A inicialização agora usa os dados do formulário
+devolvido, e o erro aparece junto aos campos. O teste recusa 25 unidades quando
+há 20 e confirma que nada foi movimentado; ao corrigir para três, os dois locais
+terminam com 17 e 21 unidades. O ajuste para zero também foi reproduzido: a prévia
+mostrava um traço. Agora mostra zero e o registro mantém o movimento de diferença.
+
+Os formulários públicos do portal e do pagamento retornavam 403 porque a meta
+`no-referrer` fazia o navegador enviar `Origin: null`. A troca para `same-origin`
+mantém a origem nos envios locais e protege o token quando o destino é outro site.
+Isso segue a orientação de [proteção CSRF do Django](https://docs.djangoproject.com/en/6.0/ref/csrf/)
+e a [política de referência do SecurityMiddleware](https://docs.djangoproject.com/en/6.0/ref/middleware/#referrer-policy).
+O teste reproduziu a falha antes da correção e aprovou depois; uma origem externa
+com token CSRF válido continua recebendo 403, sem confirmar o pagamento.
+
+Quatorze cenários estão versionados em `apps/site/tests_operacao_e2e.py` e fazem
+parte do job de navegador do CI. Os 13 iniciais passaram em 79,044 s; os dois
+casos finais de ajuste e total da venda passaram em 9,372 s (um caso sobreposto).
+Incluem venda única após clique repetido, comanda, produção e cobrança da
+lavanderia, manutenção com resolução e custo, pedidos do portal, envio de proposta
+somente após confirmação e pagamento simulado sem login. O banco, os estoques,
+o caixa e a caixa de e-mail em memória foram conferidos. A suíte completa passou:
+1.834 testes em 817,969 s, sem falhas ou pulos. Ruff, migrations e diff também
+passaram. A conferência adicional de relatórios e telas públicas segue em uma
+entrega separada, mantendo esta versão igual à versão testada.
+
+O NPS permanece sem coleta; a tela explica isso sem notas clicáveis falsas. O
+Fiscal permanece sem emissão real e identifica os documentos simulados. Estas
+mudanças de texto não implementam os recursos externos pendentes.
+
+Capturas automatizadas conferidas visualmente: [comparação no celular](evidencias/usabilidade-2026-10-22/comparador-aberto-390.png),
+[comparação no desktop](evidencias/usabilidade-2026-10-22/comparador-aberto-1440.png),
+[confirmação de e-mail no celular](evidencias/usabilidade-2026-10-22/confirmacao-email-390.png),
+[confirmação no desktop](evidencias/usabilidade-2026-10-22/confirmacao-email-1440.png),
+[estoque com erro preservado](evidencias/usabilidade-2026-10-22/estoque-recusa-390.png),
+[pedidos do portal](evidencias/usabilidade-2026-10-22/portal-pedidos-390.png) e
+[total da venda](evidencias/usabilidade-2026-10-22/loja-venda-390.png).

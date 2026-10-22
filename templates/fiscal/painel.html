@@ -7,9 +7,9 @@
 <p class="pagina-eyebrow letreiro">Financeiro</p>
 <h1>Fiscal — Notas eletrônicas</h1>
 <p class="subtitulo">
-  Emissão de NFS-e (serviço) e NFC-e (consumo). Gateway ativo:
-  <span class="selo">{{ gateway }}</span>
-  {% if gateway == 'simulado' %}<small class="opcional">(sandbox — sem valor fiscal)</small>{% endif %}
+  Acompanhe os documentos de serviço (NFS-e) e de consumo (NFC-e).
+  {% if gateway == 'simulado' %}<strong>Modo de teste: os documentos não têm valor fiscal.</strong>
+  {% else %}<span class="selo">Integração: {{ gateway }}</span>{% endif %}
 </p>
 
 <table class="tabela">
@@ -28,13 +28,12 @@
         <td>{{ d.numero|default:"—" }}</td>
       </tr>
     {% empty %}
-      <tr><td colspan="7" class="vazio">Nenhum documento emitido ainda. (Esqueleto do módulo — emissão a ligar às contas/vendas na fase 2.)</td></tr>
+      <tr><td colspan="7" class="vazio">Nenhum documento fiscal registrado.</td></tr>
     {% endfor %}
   </tbody>
 </table>
 
 <p class="ficha-texto opcional">
-  Módulo em construção — ver <code>docs/Implementar_fiscal.md</code>. Backends do gateway:
-  <strong>simulado</strong> (sandbox, ativo), <strong>focus</strong> e <strong>governo</strong> (a configurar).
+  A emissão fiscal real ainda não está disponível neste sistema. Para emitir uma nota válida, use o procedimento fiscal adotado pela pousada.
 </p>
 {% endblock %}

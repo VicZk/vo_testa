@@ -7,7 +7,8 @@
   <title>{% block titulo %}Sua estadia — Pousada Vô Testa{% endblock %}</title>
   {# Página com token na URL: não pode entrar em índice de busca nem ser seguida. #}
   <meta name="robots" content="noindex, nofollow">
-  <meta name="referrer" content="no-referrer">
+  {# Mantém a origem nos formulários locais e não envia o token a outros sites. #}
+  <meta name="referrer" content="same-origin">
   <link rel="icon" href="{% static 'img/simbolo-dourado.png' %}" type="image/png">
   {# Fontes da marca (antes esta tela caía em Georgia/system) #}
   {% include "componentes/fontes.html" %}

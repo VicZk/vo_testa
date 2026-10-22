@@ -34,6 +34,7 @@ tela prometer um conteúdo que não existe.{% endcomment %}
   {% comment %}O catálogo entra uma vez só: o mesmo json_script alimenta o
   combobox (pelo include) e a prévia (pelo componente Alpine abaixo).{% endcomment %}
   {{ locais_json|json_script:"locais-data" }}
+  {{ movimento_inicial|json_script:"movimento-inicial" }}
 
   <section class="cartao-el est-mov-campos">
     <h2 class="est-mov-titulo">{{ config.titulo }}</h2>
@@ -146,7 +147,7 @@ tela prometer um conteúdo que não existe.{% endcomment %}
     {% if operacao == 'entrada' %}
       <div class="campo">
         <label for="id_fornecedor">Fornecedor <span class="rotulo-opcional">(opcional)</span></label>
-        {% include "componentes/combo_pessoa.html" with dados=fornecedores_json dados_id="fornecedores-data" campo="fornecedor" placeholder="Buscar fornecedor…" %}
+        {% include "componentes/combo_pessoa.html" with dados=fornecedores_json dados_id="fornecedores-data" campo="fornecedor" placeholder="Buscar fornecedor…" valor_id=fornecedor_escolhido %}
         {% for erro in form.fornecedor.errors %}<small class="erro">{{ erro }}</small>{% endfor %}
       </div>
       <div class="est-mov-grade">
@@ -197,7 +198,7 @@ tela prometer um conteúdo que não existe.{% endcomment %}
             <div class="est-previa-destaque">
               <dt>Fica com</dt>
               <dd :class="depoisNegativo && 'est-previa-erro'"
-                  x-text="local && qtd ? fmt(depois) + ' ' + p.unidade : '—'"></dd>
+                  x-text="local && qtd !== null ? fmt(depois) + ' ' + p.unidade : '—'"></dd>
             </div>
           </dl>
         </template>
@@ -236,16 +237,19 @@ tela prometer um conteúdo que não existe.{% endcomment %}
   // Prévia da movimentação. Só conta de TELA: quem grava é o motor do núcleo,
   // com a linha do produto travada — por isso aqui número de JS é suficiente.
   function movEstoque() {
+    const inicial = JSON.parse(document.getElementById('movimento-inicial').textContent);
+    const numero = valor => valor === null || valor === undefined || valor === ''
+      ? null : Number(String(valor).replace(',', '.'));
     return {
       produtos: JSON.parse(document.getElementById('produtos-data').textContent),
       locais: JSON.parse(document.getElementById('locais-data').textContent),
-      produto: '{{ escolhido }}',
-      local: '{{ local_escolhido }}',
-      origem: '{{ local_escolhido }}',
-      destino: '',
-      motivo: 'consumo_interno',
-      qtd: null,
-      custo: null,
+      produto: String(inicial.produto || ''),
+      local: String(inicial.local || ''),
+      origem: String(inicial.origem || ''),
+      destino: String(inicial.destino || ''),
+      motivo: inicial.tipo || 'consumo_interno',
+      qtd: numero(inicial.quantidade),
+      custo: numero(inicial.custo_unitario),
       operacao: '{{ operacao }}',
       get p() {
         return this.produtos.find((x) => String(x.id) === String(this.produto)) || null;

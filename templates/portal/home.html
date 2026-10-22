@@ -11,11 +11,11 @@
     <a href="{% url 'portal:checkout' token %}" class="botao-primario">Ver conta & check-out</a>
   </div>
   <div class="pt-atalhos">
-    <a href="{% url 'portal:nps' token %}" class="pt-atalho destaque" title="Avaliar a estadia (NPS)">
+    <a href="{% url 'portal:nps' token %}" class="pt-atalho" title="Informações sobre a avaliação da estadia">
       <span class="pt-ico" aria-hidden="true">
         <svg viewBox="0 0 24 24"><path d="M12 3l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 15.9 7.2 18l.9-5.4L4.2 8.7l5.4-.8z"/></svg>
       </span>
-      NPS
+      Sua opinião · Em breve
     </a>
   </div>
 </div>
@@ -28,7 +28,7 @@
     {% for item in cardapio %}
       <div class="pt-cardapio-item">
         <span class="nome">{{ item.nome }}<br><span class="preco">{{ item.preco|intcomma_brl }}</span></span>
-        <input type="number" name="qtd_{{ item.id }}" min="0" value="0" inputmode="numeric">
+        <input type="number" name="qtd_{{ item.id }}" min="0" max="20" value="0" inputmode="numeric" aria-label="Quantidade de {{ item.nome }}">
       </div>
     {% endfor %}
     <div class="pt-acoes pt-acoes-pedido">

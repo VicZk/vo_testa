@@ -1,56 +1,19 @@
 {% extends "base.html" %}
 
-{% block titulo %}NPS — CRM Vô Testa{% endblock %}
+{% block titulo %}Opinião dos hóspedes — CRM Vô Testa{% endblock %}
 
 {% block conteudo %}
-<p class="pagina-eyebrow letreiro">Online · Proposta</p>
-<div class="pagina-cabecalho">
-  <h1>NPS</h1>
-  <span class="selo">Em breve — fase 2</span>
-</div>
-<p class="subtitulo">{{ proposta.objetivo }}</p>
-
-<div class="cartao respiro">
-  <h2 class="letreiro bloco-subtitulo">Proposta registrada</h2>
-  <p class="bloco-nota">
-    Status: <strong>{{ proposta.status }}</strong> · Fase: {{ proposta.fase }} ·
-    Documento: <code>{{ proposta.documento }}</code>
-  </p>
-  <ul class="lista-simples">
-    {% for item in proposta.escopo_ui %}
-      <li>{{ item }}</li>
-    {% endfor %}
-  </ul>
-</div>
-
-<div class="cartao respiro">
-  <h2 class="letreiro bloco-subtitulo">API específica (stub)</h2>
-  <p class="bloco-nota">
-    Base <code>{{ proposta.api.base }}</code> — endpoints respondem
-    <strong>HTTP 501</strong> até a implementação.
-  </p>
-  <table class="tabela">
-    <thead>
-      <tr><th>Método</th><th>Path</th><th>Descrição</th></tr>
-    </thead>
-    <tbody>
-      {% for ep in proposta.api.endpoints %}
-        <tr>
-          <td><code>{{ ep.metodo }}</code></td>
-          <td><code>{{ ep.path }}</code></td>
-          <td>{{ ep.descricao }}</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-
-<div class="cartao respiro">
-  <h2 class="letreiro bloco-subtitulo">Fora desta fase</h2>
-  <ul class="lista-simples">
-    {% for item in proposta.fora_desta_fase %}
-      <li>{{ item }}</li>
-    {% endfor %}
-  </ul>
+<div class="eleg">
+  <p class="pagina-eyebrow letreiro">Relacionamento</p>
+  <div class="pagina-cabecalho">
+    <h1>Opinião dos hóspedes</h1>
+    <span class="selo">Em preparação</span>
+  </div>
+  <p class="subtitulo">Acompanhe como foi a experiência de quem se hospedou na pousada.</p>
+  <section class="cartao-el respiro">
+    <h2 class="titulo-topo">A pesquisa ainda não está disponível</h2>
+    <p>As avaliações pelo portal ainda não são coletadas nem salvas. Por enquanto, peça ao hóspede que compartilhe sua opinião com a recepção.</p>
+    <p class="ajuda">Quando esta função estiver pronta, as notas e os comentários poderão ser acompanhados aqui.</p>
+  </section>
 </div>
 {% endblock %}

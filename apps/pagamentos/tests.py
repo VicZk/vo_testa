@@ -744,7 +744,7 @@ class PaginaPublicaPagarTests(PagamentosBase):
     def test_fora_de_indice_de_busca(self):
         html = self.html()
         self.assertIn('name="robots" content="noindex, nofollow"', html)
-        self.assertIn('name="referrer" content="no-referrer"', html)
+        self.assertIn('name="referrer" content="same-origin"', html)
 
     def test_carrega_as_fontes_da_marca(self):
         self.assertIn("HankenGrotesk-400-latin.woff2", self.html())

@@ -9,6 +9,37 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 22/10/2026 — Formulários utilizáveis no celular e pedidos do hóspede funcionando
+
+**O que melhorou**
+- O editor de e-mail e o detalhe de página de captação cabem em telas pequenas.
+  A comparação de quartos e a confirmação de e-mail usam o diálogo compartilhado,
+  com Escape, foco contido, retorno ao botão de origem e ações acessíveis.
+- Mensagens de tabelas vazias ficam visíveis sem arrastar. A busca da Loja e de
+  Reservas mantém espaço para digitar; os dias da temporada têm área de toque
+  adequada, e o calendário vazio apresenta a orientação fora da grade larga.
+- Uma movimentação de estoque recusada preserva produto, locais, quantidade,
+  custo e fornecedor. O erro permanece no formulário; o ajuste para zero mostra
+  o saldo correto na prévia. O total da venda aparece antes da tabela no celular.
+- Pedidos e solicitações do portal e a confirmação pública de pagamento deixam
+  de falhar com erro 403. A política da página mantém a origem nos formulários
+  locais, sem enviar o endereço com token a outros sites; a proteção CSRF continua ativa.
+- NPS e Fiscal explicam o que ainda não está disponível em linguagem de operação,
+  sem expor instruções de desenvolvimento. O pagamento confirmado informa seu
+  registro sem prometer uma reserva para toda cobrança avulsa.
+
+**O que foi modificado**
+- CSS compartilhado, diálogos do Comercial, campos de Estoque, telas públicas e
+  textos de orientação. Nenhum model ou migration foi alterado nesta entrega.
+- Quatorze cenários de regressão em `apps/site/tests_operacao_e2e.py`, incluídos
+  no CI: layouts, teclado, dados inválidos e fluxos de loja, restaurante,
+  lavanderia, manutenção, portal, estoque, proposta por e-mail e pagamento simulado.
+- A matriz de 132 rotas GET passou em quatro larguras (528 combinações), e a suíte
+  completa passou nos 1.834 testes em 817,969 s, sem pulos; detalhes e evidências
+  em `docs/REVISAO_USABILIDADE_2026-10-22.md`.
+
+---
+
 ## 22/10/2026 — Governança com orientação atualizada e relato que pode ser corrigido
 
 **O que melhorou**

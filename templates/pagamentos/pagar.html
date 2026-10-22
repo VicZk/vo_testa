@@ -8,7 +8,7 @@
   {% comment %}Link de pagamento com token na URL: fora de índice de busca, e sem
   vazar a URL no Referer para o gateway/anúncio.{% endcomment %}
   <meta name="robots" content="noindex, nofollow">
-  <meta name="referrer" content="no-referrer">
+  <meta name="referrer" content="same-origin">
   {# Fontes da marca (antes esta tela caía em Georgia/system) #}
   {% include "componentes/fontes.html" %}
   {# O recorte do app.css que esta tela usa (gerado: manage.py gerar_base_css), não o CRM inteiro. #}
@@ -99,7 +99,7 @@
 
     {% if cobranca.status == 'pago' %}
       <p class="pay-ok"><span class="pay-ok-ico">✓</span> Pagamento confirmado. Obrigado!</p>
-      <p class="subtitulo pay-ok-texto">Sua reserva está garantida. Guarde o comprovante se precisar.</p>
+      <p class="subtitulo pay-ok-texto">O pagamento foi registrado. Guarde o comprovante se precisar.</p>
       <div class="acoes">
         {% if url_recibo_site %}
           <a href="{{ url_recibo_site }}" class="botao-primario">Ver minha reserva</a>

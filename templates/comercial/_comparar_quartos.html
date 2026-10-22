@@ -1,6 +1,14 @@
 {% load moeda %}
 {# Tabela comparativa de 2–3 quartos — carregada no modal do painel. #}
+<section class="comparacao-quartos modal-form">
+<header class="modal-cabecalho">
+  <h2>Comparar quartos</h2>
+  <button type="button" class="modal-fechar" onclick="fecharModal()" aria-label="Fechar comparação">&times;</button>
+</header>
+<div class="modal-corpo">
 {% if cols %}
+<p class="ajuda">Compare as opções lado a lado. Deslize a tabela para ver todos os quartos.</p>
+<div class="comparacao-rol" tabindex="0" role="region" aria-label="Características dos quartos">
 <table class="pq-cmp-tab">
   <thead>
     <tr>
@@ -29,6 +37,10 @@
     </tr>
   </tbody>
 </table>
+</div>
 {% else %}
 <p class="pq-vazio">Selecione 2 ou 3 quartos para comparar.</p>
 {% endif %}
+</div>
+<footer class="modal-acoes"><button type="button" class="botao-neutro" onclick="fecharModal()">Fechar</button></footer>
+</section>

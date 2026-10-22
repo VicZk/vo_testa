@@ -20,15 +20,16 @@ class NpsPropostaTests(TestCase):
         resp = self.client.get(reverse("nps:painel"))
         self.assertEqual(resp.status_code, 302)
 
-    def test_painel_mostra_proposta(self):
+    def test_painel_explica_que_a_coleta_ainda_nao_esta_disponivel(self):
         u = Usuario.objects.create_user(username="nps", password="x")
         u.areas = ["nps"]
         u.save()
         self.client.login(username="nps", password="x")
         resp = self.client.get(reverse("nps:painel"))
         self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, "Proposta registrada")
-        self.assertContains(resp, "/api/nps/v1/")
+        self.assertContains(resp, "A pesquisa ainda não está disponível")
+        self.assertContains(resp, "ainda não são coletadas nem salvas")
+        self.assertNotContains(resp, "/api/nps/v1/")
 
     def test_api_criar_resposta_retorna_501(self):
         resp = Client().post(reverse("nps_api:criar_resposta"), {})
