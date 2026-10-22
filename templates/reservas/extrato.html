@@ -1,0 +1,76 @@
+{% load static moeda %}<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Conta da reserva #{{ reserva.pk }} | Pousada Vô Testa</title>
+  <link rel="stylesheet" href="{% static 'css/extrato.css' %}">
+</head>
+<body>
+  <nav class="extrato-acoes" aria-label="Ações da conferência">
+    <a href="{{ voltar }}">Voltar à reserva</a>
+    <button type="button" onclick="window.print()">Imprimir / salvar PDF</button>
+  </nav>
+  <article class="extrato" aria-label="Extrato da hospedagem">
+    <header class="extrato-topo">
+      <div><strong class="extrato-marca">Pousada Vô Testa</strong><span>Itá · Santa Catarina</span></div>
+      <div class="extrato-referencia"><strong>Reserva #{{ reserva.pk }}</strong><span>Conta #{{ extrato.conta.pk }}</span></div>
+    </header>
+    <h1>{% if extrato.conta.aberta %}Conferência da hospedagem{% else %}Extrato de encerramento{% endif %}</h1>
+    <dl class="extrato-dados">
+      <div><dt>Hóspede</dt><dd>{{ reserva.hospede.nome }}</dd></div>
+      <div><dt>Quarto</dt><dd>{{ reserva.uh.numero }}</dd></div>
+      <div><dt>Período</dt><dd>{{ reserva.checkin|date:"d/m/Y" }} a {{ reserva.checkout|date:"d/m/Y" }}</dd></div>
+      <div><dt>Situação</dt><dd>{{ extrato.conta.get_status_display }}{% if extrato.conta.fechada_em %} · {{ extrato.conta.fechada_em|date:"d/m/Y H:i" }}{% endif %}</dd></div>
+    </dl>
+    {% if reserva.grupo_id %}<p class="extrato-nota">Reserva vinculada ao grupo {{ reserva.grupo.rotulo }}. Este extrato reúne os lançamentos desta conta; valores faturados na conta do grupo são conferidos separadamente.</p>{% endif %}
+    {% if extrato.pendencias %}
+      <section class="extrato-pendencias" aria-label="Consumos ainda em aberto">
+        <h2>Consumos ainda em aberto</h2>
+        <p>Estes pedidos ainda não estão incluídos no total. Finalize ou cancele os pedidos antes de encerrar a hospedagem.</p>
+        <ul>{% for item in extrato.pendencias %}<li>{{ item.rotulo }} · {{ item.valor|intcomma_brl }}</li>{% endfor %}</ul>
+      </section>
+    {% endif %}
+    <section aria-labelledby="extrato-itens">
+      <h2 id="extrato-itens">Diárias, consumos e serviços</h2>
+      <p class="extrato-dica-rol">Deslize a tabela para conferir quantidades e valores →</p>
+      <div class="extrato-tabela-rol" tabindex="0" role="region" aria-label="Lançamentos da conta">
+        <table>
+          <thead><tr><th>Data</th><th>Descrição</th><th class="num">Qtd.</th><th class="num">Unitário</th><th class="num">Valor</th></tr></thead>
+          <tbody>{% for item in extrato.lancamentos %}
+            <tr>
+              <td class="data">{{ item.competencia|date:"d/m/Y" }}</td>
+              <td>{{ item.descricao }}{% if item.observacoes %}<small>{{ item.observacoes }}</small>{% endif %}<small class="extrato-tipo">{{ item.get_tipo_display }}</small></td>
+              <td class="num">{% if item.quantidade is not None %}{{ item.quantidade|floatformat:"-3" }}{% else %}—{% endif %}</td>
+              <td class="num">{% if item.preco_unitario is not None %}{{ item.preco_unitario|intcomma_brl }}{% else %}—{% endif %}</td>
+              <td class="num">{% if item.tipo == 'desconto' %}−{% endif %}{{ item.valor|intcomma_brl }}</td>
+            </tr>
+          {% empty %}<tr><td colspan="5">Nenhum lançamento nesta conta.</td></tr>{% endfor %}</tbody>
+        </table>
+      </div>
+    </section>
+    <section aria-labelledby="extrato-pagamentos">
+      <h2 id="extrato-pagamentos">Pagamentos e créditos</h2>
+      <div class="extrato-tabela-rol" tabindex="0" role="region" aria-label="Pagamentos e adiantamentos">
+        <table>
+          <thead><tr><th>Data</th><th>Registro</th><th>Forma / observação</th><th class="num">Valor</th></tr></thead>
+          <tbody>{% for item in extrato.pagamentos %}
+            <tr><td class="data">{{ item.data|date:"d/m/Y H:i" }}</td><td>{{ item.tipo }}</td><td>{{ item.forma }}{% if item.observacao %}<small>{{ item.observacao }}</small>{% endif %}</td><td class="num">{{ item.valor|intcomma_brl }}</td></tr>
+          {% empty %}<tr><td colspan="4">Nenhum pagamento ou adiantamento registrado.</td></tr>{% endfor %}</tbody>
+        </table>
+      </div>
+    </section>
+    <dl class="extrato-totais">
+      <div><dt>Subtotal dos lançamentos</dt><dd>{{ extrato.subtotal|intcomma_brl }}</dd></div>
+      <div><dt>Descontos</dt><dd>− {{ extrato.descontos|intcomma_brl }}</dd></div>
+      <div><dt>Total da conta</dt><dd>{{ extrato.total|intcomma_brl }}</dd></div>
+      <div><dt>Pagamentos e créditos</dt><dd>{{ extrato.creditos|intcomma_brl }}</dd></div>
+      <div class="extrato-saldo"><dt>{% if extrato.saldo < 0 %}Saldo a devolver{% else %}Saldo a pagar{% endif %}</dt><dd>{{ extrato.saldo_absoluto|intcomma_brl }}</dd></div>
+    </dl>
+    <footer class="extrato-rodape">
+      <p>Conferência emitida em {{ extrato.emitido_em|date:"d/m/Y H:i" }}. {% if extrato.conta.aberta %}A conta permanece aberta.{% else %}Conta encerrada.{% endif %}</p>
+      <p>Este extrato não substitui o documento fiscal.</p>
+    </footer>
+  </article>
+</body>
+</html>

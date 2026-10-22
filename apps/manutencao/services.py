@@ -38,9 +38,13 @@ def _registrar_bloqueio(uh, usuario, ordem):
         raise ValidationError(f"O quarto {uh.numero} está inativo.")
     # A janela do bloqueio não pode colidir com reserva ativa (consulta a fonte).
     if modulo_ativo(Modulo.RESERVAS):
-        from apps.reservas.services import reserva_conflita
+        from apps.reservas.services import reserva_conflita, uh_ocupada
 
-        if reserva_conflita(uh, ordem.bloqueio_inicio, ordem.bloqueio_fim):
+        hoje = timezone.localdate()
+        bloqueia_hoje = (ordem.bloqueio_inicio <= hoje
+                        and (ordem.bloqueio_fim is None or ordem.bloqueio_fim >= hoje))
+        if (reserva_conflita(uh, ordem.bloqueio_inicio, ordem.bloqueio_fim)
+                or (bloqueia_hoje and uh_ocupada(uh))):
             raise ValidationError(
                 f'O quarto {uh.numero} tem reserva no período do bloqueio. Ajuste as datas ou troque o hóspede de quarto antes de continuar.'
             )
@@ -81,6 +85,9 @@ def abrir_os(operador, *, uh=None, area="", titulo, descricao="",
     # Janela do bloqueio (por datas): início = agendada/hoje; fim = previsto ou aberto.
     b_ini = b_fim = None
     if bloquear and uh:
+        from apps.nucleo.sistema import travar_quartos
+
+        travar_quartos(uh)
         b_ini = bloqueio_inicio or agendada_para or timezone.localdate()
         b_fim = bloqueio_fim or previsto_para or None
         if b_fim and b_fim < b_ini:
@@ -101,7 +108,11 @@ def abrir_os(operador, *, uh=None, area="", titulo, descricao="",
     return ordem
 
 
+@transaction.atomic
 def iniciar_os(ordem, usuario):
+    from apps.nucleo.sistema import travar
+
+    travar(ordem)
     if ordem.status != OrdemServico.Status.ABERTA:
         raise ValidationError("Só uma OS aberta pode ser iniciada.")
     ordem.status = OrdemServico.Status.EM_ANDAMENTO
@@ -114,6 +125,11 @@ def iniciar_os(ordem, usuario):
 def concluir_os(ordem, usuario, *, resolucao="",
                 custo_maodeobra=None, custo_pecas=None,
                 nota_fiscal=None, garantia_ate=None):
+    from apps.nucleo.sistema import travar
+
+    travar(ordem)
+    if ordem.status == OrdemServico.Status.CONCLUIDA:
+        return OrdemServico.objects.filter(anterior=ordem).first()
     if not ordem.aberta_ou_andamento:
         raise ValidationError("Esta OS já foi encerrada.")
     if custo_maodeobra is not None:
@@ -140,7 +156,12 @@ def concluir_os(ordem, usuario, *, resolucao="",
 
     # Libera o quarto e avisa a Governança (quarto pós-reparo precisa de limpeza).
     if ordem.bloqueia_uh and ordem.uh_id:
+        from apps.governanca.services import sujar_apos_ocupacao
+        from apps.nucleo.sistema import travar_quartos
+
+        travar_quartos(ordem.uh)
         _liberar_uh(ordem.uh, usuario, ordem)
+        sujar_apos_ocupacao(ordem.uh, usuario)
         emitir(
             reparo_concluido, sender=OrdemServico, uh=ordem.uh, ordem=ordem,
             usuario=usuario,
@@ -151,6 +172,7 @@ def concluir_os(ordem, usuario, *, resolucao="",
     if ordem.tipo == OrdemServico.Tipo.PREVENTIVA and ordem.recorrencia_meses:
         base = ordem.agendada_para or timezone.localdate()
         proxima = OrdemServico.objects.create(
+            anterior=ordem,
             uh=ordem.uh, area=ordem.area, titulo=ordem.titulo,
             descricao=ordem.descricao, tipo=OrdemServico.Tipo.PREVENTIVA,
             prioridade=ordem.prioridade, responsavel=ordem.responsavel,
@@ -233,9 +255,15 @@ def pendencias_auditoria():
 
 @transaction.atomic
 def cancelar_os(ordem, usuario, motivo=""):
+    from apps.nucleo.sistema import travar
+
+    travar(ordem)
     if not ordem.aberta_ou_andamento:
         raise ValidationError("Esta OS já foi encerrada.")
     if ordem.bloqueia_uh and ordem.uh_id:
+        from apps.nucleo.sistema import travar_quartos
+
+        travar_quartos(ordem.uh)
         _liberar_uh(ordem.uh, usuario, ordem)
     ordem.status = OrdemServico.Status.CANCELADA
     ordem.motivo_cancelamento = motivo or ""

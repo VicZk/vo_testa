@@ -29,9 +29,22 @@ def _estadia_ou_404(token):
 @never_cache
 def home(request, token):
     estadia = _estadia_ou_404(token)
+    return _home(request, token, estadia)
+
+
+def _home(request, token, estadia, *, dados=None):
+    cardapio = services.cardapio()
+    if dados is not None:
+        for item in cardapio:
+            item["quantidade"] = dados.get(f"qtd_{item['id']}", "0")
+            item["observacoes"] = dados.get(f"obs_{item['id']}", "")
+            for grupo in item["grupos"]:
+                escolhidas = set(dados.getlist(f"opcoes_{item['id']}_{grupo.pk}"))
+                for opcao in grupo.opcoes.all():
+                    opcao.escolhida = str(opcao.pk) in escolhidas
     return render(request, "portal/home.html", {
         "token": token, "e": estadia,
-        "cardapio": services.cardapio(),
+        "cardapio": cardapio,
     })
 
 
@@ -42,6 +55,7 @@ def nps(request, token):
     return render(request, "portal/nps.html", {"token": token, "e": estadia})
 
 
+@never_cache
 def pedir(request, token):
     estadia = _estadia_ou_404(token)
     if request.method == "POST":
@@ -52,12 +66,17 @@ def pedir(request, token):
         pedidos = []
         for chave, valor in request.POST.items():
             if chave.startswith("qtd_") and valor.strip():
-                pedidos.append((chave[4:], valor))
+                produto_id = chave[4:]
+                opcoes = [opcao for campo, valores in request.POST.lists()
+                          if campo.startswith(f"opcoes_{produto_id}_") for opcao in valores if opcao]
+                pedidos.append({"produto_id": produto_id, "quantidade": valor,
+                                "observacoes": request.POST.get(f"obs_{produto_id}", ""), "opcoes": opcoes})
         try:
             comanda = services.pedir_restaurante(estadia, pedidos)
             messages.success(request, f"Pedido enviado! Comanda #{comanda.pk}.")
         except ValidationError as erro:
             messages.error(request, " ".join(erro.messages))
+            return _home(request, token, estadia, dados=request.POST)
     return redirect("portal:home", token=token)
 
 

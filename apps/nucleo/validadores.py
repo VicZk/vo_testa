@@ -1,7 +1,34 @@
 """Validadores compartilhados do núcleo (reusados por todos os módulos)."""
 import re
+from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import ValidationError
+
+
+def decimal_valido(valor, *, nome="Valor", minimo=Decimal("0"),
+                   maximo=Decimal("99999999.99"), casas=2):
+    """Valida antes de calcular: rejeita NaN, infinito, expoentes e precisão excessiva."""
+    texto = str(valor).strip() if valor is not None else ""
+    if len(texto) > 64:
+        raise ValidationError(f"{nome}: número fora do limite permitido.")
+    try:
+        numero = Decimal(texto)
+        if not numero.is_finite() or numero < minimo or numero > maximo:
+            raise InvalidOperation
+        if numero.quantize(Decimal(1).scaleb(-casas)) != numero:
+            raise InvalidOperation
+    except (InvalidOperation, ValueError, TypeError):
+        raise ValidationError(f"{nome}: informe um número entre {minimo} e {maximo}, com até {casas} casas decimais.")
+    return numero
+
+
+def identificador_valido(valor, *, nome="Registro", opcional=False):
+    if opcional and valor in (None, ""):
+        return None
+    texto = str(valor)
+    if not re.fullmatch(r"[0-9]{1,19}", texto) or not 0 < int(texto) <= 9223372036854775807:
+        raise ValidationError(f"{nome}: selecione um registro válido.")
+    return int(texto)
 
 # DDDs válidos no Brasil (há buracos — ex.: 20, 23, 25, 26, 29, 30, 36, 39, 40...).
 DDDS_VALIDOS = frozenset({

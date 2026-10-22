@@ -90,6 +90,9 @@ def _parse_ofx(texto: str) -> list[dict]:
 @transaction.atomic
 def importar_ofx(*, conteudo, banco="Banco Safra", conta="", arquivo_nome="", usuario=None):
     """Importa um extrato OFX. Dedupe por FITID na mesma conta (reimportar não duplica)."""
+    import hashlib
+    import json
+
     if isinstance(conteudo, bytes):
         conteudo = conteudo.decode("latin-1", "replace")
     linhas = _parse_ofx(conteudo)
@@ -107,15 +110,21 @@ def importar_ofx(*, conteudo, banco="Banco Safra", conta="", arquivo_nome="", us
         .exclude(fitid="").values_list("fitid", flat=True)
     )
     novos = ignorados = 0
-    for x in linhas:
+    arquivo_hash = hashlib.sha256(conteudo.encode("utf-8")).hexdigest()
+    for numero, x in enumerate(linhas):
         if x["fitid"] and x["fitid"] in existentes:
             ignorados += 1
             continue
-        LancamentoExtrato.objects.create(
-            extrato=extrato, data=x["data"], valor=x["valor"],
-            descricao=x["descricao"], fitid=x["fitid"],
+        identidade = [banco.strip().casefold(), conta.strip(),
+                      ["fitid", x["fitid"]] if x["fitid"] else ["arquivo", arquivo_hash, numero]]
+        chave = hashlib.sha256(json.dumps(identidade, ensure_ascii=False).encode("utf-8")).hexdigest()
+        _, criado = LancamentoExtrato.objects.get_or_create(
+            chave_importacao=chave,
+            defaults={"extrato": extrato, "data": x["data"], "valor": x["valor"],
+                      "descricao": x["descricao"], "fitid": x["fitid"]},
         )
-        novos += 1
+        novos += int(criado)
+        ignorados += int(not criado)
         if x["fitid"]:
             existentes.add(x["fitid"])
     return {"extrato": extrato, "novos": novos, "ignorados": ignorados}

@@ -15,6 +15,9 @@
 {% include "estoque/partials/nav.html" %}
 
 {% if inventario.status == "aberto" %}
+<p class="ajuda">Salve a contagem assim que conferir a prateleira, sem movimentar os produtos durante essa conferência.
+  Ao aplicar, o sistema corrige a diferença registrada e preserva vendas e entradas feitas depois.
+  Para recontar o mesmo valor, apague o campo, salve e registre a nova contagem.</p>
 <form method="post" x-data="contagemEstoque({{ resumo.total }})">
   {% csrf_token %}
 

@@ -1,0 +1,17 @@
+<div id="cozinha-quadro" class="cozinha-quadro" hx-get="{% url 'restaurante:cozinha' %}" hx-trigger="every 15s" hx-swap="outerHTML">
+  {% for coluna in colunas %}<section class="cozinha-coluna" aria-label="{{ coluna.nome }}">
+    <h2>{{ coluna.nome }} <span class="selo">{{ coluna.itens|length }}</span></h2>
+    {% for item in coluna.itens %}<article class="cozinha-pedido">
+      <header><a href="{% url 'restaurante:comanda' item.comanda_id %}">{{ item.comanda.titulo }} · #{{ item.comanda_id }}</a><time>{{ item.criado_em|date:"H:i" }}</time></header>
+      <h3>{{ item.quantidade|floatformat:"-3" }} × {{ item.descricao }}</h3>
+      {% for opcao in item.opcoes %}<p class="pedido-detalhe"><strong>{{ opcao.grupo }}:</strong> {{ opcao.nome }}</p>{% endfor %}
+      {% if item.observacoes %}<p class="pedido-observacao">{{ item.observacoes }}</p>{% endif %}
+      <form method="post" action="{% url 'restaurante:preparo_item' item.comanda_id item.pk %}">
+        {% csrf_token %}<input type="hidden" name="versao" value="{{ item.versao }}">
+        {% if item.preparo == 'aguardando' %}<button class="botao-primario" name="preparo" value="preparando">Iniciar preparo</button><button class="botao-neutro" name="preparo" value="entregue">Entregar direto</button>
+        {% elif item.preparo == 'preparando' %}<button class="botao-primario" name="preparo" value="pronto">Marcar pronto</button>
+        {% else %}<button class="botao-primario" name="preparo" value="entregue">Confirmar entrega</button>{% endif %}
+      </form>
+    </article>{% empty %}<p class="estado-vazio">Nenhum pedido nesta etapa.</p>{% endfor %}
+  </section>{% endfor %}
+</div>

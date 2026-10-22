@@ -8,6 +8,7 @@ e-mail só sai para quem foi configurado.
 """
 from datetime import timedelta
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core import mail
@@ -74,7 +75,8 @@ class KitBase(TestCase):
         """Reserva que entrou ontem e já está em casa (conta aberta)."""
         kwargs.setdefault("offset", -1)
         r = self.reserva(status=Reserva.Status.CONFIRMADA, **kwargs)
-        r.fazer_checkin(self.usuario)
+        with patch("django.utils.timezone.localdate", return_value=r.checkin):
+            r.fazer_checkin(self.usuario)
         return r
 
 

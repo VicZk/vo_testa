@@ -8,6 +8,8 @@ do núcleo (estoque + caixa) e a conta do quarto via reservas.services.
 from decimal import Decimal
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from django.db import models
 
 
@@ -68,6 +70,10 @@ class Comanda(models.Model):
         related_name="comanda", verbose_name="recebimento no caixa",
     )
     conta_ref = models.CharField("conta do quarto", max_length=120, blank=True)
+    conta = models.ForeignKey(
+        "reservas.ContaHospedagem", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="comandas_restaurante", verbose_name="estadia vinculada",
+    )
     criado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
         related_name="comandas", verbose_name="aberta por",
@@ -106,6 +112,12 @@ class Comanda(models.Model):
 
 
 class ItemComanda(models.Model):
+    class Preparo(models.TextChoices):
+        AGUARDANDO = "aguardando", "A preparar"
+        PREPARANDO = "preparando", "Em preparo"
+        PRONTO = "pronto", "Pronto"
+        ENTREGUE = "entregue", "Entregue"
+
     comanda = models.ForeignKey(
         Comanda, on_delete=models.CASCADE, related_name="itens", verbose_name="comanda"
     )
@@ -120,6 +132,11 @@ class ItemComanda(models.Model):
         "preço unitário (R$)", max_digits=10, decimal_places=2
     )
     criado_em = models.DateTimeField("lançado em", auto_now_add=True)
+    observacoes = models.CharField("observações para preparo", max_length=500, blank=True)
+    opcoes = models.JSONField("escolhas do cliente", default=list, blank=True)
+    estoque_baixado = models.JSONField("itens retirados do estoque", default=list, blank=True, editable=False)
+    preparo = models.CharField("preparo", max_length=12, choices=Preparo.choices, default=Preparo.AGUARDANDO)
+    versao = models.PositiveIntegerField("versão", default=1, editable=False)
 
     class Meta:
         verbose_name = "item da comanda"
@@ -132,3 +149,53 @@ class ItemComanda(models.Model):
     @property
     def subtotal(self) -> Decimal:
         return (self.preco_unitario * self.quantidade).quantize(Decimal("0.01"))
+
+    @property
+    def resumo_opcoes(self):
+        return "; ".join(f"{opcao['grupo']}: {opcao['nome']}" for opcao in self.opcoes)
+
+    @property
+    def detalhe_preparo(self):
+        return ". ".join(parte for parte in (self.resumo_opcoes, self.observacoes) if parte)
+
+
+class GrupoOpcaoCardapio(models.Model):
+    produto = models.ForeignKey("nucleo.Produto", on_delete=models.PROTECT, related_name="grupos_opcoes")
+    nome = models.CharField("nome do grupo", max_length=60)
+    minimo = models.PositiveSmallIntegerField("mínimo de escolhas", default=0)
+    maximo = models.PositiveSmallIntegerField("máximo de escolhas", default=1)
+    ordem = models.PositiveSmallIntegerField("ordem", default=0)
+    ativo = models.BooleanField("ativo", default=True)
+
+    class Meta:
+        ordering = ["ordem", "pk"]
+        constraints = [models.CheckConstraint(
+            condition=models.Q(maximo__gte=models.F("minimo")) & models.Q(maximo__gte=1),
+            name="grupo_opcao_limites_validos",
+        )]
+
+    def __str__(self):
+        return f"{self.produto.nome} · {self.nome}"
+
+    def clean(self):
+        if self.maximo < 1 or self.minimo > self.maximo:
+            raise ValidationError("O máximo deve ser pelo menos 1 e igual ou maior que o mínimo.")
+
+
+class OpcaoCardapio(models.Model):
+    grupo = models.ForeignKey(GrupoOpcaoCardapio, on_delete=models.CASCADE, related_name="opcoes")
+    nome = models.CharField("opção", max_length=80)
+    adicional = models.DecimalField("adicional por unidade (R$)", max_digits=10, decimal_places=2,
+                                    default=Decimal("0"), validators=[MinValueValidator(Decimal("0"))])
+    produto_estoque = models.ForeignKey("nucleo.Produto", on_delete=models.PROTECT, null=True, blank=True,
+                                       related_name="opcoes_consumo", verbose_name="produto consumido pelo adicional")
+    quantidade_estoque = models.DecimalField("quantidade consumida por unidade", max_digits=12, decimal_places=3,
+                                           default=Decimal("1"), validators=[MinValueValidator(Decimal("0.001"))])
+    ordem = models.PositiveSmallIntegerField("ordem", default=0)
+    ativo = models.BooleanField("ativo", default=True)
+
+    class Meta:
+        ordering = ["ordem", "pk"]
+
+    def __str__(self):
+        return self.nome

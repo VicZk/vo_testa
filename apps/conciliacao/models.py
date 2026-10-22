@@ -61,6 +61,10 @@ class LancamentoExtrato(models.Model):
     )
     descricao = models.CharField("descrição", max_length=255, blank=True)
     fitid = models.CharField("id da transação (FITID)", max_length=100, blank=True)
+    chave_importacao = models.CharField(
+        "chave de importação", max_length=64, null=True, blank=True,
+        unique=True, editable=False,
+    )
     status = models.CharField(
         "status", max_length=12, choices=Status.choices, default=Status.PENDENTE
     )

@@ -1061,7 +1061,8 @@ def faixas_oportunidade(op):
         c05 = sum(1 for a in idades if a <= 5)
         c615 = sum(1 for a in idades if 6 <= a <= 15)
         c16 = sum(1 for a in idades if a >= 16)
-        return op.adultos + c16, c05, c615
+        sem_idade = max(0, op.criancas - len(idades))
+        return op.adultos + c16, c05, c615 + sem_idade
     return op.adultos, 0, op.criancas
 
 
@@ -1198,8 +1199,15 @@ def _registrar_diaria_vendida(oportunidade, *, vendida, tipo_uh, uh, checkin, ch
 @transaction.atomic
 def converter_em_reserva(oportunidade, *, tipo_uh=None, uh=None, checkin, checkout, usuario,
                          valor_diaria=None, criar_sinal=False, valor_sinal=None):
+    from apps.nucleo.sistema import travar
+    from apps.reservas.services import reserva_por_id
+
+    travar(oportunidade)
     if oportunidade.reserva_id:
-        raise ValidationError("Esta oportunidade já foi convertida em reserva.")
+        existente = reserva_por_id(oportunidade.reserva_id)
+        if (existente.checkin, existente.checkout) != (checkin, checkout):
+            raise ValidationError("Esta oportunidade já foi convertida. Altere as datas em Reservas.")
+        return existente
     if not modulo_ativo(Modulo.RESERVAS):
         raise ValidationError(
             "O módulo Reservas está inativo. Ative-o para converter o lead em reserva."
@@ -1212,10 +1220,12 @@ def converter_em_reserva(oportunidade, *, tipo_uh=None, uh=None, checkin, checko
 
     Hospede.objects.get_or_create(pessoa=oportunidade.pessoa)
     base_obs = f"Convertida da oportunidade #{oportunidade.pk} — {oportunidade.titulo}"
+    adultos, criancas_0_5, criancas_6_15 = faixas_oportunidade(oportunidade)
     reserva_kwargs = dict(
         checkin=checkin, checkout=checkout, hospede=oportunidade.pessoa, usuario=usuario,
         canal="site" if oportunidade.origem == "site" else "balcao",
-        faturamento=oportunidade.faturamento, adultos=oportunidade.hospedes,
+        faturamento=oportunidade.faturamento, adultos=adultos,
+        criancas_0_5=criancas_0_5, criancas_6_15=criancas_6_15,
         valor_diaria=valor_diaria,
         # Aqui `canal` guarda de ONDE veio o lead, não quem vendeu: converter é venda
         # NEGOCIADA por alguém da casa. A restrição de venda do período (estadia

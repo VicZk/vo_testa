@@ -51,7 +51,7 @@ class VerbaMarketing(models.Model):
     def atual(cls) -> VerbaMarketing:
         obj = cls.objects.first()
         if obj is None:
-            obj = cls.objects.create()
+            obj, _ = cls.objects.get_or_create(pk=1)
         return obj
 
     def teto_do_mes(self, aaaa_mm: str) -> Decimal:

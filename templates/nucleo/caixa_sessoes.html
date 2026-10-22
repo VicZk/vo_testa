@@ -2,10 +2,14 @@
 {% load moeda %}
 
 {% block titulo %}Sessões de caixa | CRM Vô Testa{% endblock %}
+{% block conteudo_classe %}tela-caixa{% endblock %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Financeiro</p>
-<h1>Sessões de caixa</h1>
+<div class="pagina-cabecalho">
+  <h1>Sessões de caixa</h1>
+  <a href="{% url 'caixa' %}" class="botao-neutro">Meu caixa</a>
+</div>
 <p class="subtitulo">Histórico de aberturas e fechamentos, com as diferenças de conferência.</p>
 
 <table class="tabela">

@@ -147,11 +147,12 @@ class Command(BaseCommand):
                 criado_por=self.user, observacoes="[lotacao]",
             )
             # Guard de Governança: entrada só em quarto limpo/inspecionado.
-            try:
-                from apps.governanca.models import StatusLimpeza
-                gov.definir_status(uh, StatusLimpeza.Situacao.LIMPA, self.user)
-            except Exception:
-                pass
+            from apps.governanca.models import StatusLimpeza, TarefaGovernanca
+            for tarefa in TarefaGovernanca.objects.filter(uh=uh).exclude(
+                status=TarefaGovernanca.Status.CONCLUIDA
+            ).order_by("pk"):
+                gov.concluir_tarefa(tarefa, self.user)
+            gov.definir_status(uh, StatusLimpeza.Situacao.LIMPA, self.user)
             # Hóspede de mentira não tem FNRH: só o seed passa pela trava.
             with override_settings(FNRH_BLOQUEAR_CHECKIN=False):
                 conta = r.fazer_checkin(self.user)

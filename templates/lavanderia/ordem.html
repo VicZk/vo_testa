@@ -84,13 +84,20 @@
         {% if contas %}
         <label class="select-wrap pdv-destino" x-show="destino === 'conta'" x-cloak>
           <select name="conta_id"><option value="">Quarto / hóspede…</option>
-            {% for c in contas %}<option value="{{ c.id }}">{{ c.rotulo }}</option>{% endfor %}
+            {% for c in contas %}<option value="{{ c.id }}"{% if c.id == ordem.conta_id %} selected{% endif %}>{{ c.rotulo }}</option>{% endfor %}
           </select>
         </label>
         {% endif %}
         <button type="submit" class="botao-primario pdv-finalizar">Entregar e cobrar</button>
       </form>
 
+      {% if contas %}<form method="post" action="{% url 'lavanderia:vincular' ordem.pk %}" class="comanda-extras campo">
+        {% csrf_token %}<label for="lavanderia-estadia">Estadia vinculada</label>
+        <select id="lavanderia-estadia" name="conta_id" required><option value="">Selecione o quarto / hóspede…</option>
+          {% for conta in contas %}<option value="{{ conta.id }}"{% if conta.id == ordem.conta_id %} selected{% endif %}>{{ conta.rotulo }}</option>{% endfor %}
+        </select><button class="botao-neutro" type="submit">Vincular à estadia</button>
+        <small class="ajuda">O check-out avisa sobre esta ordem enquanto ela estiver em produção.</small>
+      </form>{% endif %}
       {% if eh_gerente %}
         <div class="comanda-extras">
           <details class="acao-sensivel">

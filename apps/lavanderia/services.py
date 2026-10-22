@@ -24,16 +24,27 @@ ZERO = Decimal("0.00")
 
 # ───────────────────────── (a) Serviço ao hóspede ─────────────────────────
 
-def abrir_ordem(operador, cliente=None, rotulo="", prazo=None):
+@transaction.atomic
+def abrir_ordem(operador, cliente=None, rotulo="", prazo=None, conta_id=None):
+    from apps.reservas.services import conta_para_pedido
+
+    conta = conta_para_pedido(cliente=cliente, conta_id=conta_id)
+    if conta:
+        cliente = cliente or conta.reserva.hospede
+        rotulo = rotulo or f"Quarto {conta.reserva.uh.numero}"
     rotulo = (rotulo or "").strip()
     if not (cliente or rotulo):
         raise ValidationError("Informe o hóspede/cliente ou uma identificação.")
     return OrdemLavanderia.objects.create(
-        cliente=cliente, rotulo=rotulo, prazo=prazo, criado_por=operador
+        cliente=cliente, rotulo=rotulo, prazo=prazo, criado_por=operador, conta=conta,
     )
 
 
+@transaction.atomic
 def adicionar_item(ordem, servico, quantidade, operador):
+    from apps.nucleo.sistema import travar
+
+    travar(ordem)
     if not ordem.em_producao:
         raise ValidationError("Só é possível lançar itens antes da entrega.")
     quantidade = Decimal(str(quantidade))
@@ -51,14 +62,28 @@ def adicionar_item(ordem, servico, quantidade, operador):
     )
 
 
+@transaction.atomic
 def remover_item(item):
-    if not item.ordem.em_producao:
+    from apps.nucleo.sistema import travar
+
+    ordem = travar(item.ordem)
+    if not ordem.em_producao:
         raise ValidationError("A ordem já foi entregue.")
+    item = ItemOrdemLavanderia.objects.select_for_update().filter(pk=item.pk, ordem=ordem).first()
+    if item is None:
+        raise ValidationError("Este item já foi removido. Atualize a ordem.")
     item.delete()
 
 
+@transaction.atomic
 def avancar_status(ordem):
     """Avança um passo no fluxo recebida → lavando → pronta."""
+    from apps.nucleo.sistema import travar
+
+    esperado = ordem.status
+    travar(ordem)
+    if ordem.status != esperado:
+        raise ValidationError("A ordem foi alterada em outra sessão. Atualize a tela.")
     fluxo = OrdemLavanderia.FLUXO
     if ordem.status not in fluxo or ordem.status == fluxo[-1]:
         raise ValidationError("A ordem já está pronta para entrega.")
@@ -95,13 +120,15 @@ def entregar(ordem, operador, destino, forma=None, conta_id=None, desconto=ZERO)
     else:
         from apps.reservas import services as reservas
 
-        conta = reservas.conta_aberta(conta_id)
-        if not conta:
-            raise ValidationError("Selecione uma conta do quarto aberta.")
+        conta = reservas.travar_conta_aberta(conta_id or ordem.conta_id)
+        if ordem.conta_id and ordem.conta_id != conta.pk:
+            raise ValidationError("A ordem pertence a outra estadia. Confira o vínculo antes de cobrar.")
+        ordem.conta = conta
         for item in ordem.itens.all():
             reservas.lancar_na_conta(
                 conta, "servico", item.natureza,
                 f"Lavanderia: {item.descricao}", item.subtotal, operador,
+                quantidade=item.quantidade, preco_unitario=item.preco_unitario,
             )
         if desconto > 0:
             reservas.lancar_na_conta(
@@ -117,7 +144,36 @@ def entregar(ordem, operador, destino, forma=None, conta_id=None, desconto=ZERO)
     return ordem
 
 
+@transaction.atomic
+def vincular_conta(ordem, conta_id, operador):
+    from apps.nucleo.sistema import travar
+    from apps.reservas.services import travar_conta_aberta
+
+    travar(ordem)
+    if not ordem.em_producao:
+        raise ValidationError("Só uma ordem em produção pode ser vinculada à estadia.")
+    anterior = ordem.conta_id
+    ordem.conta = travar_conta_aberta(conta_id)
+    ordem.save(update_fields=["conta"])
+    registrar_auditoria(operador, "lavanderia_vinculada", ordem,
+                       {"conta_anterior": anterior, "conta": ordem.conta_id})
+    return ordem
+
+
+def pendencias_da_conta(conta_id):
+    from django.urls import reverse
+
+    return [{"rotulo": f"Lavanderia #{ordem.pk}", "valor": ordem.total(),
+             "url": reverse("lavanderia:ordem", args=[ordem.pk])}
+            for ordem in OrdemLavanderia.objects.filter(conta_id=conta_id, status__in=OrdemLavanderia.FLUXO)
+            .prefetch_related("itens")]
+
+
+@transaction.atomic
 def cancelar_ordem(ordem, operador, motivo=""):
+    from apps.nucleo.sistema import travar
+
+    travar(ordem)
     if ordem.status == OrdemLavanderia.Status.ENTREGUE:
         raise ValidationError("Ordem entregue não pode ser cancelada (já cobrada).")
     if ordem.status == OrdemLavanderia.Status.CANCELADA:
@@ -148,6 +204,9 @@ def _mov(item, estado, quantidade, motivo, usuario, uh=None):
 
 @transaction.atomic
 def _transferir(item, de, para, quantidade, motivo, usuario, uh=None):
+    from apps.nucleo.sistema import travar
+
+    travar(item)
     quantidade = int(quantidade)
     if quantidade <= 0:
         raise ValidationError("Quantidade inválida.")
@@ -159,8 +218,12 @@ def _transferir(item, de, para, quantidade, motivo, usuario, uh=None):
     _mov(item, para, quantidade, motivo, usuario, uh)
 
 
+@transaction.atomic
 def adquirir(item, quantidade, usuario):
     """Entrada de enxoval novo direto na rouparia (limpa)."""
+    from apps.nucleo.sistema import travar
+
+    travar(item)
     quantidade = int(quantidade)
     if quantidade <= 0:
         raise ValidationError("Quantidade inválida.")
@@ -183,8 +246,12 @@ def receber_limpo(item, quantidade, usuario):
     _transferir(item, Estado.LAVANDO, Estado.LIMPA, quantidade, "retorno_lavagem", usuario)
 
 
+@transaction.atomic
 def baixar(item, quantidade, estado, motivo, usuario):
     """Baixa por desgaste/dano — sai do estado sem destino. Auditada."""
+    from apps.nucleo.sistema import travar
+
+    travar(item)
     quantidade = int(quantidade)
     if quantidade <= 0:
         raise ValidationError("Quantidade inválida.")
@@ -210,10 +277,12 @@ def posicao_enxoval():
     return linhas
 
 
+@transaction.atomic
 def coletar_faxina(uh, usuario):
     """Chamado pela conclusão da faxina (Governança): recolhe o kit padrão de cada
     item (por_faxina) de 'em uso' para 'suja', limitado ao saldo em uso."""
-    for item in ItemEnxoval.objects.filter(ativo=True, por_faxina__gt=0):
+    for item in ItemEnxoval.objects.select_for_update().filter(
+            ativo=True, por_faxina__gt=0).order_by("pk"):
         qtd = min(item.por_faxina, saldo_enxoval(item, Estado.EM_USO))
         if qtd > 0:
             coletar_suja(item, qtd, usuario, uh=uh, origem="faxina")

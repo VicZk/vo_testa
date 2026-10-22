@@ -1,5 +1,6 @@
 from datetime import timedelta
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -149,7 +150,8 @@ class SaidasVencidasTests(ReservasTestsBase):
 
     def _hospedar_vencida(self, dias=2, offset=-5, uh=None):
         r = self.reserva(status=Reserva.Status.CONFIRMADA, dias=dias, offset=offset, uh=uh)
-        r.fazer_checkin(self.usuario)
+        with patch("django.utils.timezone.localdate", return_value=r.checkin):
+            r.fazer_checkin(self.usuario)
         return r
 
     def test_com_saldo_entra_em_com_saldo(self):
@@ -575,12 +577,14 @@ class ContaHospedagemTests(ReservasTestsBase):
         self.assertEqual(self.conta.saldo(), Decimal("500.00"))
 
     def test_adiantamento_vira_credito_na_conta(self):
-        r2 = self.reserva(dias=2, offset=10)
+        outro_quarto = UH.objects.create(numero="ADI", tipo=self.tipo)
+        r2 = self.reserva(dias=2, offset=10, uh=outro_quarto)
         self.abrir_caixa()
         services.receber_adiantamento(
             r2, self.usuario, self.dinheiro, Decimal("200.00")
         )
-        conta = r2.fazer_checkin(self.usuario)  # 600 de diárias
+        with patch("django.utils.timezone.localdate", return_value=r2.checkin):
+            conta = r2.fazer_checkin(self.usuario)  # 600 de diárias
         self.assertEqual(conta.saldo(), Decimal("400.00"))
 
     def test_adiantamento_so_antes_do_checkin(self):
@@ -1627,7 +1631,8 @@ class PagamentoOnlineNaContaTests(ReservasTestsBase):
         adiantamento = services.receber_adiantamento(r, self.usuario, self.dinheiro,
                                                      Decimal("200.00"))
         estornar_movimento(adiantamento.movimento_caixa, sessao, self.usuario, "Desistiu")
-        conta = r.fazer_checkin(self.usuario)
+        with patch("django.utils.timezone.localdate", return_value=r.checkin):
+            conta = r.fazer_checkin(self.usuario)
         self.assertEqual(conta.saldo(), Decimal("600.00"))
 
     def test_sinal_estornado_volta_a_contar_como_sem_sinal(self):
@@ -2291,7 +2296,7 @@ class NoShowAutomaticoTests(ReservasTestsBase):
         r = self.reserva(dias=3, offset=-1)
         r.marcar_no_show(self.usuario)
         self.reserva(dias=2)                            # o T1 foi vendido de novo
-        with self.assertRaisesMessage(ValidationError, "já foi vendido"):
+        with self.assertRaisesMessage(ValidationError, "reserva ativa no período"):
             r.desfazer_no_show(self.usuario, "chegou")
         self.assertIsNotNone(r.cancelada_em)        # recusado: a instância volta como era
         r.refresh_from_db()
@@ -2346,7 +2351,8 @@ class CompetenciaDasDiariasTests(TestCase):
             checkout=self.ini_mes + timedelta(days=1), status=Reserva.Status.CONFIRMADA,
             valor_diaria=Decimal("200"), criado_por=self.op,
         )
-        self.reserva.fazer_checkin(self.op)
+        with patch("django.utils.timezone.localdate", return_value=self.reserva.checkin):
+            self.reserva.fazer_checkin(self.op)
 
     def test_cada_diaria_leva_a_sua_noite(self):
         noites = sorted(LancamentoConta.objects.filter(
@@ -2400,7 +2406,8 @@ class OcupacaoSemDayUseTests(TestCase):
                 uh=uh, hospede=hospede,
                 checkin=self.ontem, checkout=HOJE, status=Reserva.Status.CONFIRMADA,
                 valor_diaria=Decimal(valor), criado_por=op)
-            r.fazer_checkin(op)
+            with patch("django.utils.timezone.localdate", return_value=r.checkin):
+                r.fazer_checkin(op)
 
     def test_relatorio_conta_so_os_quartos(self):
         o = services.relatorio_ocupacao(self.ontem, self.ontem)

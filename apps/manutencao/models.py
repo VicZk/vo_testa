@@ -83,6 +83,10 @@ class OrdemServico(models.Model):
         help_text="Só para preventiva: repetir a cada N meses.",
     )
     agendada_para = models.DateField("agendada para", null=True, blank=True)
+    anterior = models.OneToOneField(
+        "self", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="sucessora", verbose_name="ocorrência anterior",
+    )
 
     criado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT,

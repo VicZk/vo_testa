@@ -14,6 +14,7 @@ from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.db.models import Count, DecimalField, F, Q, Sum
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404, redirect, render
@@ -553,23 +554,29 @@ def inventarios(request):
 @requer_modulo(Modulo.ESTOQUE)
 def inventario(request, pk):
     inv = get_object_or_404(Inventario.objects.select_related("local"), pk=pk)
-    if request.method == "POST" and inv.status == Inventario.Status.ABERTO:
-        invalidos = _salvar_contagem(request, inv)
+    if request.method == "POST":
+        try:
+            with transaction.atomic():
+                from apps.nucleo.sistema import travar
+
+                travar(inv)
+                if inv.status != Inventario.Status.ABERTO:
+                    raise ValidationError("Este inventário já foi aplicado ou cancelado.")
+                invalidos = _salvar_contagem(request, inv)
+                if "aplicar" in request.POST and not invalidos:
+                    inv.aplicar(request.user, somente_contados=True)
+        except ValidationError as erro:
+            messages.error(request, " ".join(erro.messages))
+            return redirect("estoque:inventario", pk=inv.pk)
         if invalidos:
             messages.error(
                 request,
                 "Contagem inválida (ignorada) em: " + ", ".join(invalidos[:8])
                 + (" …" if len(invalidos) > 8 else "") + ". Use só números.",
             )
-        if "aplicar" in request.POST:
-            try:
-                inv.aplicar(request.user, somente_contados=True)
-                messages.success(
-                    request, "Inventário aplicado. Ajustes registrados no histórico de auditoria."
-                )
-                return redirect("estoque:posicao")
-            except ValidationError as erro:
-                messages.error(request, " ".join(erro.messages))
+        if "aplicar" in request.POST and not invalidos:
+            messages.success(request, "Inventário aplicado. Movimentos posteriores à contagem foram preservados.")
+            return redirect("estoque:posicao")
         else:
             messages.success(request, "Contagem salva.")
         return redirect("estoque:inventario", pk=inv.pk)
@@ -629,7 +636,12 @@ def _salvar_contagem(request, inv):
     centenas de linhas do local de uma vez. O que vale para a auditoria é o
     ajuste gerado no «Aplicar» — esse passa pelo motor e é registrado lá."""
     invalidos, mudados = [], []
-    for item in inv.itens.select_related("produto"):
+    itens = list(inv.itens.select_related("produto").order_by("produto_id"))
+    list(Produto.objects.select_for_update().filter(
+        pk__in=[item.produto_id for item in itens]).order_by("pk"))
+    saldos = saldos_por_local()
+    agora = timezone.now()
+    for item in itens:
         bruto = request.POST.get(f"item_{item.pk}")
         if bruto is None:
             continue
@@ -637,14 +649,20 @@ def _salvar_contagem(request, inv):
         if bruto == "":
             if item.contado:
                 item.contado = False
+                item.contado_em = None
                 mudados.append(item)
             continue
         quantidade = _contagem_valida(bruto)
         if quantidade is None:
             invalidos.append(item.produto.nome)
             continue
+        if item.contado and item.quantidade_contada == quantidade:
+            continue  # aplicar/reenviar o formulário não refaz o instante da contagem
+        item.saldo_sistema = saldos.get((item.produto_id, inv.local_id), ZERO)
+        item.contado_em = agora
         item.quantidade_contada, item.contado = quantidade, True
         mudados.append(item)
     if mudados:
-        ItemInventario.objects.bulk_update(mudados, ["quantidade_contada", "contado"])
+        ItemInventario.objects.bulk_update(
+            mudados, ["quantidade_contada", "contado", "saldo_sistema", "contado_em"])
     return invalidos

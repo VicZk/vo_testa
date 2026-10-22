@@ -26,6 +26,7 @@ urlpatterns = [
     path("grupos/<int:pk>/remover/<int:reserva_pk>/", views.grupo_remover_quarto,
          name="grupo_remover_quarto"),
     path("<int:pk>/", views.detalhe, name="detalhe"),
+    path("<int:pk>/extrato/", views.extrato, name="extrato"),
     path("<int:pk>/confirmar/", views.confirmar, name="confirmar"),
     path("<int:pk>/checkin/", views.fazer_checkin, name="checkin"),
     path("<int:pk>/checkout/", views.fazer_checkout, name="checkout"),

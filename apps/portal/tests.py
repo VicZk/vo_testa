@@ -1,5 +1,6 @@
 from datetime import timedelta
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -190,7 +191,8 @@ class FNRHPortalTests(TestCase):
             self.reserva.fichas_fnrh.filter(origem="portal").exists()
         )
         # e o check-in agora passa
-        self.reserva.fazer_checkin(self.op)
+        with patch("django.utils.timezone.localdate", return_value=self.reserva.checkin):
+            self.reserva.fazer_checkin(self.op)
         self.reserva.refresh_from_db()
         self.assertEqual(self.reserva.status, Reserva.Status.HOSPEDADA)
 
@@ -281,7 +283,9 @@ class PedidoValidacaoTests(PedidoTests):
         self._estoque_restaurante()
         token = services.get_acesso(self.reserva.pk).token
         r = self.client.post(reverse("portal:pedir", args=[token]), {"qtd_abc": "1"})
-        self.assertEqual(r.status_code, 302)
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "selecione um registro válido")
+        self.assertIn("no-store", r["Cache-Control"])
 
 
 class NovoQRTests(PortalBase):

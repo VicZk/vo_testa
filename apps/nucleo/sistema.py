@@ -21,3 +21,29 @@ def travar(obj):
     type(obj).objects.select_for_update().get(pk=obj.pk)
     obj.refresh_from_db()
     return obj
+
+
+def travar_quartos(*quartos):
+    """Âncora comum de disponibilidade, manutenção e ocupação física.
+
+    O conjunto é travado em ordem fixa. Uma UH já em alteração responde conflito
+    imediato: ninguém fica segurando conta/reserva/pool enquanto espera outra UH.
+    O savepoint mantém utilizável a transação de quem tratar o conflito.
+    """
+    from django.core.exceptions import ValidationError
+    from django.db import DatabaseError, transaction
+
+    from .models import UH
+
+    try:
+        with transaction.atomic():
+            list(UH.objects.select_for_update(nowait=True).filter(
+                pk__in={quarto.pk for quarto in quartos}).order_by("pk"))
+    except DatabaseError as erro:
+        if getattr(erro.__cause__, "sqlstate", None) != "55P03":
+            raise
+        raise ValidationError(
+            "O quarto está sendo atualizado em outra sessão. Atualize a tela e tente novamente."
+        ) from erro
+    for quarto in quartos:
+        quarto.refresh_from_db()

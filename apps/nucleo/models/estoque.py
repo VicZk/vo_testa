@@ -592,14 +592,28 @@ class Inventario(models.Model):
         ABERTURA; se houver uma venda durante a contagem, aplicar esse número de
         volta apagaria a baixa. Quem não foi contado fica como está.
         """
+        from apps.nucleo.sistema import travar
+
+        travar(self)
         if self.status != self.Status.ABERTO:
             raise ValidationError("Este inventário já foi aplicado ou cancelado.")
         itens = self.itens.select_related("produto")
         if somente_contados:
             itens = itens.filter(contado=True)
+        itens = list(itens.order_by("produto_id"))
+        list(Produto.objects.select_for_update().filter(
+            pk__in=[item.produto_id for item in itens]).order_by("pk"))
         for item in itens:
+            # Corrige a diferença observada; movimentos posteriores à contagem
+            # permanecem no kardex e não são sobrescritos pelo saldo físico antigo.
+            destino = saldo(item.produto, self.local) + item.diferenca
+            if destino < ZERO:
+                raise ValidationError(
+                    f"Reconte {item.produto.nome}: houve movimentação após a contagem "
+                    "e a diferença levaria o saldo abaixo de zero."
+                )
             ajustar(
-                item.produto, self.local, item.quantidade_contada, usuario,
+                item.produto, self.local, destino, usuario,
                 motivo=f"Inventário #{self.pk}",
             )
         from django.utils import timezone
@@ -629,6 +643,7 @@ class ItemInventario(models.Model):
         "contado", default=False,
         help_text="Alguém conferiu este item na prateleira (não é o palpite da abertura).",
     )
+    contado_em = models.DateTimeField("contado em", null=True, blank=True)
 
     class Meta:
         verbose_name = "item de inventário"

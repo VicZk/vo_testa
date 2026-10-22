@@ -1,6 +1,7 @@
 """Serviços da Governança — interface pública (o Mapa de quartos consome daqui)."""
 
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.utils import timezone
 
 from apps.nucleo.models import registrar_auditoria
@@ -14,7 +15,9 @@ def situacao_uh(uh) -> StatusLimpeza:
 
 def uh_pronta_para_checkin(uh) -> bool:
     """Limpa ou inspecionada. Interface pública para Reservas (guard de entrada)."""
-    return situacao_uh(uh).pronta
+    return situacao_uh(uh).pronta and not TarefaGovernanca.objects.filter(
+        uh=uh, status__in=[TarefaGovernanca.Status.PENDENTE, TarefaGovernanca.Status.EM_ANDAMENTO]
+    ).exists()
 
 
 def status_por_uh() -> dict:
@@ -22,12 +25,21 @@ def status_por_uh() -> dict:
     return {s.uh_id: s.situacao for s in StatusLimpeza.objects.all()}
 
 
+@transaction.atomic
 def definir_status(uh, situacao, usuario=None):
+    from apps.nucleo.sistema import travar_quartos
+
+    travar_quartos(uh)
     status = situacao_uh(uh)
     status.situacao = situacao
     status.atualizado_por = usuario
     status.save()
     return status
+
+
+def sujar_apos_ocupacao(uh, usuario=None):
+    """A indisponibilidade é persistida antes da geração best-effort da faxina."""
+    return definir_status(uh, StatusLimpeza.Situacao.SUJA, usuario)
 
 
 def abrir_faxina(uh, tipo=TarefaGovernanca.Tipo.FAXINA, usuario=None, origem="manual"):
@@ -42,9 +54,10 @@ def abrir_faxina(uh, tipo=TarefaGovernanca.Tipo.FAXINA, usuario=None, origem="ma
     """
     from django.db import transaction
 
-    from apps.nucleo.sistema import travar
+    from apps.nucleo.sistema import travar, travar_quartos
 
     with transaction.atomic():
+        travar_quartos(uh)
         travar(situacao_uh(uh))
         tarefa = TarefaGovernanca.objects.filter(
             uh=uh, tipo=tipo,
@@ -104,13 +117,25 @@ def iniciar_tarefa(tarefa, usuario=None):
     return tarefa
 
 
+@transaction.atomic
 def concluir_tarefa(tarefa, usuario=None):
+    from apps.nucleo.sistema import travar
+
+    travar(tarefa)
     if tarefa.status == TarefaGovernanca.Status.CONCLUIDA:
         return tarefa  # idempotente — não re-dispara o sinal nem re-audita
     tarefa.status = TarefaGovernanca.Status.CONCLUIDA
     tarefa.concluida_em = timezone.now()
     tarefa.save()
-    definir_status(tarefa.uh, StatusLimpeza.Situacao.LIMPA, usuario)
+    outras = TarefaGovernanca.objects.filter(
+        uh=tarefa.uh, status__in=[TarefaGovernanca.Status.PENDENTE, TarefaGovernanca.Status.EM_ANDAMENTO]
+    ).exclude(pk=tarefa.pk)
+    situacao = StatusLimpeza.Situacao.LIMPA
+    if outras.exists():
+        situacao = (StatusLimpeza.Situacao.EM_LIMPEZA
+                    if outras.filter(status=TarefaGovernanca.Status.EM_ANDAMENTO).exists()
+                    else StatusLimpeza.Situacao.SUJA)
+    definir_status(tarefa.uh, situacao, usuario)
     registrar_auditoria(usuario, "faxina_concluida", tarefa, {"quarto": tarefa.uh.numero})
     # A Lavanderia (se ativa) recolhe o enxoval sujo do quarto — via sinal.
     from apps.nucleo.sinais import emitir

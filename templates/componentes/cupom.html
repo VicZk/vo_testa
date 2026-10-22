@@ -36,7 +36,7 @@ Não é documento fiscal: a NFC-e sai pelo módulo Fiscal.
       <tbody>
         {% for i in cupom.itens %}
           <tr>
-            <td>{{ i.qtd }} × {{ i.descricao }}{% if i.qtd != "1" %}<small>{{ i.unitario|intcomma_brl|cut:"R$ " }} cada</small>{% endif %}</td>
+            <td>{{ i.qtd }} × {{ i.descricao }}{% if i.detalhe %}<small>{{ i.detalhe }}</small>{% endif %}{% if i.qtd != "1" %}<small>{{ i.unitario|intcomma_brl|cut:"R$ " }} cada</small>{% endif %}</td>
             <td class="num">{{ i.subtotal|intcomma_brl|cut:"R$ " }}</td>
           </tr>
         {% empty %}

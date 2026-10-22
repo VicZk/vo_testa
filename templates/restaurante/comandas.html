@@ -8,6 +8,8 @@
 <div class="pagina-cabecalho">
   <h1>Restaurante Piscina</h1>
   <div class="pagina-acoes">
+    <a href="{% url 'restaurante:cozinha' %}" class="botao-neutro">Cozinha</a>
+    {% if user.is_staff or user.is_superuser %}<a href="{% url 'restaurante:cardapio_config' %}" class="botao-neutro">Cardápio e adicionais</a>{% endif %}
     <a href="{% url 'restaurante:historico' %}" class="botao-neutro">Histórico</a>
     <a href="{% url 'restaurante:mesas' %}" class="botao-neutro">Pontos</a>
   </div>
@@ -22,6 +24,10 @@
   <h2 class="titulo-topo">Abrir comanda</h2>
   <form method="post" action="{% url 'restaurante:abrir' %}" class="abrir-comanda">
     {% csrf_token %}
+    {% if contas %}<label class="select-wrap"><select name="conta" aria-label="Estadia vinculada">
+      <option value="">Estadia (opcional)…</option>
+      {% for conta in contas %}<option value="{{ conta.pk }}">{{ conta.reserva.uh.numero }} · {{ conta.reserva.hospede.nome }}</option>{% endfor %}
+    </select></label>{% endif %}
     <label class="select-wrap"><select name="mesa"><option value="">Ponto…</option>
       {% for m in mesas %}<option value="{{ m.pk }}">{{ m.nome }}</option>{% endfor %}</select></label>
     {% include "componentes/combo_pessoa.html" with dados=clientes dados_id="clientes-data" campo="cliente" placeholder="Hóspede/cliente…" %}

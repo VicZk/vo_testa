@@ -3187,16 +3187,49 @@ form.htmx-request .botao-primario {
 }
 .fluxo-item:hover { background: var(--superficie-2); }
 .fluxo-uh {
-  display: grid; place-items: center; flex-shrink: 0;
-  width: 40px; height: 40px; border-radius: 10px;
+  display: inline-grid; place-items: center; flex-shrink: 0;
+  min-width: 44px; min-height: 40px; padding: .45rem .55rem; border-radius: 10px;
+  white-space: nowrap; line-height: 1.2;
   font-family: var(--fonte-titulo); font-weight: 600; font-size: 1.02rem;
   color: var(--noturno);
   background: var(--lampiao-claro);
 }
 .fluxo-info { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-.fluxo-info strong { color: var(--tinta); font-weight: 600; font-size: .92rem; }
+.fluxo-info strong { color: var(--tinta); font-weight: 600; font-size: .92rem; overflow-wrap: anywhere; }
 .fluxo-info small { color: var(--tinta-suave); font-size: .78rem; }
 .bloco-vazio { color: var(--tinta-suave); font-size: .9rem; padding: .4rem 0 .2rem; }
+
+/* Caixa: cabeçalho, operação e histórico compartilham a mesma coluna central. */
+.tela-caixa { --conteudo-max: calc(1180px + 4.8rem); }
+.tela-caixa.caixa-sem-sessao { --conteudo-max: calc(620px + 4.8rem); }
+.caixa-sessoes { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; margin: 1.25rem 0; }
+.caixa-sessoes > .letreiro { flex-basis: 100%; color: var(--tinta-suave); margin-bottom: .15rem; }
+.caixa-sessoes [aria-current="page"] { color: var(--superficie); background: var(--noturno); border-color: var(--noturno); }
+.caixa-indicadores { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.caixa-indicadores .cartao { min-width: 0; padding: 1rem 1.25rem; }
+.caixa-indicadores .indicador-valor { font-size: clamp(1.4rem, 2vw, 1.9rem); overflow-wrap: anywhere; }
+.caixa-operacao { display: grid; grid-template-columns: 1.15fr 1fr; gap: 1.25rem; align-items: start; }
+.tela-caixa .caixa-formulario { width: 100%; max-width: none; margin: 0; }
+.caixa-formulario h2 { margin: 0 0 1.2rem; }
+.caixa-conferencia > .ajuda { margin: -.6rem 0 1.2rem; display: block; line-height: 1.5; }
+.caixa-campos { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem 1rem; }
+.caixa-campos > .campo { margin: 0; min-width: 0; }
+.caixa-campos > .campo:has([name="forma_pagamento"]),
+.caixa-campos > .campo:has([name="descricao"]) { grid-column: 1 / -1; }
+.caixa-campos > .campo:has([name="tipo"]) { grid-column: 1 / -1; }
+.caixa-historico { margin-top: 2rem; }
+.caixa-historico h2 { margin-bottom: 1rem; }
+.tela-caixa .acao-sensivel > .form-cartao { margin-inline: 0; }
+@media (max-width: 1100px) {
+  .caixa-operacao { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .caixa-campos { grid-template-columns: 1fr; }
+  .caixa-indicadores { gap: .6rem; }
+  .fluxo-item { flex-wrap: wrap; gap: .55rem; }
+  .fluxo-item > .fluxo-info { flex-basis: calc(100% - 110px); }
+  .fluxo-item > .selo { margin-left: auto; max-width: 100%; }
+}
 
 .modulos-lista { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.1rem; }
 .modulo-chip {
@@ -6836,3 +6869,42 @@ body.escala-dragging .escala-drop { cursor: copy; }
 :is(.comparacao-quartos, .email-confirmacao) > .modal-corpo { min-height:0; overflow:auto; }
 .comparacao-rol { min-width:0; max-width:100%; overflow:auto; overscroll-behavior:contain; }
 .comparacao-rol .pq-cmp-tab { min-width:520px; }
+
+/* Pedidos: escolhas por item e acompanhamento da cozinha. */
+.pedido-form { padding:1.25rem; min-width:0; }
+.pedido-form .pagina-cabecalho { gap:1rem; align-items:start; }
+.pedido-form h2 { margin:0; }
+.pedido-produto { display:grid; gap:.25rem; margin:1rem 0; }
+.pedido-produto > span, .pedido-etapa { color:var(--tinta-suave); font-size:.85rem; }
+.pedido-campo { margin-block:1rem; }
+.pedido-obrigatorio { display:inline; font-size:.75rem; font-weight:400; color:var(--tinta-suave); }
+:is(.pedido-form, .cardapio-config, .comanda-extras, .pdv-produtos > .campo) :is(input:not([type=checkbox]):not([type=radio]):not([type=hidden]), select, textarea) {
+  width:100%; min-width:0; min-height:44px; padding:.6rem .75rem; font:inherit; color:var(--tinta);
+  background:var(--superficie); border:1px solid var(--fio-forte); border-radius:var(--raio-p);
+}
+.pedido-form textarea { resize:vertical; }
+.pedido-campo:has(input[name=quantidade]) { max-width:220px; }
+.pedido-campo :is(input[type=radio], input[type=checkbox]) { width:18px; min-height:18px; margin:0 .5rem 0 0; flex:0 0 auto; }
+.pedido-campo div[id^=id_grupo] { display:grid; gap:.4rem; }
+.pedido-campo div[id^=id_grupo] label { display:flex; align-items:center; min-height:44px; border:1px solid var(--fio); border-radius:10px; padding:.55rem .75rem; cursor:pointer; }
+.pedido-detalhe { display:block; color:var(--tinta-suave); margin-top:.2rem; overflow-wrap:anywhere; }
+.pedido-observacao { margin:.4rem 0; padding:.5rem .65rem; border-left:3px solid var(--lampiao); background:var(--papel); font-size:.9rem; overflow-wrap:anywhere; white-space:pre-wrap; }
+.pdv-item-nome > .botao-texto { display:block; margin-top:.3rem; min-height:36px; }
+.pdv-item { align-items:start; }
+.pdv-produto[hidden] { display:none; }
+.cozinha-quadro { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; align-items:start; }
+.cozinha-coluna { min-width:0; padding:1rem; background:var(--papel); border:1px solid var(--fio); border-radius:16px; }
+.cozinha-coluna > h2 { display:flex; justify-content:space-between; gap:.5rem; font-size:1.05rem; }
+.cozinha-pedido { background:var(--branco, #fff); padding:1rem; margin-block:.8rem; border:1px solid var(--fio); border-radius:12px; overflow-wrap:anywhere; }
+.cozinha-pedido header, .cozinha-pedido form { display:flex; justify-content:space-between; flex-wrap:wrap; gap:.6rem; }
+.cozinha-pedido header { font-size:.82rem; }
+.cozinha-pedido h3 { font-size:1.05rem; margin:.8rem 0; }
+.cozinha-pedido form { margin-top:1rem; }
+.cardapio-config { display:grid; grid-template-columns:minmax(220px, .7fr) minmax(0,2fr); gap:1.25rem; align-items:start; }
+.cardapio-config .painel-bloco { min-width:0; padding:1.25rem; }
+.cardapio-grupos { display:grid; gap:.5rem; margin-top:1rem; }
+.cardapio-campos, .cardapio-opcao { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.8rem; }
+.cardapio-opcao { margin-block:1rem; padding:1rem; border:1px solid var(--fio); border-radius:12px; min-width:0; }
+.cardapio-config :is(input[type=checkbox], input[type=radio]) { width:18px; min-height:18px; }
+@media (max-width:800px) { .cozinha-quadro, .cardapio-config { grid-template-columns:1fr; } }
+@media (max-width:480px) { .cardapio-campos, .cardapio-opcao { grid-template-columns:1fr; } .pedido-form { padding:.75rem; } }

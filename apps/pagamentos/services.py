@@ -213,6 +213,9 @@ def estornar(cobranca, operador):
 
 @transaction.atomic
 def cancelar(cobranca, operador):
+    from apps.nucleo.sistema import travar
+
+    travar(cobranca)
     if cobranca.status != Cobranca.Status.PENDENTE:
         raise ValidationError("Só cobranças pendentes podem ser canceladas.")
     cobranca.status = Cobranca.Status.CANCELADO
@@ -243,6 +246,9 @@ def registrar_liquidacao(cobranca, *, valor_liquido=None, taxa=None,
     Idempotente: rechamar com os mesmos dados não duplica. Só cobranças pagas
     liquidam. `valor_liquido`/`taxa` são o depósito real (bruto − taxa da
     adquirente); `data_liquidacao`/`id_liquidacao` amarram na linha do extrato."""
+    from apps.nucleo.sistema import travar
+
+    travar(cobranca)
     if cobranca.status != Cobranca.Status.PAGO:
         raise ValidationError("Só uma cobrança paga pode ser liquidada.")
     valor_liquido = Decimal(str(valor_liquido)) if valor_liquido is not None else None

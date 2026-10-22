@@ -7,9 +7,11 @@ operador com a área Logbook — decisão do produto (agilidade de turno).
 """
 
 from django.core.exceptions import ValidationError
+from django.db import transaction
 
 from .models import ComentarioLogbook, EntradaLogbook
 from .models.financeiro import registrar_auditoria
+from .sistema import travar
 
 
 def registrar_ocorrencia(usuario, texto, importante=False):
@@ -22,9 +24,11 @@ def registrar_ocorrencia(usuario, texto, importante=False):
     return entrada
 
 
+@transaction.atomic
 def comentar(usuario, entrada, texto):
     """Adiciona uma resposta ao tópico. Se a ocorrência está aberta e quem
     responde não é o autor, passa para 'em andamento' (alguém pegou)."""
+    travar(entrada)
     texto = (texto or "").strip()
     if not texto:
         raise ValidationError("Escreva uma resposta.")
@@ -39,7 +43,9 @@ def comentar(usuario, entrada, texto):
     return comentario
 
 
+@transaction.atomic
 def resolver(usuario, entrada, nota=""):
+    travar(entrada)
     if entrada.status == EntradaLogbook.RESOLVIDA:
         return entrada
     entrada.marcar_resolvida(usuario, nota)
@@ -51,7 +57,9 @@ def resolver(usuario, entrada, nota=""):
     return entrada
 
 
+@transaction.atomic
 def reabrir(usuario, entrada):
+    travar(entrada)
     if entrada.status != EntradaLogbook.RESOLVIDA:
         return entrada
     entrada.reabrir()

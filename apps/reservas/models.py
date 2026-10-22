@@ -517,6 +517,10 @@ class Reserva(models.Model):
                 condition=Q(checkout__gt=F("checkin")),
                 name="reserva_checkout_depois_do_checkin",
             ),
+            models.UniqueConstraint(
+                fields=["uh"], condition=Q(status="hospedada"),
+                name="reserva_uma_estadia_fisica_por_uh",
+            ),
             # Antioverbooking: duas reservas ativas não podem ocupar a mesma UH
             # em períodos sobrepostos. daterange é [checkin, checkout) — a noite
             # do checkout fica livre para a próxima entrada.
@@ -673,16 +677,26 @@ class Reserva(models.Model):
                 f"Ação disponível apenas para reserva em: {nomes}."
             )
 
+    @transaction.atomic
     def confirmar(self, usuario):
         """Pré-reserva/orçamento → confirmada (sinal recebido ou garantia)."""
+        from apps.nucleo.sistema import travar, travar_quartos
+        from apps.reservas.services import conferir_berco, conferir_disponibilidade_reserva
+
+        travar(self)
+        travar_quartos(self.uh)
         era_orcamento = self.status == self.Status.ORCAMENTO
         self._exige_status(self.Status.ORCAMENTO, self.Status.PRE_RESERVA)
+        conferir_disponibilidade_reserva(self)
         # Orçamento não reservava o pool de colchões; ao ativar, revalida a noite
         # (pré-reserva já contava, então só o orçamento precisa reconferir).
         if era_orcamento:
             from apps.reservas.colchoes import configurado
             from apps.reservas.services import conferir_arranjo
             if configurado(self.uh):
+                from apps.nucleo.sistema import travar
+
+                travar(ColchoesExtra.atual())
                 conf = conferir_arranjo(
                     self.uh, casais=self.casais, solteiros=self.solteiros,
                     usa_sofa_cama=self.usa_sofa_cama, adultos=self.adultos,
@@ -690,6 +704,8 @@ class Reserva(models.Model):
                     checkout=self.checkout, excluir_id=self.pk)
                 if conf["erros"]:
                     raise ValidationError(conf["erros"])
+        if self.usa_berco:
+            conferir_berco(self.checkin, self.checkout, excluir_id=self.pk)
         self.status = self.Status.CONFIRMADA
         self.expira_em = None  # confirmada não expira mais
         if self.confirmada_em is None:
@@ -701,10 +717,13 @@ class Reserva(models.Model):
         # Atômico + trava da reserva: se uma diária/taxa falhar, nada fica pela
         # metade (reserva hospedada com conta incompleta); clique duplo ou duas
         # recepções ao mesmo tempo esbarram no status já relido do banco.
-        from apps.nucleo.sistema import travar
+        from apps.nucleo.sistema import travar, travar_quartos
+        from apps.reservas.services import conferir_entrada
 
         travar(self)
         self._exige_status(self.Status.CONFIRMADA, self.Status.PRE_RESERVA)
+        travar_quartos(self.uh)
+        conferir_entrada(self)
         # FNRH obrigatória: ficha completa de cada hóspede antes de hospedar.
         if getattr(settings, "FNRH_BLOQUEAR_CHECKIN", True) and not self.fnrh_pronta:
             raise ValidationError(
@@ -754,11 +773,20 @@ class Reserva(models.Model):
         # Trava reserva e conta antes de conferir o saldo: um consumo lançado ao
         # mesmo tempo (lancar_na_conta também trava a conta) ou entra antes e
         # aparece no saldo, ou chega depois e é recusado por conta fechada.
-        from apps.nucleo.sistema import travar
+        from apps.nucleo.sistema import travar, travar_quartos
 
         travar(self)
         self._exige_status(self.Status.HOSPEDADA)
+        travar_quartos(self.uh)
         conta = travar(self.conta)
+        from apps.reservas.services import pendencias_consumo
+
+        pendentes = pendencias_consumo(conta)
+        if pendentes:
+            raise ValidationError(
+                "Há consumos pendentes: " + ", ".join(item["rotulo"] for item in pendentes)
+                + ". Fature ou cancele cada pedido antes da saída."
+            )
         # Único bloqueio de check-out é o dinheiro: saldo tem que estar zerado.
         # (A pousada não trabalha com consumo de frigobar, então não há trava de
         # conferência na saída.)
@@ -793,6 +821,9 @@ class Reserva(models.Model):
         self.status = self.Status.CHECKOUT
         self.checkout_real = timezone.now()
         self.save()
+        from apps.governanca.services import sujar_apos_ocupacao
+
+        sujar_apos_ocupacao(self.uh, usuario)
         # Governança (se ativa) escuta este sinal para gerar a faxina. `emitir`: um
         # módulo ouvinte que falhe não desfaz a saída (ver apps/nucleo/sinais.py).
         from apps.nucleo.sinais import emitir
@@ -804,12 +835,18 @@ class Reserva(models.Model):
             usuario=usuario, origem="checkout",
         )
 
-    def cancelar(self, usuario, motivo: str):
+    @transaction.atomic
+    def cancelar(self, usuario, motivo: str, *, valor_retido=None):
+        from apps.nucleo.sistema import travar
+
+        travar(self)
         self._exige_status(
             self.Status.ORCAMENTO, self.Status.PRE_RESERVA, self.Status.CONFIRMADA
         )
         if not motivo.strip():
             raise ValidationError("Informe o motivo do cancelamento.")
+        if valor_retido is not None:
+            self.valor_retido = valor_retido
         self.status = self.Status.CANCELADA
         self.motivo_cancelamento = motivo
         self.cancelada_em = timezone.now()
@@ -826,7 +863,11 @@ class Reserva(models.Model):
             motivo=motivo, usuario=usuario,
         )
 
+    @transaction.atomic
     def marcar_no_show(self, usuario, motivo=""):
+        from apps.nucleo.sistema import travar
+
+        travar(self)
         self._exige_status(self.Status.CONFIRMADA)
         self.status = self.Status.NO_SHOW
         self.cancelada_em = timezone.now()
@@ -841,15 +882,24 @@ class Reserva(models.Model):
             motivo=motivo, usuario=usuario,
         )
 
+    @transaction.atomic
     def desfazer_no_show(self, usuario, motivo):
         """O hóspede apareceu depois (atraso, ou o check-in ficou esquecido no sistema):
         a reserva volta a confirmada — se o quarto ainda estiver livre nas noites dela.
         Se já foi vendido, a constraint de overbooking recusa e nada muda."""
+        from apps.nucleo.sistema import travar, travar_quartos
+        from apps.reservas.services import conferir_berco, conferir_disponibilidade_reserva
+
+        travar(self)
+        travar_quartos(self.uh)
         self._exige_status(self.Status.NO_SHOW)
         if not (motivo or "").strip():
             raise ValidationError("Informe o motivo.")
         if self.checkout <= timezone.localdate():
             raise ValidationError("A estadia já terminou: faça uma reserva nova.")
+        conferir_disponibilidade_reserva(self)
+        if self.usa_berco:
+            conferir_berco(self.checkin, self.checkout, excluir_id=self.pk)
         saiu_em = self.cancelada_em
         self.status = self.Status.CONFIRMADA
         self.cancelada_em = None   # voltou à carteira: o pickup não conta como queda
@@ -1330,6 +1380,15 @@ class LancamentoConta(models.Model):
         "natureza fiscal", max_length=10, choices=NaturezaFiscal.choices
     )
     descricao = models.CharField("descrição", max_length=200)
+    observacoes = models.TextField("detalhes do consumo", blank=True)
+    quantidade = models.DecimalField(
+        "quantidade", max_digits=12, decimal_places=3, null=True, blank=True,
+        validators=[MinValueValidator(Decimal("0.001"))],
+    )
+    preco_unitario = models.DecimalField(
+        "preço unitário (R$)", max_digits=10, decimal_places=2, null=True, blank=True,
+        validators=[MinValueValidator(Decimal("0.00"))],
+    )
     valor = models.DecimalField(
         "valor (R$)", max_digits=10, decimal_places=2,
         validators=[MinValueValidator(Decimal("0.01"))],
@@ -1368,6 +1427,12 @@ class LancamentoConta(models.Model):
             raise ValidationError("A conta deste quarto já foi fechada.")
         if not self.natureza:
             raise ValidationError({"natureza": "Informe a natureza fiscal."})
+        if (self.quantidade is None) != (self.preco_unitario is None):
+            raise ValidationError("Quantidade e preço unitário devem ser informados juntos.")
+        valores = (self.quantidade, self.preco_unitario, self.valor)
+        if all(isinstance(v, Decimal) and v.is_finite() for v in valores):
+            if (self.quantidade * self.preco_unitario).quantize(Decimal("0.01")) != self.valor:
+                raise ValidationError("O valor do item não confere com a quantidade e o preço unitário.")
 
     def save(self, *args, **kwargs):
         if not self._state.adding:

@@ -35,6 +35,83 @@ if _PLAYWRIGHT_OK:
 class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
     LOCALE = "pt-BR"
 
+    def test_arrastar_reserva_entre_linhas_muda_quarto_e_preserva_conta(self):
+        from apps.nucleo.models import UH
+
+        p = self.page
+        p.set_viewport_size({"width": 1440, "height": 1000})
+        p.goto(self.url(reverse("reservas:mapa")))
+        destino = UH.objects.get(numero="QA-02")
+        barra = p.locator(f'.mapa-barra[data-reserva="{self.hospedagem.pk}"]')
+        linha = p.locator(f'.mapa-linha[data-uh="{destino.pk}"]')
+        barra.scroll_into_view_if_needed()
+        origem = barra.bounding_box()
+        alvo = linha.bounding_box()
+        x = origem["x"] + origem["width"] / 2
+        y = origem["y"] + origem["height"] / 2
+        p.once("dialog", lambda dialog: dialog.accept())
+        with p.expect_response(lambda response: response.url.endswith(
+            reverse("reservas:trocar_quarto", args=[self.hospedagem.pk])
+        ), timeout=7000) as resposta:
+            p.mouse.move(x, y)
+            p.mouse.down()
+            p.mouse.move(x, alvo["y"] + alvo["height"] / 2, steps=12)
+            p.mouse.up()
+        self.assertTrue(resposta.value.json()["ok"])
+        self.hospedagem.refresh_from_db()
+        self.assertEqual(self.hospedagem.uh_id, destino.pk)
+        self.assertEqual(self.hospedagem.conta.pk, self.conta.pk)
+        expect(linha.locator(f'[data-reserva="{self.hospedagem.pk}"]')).to_be_visible()
+        self._foto("reserva-arraste-concluido.png")
+
+    def test_caixa_alinha_paineis_e_dashboard_contem_identificacao_do_quarto(self):
+        from apps.reservas.models import Reserva
+
+        Reserva.objects.create(
+            uh=self.room, hospede=self.guest, criado_por=self.op,
+            checkin=self.today, checkout=self.today + timedelta(days=2),
+            status=Reserva.Status.CONFIRMADA, valor_diaria=300,
+        )
+        p = self.page
+        p.emulate_media(reduced_motion="reduce")
+        for largura in (320, 390, 1024, 1440, 2560, 3440):
+            with self.subTest(largura=largura):
+                p.set_viewport_size({"width": largura, "height": 900})
+                p.goto(self.url(reverse("caixa")))
+                medidas = p.evaluate("""() => {
+                    const box=s=>document.querySelector(s).getBoundingClientRect();
+                    const main=box('.main'), painel=box('.caixa-operacao');
+                    const forms=[...document.querySelectorAll('.caixa-formulario')].map(el=>{
+                        const r=el.getBoundingClientRect(), t=el.querySelector('h2').getBoundingClientRect();
+                        return {x:r.x,y:r.y,right:r.right,ty:t.y,tr:t.right};
+                    });
+                    return {centro:main.x+main.width/2, painel:painel.x+painel.width/2,
+                            largura:document.documentElement.scrollWidth, forms};
+                }""")
+                self.assertAlmostEqual(medidas["centro"], medidas["painel"], delta=1)
+                self.assertLessEqual(medidas["largura"], largura + 1)
+                for form in medidas["forms"]:
+                    self.assertGreater(form["ty"], form["y"])
+                    self.assertLess(form["tr"], form["right"])
+                if largura >= 1440:
+                    self.assertAlmostEqual(medidas["forms"][0]["y"], medidas["forms"][1]["y"], delta=1)
+                self._foto(f"caixa-alinhado-{largura}.png")
+                p.goto(self.url(reverse("dashboard")))
+                expect(p.get_by_role("heading", name="Visão geral", exact=True)).to_be_visible()
+                badge = p.locator('.fluxo-uh').filter(has_text="QA-01").first
+                texto = badge.evaluate("""el => {
+                    const r=el.getBoundingClientRect(), range=document.createRange();
+                    range.selectNodeContents(el);const t=range.getBoundingClientRect();
+                    return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,
+                            textLeft:t.left,textRight:t.right,textTop:t.top,textBottom:t.bottom};
+                }""")
+                self.assertGreaterEqual(texto["textLeft"], texto["left"])
+                self.assertLessEqual(texto["textRight"], texto["right"])
+                self.assertGreaterEqual(texto["textTop"], texto["top"])
+                self.assertLessEqual(texto["textBottom"], texto["bottom"])
+                self.assertLessEqual(p.evaluate("document.documentElement.scrollWidth"), largura + 1)
+                self._foto(f"dashboard-identificacao-{largura}.png")
+
     def test_busca_titulo_e_formulario_compartilham_o_centro_da_area_util(self):
         p = self.page
         p.emulate_media(reduced_motion="reduce")
@@ -592,6 +669,8 @@ class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
         p = self.page
         self.abrir("restaurante:comanda", self.comanda.pk)
         p.locator(".pdv-produto").filter(has_text="QA Água").click()
+        p.get_by_role("button", name="Adicionar à comanda", exact=True).click()
+        expect(p.get_by_role("dialog")).to_be_hidden()
         expect(p.locator("#comanda-itens .comanda-total-linha")).to_contain_text("21,00")
         p.locator("select[name=forma]").select_option(str(self.cash.pk))
         self.enviar("Fechar comanda")
@@ -602,6 +681,116 @@ class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
         self.assertEqual(saldo(self.product, self.kitchen), Decimal("17"))
         expect(p.get_by_role("button", name="Fechar comanda")).to_have_count(0)
         self._foto("restaurante-fechada-390.png", full_page=True)
+
+    def test_pedido_com_ponto_adicional_e_observacao_chega_a_cozinha_e_extrato(self):
+        from apps.restaurante.models import GrupoOpcaoCardapio, OpcaoCardapio
+
+        self.product.nome = "Bife acebolado QA"
+        self.product.save()
+        ponto = GrupoOpcaoCardapio.objects.create(produto=self.product, nome="Ponto da carne", minimo=1)
+        OpcaoCardapio.objects.create(grupo=ponto, nome="Ao ponto")
+        OpcaoCardapio.objects.create(grupo=ponto, nome="Bem passada")
+        extras = GrupoOpcaoCardapio.objects.create(produto=self.product, nome="Adicionais", maximo=2)
+        OpcaoCardapio.objects.create(grupo=extras, nome="Batata extra", adicional=Decimal("5"))
+        p = self.page
+        self.abrir("restaurante:comanda", self.comanda.pk)
+        p.locator(".pdv-produto").filter(has_text="Bife acebolado QA").click()
+        dialogo = p.get_by_role("dialog")
+        dialogo.get_by_label("Quantidade", exact=False).fill("2")
+        dialogo.get_by_label("Ao ponto", exact=True).check()
+        dialogo.get_by_label("Batata extra", exact=False).check()
+        dialogo.get_by_label("Observações para a cozinha", exact=False).fill("Sem cebola; molho à parte")
+        self._foto("pedido-preparo-390.png")
+        dialogo.get_by_role("button", name="Adicionar à comanda", exact=True).click()
+        expect(dialogo).to_be_hidden()
+        expect(p.locator("#comanda-itens")).to_contain_text("Sem cebola; molho à parte")
+        expect(p.locator(".comanda-total-linha")).to_contain_text("38,00")
+        p.get_by_role("button", name="Editar Bife acebolado QA", exact=True).click()
+        expect(dialogo.get_by_label("Ao ponto", exact=True)).to_be_checked()
+        expect(dialogo.get_by_label("Batata extra", exact=False)).to_be_checked()
+        dialogo.get_by_label("Quantidade", exact=False).fill("1")
+        dialogo.get_by_label("Bem passada", exact=True).check()
+        dialogo.get_by_role("button", name="Salvar pedido", exact=True).click()
+        expect(dialogo).to_be_hidden()
+        expect(p.locator(".comanda-total-linha")).to_contain_text("26,00")
+        p.get_by_role("button", name="Conta do quarto", exact=True).click()
+        p.locator(".comanda-fechar select[name=conta_id]").select_option(str(self.conta.pk))
+        self.enviar("Fechar comanda")
+        lancamento = self.conta.lancamentos.get(descricao="Restaurante: Bife acebolado QA")
+        self.assertEqual(lancamento.quantidade, 1)
+        self.assertEqual(lancamento.preco_unitario, 12)
+        self.assertIn("Bem passada", lancamento.observacoes)
+        self.assertIn("Sem cebola", lancamento.observacoes)
+        self.abrir("restaurante:cozinha")
+        pedido = p.locator(".cozinha-pedido").filter(has_text="Bife acebolado QA")
+        expect(pedido).to_contain_text("Bem passada")
+        expect(pedido).to_contain_text("Sem cebola; molho à parte")
+        self._foto("cozinha-pedido-390.png", full_page=True)
+        for acao in ("Iniciar preparo", "Marcar pronto", "Confirmar entrega"):
+            pedido.get_by_role("button", name=acao, exact=True).click()
+            p.wait_for_load_state("domcontentloaded")
+        expect(pedido).to_have_count(0)
+        self.abrir("reservas:extrato", self.hospedagem.pk)
+        expect(p.locator(".extrato")).to_contain_text("Sem cebola; molho à parte")
+        expect(p.locator(".extrato")).to_contain_text("Bem passada")
+        self._foto("extrato-item-personalizado-390.png", full_page=True)
+
+    def test_extrato_confere_conta_imprime_a4_e_continua_disponivel_apos_checkout(self):
+        from apps.lavanderia.services import cancelar_ordem
+        from apps.reservas import services
+
+        cancelar_ordem(self.ordem, self.op, "Cancelamento de fixture para conferência final")
+        for numero in range(1, 46):
+            services.lancar_na_conta(self.conta, "consumo", "consumo", f"Consumo de conferência {numero:02}",
+                                    Decimal("12.50"), self.op, quantidade=1, preco_unitario=Decimal("12.50"))
+        services.receber_pagamento(self.conta, self.op, self.cash, Decimal("100"), observacao="Pagamento parcial QA")
+        p = self.page
+        self.abrir("reservas:detalhe", self.hospedagem.pk)
+        with p.expect_popup() as aberta:
+            p.get_by_role("link", name="Conferir e imprimir conta", exact=True).click()
+        extrato = aberta.value
+        extrato.wait_for_load_state("networkidle")
+        expect(extrato.get_by_role("heading", name="Conferência da hospedagem", exact=True)).to_be_visible()
+        expect(extrato.locator(".extrato-saldo dd")).to_have_text("R$ 1.062,50")
+        for largura in (320, 390, 1440, 2560, 3440):
+            extrato.set_viewport_size({"width": largura, "height": 900})
+            self.assertLessEqual(extrato.evaluate("document.documentElement.scrollWidth"), largura + 1)
+        extrato.emulate_media(media="print")
+        expect(extrato.locator(".extrato-acoes")).to_be_hidden()
+        self.assertEqual(extrato.locator("thead").first.evaluate("el => getComputedStyle(el).display"), "table-header-group")
+        pasta = os.environ.get("E2E_EVIDENCIAS")
+        if pasta:
+            extrato.pdf(path=str(Path(pasta) / "conferencia-hospedagem-a4.pdf"), prefer_css_page_size=True, print_background=True)
+        services.receber_pagamento(self.conta, self.op, self.cash, self.conta.saldo(), observacao="Quitação no check-out")
+        self.hospedagem.fazer_checkout(self.op)
+        extrato.reload()
+        expect(extrato.get_by_role("heading", name="Extrato de encerramento", exact=True)).to_be_visible()
+        expect(extrato.locator(".extrato-saldo dd")).to_have_text("R$ 0,00")
+        expect(extrato.locator(".extrato")).to_contain_text("Quitação no check-out")
+        if pasta:
+            extrato.pdf(path=str(Path(pasta) / "encerramento-hospedagem-a4.pdf"), prefer_css_page_size=True, print_background=True)
+        extrato.close()
+
+    def test_portal_retem_observacoes_no_erro_e_envia_escolhas_para_cozinha(self):
+        from apps.restaurante.models import Comanda, GrupoOpcaoCardapio, OpcaoCardapio
+
+        grupo = GrupoOpcaoCardapio.objects.create(produto=self.product, nome="Temperatura", minimo=1)
+        OpcaoCardapio.objects.create(grupo=grupo, nome="Gelada")
+        self.abrir("portal:home", self.acesso.token)
+        p = self.page
+        p.get_by_label("Quantidade de QA Água", exact=True).fill("2")
+        p.get_by_text("Preparo e observações · QA Água", exact=True).click()
+        p.get_by_label("Observações para a cozinha", exact=True).fill("Sem gelo, por favor")
+        self.enviar("Enviar pedido ao quarto")
+        expect(p.get_by_label("Quantidade de QA Água", exact=True)).to_have_value("2")
+        expect(p.get_by_label("Observações para a cozinha", exact=True)).to_have_value("Sem gelo, por favor")
+        p.get_by_label("Gelada", exact=True).check()
+        self._foto("portal-pedido-personalizado-390.png", full_page=True)
+        self.enviar("Enviar pedido ao quarto")
+        pedido = Comanda.objects.filter(conta=self.conta).latest("pk")
+        self.assertEqual(pedido.itens.get().observacoes, "Sem gelo, por favor")
+        self.assertEqual(pedido.itens.get().resumo_opcoes, "Temperatura: Gelada")
+        self.assertEqual(pedido.itens.get().quantidade, 2)
 
     def test_lavanderia_avanca_e_cobra_as_pecas(self):
         p = self.page

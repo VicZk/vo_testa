@@ -78,6 +78,10 @@ class OrdemLavanderia(models.Model):
         related_name="ordem_lavanderia", verbose_name="recebimento no caixa",
     )
     conta_ref = models.CharField("conta do quarto", max_length=120, blank=True)
+    conta = models.ForeignKey(
+        "reservas.ContaHospedagem", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="ordens_lavanderia", verbose_name="estadia vinculada",
+    )
     criado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
         related_name="ordens_lavanderia", verbose_name="recebida por",

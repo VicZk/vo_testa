@@ -5,7 +5,7 @@
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">{% if tem_reservas %}Recepção · hoje{% else %}Hoje{% endif %}</p>
 <div class="pagina-cabecalho">
-  <h1>{% if tem_reservas %}O corredor{% else %}Visão geral{% endif %}</h1>
+  <h1>Visão geral</h1>
   {% if corredor %}
   <div class="acoes bloco-plano">
     <a href="{% url 'reservas:mapa_quartos' %}" class="botao-neutro">Filtros e troca</a>

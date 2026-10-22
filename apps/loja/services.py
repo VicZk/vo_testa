@@ -123,6 +123,7 @@ def _finalizar_venda(operador, local, itens, destino, forma, cliente, conta_id,
             reservas.lancar_na_conta(
                 conta, "consumo", produto.natureza,
                 f"Loja: {produto.nome}", valor, operador,
+                quantidade=qtd, preco_unitario=produto.preco_venda,
             )
         if desconto > 0:
             reservas.lancar_na_conta(

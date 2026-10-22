@@ -2,14 +2,18 @@
 {% load moeda %}
 
 {% block titulo %}Caixa | CRM Vô Testa{% endblock %}
+{% block conteudo_classe %}tela-caixa{% if not sessao %} caixa-sem-sessao{% endif %}{% endblock %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Operação</p>
-<h1>Caixa</h1>
+<div class="pagina-cabecalho">
+  <h1>Caixa</h1>
+  <a href="{% url 'caixa_sessoes' %}" class="botao-neutro">Histórico de sessões</a>
+</div>
 
 {% if not sessao %}
   <p class="subtitulo">Você não tem caixa aberto. Abra a sessão do seu módulo com o fundo de troco.</p>
-  <form method="post" action="{% url 'caixa_abrir' %}" class="form-cartao">
+  <form method="post" action="{% url 'caixa_abrir' %}" class="form-cartao caixa-formulario" aria-label="Abrir caixa">
     {% csrf_token %}
     {% include "nucleo/partials/campos.html" with form=form_abrir %}
     <div class="acoes">
@@ -23,18 +27,22 @@
     com fundo de {{ sessao.fundo_troco|intcomma_brl }}.
   </p>
   {% if sessoes_abertas.count > 1 %}
-  <p class="subtitulo linha-selos">
+  <nav class="caixa-sessoes" aria-label="Seus caixas abertos">
     <span class="letreiro">Seus caixas abertos:</span>
     {% for s in sessoes_abertas %}
-      <a href="?modulo={{ s.modulo }}" class="botao-mini {% if s.pk == sessao.pk %}botao-primario{% else %}botao-neutro{% endif %}">{{ s.get_modulo_display }}</a>
+      <a href="?modulo={{ s.modulo }}" class="botao-neutro{% if s.pk == sessao.pk %} ativo{% endif %}"{% if s.pk == sessao.pk %} aria-current="page"{% endif %}>{{ s.get_modulo_display }}</a>
     {% endfor %}
-  </p>
+  </nav>
   {% endif %}
 
-  <div class="cartoes cartoes-indicadores">
+  <div class="caixa-indicadores">
     <div class="cartao">
       <span class="indicador-rotulo letreiro">Movimentos</span>
       <span class="indicador-valor">{{ sessao.movimentos.count }}</span>
+    </div>
+    <div class="cartao">
+      <span class="indicador-rotulo letreiro">Fundo de troco</span>
+      <span class="indicador-valor">{{ sessao.fundo_troco|intcomma_brl }}</span>
     </div>
     {% for nome, total in sessao.totais_por_forma %}
       <div class="cartao">
@@ -44,24 +52,23 @@
     {% endfor %}
   </div>
 
-  <div class="colunas">
-    <section>
-      <h2>Registrar movimento
+  <div class="caixa-operacao">
+      <form method="post" action="{% url 'caixa_movimento' %}" class="form-cartao caixa-formulario" aria-labelledby="caixa-registrar-titulo">
+      <h2 id="caixa-registrar-titulo">Registrar movimento
         <span class="info-dica dica" data-dica="Recebimento = entra dinheiro por pagamento · Reforço = coloca troco no caixa · Sangria = retira dinheiro do caixa">ⓘ</span>
       </h2>
-      <form method="post" action="{% url 'caixa_movimento' %}" class="form-cartao">
         {% csrf_token %}
         <input type="hidden" name="modulo" value="{{ sessao.modulo }}">
+        <div class="caixa-campos">
         {% include "nucleo/partials/campos.html" with form=form_movimento %}
+        </div>
         <div class="acoes">
           <button type="submit" class="botao-primario">Registrar</button>
         </div>
       </form>
-    </section>
-
-    <section>
-      <h2>Fechar caixa</h2>
-      <form method="post" action="{% url 'caixa_fechar' %}" class="form-cartao">
+      <form method="post" action="{% url 'caixa_fechar' %}" class="form-cartao caixa-formulario caixa-conferencia" aria-labelledby="caixa-fechar-titulo">
+      <h2 id="caixa-fechar-titulo">Conferir e fechar</h2>
+      <p class="ajuda">Ao terminar o turno, informe o dinheiro contado e registre qualquer observação.</p>
         {% csrf_token %}
         <input type="hidden" name="modulo" value="{{ sessao.modulo }}">
         {% include "nucleo/partials/campos.html" with form=form_fechar %}
@@ -72,10 +79,10 @@
           </button>
         </div>
       </form>
-    </section>
   </div>
 
-  <h2>Movimentos da sessão</h2>
+  <section class="caixa-historico" aria-labelledby="caixa-movimentos-titulo">
+  <h2 id="caixa-movimentos-titulo">Movimentos da sessão</h2>
   <table class="tabela">
     <thead>
       <tr><th>Hora</th><th>Tipo</th><th>Forma</th><th class="num">Valor</th><th>Descrição</th></tr>
@@ -94,5 +101,6 @@
       {% endfor %}
     </tbody>
   </table>
+  </section>
 {% endif %}
 {% endblock %}

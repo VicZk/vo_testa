@@ -51,7 +51,18 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
     </div>
   {% endif %}
 
+  {% if pendencias_consumo %}
+    <div class="mensagem warning" role="status">
+      <strong>Consumos pendentes antes da saída</strong>
+      <ul>{% for item in pendencias_consumo %}<li><a href="{{ item.url }}">{{ item.rotulo }}</a> · {{ item.valor|intcomma_brl }}</li>{% endfor %}</ul>
+      Fature ou cancele os pedidos para concluir a saída.
+    </div>
+  {% endif %}
+
   <div class="acoes-reserva-barra">
+    {% if conta %}
+      <a href="{% url 'reservas:extrato' reserva.pk %}" class="botao-neutro" target="_blank" rel="noopener">Conferir e imprimir conta</a>
+    {% endif %}
     {# ── O que fazer agora (um por estado) ───────────────────────────────── #}
     {% if reserva.status == "orcamento" or reserva.status == "pre_reserva" %}
       <form method="post" action="{% url 'reservas:confirmar' reserva.pk %}">
@@ -66,7 +77,7 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
     {% if reserva.status == "hospedada" %}
       <form method="post" action="{% url 'reservas:checkout' reserva.pk %}"
             onsubmit="return confirm('Concluir a saída (check-out)? A conta precisa estar zerada.')">
-        {% csrf_token %}<button type="submit" class="botao-primario">Fazer saída (check-out)</button>
+        {% csrf_token %}<button type="submit" class="botao-primario"{% if pendencias_consumo %} disabled title="Resolva os consumos pendentes antes da saída"{% endif %}>Fazer saída (check-out)</button>
       </form>
     {% endif %}
 
@@ -281,7 +292,7 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
 <div class="cartao painel-financeiro">
   <p class="rot-secao">Financeiro</p>
   <div class="kpi-grade">
-    <div class="kpi"><span class="kpi-rotulo letreiro">Total previsto</span><strong class="kpi-valor num">{{ fin_total|intcomma_brl }}</strong></div>
+    <div class="kpi"><span class="kpi-rotulo letreiro">{% if conta %}Total da conta{% else %}Total previsto{% endif %}</span><strong class="kpi-valor num">{{ fin_total|intcomma_brl }}</strong></div>
     <div class="kpi"><span class="kpi-rotulo letreiro">Recebido</span><strong class="kpi-valor num">{{ fin_recebido|intcomma_brl }}</strong></div>
     {% if fin_cobr_pendente %}<div class="kpi"><span class="kpi-rotulo letreiro">Sinal/Pix pendente</span><strong class="kpi-valor num">{{ fin_cobr_pendente|intcomma_brl }}</strong></div>{% endif %}
     <div class="kpi kpi-destaque"><span class="kpi-rotulo letreiro">Saldo a receber</span><strong class="kpi-valor num">{{ fin_saldo|intcomma_brl }}</strong></div>

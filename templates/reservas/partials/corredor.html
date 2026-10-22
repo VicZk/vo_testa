@@ -3,7 +3,7 @@
   {% for q in quartos %}
     {% if q.reserva %}
       <a href="{% url 'reservas:detalhe' q.reserva.pk %}"
-         class="porta sit-{{ q.situacao }} dica"
+         class="porta sit-{{ q.situacao }} dica" draggable="false"
          data-dica="- {{ q.label }}&#10;- {{ q.uh.tipo.nome }}{% if q.lotacao %}&#10;- acomoda {{ q.lotacao }}{% endif %}&#10;- {{ q.reserva.hospede.nome }}{% if q.grupo %}&#10;- Grupo: {{ q.grupo }}{% endif %}{% if q.pcd %}&#10;- PCD{% endif %}{% if q.periodo %}&#10;- {{ q.periodo }}{% endif %}{% if q.saldo is not None %}&#10;- saldo {{ q.saldo|intcomma_brl }}{% endif %}{% if q.limpeza_label %}&#10;- {{ q.limpeza_label }}{% endif %}{% if q.badge %}&#10;- {{ q.badge }}{% endif %}{% if arrastar %}{% if q.situacao == 'ocupada' or q.situacao == 'chegada' %}&#10;- arraste para trocar{% endif %}{% endif %}"
          {% if arrastar %}{% if q.situacao == 'ocupada' or q.situacao == 'chegada' %}data-reserva="{{ q.reserva.pk }}" data-nome="{{ q.reserva.hospede.nome }}" data-num="{{ q.uh.numero|cut:'Quarto ' }}"{% endif %}{% endif %}
          {% if filtravel %}x-show="(tipos.length===0 || tipos.includes('{{ q.uh.tipo.pk }}')) && (sits.length===0 || sits.includes('{{ q.situacao }}'))"{% endif %}>

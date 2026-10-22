@@ -23,6 +23,10 @@
   <h2 class="titulo-topo">Nova ordem</h2>
   <form method="post" action="{% url 'lavanderia:abrir' %}" class="abrir-comanda">
     {% csrf_token %}
+    {% if contas %}<label class="select-wrap"><select name="conta" aria-label="Estadia vinculada">
+      <option value="">Estadia (opcional)…</option>
+      {% for conta in contas %}<option value="{{ conta.pk }}">{{ conta.reserva.uh.numero }} · {{ conta.reserva.hospede.nome }}</option>{% endfor %}
+    </select></label>{% endif %}
     {% include "componentes/combo_pessoa.html" with dados=clientes dados_id="clientes-data" campo="cliente" placeholder="Hóspede/cliente…" %}
     <input type="text" name="rotulo" placeholder="Ou identifique (ex.: quarto 12)">
     <label class="prazo-campo">Pronto para <input type="date" name="prazo" class="combo-input campo-prazo"></label>

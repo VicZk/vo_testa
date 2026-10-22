@@ -407,6 +407,38 @@ def uh_disponivel(uh: UH, checkin: date, checkout: date, *,
     return colchoes_extra_suficiente(uh, checkin, checkout, adultos, criancas or 0)
 
 
+def conferir_disponibilidade_reserva(reserva, *, uh=None):
+    """Revalida uma reserva existente enquanto a UH está travada pelo chamador."""
+    uh = uh or reserva.uh
+    if uh.status != UH.Status.ATIVA:
+        raise ValidationError(f"O quarto {uh.numero} está {uh.get_status_display().lower()}.")
+    if reservas_no_periodo(uh, reserva.checkin, reserva.checkout).exclude(pk=reserva.pk).exists():
+        raise ValidationError(f"O quarto {uh.numero} já tem reserva ativa no período.")
+    if uh.pk in _uhs_bloqueio_manutencao(reserva.checkin, reserva.checkout):
+        raise ValidationError(f"O quarto {uh.numero} está em manutenção no período da reserva.")
+
+
+def conferir_entrada(reserva, *, uh=None):
+    """Data, ocupação física e limpeza; usada na entrada e na troca durante a estadia."""
+    uh = uh or reserva.uh
+    hoje = timezone.localdate()
+    if reserva.status != Reserva.Status.HOSPEDADA and not reserva.checkin <= hoje < reserva.checkout:
+        raise ValidationError("A entrada está fora do período reservado. Ajuste as datas antes do check-in.")
+    conferir_disponibilidade_reserva(reserva, uh=uh)
+    if Reserva.objects.filter(uh=uh, status=Reserva.Status.HOSPEDADA).exclude(pk=reserva.pk).exists():
+        raise ValidationError(f"O quarto {uh.numero} ainda está ocupado. Conclua a saída anterior.")
+    if uh.pk in _uhs_bloqueio_manutencao(hoje, hoje + timedelta(days=1)):
+        raise ValidationError(f"O quarto {uh.numero} está em manutenção hoje.")
+    from apps.nucleo.models import modulo_ativo
+    from apps.nucleo.modulos import Modulo
+
+    if modulo_ativo(Modulo.GOVERNANCA):
+        from apps.governanca.services import uh_pronta_para_checkin
+
+        if not uh_pronta_para_checkin(uh):
+            raise ValidationError(f"O quarto {uh.numero} ainda precisa de limpeza ou inspeção.")
+
+
 def uhs_disponiveis(checkin: date, checkout: date, *, adultos=None, criancas=None):
     """UHs ativas livres no período — consulta central de disponibilidade
     (reservas ativas + bloqueios de manutenção por datas). Com `adultos`/`criancas`,
@@ -566,6 +598,17 @@ def berco_disponivel(checkin: date, checkout: date, excluir_id=None) -> bool:
     estoque = BercoEstoque.atual().quantidade
     usados = bercos_usados_por_noite(checkin, checkout, excluir_id=excluir_id)
     return all(u < estoque for u in usados.values())
+
+
+def conferir_berco(checkin, checkout, excluir_id=None):
+    """A mesma trava do estoque global, inclusive para quartos legados sem camas."""
+    from apps.nucleo.sistema import travar
+
+    from .models import BercoEstoque
+
+    travar(BercoEstoque.atual())
+    if not berco_disponivel(checkin, checkout, excluir_id=excluir_id):
+        raise ValidationError("Não há berço disponível em alguma noite do período.")
 
 
 def _resolver_arranjo(uh, *, casais, solteiros, usa_sofa_cama, adultos, criancas):
@@ -865,6 +908,7 @@ def criar_prereserva(*, tipo_uh=None, uh=None, checkin, checkout, hospede, usuar
     fechadas, parada de vendas). `None` = decide pelo canal — autoatendimento bloqueia
     (`CANAIS_AUTOATENDIMENTO`), canal interno não, porque ali a regra é aviso e quem
     atende negocia (ver `restricoes_da_estadia`)."""
+    from apps.nucleo.sistema import travar_quartos
     from apps.reservas import precos
     from apps.reservas.models import validar_periodo_day_use
 
@@ -874,6 +918,7 @@ def criar_prereserva(*, tipo_uh=None, uh=None, checkin, checkout, hospede, usuar
     expirar_vencidas()  # solta retenções vencidas para não bloquear a constraint
     por_unidade = uh is not None
     if por_unidade:
+        travar_quartos(uh)
         if not uh_disponivel(uh, checkin, checkout):
             raise ValidationError("Este quarto não está disponível no período.")
         tipo_uh = uh.tipo
@@ -891,6 +936,9 @@ def criar_prereserva(*, tipo_uh=None, uh=None, checkin, checkout, hospede, usuar
                               respeitar_restricoes=respeitar_restricoes)
         if not uh:
             raise ValidationError("Não há quarto desse tipo disponível no período.")
+        travar_quartos(uh)
+        if not uh_disponivel(uh, checkin, checkout):
+            raise ValidationError("Este quarto acabou de ser reservado. Tente novamente.")
 
     # Faixas de criança p/ o preço: sem o detalhe (chamador legado), trata `criancas`
     # como 6-15 (meia) — conservador. Mantém `criancas` = total coerente.
@@ -915,8 +963,8 @@ def criar_prereserva(*, tipo_uh=None, uh=None, checkin, checkout, hospede, usuar
         adultos=adultos, criancas=criancas, checkin=checkin, checkout=checkout)
 
     # Berço (grátis, recurso global): só concede se houver livre em todas as noites.
-    if usa_berco and not berco_disponivel(checkin, checkout):
-        raise ValidationError("Não há berço disponível em alguma noite do período.")
+    if usa_berco:
+        conferir_berco(checkin, checkout)
 
     expira = (timezone.now() + timedelta(minutes=settings.RESERVA_RETENCAO_MINUTOS)
               if reter else None)
@@ -998,7 +1046,12 @@ def transferir_datas(reserva, novo_checkin, novo_checkout, usuario):
     cancelamento). Revalida disponibilidade da UH + pool de colchões nas novas datas e
     recalcula a diária pela motor. Mantém a janela de arrependimento (confirmada_em).
     Só para reserva NÃO iniciada."""
+    from apps.nucleo.sistema import travar, travar_quartos
     from apps.reservas import colchoes, precos
+
+    expirar_vencidas()
+    travar(reserva)
+    travar_quartos(reserva.uh)
 
     if reserva.status not in (Reserva.Status.ORCAMENTO, Reserva.Status.PRE_RESERVA,
                               Reserva.Status.CONFIRMADA):
@@ -1009,7 +1062,6 @@ def transferir_datas(reserva, novo_checkin, novo_checkout, usuario):
 
     validar_periodo_day_use(reserva.uh.tipo, novo_checkin, novo_checkout)
 
-    expirar_vencidas()
     conflito = (reservas_ativas_qs()
                 .filter(uh=reserva.uh, checkin__lt=novo_checkout, checkout__gt=novo_checkin)
                 .exclude(pk=reserva.pk).exists())
@@ -1025,6 +1077,9 @@ def transferir_datas(reserva, novo_checkin, novo_checkout, usuario):
             excluir_id=reserva.pk)
         if conf["erros"]:
             raise ValidationError(conf["erros"])
+
+    if reserva.usa_berco:
+        conferir_berco(novo_checkin, novo_checkout, excluir_id=reserva.pk)
 
     cot = precos.cotacao(
         uh=reserva.uh, checkin=novo_checkin, checkout=novo_checkout,
@@ -1393,6 +1448,11 @@ def historico_hospede(pessoa) -> dict:
     }
 
 
+def reserva_por_id(reserva_id):
+    """Reserva já vinculada por outro módulo; preserva a identidade em reenvios."""
+    return Reserva.objects.get(pk=reserva_id)
+
+
 def confirmar_reserva(reserva_id, usuario) -> bool:
     """Confirma a reserva (pré-reserva/orçamento → confirmada). Interface pública
     para o módulo Pagamentos: sinal pago online → reserva confirmada."""
@@ -1415,6 +1475,9 @@ def lancar_na_conta(
     usuario,
     *,
     competencia: date | None = None,
+    quantidade: Decimal | None = None,
+    preco_unitario: Decimal | None = None,
+    observacoes: str = "",
 ) -> LancamentoConta:
     """Lança item na conta do quarto. É por aqui que os PDVs vão lançar consumo.
     `competencia` = o dia a que o item se refere (a noite, numa diária); omitida, é hoje.
@@ -1432,6 +1495,9 @@ def lancar_na_conta(
         descricao=descricao,
         valor=valor,
         competencia=competencia,
+        quantidade=quantidade,
+        preco_unitario=preco_unitario,
+        observacoes=observacoes,
         criado_por=usuario,
     )
 
@@ -1522,6 +1588,7 @@ def adicionar_quarto(grupo, *, uh, hospede, usuario, adultos=2, criancas=0,
     """Adiciona um quarto (reserva-filha) ao grupo, num UH específico escolhido pela
     recepção. Antioverbooking valida a UH; herda período e faturamento do grupo. Preço
     pela motor (Manual §2) e **trava de colchões por noite** — igual às reservas avulsas."""
+    from apps.nucleo.sistema import travar_quartos
     from apps.reservas import precos
 
     if grupo.encerrado_em:
@@ -1529,6 +1596,7 @@ def adicionar_quarto(grupo, *, uh, hospede, usuario, adultos=2, criancas=0,
     # A disponibilidade já ignora pré-reserva vencida, mas a constraint do banco ainda
     # a vê ativa: sem soltar antes, o quarto "livre" na tela dava erro ao salvar.
     expirar_vencidas()
+    travar_quartos(uh)
     if not uh_disponivel(uh, grupo.checkin, grupo.checkout):
         raise ValidationError(
             f"O quarto {uh.numero} não está livre no período do grupo."
@@ -1776,17 +1844,18 @@ def saidas_vencidas() -> dict:
 
 
 @transaction.atomic
-@transaction.atomic
 def estender_estadia(reserva, nova_saida, usuario) -> Decimal:
     """O hóspede fica mais: a saída passa para `nova_saida`, as noites a mais entram na
     conta pela tarifa vigente (uma diária por noite, ISS e taxa de turismo pelas mesmas
     regras do check-in) e o quarto fica ocupado até lá. Só para quem já está hospedado
     (antes do check-in, `transferir_datas`). Devolve o total lançado."""
     from apps.nucleo.models import NaturezaFiscal
-    from apps.nucleo.sistema import travar
+    from apps.nucleo.sistema import travar, travar_quartos
     from apps.reservas import colchoes, precos
 
+    expirar_vencidas()
     reserva = travar(reserva)
+    travar_quartos(reserva.uh)
     if reserva.status != Reserva.Status.HOSPEDADA:
         raise ValidationError(
             "Estender é para quem já está hospedado. Antes do check-in, transfira as datas.")
@@ -1795,7 +1864,6 @@ def estender_estadia(reserva, nova_saida, usuario) -> Decimal:
     if reserva.uh.tipo.modalidade == TipoUH.Modalidade.DAY_USE:
         raise ValidationError("Day use não se estende: faça uma nova reserva.")
     inicio = reserva.checkout
-    expirar_vencidas()
     conflito = (reservas_ativas_qs()
                 .filter(uh=reserva.uh, checkin__lt=nova_saida, checkout__gt=inicio)
                 .exclude(pk=reserva.pk).exists())
@@ -1812,6 +1880,9 @@ def estender_estadia(reserva, nova_saida, usuario) -> Decimal:
             excluir_id=reserva.pk)
         if conf["erros"]:
             raise ValidationError(conf["erros"])
+
+    if reserva.usa_berco:
+        conferir_berco(inicio, nova_saida, excluir_id=reserva.pk)
 
     cot = precos.cotacao(
         uh=reserva.uh, checkin=inicio, checkout=nova_saida, adultos=reserva.adultos,
@@ -1954,6 +2025,10 @@ def trocar_quarto(reserva, novo_uh, usuario, motivo="", cobrar_tarifa_nova=False
     `reserva.tarifa_do_destino` fica com a diária da tarifa do novo quarto, para a
     tela avisar quando ela difere da mantida.
     """
+    from apps.nucleo.sistema import travar, travar_quartos
+
+    travar(reserva)
+    travar_quartos(reserva.uh, novo_uh)
     if reserva.status not in Reserva.STATUS_ATIVOS:
         raise ValidationError("Só reservas ativas podem trocar de quarto.")
     if novo_uh.pk == reserva.uh_id:
@@ -1966,6 +2041,9 @@ def trocar_quarto(reserva, novo_uh, usuario, motivo="", cobrar_tarifa_nova=False
         raise ValidationError(
             f"O quarto {novo_uh.numero} está em manutenção no período desta reserva."
         )
+    conferir_disponibilidade_reserva(reserva, uh=novo_uh)
+    if reserva.status == Reserva.Status.HOSPEDADA:
+        conferir_entrada(reserva, uh=novo_uh)
     from apps.reservas import precos
 
     arranjo = _arranjo_no_destino(reserva, novo_uh)
@@ -1997,6 +2075,9 @@ def trocar_quarto(reserva, novo_uh, usuario, motivo="", cobrar_tarifa_nova=False
     )
     reserva.tarifa_do_destino = cot["media_noite"]
     if hospedada:
+        from apps.governanca.services import sujar_apos_ocupacao
+
+        sujar_apos_ocupacao(antigo, usuario)
         # O hóspede estava no quarto antigo — Governança gera a faxina.
         from apps.nucleo.sinais import emitir
 
@@ -2361,8 +2442,7 @@ def desfazer_venda(reserva_id, usuario, motivo: str):
     reserva = travar(reserva)
     situacao = _situacao_da_venda(reserva)  # relida sob a trava
     exigir_venda_desfazivel(situacao, usuario)
-    reserva.valor_retido = Decimal("0.00")
-    reserva.cancelar(usuario, motivo)
+    reserva.cancelar(usuario, motivo, valor_retido=Decimal("0.00"))
     if situacao["no_caixa"] > 0:
         devolver_ao_hospede(reserva, situacao["no_caixa"], usuario, motivo)
     return situacao
@@ -2389,6 +2469,52 @@ def conta_aberta(conta_id):
         .select_related("reserva", "reserva__uh", "reserva__hospede")
         .first()
     )
+
+
+def travar_conta_aberta(conta_id=None, *, reserva_id=None):
+    """Pedido só nasce em estadia ainda aberta; mesma trava usada pelo checkout."""
+    from apps.nucleo.sistema import travar
+
+    from apps.nucleo.validadores import identificador_valido
+
+    pk = identificador_valido(conta_id if conta_id is not None else reserva_id, nome="Estadia")
+    filtros = {"pk": pk} if conta_id is not None else {"reserva_id": pk}
+    conta = ContaHospedagem.objects.filter(**filtros).first()
+    if conta is None:
+        raise ValidationError("A conta da estadia não foi encontrada.")
+    travar(conta)
+    if not conta.aberta or conta.reserva_id is None or conta.reserva.status != Reserva.Status.HOSPEDADA:
+        raise ValidationError("A estadia já foi encerrada. Não é possível abrir novos pedidos.")
+    return conta
+
+
+def conta_para_pedido(*, cliente=None, conta_id=None):
+    """Vincula a estadia explícita ou a única hospedagem atual do cliente.
+
+    O chamador mantém a transação aberta até criar o pedido. Se o checkout
+    ganhar a corrida, a conta escolhida será recusada, sem virar pedido avulso.
+    """
+    if conta_id:
+        return travar_conta_aberta(conta_id)
+    if cliente is None:
+        return None
+    ids = list(ContaHospedagem.objects.filter(
+        status=ContaHospedagem.Status.ABERTA,
+        reserva__hospede=cliente, reserva__status=Reserva.Status.HOSPEDADA
+    ).values_list("pk", flat=True)[:2])
+    if len(ids) > 1:
+        raise ValidationError("Este cliente tem mais de uma estadia. Selecione o quarto do pedido.")
+    return travar_conta_aberta(ids[0]) if ids else None
+
+
+def pendencias_consumo(conta):
+    """Consumos vinculados que ainda precisam ser cobrados ou cancelados."""
+    if conta is None:
+        return []
+    from apps.lavanderia.services import pendencias_da_conta as lavanderia
+    from apps.restaurante.services import pendencias_da_conta as restaurante
+
+    return restaurante(conta.pk) + lavanderia(conta.pk)
 
 
 @transaction.atomic

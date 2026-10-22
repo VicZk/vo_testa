@@ -13,18 +13,19 @@
   <h1>Comanda #{{ comanda.pk }}: {{ comanda.titulo }}</h1>
   <span class="selo {% if comanda.status == 'cancelada' %}selo-alerta{% elif comanda.aberta %}selo-em_andamento{% else %}selo-limpa{% endif %}">{{ comanda.get_status_display }}</span>
   <a href="{% url 'restaurante:cupom' comanda.pk %}?imprimir=1" target="_blank" rel="noopener" class="botao-neutro">{% if comanda.aberta %}Imprimir conferência{% else %}Imprimir cupom{% endif %}</a>
+  <a href="{% url 'restaurante:cozinha' %}" class="botao-neutro">Cozinha</a>
 </div>
 
 <div class="pdv" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
   <section class="pdv-produtos">
     {% if comanda.aberta %}
-      <p class="subtitulo">Toque num item do cardápio para lançar na comanda.</p>
+      <p class="subtitulo">Escolha o produto, a quantidade e os detalhes de preparo.</p>
+      <label class="campo">Buscar no cardápio<input type="search" placeholder="Nome do produto…" oninput="document.querySelectorAll('.pdv-produto').forEach(el => el.hidden = !el.textContent.toLocaleLowerCase('pt-BR').includes(this.value.toLocaleLowerCase('pt-BR')))"></label>
       <div class="pdv-lista">
         {% for p in cardapio %}
           <button type="button" class="pdv-produto {% if p.saldo <= 0 %}esgotado{% endif %}"
-                  {% if p.saldo > 0 %}hx-post="{% url 'restaurante:add_item' comanda.pk %}"
-                  hx-vals='{"produto_id": {{ p.id }}, "quantidade": 1}'
-                  hx-target="#comanda-itens" hx-swap="outerHTML"{% else %}disabled{% endif %}>
+                  {% if p.saldo > 0 %}hx-get="{% url 'restaurante:pedir_item' comanda.pk p.id %}"
+                  hx-target="#modal-conteudo"{% else %}disabled{% endif %}>
             <span class="pdv-produto-nome">{{ p.nome }}</span>
             <span class="pdv-produto-meta">
               <span class="pdv-preco">{{ p.preco|intcomma_brl }}</span>
@@ -75,7 +76,7 @@
         {% if contas %}
         <label class="select-wrap pdv-destino" x-show="destino === 'conta'" x-cloak>
           <select name="conta_id"><option value="">Quarto / hóspede…</option>
-            {% for c in contas %}<option value="{{ c.id }}">{{ c.rotulo }}</option>{% endfor %}
+            {% for c in contas %}<option value="{{ c.id }}"{% if c.id == comanda.conta_id %} selected{% endif %}>{{ c.rotulo }}</option>{% endfor %}
           </select>
         </label>
         {% endif %}
@@ -83,6 +84,13 @@
       </form>
 
       <div class="comanda-extras">
+        {% if contas %}<form method="post" action="{% url 'restaurante:vincular' comanda.pk %}" class="campo">
+          {% csrf_token %}<label for="comanda-estadia">Estadia vinculada</label>
+          <select id="comanda-estadia" name="conta_id" required><option value="">Selecione o quarto / hóspede…</option>
+            {% for conta in contas %}<option value="{{ conta.id }}"{% if conta.id == comanda.conta_id %} selected{% endif %}>{{ conta.rotulo }}</option>{% endfor %}
+          </select><button class="botao-neutro" type="submit">Vincular à estadia</button>
+          <small class="ajuda">O check-out avisa sobre esta comanda enquanto ela estiver aberta.</small>
+        </form>{% endif %}
         <form method="post" action="{% url 'restaurante:transferir' comanda.pk %}" class="form-inline">
           {% csrf_token %}
           <select name="mesa"><option value="">Transferir para ponto…</option>
@@ -96,7 +104,7 @@
             <form method="post" action="{% url 'restaurante:cancelar' comanda.pk %}" class="form-cartao">
               {% csrf_token %}
               <div class="campo"><label>Motivo</label><input type="text" name="motivo" required></div>
-              <div class="acoes"><button type="submit" class="botao-perigo">Cancelar e devolver estoque</button></div>
+              <div class="acoes"><button type="submit" class="botao-perigo">Confirmar cancelamento</button></div>
             </form>
           </details>
         {% endif %}
@@ -104,4 +112,5 @@
     {% endif %}
   </aside>
 </div>
+<script>document.body.addEventListener('pedidoSalvo', function () { fecharModal(); });</script>
 {% endblock %}

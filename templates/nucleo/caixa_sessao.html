@@ -2,16 +2,20 @@
 {% load moeda %}
 
 {% block titulo %}Sessão de caixa | CRM Vô Testa{% endblock %}
+{% block conteudo_classe %}tela-caixa{% endblock %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Financeiro</p>
-<h1>Sessão de caixa: {{ sessao.get_modulo_display }}</h1>
+<div class="pagina-cabecalho">
+  <h1>Sessão de caixa: {{ sessao.get_modulo_display }}</h1>
+  <a href="{% url 'caixa_sessoes' %}" class="botao-neutro">Histórico de sessões</a>
+</div>
 <p class="subtitulo">
   Operador {{ sessao.operador }} · aberta em {{ sessao.aberta_em|date:"d/m/Y H:i" }}
   {% if sessao.fechada_em %} · fechada em {{ sessao.fechada_em|date:"d/m/Y H:i" }}{% endif %}
 </p>
 
-<div class="cartoes cartoes-indicadores">
+<div class="caixa-indicadores">
   <div class="cartao">
     <span class="indicador-rotulo letreiro">Fundo de troco</span>
     <span class="indicador-valor">{{ sessao.fundo_troco|intcomma_brl }}</span>

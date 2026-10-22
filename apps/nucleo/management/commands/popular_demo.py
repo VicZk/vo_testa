@@ -11,6 +11,7 @@ vez (marcados com "[demo]") — rodar de novo não duplica.
 
 from datetime import timedelta
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
@@ -211,7 +212,9 @@ class Command(BaseCommand):
                       status=Reserva.Status.CONFIRMADA)
         # A demonstração não preenche a FNRH dos hóspedes de mentira: só o check-in
         # do seed passa pela trava (o sistema em pé segue com ela ligada).
-        with override_settings(FNRH_BLOQUEAR_CHECKIN=False):
+        with override_settings(FNRH_BLOQUEAR_CHECKIN=False), patch(
+            "django.utils.timezone.localdate", return_value=r_hosp.checkin
+        ):
             conta = r_hosp.fazer_checkin(self.user)
         services.lancar_na_conta(conta, "consumo", "consumo",
                                  "Loja — refrigerante", D("7.00"), self.user)
@@ -219,7 +222,10 @@ class Command(BaseCommand):
         # Saída concluída (paga e encerrada)
         r_out = cria(1, hosp("Maria Silva"), -3, -1,
                      status=Reserva.Status.CONFIRMADA)
-        with override_settings(FNRH_BLOQUEAR_CHECKIN=False):
+        # O seed encena a chegada passada; a operação real só aceita o período atual.
+        with override_settings(FNRH_BLOQUEAR_CHECKIN=False), patch(
+            "django.utils.timezone.localdate", return_value=r_out.checkin
+        ):
             conta_out = r_out.fazer_checkin(self.user)
         services.receber_pagamento(conta_out, self.user, dinheiro, conta_out.saldo())
         r_out.fazer_checkout(self.user)

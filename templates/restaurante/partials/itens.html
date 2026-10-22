@@ -6,10 +6,17 @@
       {% for i in comanda.itens.all %}
         <div class="pdv-item">
           <span class="comanda-qtd">{{ i.quantidade|floatformat:"-3" }}×</span>
-          <span class="pdv-item-nome">{{ i.descricao }}</span>
+          <div class="pdv-item-nome">
+            <strong>{{ i.descricao }}</strong>
+            {% for opcao in i.opcoes %}<small class="pedido-detalhe">{{ opcao.grupo }}: {{ opcao.nome }}{% if opcao.adicional != '0.00' and opcao.adicional != '0' %} (+ {{ opcao.adicional|intcomma_brl }}){% endif %}</small>{% endfor %}
+            {% if i.observacoes %}<p class="pedido-observacao">{{ i.observacoes }}</p>{% endif %}
+            <small class="pedido-etapa">{{ i.get_preparo_display }}</small>
+            {% if comanda.aberta and i.preparo == 'aguardando' %}<button type="button" class="botao-texto" hx-get="{% url 'restaurante:editar_item' comanda.pk i.pk %}" hx-target="#modal-conteudo" aria-label="Editar {{ i.descricao }}">Editar pedido</button>{% endif %}
+            {% if comanda.aberta and i.preparo != 'aguardando' %}<details class="acao-sensivel"><summary>Cancelar este item</summary><form hx-post="{% url 'restaurante:remover_item' comanda.pk i.pk %}" hx-target="#comanda-itens" hx-swap="outerHTML">{% csrf_token %}<label class="campo">Motivo<input name="motivo" required maxlength="300"></label><small>Exige gerência. O consumo será registrado como perda.</small><button type="submit" class="botao-perigo">Cancelar item</button></form></details>{% endif %}
+          </div>
           <span class="pdv-sub">{{ i.subtotal|intcomma_brl }}</span>
-          {% if comanda.aberta %}
-            <button type="button" class="pdv-x" title="Remover"
+          {% if comanda.aberta and i.preparo == 'aguardando' %}
+            <button type="button" class="pdv-x" title="Remover" aria-label="Remover {{ i.descricao }}"
                     hx-post="{% url 'restaurante:remover_item' comanda.pk i.pk %}"
                     hx-target="#comanda-itens" hx-swap="outerHTML">&times;</button>
           {% else %}<span></span>{% endif %}

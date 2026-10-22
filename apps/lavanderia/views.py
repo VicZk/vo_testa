@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from django.contrib import messages
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.cache import never_cache
@@ -37,14 +37,18 @@ def _data(txt):
 @never_cache
 @requer_modulo(Modulo.LAVANDERIA)
 def painel(request):
+    from apps.reservas.services import contas_abertas
+
     abertas = (
         OrdemLavanderia.objects.filter(status__in=OrdemLavanderia.FLUXO)
-        .select_related("cliente")
+        .select_related("cliente", "conta__reserva__uh")
+        .prefetch_related("itens")
     )
     return render(request, "lavanderia/painel.html", {
         "abertas": abertas,
         "clientes": pessoas_agrupadas(),
         "tem_servico": ServicoLavanderia.objects.filter(ativo=True).exists(),
+        "contas": contas_abertas() if request.user.pode_acessar(Modulo.RESERVAS) else [],
     })
 
 
@@ -52,12 +56,15 @@ def painel(request):
 def abrir(request):
     if request.method != "POST":
         return redirect("lavanderia:painel")
+    if request.POST.get("conta") and not request.user.pode_acessar(Modulo.RESERVAS):
+        raise PermissionDenied
     cliente = Pessoa.objects.filter(pk=request.POST.get("cliente") or None).first()
     try:
         ordem = services.abrir_ordem(
             request.user, cliente=cliente,
             rotulo=request.POST.get("rotulo", ""),
             prazo=_data(request.POST.get("prazo")),
+            conta_id=request.POST.get("conta") or None,
         )
     except ValidationError as erro:
         messages.error(request, " ".join(erro.messages))
@@ -85,8 +92,20 @@ def _contexto_ordem(request, ordem):
 
 @requer_modulo(Modulo.LAVANDERIA)
 def ordem(request, pk):
-    o = get_object_or_404(OrdemLavanderia.objects.select_related("cliente"), pk=pk)
+    o = get_object_or_404(OrdemLavanderia.objects.select_related("cliente", "conta__reserva__uh"), pk=pk)
     return render(request, "lavanderia/ordem.html", _contexto_ordem(request, o))
+
+
+@requer_modulo(Modulo.LAVANDERIA)
+@requer_modulo(Modulo.RESERVAS)
+def vincular(request, pk):
+    if request.method == "POST":
+        try:
+            services.vincular_conta(get_object_or_404(OrdemLavanderia, pk=pk), request.POST.get("conta_id"), request.user)
+            messages.success(request, "Ordem vinculada à estadia.")
+        except ValidationError as erro:
+            messages.error(request, " ".join(erro.messages))
+    return redirect("lavanderia:ordem", pk=pk)
 
 
 @requer_modulo(Modulo.LAVANDERIA)

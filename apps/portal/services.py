@@ -70,9 +70,10 @@ def cardapio():
     if not local or not modulo_ativo(Modulo.RESTAURANTE):
         return []
     itens = []
-    for p in Produto.objects.filter(ativo=True, preco_venda__gt=0):
+    for p in Produto.objects.filter(ativo=True, preco_venda__gt=0).prefetch_related("grupos_opcoes__opcoes"):
         if saldo(p, local) > 0:
-            itens.append({"id": p.pk, "nome": p.nome, "preco": p.preco_venda})
+            itens.append({"id": p.pk, "nome": p.nome, "preco": p.preco_venda,
+                          "grupos": [grupo for grupo in p.grupos_opcoes.all() if grupo.ativo]})
     return itens
 
 
@@ -90,9 +91,22 @@ def pedir_restaurante(estadia, pedidos):
     # Só o que está no cardápio (ativo, com preço) e em quantidade de pedido de quarto;
     # entrada inválida vira mensagem, não erro 500.
     itens = []
-    for produto_id, qtd in pedidos:
+    if not isinstance(pedidos, (list, tuple)) or len(pedidos) > 100:
+        raise ValidationError("Pedido inválido: confira os itens.")
+    from apps.nucleo.validadores import identificador_valido
+
+    for pedido in pedidos:
+        if isinstance(pedido, dict):
+            produto_id, qtd = pedido.get("produto_id"), pedido.get("quantidade")
+            observacoes, opcoes = pedido.get("observacoes", ""), pedido.get("opcoes", [])
+        elif isinstance(pedido, (tuple, list)) and len(pedido) == 2:
+            produto_id, qtd = pedido
+            observacoes, opcoes = "", []
+        else:
+            raise ValidationError("Pedido inválido: confira os itens.")
         try:
-            produto_id, qtd = int(produto_id), int(str(qtd or 0).strip() or 0)
+            produto_id = identificador_valido(produto_id, nome="Produto")
+            qtd = int(str(qtd or 0).strip() or 0)
         except (TypeError, ValueError):
             raise ValidationError("Pedido inválido: confira as quantidades.")
         if qtd <= 0:
@@ -103,14 +117,17 @@ def pedir_restaurante(estadia, pedidos):
         produto = Produto.objects.filter(pk=produto_id, ativo=True, preco_venda__gt=0).first()
         if produto is None:
             raise ValidationError("Um dos itens não está mais no cardápio.")
-        itens.append((produto, qtd))
+        itens.append((produto, qtd, observacoes, opcoes))
     if not itens:
         raise ValidationError("Escolha ao menos um item.")
     op = _usuario_sistema()
-    comanda = restaurante.abrir_comanda(op, local, rotulo=f"{estadia['uh']} · app")
+    from apps.reservas.services import travar_conta_aberta
+
+    conta = travar_conta_aberta(reserva_id=estadia["reserva_id"])
+    comanda = restaurante.abrir_comanda(op, local, rotulo=f"{estadia['uh']} · app", conta_id=conta.pk)
     total_itens = 0
-    for produto, qtd in itens:
-        restaurante.adicionar_item(comanda, produto, qtd, op)
+    for produto, qtd, observacoes, opcoes in itens:
+        restaurante.adicionar_item(comanda, produto, qtd, op, observacoes=observacoes, opcoes=opcoes)
         total_itens += qtd
     SolicitacaoPortal.objects.create(
         reserva_id=estadia["reserva_id"], uh_numero=estadia["uh"],

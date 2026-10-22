@@ -28,8 +28,15 @@
     {% for item in cardapio %}
       <div class="pt-cardapio-item">
         <span class="nome">{{ item.nome }}<br><span class="preco">{{ item.preco|intcomma_brl }}</span></span>
-        <input type="number" name="qtd_{{ item.id }}" min="0" max="20" value="0" inputmode="numeric" aria-label="Quantidade de {{ item.nome }}">
+        <input type="number" name="qtd_{{ item.id }}" min="0" max="20" value="{{ item.quantidade|default:'0' }}" inputmode="numeric" aria-label="Quantidade de {{ item.nome }}">
       </div>
+      <details class="pt-preparo"{% if item.observacoes or item.quantidade and item.quantidade != '0' %} open{% endif %}><summary>Preparo e observações · {{ item.nome }}</summary>
+        {% for grupo in item.grupos %}<fieldset><legend>{{ grupo.nome }} · de {{ grupo.minimo }} a {{ grupo.maximo }} escolha(s)</legend>
+          {% if grupo.maximo == 1 and grupo.minimo == 0 %}<label><input type="radio" name="opcoes_{{ item.id }}_{{ grupo.pk }}" value=""> Sem adicional</label>{% endif %}
+          {% for opcao in grupo.opcoes.all %}{% if opcao.ativo %}<label><input type="{% if grupo.maximo == 1 %}radio{% else %}checkbox{% endif %}" name="opcoes_{{ item.id }}_{{ grupo.pk }}" value="{{ opcao.pk }}"{% if opcao.escolhida %} checked{% endif %}> {{ opcao.nome }}{% if opcao.adicional %} (+ {{ opcao.adicional|intcomma_brl }}){% endif %}</label>{% endif %}{% endfor %}
+        </fieldset>{% endfor %}
+        <div class="campo"><label for="obs_{{ item.id }}">Observações para a cozinha</label><textarea id="obs_{{ item.id }}" name="obs_{{ item.id }}" rows="2" maxlength="500" placeholder="Ex.: sem sal, molho à parte…">{{ item.observacoes }}</textarea></div>
+      </details>
     {% endfor %}
     <div class="pt-acoes pt-acoes-pedido">
       <button type="submit" class="botao-primario">Enviar pedido ao quarto</button>

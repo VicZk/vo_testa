@@ -9,6 +9,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.cache import never_cache
 
 from apps.nucleo.areas import Area
 from apps.nucleo.formatos import pct_br
@@ -350,6 +351,10 @@ def nova(request):
                 # Trava global de colchões extra por noite (orçamento não consome pool).
                 # O lock no pool serializa reservas concorrentes na mesma noite.
                 if reserva.status != Reserva.Status.ORCAMENTO:
+                    from apps.nucleo.sistema import travar_quartos
+
+                    travar_quartos(reserva.uh)
+                    services.conferir_disponibilidade_reserva(reserva)
                     ColchoesExtra.atual()
                     ColchoesExtra.objects.select_for_update().first()
                     conf = services.conferir_arranjo(
@@ -365,13 +370,12 @@ def nova(request):
                     for aviso in conf["avisos"]:
                         messages.warning(request, aviso)
                     # Berço (grátis, recurso global): bloqueia se não há livre na noite.
-                    if reserva.usa_berco and not services.berco_disponivel(
-                        reserva.checkin, reserva.checkout
-                    ):
-                        form.add_error(
-                            None, "Não há berço disponível em alguma noite do período.")
-                        return render(request, template, contexto)
+                    if reserva.usa_berco:
+                        services.conferir_berco(reserva.checkin, reserva.checkout)
                 reserva.save()
+        except ValidationError as erro:
+            form.add_error(None, erro)
+            return render(request, template, contexto)
         except IntegrityError:
             form.add_error(
                 None,
@@ -588,8 +592,8 @@ def detalhe(request, pk):
     from decimal import Decimal
 
     from .cancelamento import total_pago
-    fin_total = reserva.total_previsto()
-    fin_recebido = total_pago(reserva)
+    fin_total = conta.total_lancamentos() if conta else reserva.total_previsto()
+    fin_recebido = (conta.total_pago() + conta.total_adiantamentos()) if conta else total_pago(reserva)
     cobrancas_reserva, fin_cobr_pendente = [], Decimal("0.00")
     if modulo_ativo(Modulo.PAGAMENTOS):
         from apps.pagamentos.services import cobrancas_da_reserva
@@ -621,6 +625,7 @@ def detalhe(request, pk):
         {
             "reserva": reserva,
             "conta": conta,
+            "pendencias_consumo": services.pendencias_consumo(conta),
             "fin_total": fin_total,
             "fin_recebido": fin_recebido,
             "fin_saldo": fin_saldo,
@@ -669,6 +674,20 @@ def detalhe(request, pk):
     )
 
 
+@never_cache
+@requer_modulo(Modulo.RESERVAS)
+def extrato(request, pk):
+    from .extrato import dados_extrato
+    from .models import ContaHospedagem
+
+    reserva = get_object_or_404(Reserva.objects.select_related("hospede", "uh", "grupo"), pk=pk)
+    conta = get_object_or_404(ContaHospedagem, reserva=reserva)
+    return render(request, "reservas/extrato.html", {
+        "reserva": reserva, "extrato": dados_extrato(conta),
+        "voltar": reverse("reservas:detalhe", args=[pk]),
+    })
+
+
 @requer_modulo(Modulo.RESERVAS)
 def trocar_quarto(request, pk):
     reserva = get_object_or_404(Reserva, pk=pk)
@@ -703,7 +722,11 @@ def _acao_reserva(request, pk, acao):
     """Executa uma transição de estado e volta ao detalhe com mensagem."""
     reserva = get_object_or_404(Reserva, pk=pk)
     try:
-        acao(reserva)
+        with transaction.atomic():
+            from apps.nucleo.sistema import travar
+
+            travar(reserva)
+            acao(reserva)
     except (ValidationError, IntegrityError) as erro:
         mensagens = (
             erro.messages if isinstance(erro, ValidationError) else [str(erro)]
@@ -769,8 +792,8 @@ def cancelar(request, pk):
         resumo = cancelamento.resumo_cancelamento(reserva)
         nota = _nota_politica(resumo)
         # Grava o que a pousada fica: a tela da reserva cancelada sugere devolver o resto.
-        reserva.valor_retido = resumo["cobranca"]
-        reserva.cancelar(request.user, f"{form.cleaned_data['motivo']} — {nota}")
+        reserva.cancelar(request.user, f"{form.cleaned_data['motivo']} — {nota}",
+                         valor_retido=resumo["cobranca"])
         registrar_auditoria(request.user, "politica_cancelamento", reserva, {
             "cenario": resumo["cenario"],
             "retido": str(resumo["cobranca"]),

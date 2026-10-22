@@ -74,7 +74,7 @@
               <td colspan="{{ c.span }}" class="mapa-ocupada dica"
                   data-dica="{{ c.reserva.hospede.nome }} · {{ c.reserva.checkin|date:'d/m' }} → {{ c.reserva.checkout|date:'d/m' }} · {{ c.reserva.get_status_display }}. Arraste para outra linha para trocar de quarto">
                 <a href="{% url 'reservas:detalhe' c.reserva.pk %}"
-                   class="mapa-barra mapa-cor-{{ c.reserva.status }}"
+                   class="mapa-barra mapa-cor-{{ c.reserva.status }}" draggable="false"
                    data-reserva="{{ c.reserva.pk }}"
                    data-nome="{{ c.reserva.hospede.nome }}" data-de="{{ linha.uh.numero }}">
                   {{ c.reserva.hospede.nome|truncatechars:16 }}
@@ -246,6 +246,7 @@
     bar.addEventListener('pointerdown', e => {
       if (e.button != null && e.button !== 0) return;
       ativo = true; moveu = false; pid = e.pointerId; x0 = e.clientX; y0 = e.clientY;
+      bar.setPointerCapture(pid);
       track.reset(); track.push(e.clientX, e.clientY, e.timeStamp);
       e.stopPropagation();                     // não dispara a seleção de noites
     });
@@ -253,7 +254,7 @@
       if (!ativo || e.pointerId !== pid) return;
       const dx = e.clientX - x0, dy = e.clientY - y0;
       if (!moveu && Math.hypot(dx, dy) < LIMIAR) return;
-      if (!moveu) { moveu = true; bar.setPointerCapture(pid); bar.classList.add('arrastando'); }
+      if (!moveu) { moveu = true; bar.classList.add('arrastando'); }
       e.preventDefault();
       track.push(e.clientX, e.clientY, e.timeStamp);
       bar.style.transform = 'translate(' + dx + 'px,' + dy + 'px)'; bar.style.zIndex = 50;
@@ -286,6 +287,11 @@
       });
     });
     bar.addEventListener('click', e => { if (suprimir) { e.preventDefault(); suprimir = false; } });
+    bar.addEventListener('dragstart', e => e.preventDefault());
+    bar.addEventListener('pointercancel', () => {
+      ativo = false; limpar(); bar.style.transform = ''; bar.style.zIndex = '';
+      bar.classList.remove('arrastando');
+    });
   });
 })();
 </script>

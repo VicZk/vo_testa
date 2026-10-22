@@ -5,6 +5,7 @@ ainda — a validação de Aprovação/Encerramento entra no Passo 4.
 """
 from datetime import timedelta
 
+from django.db import transaction
 from django.utils import timezone
 
 from .models import Campanha, PecaCampanha
@@ -104,13 +105,16 @@ def parse_moeda(valor) -> Decimal:
         raise ValueError("Valor monetário inválido.")
 
 
+@transaction.atomic
 def definir_teto(mes: str, valor) -> VerbaMarketing:
     """Gestor cadastra/edita o teto do mês (a única fonte do número)."""
     try:
         dec = parse_moeda(valor)
     except ValueError:
         raise ValueError("Valor de teto inválido.")
-    verba = VerbaMarketing.atual()
+    from apps.nucleo.sistema import travar
+
+    verba = travar(VerbaMarketing.atual())
     tetos = dict(verba.tetos or {})
     tetos[mes] = str(dec)  # string preserva a precisão do dinheiro no JSON
     verba.tetos = tetos
@@ -120,7 +124,6 @@ def definir_teto(mes: str, valor) -> VerbaMarketing:
 
 # ── Passo 4: portão POR FASE + avanço no funil (regras invariantes) ───────────
 from django.core.exceptions import ValidationError  # noqa: E402
-from django.db import transaction  # noqa: E402
 
 from .models import Comentario, EtapaCampanha, ItemChecklist  # noqa: E402
 
@@ -366,6 +369,7 @@ def _aplicar_aprovacao(campanha, usuario):
     campanha.aprovada_em = timezone.now()
 
 
+@transaction.atomic
 def avancar(campanha, usuario):
     """Move a campanha UMA fase adiante, cobrando o portão e aplicando o efeito da transição.
 
@@ -374,6 +378,13 @@ def avancar(campanha, usuario):
     em transação — o mês nunca fica comprometido por uma transição que não passou.
     """
     from apps.nucleo.permissoes import eh_gerente
+    from apps.nucleo.sistema import travar
+
+    esperado = campanha.fase
+    travar(VerbaMarketing.atual())
+    travar(campanha)
+    if campanha.fase != esperado:
+        raise ValidationError("A campanha mudou de fase em outra sessão. Atualize a tela.")
     prox = proxima_fase(campanha.fase)
     if prox is None:
         raise ValidationError("Campanha já encerrada.")
@@ -392,10 +403,15 @@ def avancar(campanha, usuario):
     return campanha
 
 
+@transaction.atomic
 def retroceder(campanha, fase_destino, usuario=None):
     """Volta a campanha a uma fase anterior (ex.: 'Reprovar' → Proposta).
 
     Descer abaixo de Aprovação destrava a verba (aprovada_por/verba_travada zerados)."""
+    from apps.nucleo.sistema import travar
+
+    travar(VerbaMarketing.atual())
+    travar(campanha)
     if fase_destino not in Campanha.Fase.values:
         return campanha
     if ORDEM_FASES.index(fase_destino) >= ORDEM_FASES.index(campanha.fase):

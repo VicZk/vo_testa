@@ -6,7 +6,7 @@
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Reservas</p>
 <div class="pagina-cabecalho">
-  <h1>O corredor</h1>
+  <h1>Mapa de quartos</h1>
   <div class="acoes bloco-plano">
     <a href="{% url 'reservas:mapa' %}" class="botao-neutro">Mapa de reservas</a>
     <a href="{% url 'reservas:kit' %}" class="botao-neutro">Kit de contingência</a>
@@ -89,6 +89,7 @@
     porta.addEventListener('pointerdown', e => {
       if (e.button != null && e.button !== 0) return;
       ativo = true; moveu = false; pid = e.pointerId;
+      porta.setPointerCapture(pid);
       x0 = e.clientX; y0 = e.clientY;
       track.reset(); track.push(e.clientX, e.clientY, e.timeStamp);
     });
@@ -97,7 +98,7 @@
       if (!ativo || e.pointerId !== pid) return;
       const dx = e.clientX - x0, dy = e.clientY - y0;
       if (!moveu && Math.hypot(dx, dy) < LIMIAR) return;
-      if (!moveu) { moveu = true; porta.setPointerCapture(pid); porta.classList.add('arrastando'); }
+      if (!moveu) { moveu = true; porta.classList.add('arrastando'); }
       e.preventDefault();
       track.push(e.clientX, e.clientY, e.timeStamp);
       porta.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
@@ -145,6 +146,11 @@
 
     porta.addEventListener('click', e => {
       if (suprimirClique) { e.preventDefault(); suprimirClique = false; }
+    });
+    porta.addEventListener('dragstart', e => e.preventDefault());
+    porta.addEventListener('pointercancel', () => {
+      ativo = false; limparAlvo(); porta.style.transform = '';
+      porta.classList.remove('arrastando');
     });
   });
 })();

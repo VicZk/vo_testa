@@ -18,5 +18,6 @@ urlpatterns = [
     path("<int:pk>/item/<int:item_pk>/remover/", views.remover_item, name="remover_item"),
     path("<int:pk>/avancar/", views.avancar, name="avancar"),
     path("<int:pk>/entregar/", views.entregar, name="entregar"),
+    path("<int:pk>/vincular/", views.vincular, name="vincular"),
     path("<int:pk>/cancelar/", views.cancelar, name="cancelar"),
 ]

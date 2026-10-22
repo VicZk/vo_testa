@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block titulo %}Pedido · {{ produto.nome }}{% endblock %}
+{% block conteudo %}
+<a class="voltar" href="{% url 'restaurante:comanda' comanda.pk %}">Voltar à comanda</a>
+<div class="painel-bloco estreito">{% include "restaurante/partials/pedido_item.html" %}</div>
+{% endblock %}
