@@ -6971,3 +6971,13 @@ body.escala-dragging .escala-drop { cursor: copy; }
 .gov-bloco .bloco-subtitulo + .gov-plano-grupo { border-top:0; padding-top:0; }
 .gov-bloco .gov-plano-sobra { margin:0; padding-top:.75rem; }
 .gov-visao .estado-vazio { padding:1rem; }
+.botao-ronda, .fx-chip {
+  min-height:44px; border:0; border-bottom:2px solid transparent; border-radius:0;
+  background:transparent; box-shadow:none; padding:.55rem .65rem;
+}
+.botao-ronda.marcado, .fx-chip.on {
+  color:var(--noturno); background:transparent; border-bottom-color:var(--lampiao); box-shadow:none;
+}
+.botao-ronda:active { transform:none; }
+.mk-pil-acao { border-radius:6px; min-height:44px; }
+@media (min-width:821px) { .tabela-limpeza tbody tr { height:6rem; } }
