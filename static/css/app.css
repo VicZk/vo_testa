@@ -1480,9 +1480,17 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
    limpo é verde, pronto (inspecionado) é azul — para a tela não dizer duas coisas
    diferentes sobre o mesmo quarto. Os hexes são da paleta noturna do corredor: o
    painel é escuro e precisa do próprio contraste. */
-.corredor-gov .porta { background: linear-gradient(180deg, #1A3A4C, #122937); }
-.corredor-gov .porta.limp-suja,
-.corredor-gov .porta.limp-em_limpeza { background: linear-gradient(180deg, #4A2E22, #2E1A14); }
+/* O bloco da Governança é mais BAIXO que a porta da recepção: lá cabem nome,
+   período e saldo (proporção 4/5), aqui a metade de baixo ficava vazia. */
+.corredor-gov .porta {
+  background: linear-gradient(180deg, #1A3A4C, #122937);
+  aspect-ratio: auto; min-height: 94px; max-height: none; gap: 1px;
+}
+.corredor-gov .porta.limp-suja { background: linear-gradient(180deg, #4A2E22, #2E1A14); }
+/* "Em limpeza" tinha o MESMO fundo de "a limpar": dois estados diferentes com a
+   mesma cor de bloco, impossíveis de separar de longe (que é como esta tela é
+   lida). Ganhou o próprio tom de âmbar. */
+.corredor-gov .porta.limp-em_limpeza { background: linear-gradient(180deg, #4A3C1E, #2C2310); }
 .corredor-gov .porta.limp-limpa {
   background: linear-gradient(180deg, #1B3B33, #102722);
   box-shadow: inset 0 0 0 1px rgba(127, 201, 163, .22);
@@ -1491,17 +1499,47 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
   background: linear-gradient(180deg, #1C3A4E, #112636);
   box-shadow: inset 0 0 0 1px rgba(127, 180, 217, .22);
 }
-.corredor-gov .porta.limp-bloqueada { opacity: .45; filter: grayscale(.35); }
-/* O trinco é o pontinho de cor: o estado se lê mesmo de longe. */
-.corredor-gov .limp-suja .porta-fecho { background: #E8B07A; box-shadow: 0 0 8px rgba(232, 176, 122, .5); }
-.corredor-gov .limp-em_limpeza .porta-fecho { background: #D98A4A; box-shadow: 0 0 8px rgba(217, 138, 74, .5); }
-.corredor-gov .limp-limpa .porta-fecho { background: #7FC9A3; box-shadow: 0 0 8px rgba(127, 201, 163, .5); }
-.corredor-gov .limp-inspecionada .porta-fecho { background: #7FB4D9; box-shadow: 0 0 8px rgba(127, 180, 217, .5); }
-.corredor-gov .limp-bloqueada .porta-fecho { background: #6B808C; box-shadow: none; }
-.corredor-gov .limp-suja .porta-selo { color: #E8B07A; }
-.corredor-gov .limp-em_limpeza .porta-selo { color: #D98A4A; }
-.corredor-gov .limp-limpa .porta-selo { color: #7FC9A3; }
-.corredor-gov .limp-inspecionada .porta-selo { color: #7FB4D9; }
+/* Bloqueado era `opacity: .45` + `grayscale`: o bloco inteiro desbotava e o texto
+   parava de passar contraste (o quarto em reparo é informação, não enfeite).
+   Agora é um fundo de ardósia, sem transparência, e o texto segue legível. */
+.corredor-gov .porta.limp-bloqueada { background: linear-gradient(180deg, #2A343A, #1B2328); }
+/* O trinco é o pontinho de cor: o estado se lê mesmo de longe — e na MESMA cor do
+   texto do estado, para a porta não dar dois sinais diferentes. */
+.corredor-gov .limp-suja .porta-fecho { background: #F0C08E; box-shadow: 0 0 8px rgba(240, 192, 142, .5); }
+.corredor-gov .limp-em_limpeza .porta-fecho { background: #F2CE7E; box-shadow: 0 0 8px rgba(242, 206, 126, .5); }
+.corredor-gov .limp-limpa .porta-fecho { background: #9BDCBB; box-shadow: 0 0 8px rgba(155, 220, 187, .5); }
+.corredor-gov .limp-inspecionada .porta-fecho { background: #A8CFEB; box-shadow: 0 0 8px rgba(168, 207, 235, .5); }
+.corredor-gov .limp-bloqueada .porta-fecho { background: #C8D3D9; box-shadow: none; }
+
+/* ── O bloco do quarto: NÚMERO → ESTADO → quem está dentro → quem limpa ──
+   O estado saía num rótulo de 9 px em maiúsculas (quase invisível no painel
+   escuro, sobretudo o azul do "Pronto") e o maior texto do bloco era o TIPO do
+   quarto — dado que não muda nada do que fazer agora. Agora o estado é o segundo
+   texto mais forte e o rodapé só aparece quando tem o que dizer. Todas as cores
+   passam 4,5:1 sobre as duas pontas do gradiente (CorredorDaGovernancaTests). */
+.corredor-gov .porta-num { font-size: clamp(1rem, .92rem + .25vw, 1.2rem); color: #EEF4F7; }
+.porta-estado {
+  font-size: clamp(.8rem, .7rem + .3vw, .98rem);
+  font-weight: 700; line-height: 1.15; letter-spacing: -.01em;
+  overflow-wrap: break-word;
+}
+.corredor-gov .limp-suja .porta-estado { color: #F0C08E; }
+.corredor-gov .limp-em_limpeza .porta-estado { color: #F2CE7E; }
+.corredor-gov .limp-limpa .porta-estado { color: #9BDCBB; }
+.corredor-gov .limp-inspecionada .porta-estado { color: #A8CFEB; }
+.corredor-gov .limp-bloqueada .porta-estado { color: #C8D3D9; }
+/* Quem está no quarto: duas linhas antes de cortar (o nome do hóspede é o dado
+   que a supervisora ia buscar no mapa de reservas). */
+.porta-ocupacao {
+  font-size: clamp(.66rem, .6rem + .18vw, .76rem);
+  color: #B3C2CB; line-height: 1.25;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  overflow: hidden; overflow-wrap: anywhere;
+}
+.porta-quem {
+  font-size: .66rem; font-weight: 650; color: #DCE6EB;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
 /* "chega hóspede hoje" é o que muda a urgência da porta — e por isso é o único
    enfeite que ela ganha. */
 .porta-chegada {
@@ -1532,7 +1570,9 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 @container gov-visao (max-width: 600px) {
   .gov-visao > .gov-progresso { order: -2; }
   .gov-visao > .atencao-secao { order: -1; }
-  .corredor-gov .porta { aspect-ratio: auto; min-height: 0; }
+  /* No celular o bloco encolhe para o que tem dentro: 24 quartos em oito fileiras
+     de 94px empurravam o resto da tela para muito abaixo da dobra. */
+  .corredor-gov .porta { min-height: 0; }
 }
 .chip-legenda.limp-em_limpeza i { background: var(--andamento); }
 .chip-legenda.limp-limpa i { background: var(--sucesso); }

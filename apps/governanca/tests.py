@@ -1303,3 +1303,58 @@ class OcupacaoSemReservasTests(RondaBase):
         """Sem ocupação para contar, a linha não fica muda: mostra o tipo."""
         self.assertContains(self.client.get(reverse("governanca:quartos")),
                             f'<small class="ajuda">{self.uh.tipo.nome}</small>')
+
+
+class BlocoDoQuartoTests(RondaBase):
+    """O bloco da visão geral é lido de longe: número e ESTADO na frente.
+
+    O estado saía num rótulo de 9 px em maiúsculas, o maior texto do bloco era o
+    tipo do quarto e a metade de baixo ficava vazia.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="governanta", password="senha-forte-123")
+
+    def _corpo(self):
+        return self.client.get(reverse("governanca:painel")).content.decode()
+
+    def test_o_estado_tem_marcacao_propria_no_bloco(self):
+        services.abrir_faxina(self.uh, usuario=self.user)
+        corpo = self._corpo()
+        self.assertIn('class="porta-estado"', corpo)
+        self.assertIn("A limpar", corpo)
+
+    def test_o_tipo_do_quarto_sai_do_bloco_e_fica_na_dica(self):
+        corpo = self._corpo()
+        self.assertNotIn('class="porta-nome"', corpo)       # era o maior texto
+        self.assertIn(f"- {self.tipo.nome}", corpo)         # está na dica
+
+    def test_quem_esta_no_quarto_aparece_no_bloco(self):
+        self._hospedar(self.uh, nome="Ana Lima")
+        corpo = self._corpo()
+        self.assertIn('class="porta-ocupacao"', corpo)
+        self.assertIn("Ana Lima", corpo)
+
+    def test_a_camareira_aparece_no_rodape_do_bloco(self):
+        tarefa = services.abrir_faxina(self.uh, usuario=self.user)
+        maria = Usuario.objects.create_user(
+            username="maria", password="senha-forte-123", first_name="Maria")
+        tarefa.camareira = maria
+        tarefa.save(update_fields=["camareira"])
+        corpo = self._corpo()
+        self.assertIn('class="porta-quem"', corpo)
+        self.assertIn("Maria", corpo)
+
+    def test_bloco_sem_camareira_e_sem_divergencia_nao_tem_rodape_vazio(self):
+        """O rodapé é uma faixa com fio em cima: sem conteúdo, era metade do bloco
+        em branco."""
+        self.assertNotIn('class="porta-rodape"', self._corpo())
+
+    def test_quarto_bloqueado_diz_bloqueado_no_bloco(self):
+        self.uh.status = UH.Status.BLOQUEADA
+        self.uh.save(update_fields=["status"])
+        porta = next(p for p in services.visao_geral()["portas"]
+                     if p["uh"].pk == self.uh.pk)
+        self.assertEqual(porta["ocupacao"], "Bloqueado")
+        self.assertEqual(porta["cor"], "limp-bloqueada")
