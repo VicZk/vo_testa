@@ -470,7 +470,7 @@ def tarifa_preview(request):
         colchoes_status, colchoes_msg = "aviso", conf["avisos"][0]
     elif conf["extra"]:
         colchoes_status = "ok"
-        colchoes_msg = f"{conf['extra']} colchão(ões) extra neste arranjo — há disponível."
+        colchoes_msg = f"{conf['extra']} colchão(ões) extra neste arranjo. Há disponibilidade."
     else:
         colchoes_status = "ok"
         colchoes_msg = "Arranjo dentro da base do quarto (não usa colchão extra)."
@@ -735,7 +735,7 @@ def fazer_checkin(request, pk):
         services.enviar_fnrh(reserva)
         messages.success(
             request,
-            "Entrada registrada — conta do quarto aberta com as diárias lançadas.",
+            "Entrada registrada. A conta do quarto foi aberta com as diárias lançadas.",
         )
 
     return _acao_reserva(request, pk, acao)
@@ -795,7 +795,7 @@ def _nota_politica(resumo) -> str:
         return (f"Saída antecipada: cobrar {resumo['dias_consumidos']} diária(s) usada(s) "
                 f"+ {pct_br(resumo['retencao_pct'])}% de retenção. Devolver {devolver}.")
     if resumo["dentro_arrependimento"]:
-        return f"Dentro do prazo de arrependimento — devolver 100% ({devolver})."
+        return f"Dentro do prazo de arrependimento. Devolver 100% ({devolver})."
     return (f"Fora do prazo: reter {pct_br(resumo['retencao_pct'])}% "
             f"({intcomma_brl(resumo['retencao_valor'])}). Devolver {devolver}.")
 
@@ -1069,7 +1069,7 @@ def fnrh(request, pk):
                 fichas or queryset, origem="recepcao", usuario=request.user
             )
             if reserva.fnrh_pronta:
-                messages.success(request, "FNRH completa — check-in liberado.")
+                messages.success(request, "FNRH completa. Check-in liberado.")
             else:
                 messages.success(
                     request, "Fichas salvas. Ainda falta completar alguma."
@@ -1170,7 +1170,7 @@ def _boh_csv(dados):
     resp.write("﻿")  # BOM: Excel abre com acentos corretos
     w = csv.writer(resp, delimiter=";")
     w.writerow(["Boletim de Ocupação Hoteleira", f'{dados["mes"]:02d}/{dados["ano"]}'])
-    w.writerow(["Pousada Vô Testa — Itá/SC"])
+    w.writerow(["Pousada Vô Testa | Itá/SC"])
     w.writerow([])
     w.writerow(["Indicador", "Valor"])
     w.writerow(["Total de hóspedes (entradas)", dados["total_hospedes"]])

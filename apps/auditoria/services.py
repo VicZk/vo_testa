@@ -40,7 +40,7 @@ def _checagens_nucleo():
               .select_related("operador")):
         achados.append({
             "area": "Caixa", "tipo": "caixa_aberto_antigo", "gravidade": "alta",
-            "descricao": f"Caixa de {c.operador} aberto desde {c.aberta_em:%d/%m %H:%M} — conferir/fechar.",
+            "descricao": f"Caixa de {c.operador} aberto desde {c.aberta_em:%d/%m %H:%M}. Confira e feche a sessão.",
             "url": _url("caixa_sessao", c.pk),
         })
 

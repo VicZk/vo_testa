@@ -119,6 +119,6 @@ class MFAObrigatorioMiddleware:
                       reverse("senha_esqueci")}
             if (request.path not in livres
                     and not request.path_info.startswith(("/static/", "/media/"))):
-                messages.warning(request, "Ative o MFA para continuar — é obrigatório na sua conta.")
+                messages.warning(request, "Ative a autenticação em duas etapas (MFA) para continuar. Ela é obrigatória na sua conta.")
                 return redirect("mfa_ativar")
         return self.get_response(request)

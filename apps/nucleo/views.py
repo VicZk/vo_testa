@@ -165,9 +165,7 @@ def dashboard(request):
             atencao.append({
                 "nivel": "alerta",
                 "rotulo": (
-                    f"{n_saldo} saída{'s' if n_saldo > 1 else ''} vencida"
-                    f"{'s' if n_saldo > 1 else ''} com saldo em aberto — "
-                    f"R$ {vencidas['total_aberto']} a receber"
+                    f'{n_saldo} saída{('s' if n_saldo > 1 else '')} vencida{('s' if n_saldo > 1 else '')} com saldo em aberto de R$ {vencidas['total_aberto']} a receber'
                 ),
                 "detalhe": "Cobre no caixa e finalize o check-out",
                 "url": reverse("reservas:lista") + "?saida=vencida_saldo",
@@ -178,7 +176,7 @@ def dashboard(request):
                 "rotulo": (
                     f"{n_quit} saída{'s' if n_quit > 1 else ''} vencida"
                     f"{'s' if n_quit > 1 else ''} já quitada"
-                    f"{'s' if n_quit > 1 else ''} — confirmar saída"
+                    f"{'s' if n_quit > 1 else ''}. Confirmar saída"
                 ),
                 "detalhe": "Conta zerada, só finalizar o check-out",
                 "url": reverse("reservas:lista") + "?saida=vencida_quitada",
@@ -1130,7 +1128,7 @@ def caixa_movimento(request):
         erros = "; ".join(
             f"{campo}: {' '.join(msgs)}" for campo, msgs in form.errors.items()
         )
-        messages.error(request, f"Movimento não registrado — {erros}")
+        messages.error(request, f"Movimento não registrado: {erros}")
     return redirect("caixa")
 
 
@@ -1196,7 +1194,7 @@ def caixa_reabrir(request, pk):
     sessao = get_object_or_404(SessaoCaixa, pk=pk)
     try:
         sessao.reabrir(request.user, request.POST.get("motivo", ""))
-        messages.success(request, "Sessão reaberta — operação auditada.")
+        messages.success(request, "Sessão reaberta. A ação foi registrada na auditoria.")
     except ValidationError as erro:
         messages.error(request, " ".join(erro.messages))
     return redirect("caixa_sessao", pk=pk)
@@ -1219,7 +1217,7 @@ def estorno(request, movimento_pk):
                 form.cleaned_data["motivo"],
                 form.cleaned_data["valor"],
             )
-            messages.success(request, "Estorno registrado — operação auditada.")
+            messages.success(request, "Estorno registrado no histórico de auditoria.")
         except ValidationError as erro:
             messages.error(request, " ".join(erro.messages))
     else:

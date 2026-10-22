@@ -523,7 +523,7 @@ class DiscrepanciaSemReservasTests(RondaBase):
         self.assertEqual(self.client.get(reverse("governanca:quartos")).status_code, 200)
         r = self.client.get(reverse("governanca:discrepancias"))
         self.assertEqual(r.status_code, 200)
-        self.assertContains(r, "não há com o que comparar")
+        self.assertContains(r, "não é possível comparar a ronda com as reservas")
 
     def test_varredura_da_auditoria_nao_aponta_nada(self):
         services.registrar_conferencia(self.uh, "ocupado", usuario=self.user)
@@ -827,7 +827,7 @@ class FluxoDidaticoTests(GovernancaBase):
     def test_quarto_pronto_nao_tem_acao_principal(self):
         services.inspecionar(self.uh, self.user)
         corpo = self._painel()
-        self.assertIn("Nada a fazer", corpo)
+        self.assertIn("Pronto para receber o hóspede", corpo)
         self.assertIn("Pedir nova limpeza", corpo)
         self.assertNotIn("botao-primario", corpo)
 
@@ -844,7 +844,7 @@ class FluxoDidaticoTests(GovernancaBase):
 
     def test_arrumacao_do_dia_se_explica_diferente_do_checkout(self):
         services.abrir_faxina(self.uh, usuario=self.user, origem="arrumacao_diaria")
-        self.assertIn("O hóspede continua no quarto", self._painel())
+        self.assertIn("Arrumação do dia, com o hóspede ainda no quarto.", self._painel())
 
     def test_estado_usa_a_palavra_simples_e_nao_o_termo_do_model(self):
         """O model diz "Inspecionado"; a tela diz "Pronto" (o termo de hotelaria
@@ -1718,7 +1718,7 @@ class DistribuirAFilaTests(QuemLimpaVemDaEscalaTests):
                          (0, "sem_turno"))
         r = self.client.post(reverse("governanca:distribuir"), HTTP_HX_REQUEST="true")
         aviso = json.loads(r["HX-Trigger"])["aviso"]
-        self.assertIn("Ninguém de turno hoje", aviso["texto"])
+        self.assertIn("Não há funcionários escalados hoje", aviso["texto"])
         self.assertEqual(aviso["tipo"], "warning")
 
     def test_o_botao_so_aparece_com_quarto_sem_camareira(self):
@@ -1964,7 +1964,7 @@ class ReportarProblemaTests(RondaBase):
                              {"descricao": "torneira", "fila": "1"},
                              HTTP_HX_REQUEST="true")
         self.assertEqual(self._ordens().count(), 0)
-        self.assertContains(r, "Manutenção desligado")
+        self.assertContains(r, "Manutenção está desativado")
         self.assertContains(r, "torneira")
         self.assertNotIn("X-Gov-Registrado", r)
 
@@ -2001,7 +2001,7 @@ class QuartoBloqueadoTests(RondaBase):
         corpo = self.client.get(reverse("governanca:quartos")).content.decode()
         linha = corpo[corpo.index(f'id="quarto-{self.uh.pk}"'):]
         linha = linha[:linha.index("</tr>")]
-        self.assertIn("Em manutenção — fora de operação", linha)
+        self.assertIn("Em manutenção (fora de operação)", linha)
         self.assertNotIn("pronto para o hóspede", linha)
         self.assertNotIn("Pedir nova limpeza", linha)
 
@@ -2038,13 +2038,13 @@ class EscaladaSemLoginTests(GovernancaBase):
         r = self.client.post(reverse("governanca:distribuir"), HTTP_HX_REQUEST="true")
         texto = json.loads(r["HX-Trigger"])["aviso"]["texto"]
         self.assertIn("Rita Camareira", texto)
-        self.assertIn("sem login no CRM", texto)
+        self.assertIn("sem acesso ao CRM", texto)
         self.assertNotIn("Ninguém de turno", texto)
 
     def test_a_tela_diz_o_que_fazer(self):
         corpo = self.client.get(reverse("governanca:quartos")).content.decode()
         self.assertIn("Rita Camareira", corpo)
-        self.assertIn("ligue o login na ficha do funcionário", corpo)
+        self.assertIn("Ative o acesso na ficha do funcionário", corpo)
         self.assertNotIn("Distribuir a fila", corpo)
 
     def test_com_o_login_ligado_passa_a_distribuir(self):
@@ -2139,7 +2139,7 @@ class FichaDoQuartoTests(RondaBase):
         self.uh.status = UH.Status.BLOQUEADA
         self.uh.save(update_fields=["status"])
         r = self._ficha()
-        self.assertContains(r, "Em manutenção — fora de operação")
+        self.assertContains(r, "Em manutenção (fora de operação)")
         self.assertNotContains(r, "Começar limpeza")
 
 
@@ -2205,7 +2205,7 @@ class DesfazerAprovacaoTests(GovernancaBase):
             criado_por=self.user)
         self._aprovar()
         texto = self.client.session.get("gov_desfazer")["texto"]
-        self.assertIn("arrumação do dia", texto)
+        self.assertIn("Arrumação do dia", texto)
         self.assertNotIn("recepção", texto)
 
     def test_a_oferta_aparece_na_tela_e_some_depois(self):

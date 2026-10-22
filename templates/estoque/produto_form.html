@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load moeda estoque_extras nucleo_extras %}
 
-{% block titulo %}{% if produto %}{{ produto.nome }}{% else %}Novo produto{% endif %} — Estoque{% endblock %}
+{% block titulo %}{% if produto %}{{ produto.nome }}{% else %}Novo produto{% endif %} | Estoque{% endblock %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Vendas &amp; Estoque</p>
@@ -71,9 +71,8 @@
         entrada, pela média ponderada. Não se digita aqui.</p>
     {% else %}
       <h3 class="letreiro">Antes de salvar</h3>
-      <p class="est-previa-vazia">O saldo não nasce no cadastro: depois de salvar,
-        registre uma <strong>entrada</strong> para o produto existir em algum depósito —
-        é ela que forma o custo médio.</p>
+      <p class="est-previa-vazia">Depois de salvar o produto, registre uma <strong>entrada</strong> no depósito.
+        Essa entrada atualiza o saldo e o custo médio.</p>
     {% endif %}
   </aside>
 </div>

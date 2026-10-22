@@ -17,7 +17,7 @@ dica; o rodapé só existe quando tem o que dizer, em vez de uma metade vazia.
     <a href="{% url 'governanca:quarto' p.uh.pk %}?voltar=painel"
        class="porta porta-gov {{ p.cor }} dica"
        hx-get="{% url 'governanca:quarto' p.uh.pk %}?voltar=painel" hx-target="#modal-conteudo"
-       aria-label="{{ p.uh.numero }}: {{ p.rotulo }}{% if p.ocupacao %}, {{ p.ocupacao }}{% endif %} — abrir"
+       aria-label="{{ p.uh.numero }}: {{ p.rotulo }}{% if p.ocupacao %}, {{ p.ocupacao }}{% endif %}. Abrir"
        data-dica="- {{ p.uh.numero }}&#10;- {{ p.rotulo }}&#10;- {{ p.explicacao }}{% if p.camareira %}&#10;- Limpa: {{ p.camareira }}{% endif %}{% if p.divergente %}&#10;- {{ p.divergencia_rotulo }}{% endif %}">
       <span class="porta-topo">
         <span class="porta-num">{{ p.uh.numero|cut:"Quarto " }}</span>

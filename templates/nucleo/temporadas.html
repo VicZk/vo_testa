@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block titulo %}Temporadas — CRM Vô Testa{% endblock %}
+{% block titulo %}Temporadas | CRM Vô Testa{% endblock %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Cadastros</p>
@@ -20,7 +20,7 @@
     <input type="checkbox" name="feriados_automaticos"
            {% if config.feriados_automaticos %}checked{% endif %}
            onchange="this.form.submit()">
-    <span><strong>Feriados automáticos</strong> — classifica os feriados nacionais e o
+    <span><strong>Feriados automáticos:</strong> classifica os feriados nacionais e o
     aniversário de Itá (13/12) como <em>Feriado</em>, sem cadastrar cada data.
     Feriados locais específicos você ainda cadastra abaixo.</span>
   </label>

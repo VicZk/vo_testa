@@ -347,7 +347,7 @@ def pagar_cartao(request, token):
         mes_i = int(mes)
         ano_i = 2000 + int(ano) if len(ano) == 2 else int(ano)
     except (ValueError, AttributeError):
-        messages.error(request, "Validade inválida — use MM/AA.")
+        messages.error(request, "Validade inválida. Use MM/AA.")
         return redirect("pagamentos:pagar", token=token)
     if len(numero) < 13 or len(cvv) < 3 or not nome:
         messages.error(request, "Confira os dados do cartão.")

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block titulo %}{% if novo %}Nova resposta{% else %}Editar resposta{% endif %} — Comercial{% endblock %}
+{% block titulo %}{% if novo %}Nova resposta{% else %}Editar resposta{% endif %} | Comercial{% endblock %}
 
 {% block conteudo %}
 <div class="eleg">
@@ -19,7 +19,7 @@
         {% if field.errors %}<p class="erro-campo">{{ field.errors }}</p>{% endif %}
       </div>
     {% endfor %}
-    <p class="ajuda">Variáveis: <code>{nome}</code> <code>{checkin}</code> <code>{checkout}</code> <code>{noites}</code> <code>{valor}</code> <code>{vagas}</code> — preenchidas com os dados do lead na hora de enviar.</p>
+    <p class="ajuda">Variáveis: <code>{nome}</code> <code>{checkin}</code> <code>{checkout}</code> <code>{noites}</code> <code>{valor}</code> <code>{vagas}</code>. Essas variáveis são preenchidas com os dados do lead na hora de enviar.</p>
     <div class="eleg-acoes">
       <button type="submit" class="botao-primario">Salvar</button>
       {% if not novo %}

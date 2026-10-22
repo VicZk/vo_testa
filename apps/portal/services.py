@@ -151,14 +151,14 @@ def solicitar_manutencao(estadia, descricao):
 def cobrar_saldo(estadia, metodo="pix"):
     """Gera a cobrança do saldo da conta via Pagamentos e devolve a cobrança."""
     if not modulo_ativo(Modulo.PAGAMENTOS):
-        raise ValidationError("Pagamento online indisponível — acerte na recepção.")
+        raise ValidationError("Pagamento online indisponível. Faça o pagamento na recepção.")
     saldo_conta = Decimal(estadia["saldo"])
     if saldo_conta <= 0:
         raise ValidationError("Não há saldo a pagar.")
     from apps.pagamentos import services as pag
     return pag.criar_cobranca(
         _usuario_sistema(), valor=saldo_conta, metodo=metodo,
-        descricao=f"Saldo da hospedagem — {estadia['uh']}",
+        descricao=f"Saldo da hospedagem: {estadia['uh']}",
         finalidade=pag.FINALIDADE_SALDO, reserva_id=estadia["reserva_id"],
     )
 

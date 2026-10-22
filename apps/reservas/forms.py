@@ -141,7 +141,7 @@ class RecebimentoForm(forms.Form):
     autorizacao = forms.CharField(
         label="Autorização / NSU (cartão)", required=False, max_length=40,
         widget=forms.TextInput(attrs={
-            "placeholder": "Do comprovante da maquininha — p/ conciliar",
+            "placeholder": "Código do comprovante da maquininha, usado na conciliação",
         }),
     )
     observacao = forms.CharField(

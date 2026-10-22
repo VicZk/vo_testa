@@ -71,7 +71,7 @@ def atribuir(turno, funcionario, data, operador):
         raise ValidationError("Informe uma data válida para a escala.")
     if ausencia_no_dia(funcionario, data):
         raise ValidationError(
-            f"{funcionario.pessoa.nome} está ausente em {data:%d/%m} — remova a ausência antes."
+            f"{funcionario.pessoa.nome} está ausente em {data:%d/%m}. Remova a ausência antes de escalar."
         )
     try:
         return Atribuicao.objects.create(
@@ -560,12 +560,12 @@ def analisar_semana(inicio, setor=None):
             limite = 4 if f.sexo == "M" else 3      # ♂: nunca folgou no mês; ♀: só 1 folga em 4
             if qtd >= limite and f.pk in trab_este:
                 rodizio.append(f.pessoa.nome)
-                marca(trab_este[f.pk].pk, "aviso", f"{qtd}º domingo — rodízio")
+                marca(trab_este[f.pk].pk, "aviso", f"{qtd}º domingo (rodízio)")
     if folgam:
-        alertas.append({"nivel": "info", "texto": f"Domingo {domingo:%d/%m} — folga pela regra: " + "; ".join(folgam) + "."})
+        alertas.append({"nivel": "info", "texto": f"Domingo {domingo:%d/%m}. Folga pela regra: " + "; ".join(folgam) + "."})
     if forcados:
         alertas.append({"nivel": "aviso",
-                        "texto": f"Domingo {domingo:%d/%m} — folga dominical não coube por falta de gente: "
+                        "texto": f"Domingo {domingo:%d/%m}. Não foi possível dar a folga de domingo por falta de equipe: "
                                  f"{', '.join(forcados)}. Considere um coringa."})
     if rodizio:
         alertas.append({"nivel": "aviso",
@@ -575,8 +575,7 @@ def analisar_semana(inicio, setor=None):
     # 5) Feriado na semana
     for fe in Feriado.objects.filter(data__range=(dias[0], dias[-1])):
         alertas.append({"nivel": "info",
-                        "texto": f"Feriado {fe.data:%d/%m} ({fe.nome}) — tratar como domingo; "
-                                 "compensação (folga/dobro) por funcionário."})
+                        "texto": f'Feriado {fe.data:%d/%m} ({fe.nome}). Tratar como domingo; compensação (folga/dobro) por funcionário.'})
 
     return {"alertas": alertas, "violacoes": violacoes, "bloqueios": bloqueios}
 

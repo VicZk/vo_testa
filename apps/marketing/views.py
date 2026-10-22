@@ -89,7 +89,7 @@ def mover_fase(request, pk):
                 services.retroceder(campanha, fase, request.user)
                 messages.success(request, f"Voltou para {campanha.get_fase_display()}.")
             else:
-                raise ValidationError("Arraste uma fase por vez — cada portão precisa passar.")
+                raise ValidationError("Avance uma fase por vez, cumprindo os requisitos de cada etapa.")
     except ValidationError as e:
         messages.error(request, "; ".join(e.messages))
     return _rota_pos(request, campanha, destino)
@@ -493,7 +493,7 @@ def ocupacao(request):
         resumo = f"{problemas} semana{'s' if problemas != 1 else ''} com campanha no ar e ainda vazia{'s' if problemas != 1 else ''}."
         resumo_tom = "perigo"
     elif oportunidades:
-        resumo = f"{oportunidades} semana{'s' if oportunidades != 1 else ''} vazia{'s' if oportunidades != 1 else ''} sem campanha — espaço para anunciar."
+        resumo = f"{oportunidades} semana{'s' if oportunidades != 1 else ''} vazia{'s' if oportunidades != 1 else ''} sem campanha. Período disponível para anunciar."
         resumo_tom = "alerta"
     else:
         resumo = "Sem vazios preocupantes nos próximos 90 dias."
@@ -512,5 +512,5 @@ def ocupacao(request):
 def duplicar(request, pk):
     c = get_object_or_404(Campanha, pk=pk)
     nova = services.duplicar(c, request.user)
-    messages.success(request, "Campanha duplicada — comece a nova em Ideia.")
+    messages.success(request, "Campanha duplicada. A nova campanha começa na fase Ideia.")
     return redirect("marketing:detalhe", pk=nova.pk)

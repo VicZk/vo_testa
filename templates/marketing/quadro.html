@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block titulo %}Marketing — CRM Vô Testa{% endblock %}
+{% block titulo %}Marketing | CRM Vô Testa{% endblock %}
 
 {% block conteudo %}
 {% load moeda %}
@@ -129,7 +129,7 @@ desenhadas à mão, indistinguíveis dos chips de dado do quadro.{% endcomment %
 {# ── Aviso de filtro vazio (só os meus) ── #}
 {% if so_meus and not meus_count %}
 <div class="mk-aviso">
-  <span class="mk-aviso-txt">Nada seu aqui — há campanhas de outras pessoas no quadro.</span>
+  <span class="mk-aviso-txt">Você não tem campanhas neste filtro. Há campanhas de outras pessoas no quadro.</span>
   <a href="{% url 'marketing:quadro' %}" class="mk-aviso-acao">Mostrar todas</a>
 </div>
 {% endif %}

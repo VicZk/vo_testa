@@ -179,7 +179,7 @@ def conversao_reenviar(request, pk):
         else:
             ce = services.enviar_conversao(op, "lead", forcar=True)
         if ce is None:
-            messages.info(request, "Sem identificador de clique (fbclid/gclid) — nada a enviar.")
+            messages.info(request, "Não há identificador de clique (fbclid/gclid) para enviar.")
         elif ce.status == "enviada":
             messages.success(request, "Conversão reenviada ao provedor.")
         else:
@@ -300,7 +300,7 @@ def oportunidade(request, pk):
         h = historico_hospede(op.pessoa)
         if h["estadias"] or h["futuras"]:
             historico_cliente = h
-    # Gestão de lead fechado (reabrir/mover) — só para quem tem a área; avisa sobre a
+    # Gestão de lead fechado (reabrir/mover): só para quem tem a área; avisa sobre a
     # reserva que seria cancelada e o dinheiro que voltaria ao hóspede.
     pode_gerir_fechados = request.user.pode_area(Area.COMERCIAL_FECHADOS)
     reserva_vinculada = None
@@ -322,7 +322,7 @@ def oportunidade(request, pk):
         "reserva_vinculada": reserva_vinculada,
         "conversao_form": _conversao_inicial(op),
         "cotacao_form": _cotacao_inicial(op),
-        # Dados iniciais do combo de quarto (quebrado por ala) — já filtrado pelas
+        # Dados iniciais do combo de quarto (quebrado por ala): já filtrado pelas
         # datas do lead; o combo refaz via fetch quando as datas mudam.
         "quartos_combo": services.quartos_combo_dados(
             services.quartos_para_cotacao(op.checkin_previsto, op.checkout_previsto)),
@@ -557,7 +557,7 @@ def perder(request, pk):
 @requer_modulo(Modulo.COMERCIAL)
 @requer_area(Area.COMERCIAL_FECHADOS)
 def mover_fechado(request, pk):
-    """Reabrir/mover um lead já fechado (ganho/perdido) — só gestão comercial."""
+    """Reabrir/mover um lead já fechado (ganho/perdido): só gestão comercial."""
     op = get_object_or_404(Oportunidade, pk=pk)
     if request.method == "POST":
         etapa = get_object_or_404(EtapaFunil, pk=request.POST.get("etapa"))
@@ -803,7 +803,7 @@ def captacao_publica(request, slug):
                         nome=dados["nome"], telefone=dados["telefone"], email=dados["email"],
                         tipo_interesse=pagina.tipo_interesse, pagina=pagina,
                         hospedes=dados["pessoas"], checkin=dados["checkin"], checkout=dados["checkout"],
-                        mensagem=f"Lista de espera — {pagina.nome}", origem=origem,
+                        mensagem=f"Lista de espera: {pagina.nome}", origem=origem,
                         aceita_email=dados["consent"],
                     )
                     if lead is None:
@@ -846,7 +846,7 @@ def enviar_proposta_sinal(request, pk):
             pass  # best-effort — o link já foi gerado
         services.registrar_atividade(
             oportunidade=op, usuario=request.user, tipo=AtividadeComercial.Tipo.WHATSAPP,
-            descricao=f"Proposta + sinal enviada (R$ {valor_br}) — {link}")
+            descricao=f"Proposta + sinal enviada (R$ {valor_br}): {link}")
         messages.success(request, f"Sinal gerado e enviado no WhatsApp. Link: {link}")
     return redirect("comercial:oportunidade", pk=op.pk)
 

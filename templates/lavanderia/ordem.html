@@ -9,7 +9,7 @@
 </a>
 <p class="pagina-eyebrow letreiro">Lavanderia</p>
 <div class="pagina-cabecalho">
-  <h1>Ordem #{{ ordem.pk }} — {{ ordem.titulo }}</h1>
+  <h1>Ordem #{{ ordem.pk }}: {{ ordem.titulo }}</h1>
   <span class="selo {% if ordem.status == 'cancelada' %}selo-alerta{% elif ordem.status == 'entregue' %}selo-limpa{% else %}selo-em_andamento{% endif %}">{{ ordem.get_status_display }}</span>
   <a href="{% url 'lavanderia:cupom' ordem.pk %}?imprimir=1" target="_blank" rel="noopener" class="botao-neutro">{% if ordem.status == 'entregue' %}Imprimir recibo{% else %}Imprimir comprovante{% endif %}</a>
 </div>
@@ -37,9 +37,9 @@
     {% else %}
       <p class="subtitulo">
         Ordem {{ ordem.get_status_display|lower }}
-        {% if ordem.status == 'cancelada' %}{% if ordem.motivo_cancelamento %} — motivo: <strong>{{ ordem.motivo_cancelamento }}</strong>{% endif %}
-        {% elif ordem.conta_ref %} — lançada na conta: <strong>{{ ordem.conta_ref }}</strong>
-        {% elif ordem.forma_pagamento %} — paga com <strong>{{ ordem.forma_pagamento.nome }}</strong>{% endif %}.
+        {% if ordem.status == 'cancelada' %}{% if ordem.motivo_cancelamento %}. Motivo: <strong>{{ ordem.motivo_cancelamento }}</strong>{% endif %}
+        {% elif ordem.conta_ref %}, lançada na conta: <strong>{{ ordem.conta_ref }}</strong>
+        {% elif ordem.forma_pagamento %}, paga com <strong>{{ ordem.forma_pagamento.nome }}</strong>{% endif %}.
       </p>
     {% endif %}
   </section>

@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% load moeda %}
 
-{% block titulo %}Sessão de caixa — CRM Vô Testa{% endblock %}
+{% block titulo %}Sessão de caixa | CRM Vô Testa{% endblock %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Financeiro</p>
-<h1>Sessão de caixa — {{ sessao.get_modulo_display }}</h1>
+<h1>Sessão de caixa: {{ sessao.get_modulo_display }}</h1>
 <p class="subtitulo">
   Operador {{ sessao.operador }} · aberta em {{ sessao.aberta_em|date:"d/m/Y H:i" }}
   {% if sessao.fechada_em %} · fechada em {{ sessao.fechada_em|date:"d/m/Y H:i" }}{% endif %}
@@ -48,7 +48,7 @@
         <textarea id="motivo-reabertura" name="motivo" rows="2" required></textarea>
       </div>
       <div class="acoes">
-        <button type="submit" class="botao-perigo">Reabrir — fica auditado</button>
+        <button type="submit" class="botao-perigo">Reabrir (ação registrada)</button>
       </div>
     </form>
   </details>

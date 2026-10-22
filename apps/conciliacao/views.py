@@ -180,7 +180,7 @@ def ignorar_extrato(request):
 def desfazer_extrato(request):
     lanc = get_object_or_404(LancamentoExtrato, pk=request.POST.get("lancamento"))
     services.desfazer_extrato(lancamento=lanc, usuario=request.user)
-    messages.success(request, "Conciliação desfeita — a linha voltou para pendente.")
+    messages.success(request, "Conciliação desfeita. O registro voltou para pendente.")
     return redirect("conciliacao:manual")
 
 

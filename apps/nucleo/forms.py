@@ -157,7 +157,7 @@ class FuncionarioForm(forms.ModelForm):
         try:  # '10.000,00' → '10000.00'
             return Decimal(raw.replace(".", "").replace(",", "."))
         except (InvalidOperation, ValueError):
-            raise forms.ValidationError("Valor inválido — use o formato 10.000,00.")
+            raise forms.ValidationError("Valor inválido. Use o formato 10.000,00.")
 
 
 class FornecedorForm(forms.ModelForm):
@@ -274,7 +274,7 @@ class FecharCaixaForm(forms.Form):
     valor_contado = forms.DecimalField(
         label="Dinheiro contado na gaveta (R$)",
         min_value=Decimal("0.00"), decimal_places=2,
-        help_text="Conferência cega: conte o dinheiro antes — o sistema aponta a diferença.",
+        help_text="Conte o dinheiro sem consultar o saldo. O sistema mostrará a diferença após a conferência.",
     )
     observacoes = forms.CharField(
         label="Observações", required=False, widget=forms.Textarea(attrs={"rows": 2})

@@ -356,8 +356,7 @@ def texto_oferta(uh, op) -> str:
         if cot["taxa_turismo"]:
             taxas.append(f"taxa de turismo R$ {_reais(cot['taxa_turismo'])}")
         if taxas:
-            linhas.append(f"{' + '.join(taxas)} (quitadas no check-out) — "
-                          f"total *R$ {_reais(cot['total'])}*.")
+            linhas.append(f'{' + '.join(taxas)} (pagas no check-out). Total: *R$ {_reais(cot['total'])}*.')
         venda = _venda(cot["total"])
         if venda:
             linhas.append(
@@ -387,7 +386,7 @@ def texto_proposta(op, ids) -> str:
     for i, uh in enumerate(ordenadas, 1):
         nome = uh.nome_tematico or uh.numero
         cot = _cotacao_periodo(uh, op)
-        linha = f"*{i}. {nome}* — {estrutura.descricao_camas(uh)}"
+        linha = f"*{i}. {nome}*: {estrutura.descricao_camas(uh)}"
         if cot:
             linha += f"\n   {cot['noites']} noite{'s' if cot['noites'] != 1 else ''}: "
             linha += f"*R$ {_reais(cot['total'])}*"

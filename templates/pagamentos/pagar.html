@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Pagamento — Pousada Vô Testa</title>
+  <title>Pagamento | Pousada Vô Testa</title>
   {% comment %}Link de pagamento com token na URL: fora de índice de busca, e sem
   vazar a URL no Referer para o gateway/anúncio.{% endcomment %}
   <meta name="robots" content="noindex, nofollow">
@@ -116,7 +116,7 @@
       {% if cobranca.metodo == 'pix' and cobranca.pix_copia_cola %}
         {% if qr_svg %}
           <div class="pix-qr">{{ qr_svg|safe }}</div>
-          <p class="subtitulo pix-instrucao">Abra o app do seu banco e <b>escaneie o QR</b> — ou use o copia-e-cola abaixo.</p>
+          <p class="subtitulo pix-instrucao">Abra o app do seu banco e <b>escaneie o QR Code</b> ou use o código Pix Copia e Cola abaixo.</p>
         {% endif %}
         <span class="letreiro">Pix copia-e-cola</span>
         <button type="button" class="pix-copia" data-copiar="{{ cobranca.pix_copia_cola }}">
@@ -187,7 +187,7 @@
         {% elif pix_direto %}
           <p class="subtitulo pay-rodape">Depois de pagar pelo app do seu banco, toque em “Já paguei”. Confirmamos o valor na conta e liberamos sua reserva.</p>
         {% else %}
-          <p class="subtitulo pay-rodape">Após pagar, clique acima — verificamos a confirmação com o banco. Pode levar alguns instantes.</p>
+          <p class="subtitulo pay-rodape">Após pagar, clique no botão acima para consultar a confirmação do banco. Isso pode levar alguns instantes.</p>
         {% endif %}
       {% endif %}
       {% if cobranca.metodo != 'cartao' or sandbox %}{% include "pagamentos/_confianca.html" %}{% endif %}

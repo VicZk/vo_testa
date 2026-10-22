@@ -338,7 +338,7 @@ def rel_distribuicao(inicio, fim):
             "parâmetro da casa (Cadastros → Tabela de preços → Custo de vender por "
             "canal). Base = reservas firmes com noites no período (pré-reserva pode "
             "cair). As linhas de agência/empresa usam a comissão do cadastro da agência "
-            "e ficam FORA do total de custo — como a comissão entra na contabilidade "
+            "e ficam FORA do total de custo. Como a comissão entra na contabilidade "
             "ainda é decisão da pousada, então nada é lançado no Financeiro."
         ),
     }
@@ -469,7 +469,7 @@ RELATORIOS = {
     "carteira": {"nome": "Carteira de reservas (OTB)", "grupo": "Consolidados",
                  "builder": rel_carteira, "modulo": Modulo.RESERVAS,
                  "periodo": "proximo_mes"},
-    "pickup": {"nome": "Pickup — entrou × saiu", "grupo": "Consolidados",
+    "pickup": {"nome": "Pickup: entradas e saídas", "grupo": "Consolidados",
                "builder": rel_pickup, "modulo": Modulo.RESERVAS,
                "periodo": "proximo_mes", "controles": ["janela"]},
     "ritmo": {"nome": "Ritmo de vendas (antecedência)", "grupo": "Consolidados",
@@ -482,23 +482,23 @@ RELATORIOS = {
     "faturamento_modulos": {"nome": "Faturamento por setor (caixa × quarto)",
                             "grupo": "Consolidados",
                             "builder": rel_faturamento_modulos, "modulo": None},
-    "estoque": {"nome": "Estoque — consumo (curva ABC)", "grupo": "Por módulo",
+    "estoque": {"nome": "Estoque: consumo (curva ABC)", "grupo": "Por módulo",
                 "builder": rel_estoque_consumo, "modulo": Modulo.ESTOQUE},
-    "reservas": {"nome": "Reservas — canal e status", "grupo": "Por módulo",
+    "reservas": {"nome": "Reservas: canal e status", "grupo": "Por módulo",
                  "builder": rel_reservas, "modulo": Modulo.RESERVAS},
-    "governanca_faxinas": {"nome": "Governança — faxinas por camareira",
+    "governanca_faxinas": {"nome": "Governança: faxinas por camareira",
                            "grupo": "Por módulo",
                            "builder": rel_governanca_faxinas,
                            "modulo": Modulo.GOVERNANCA},
-    "governanca_inspecao": {"nome": "Governança — inspeção e retrabalho",
+    "governanca_inspecao": {"nome": "Governança: inspeção e retrabalho",
                             "grupo": "Por módulo",
                             "builder": rel_governanca_inspecao,
                             "modulo": Modulo.GOVERNANCA},
-    "governanca_discrepancias": {"nome": "Governança — discrepâncias da ronda",
+    "governanca_discrepancias": {"nome": "Governança: discrepâncias da ronda",
                                  "grupo": "Por módulo",
                                  "builder": rel_governanca_discrepancias,
                                  "modulo": Modulo.GOVERNANCA},
-    "comercial": {"nome": "Comercial — funil e conversão", "grupo": "Por módulo",
+    "comercial": {"nome": "Comercial: funil e conversão", "grupo": "Por módulo",
                   "builder": rel_comercial, "modulo": Modulo.COMERCIAL},
 }
 

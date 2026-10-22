@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load moeda nucleo_extras %}
 
-{% block titulo %}Cadastros — Estoque{% endblock %}
+{% block titulo %}Cadastros | Estoque{% endblock %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Vendas &amp; Estoque</p>
@@ -13,7 +13,7 @@
 
 <p class="subtitulo">As duas listas que sustentam o resto: a <strong>categoria</strong> agrupa
   o produto nos filtros e nos relatórios; o <strong>local</strong> é o depósito físico onde o
-  saldo mora — um por área que usa estoque, mais o almoxarifado central.</p>
+  saldo é registrado. Cada área tem seu depósito, além do almoxarifado central.</p>
 
 <div class="est-cadastros">
   <section class="est-cadastro-bloco">
@@ -30,7 +30,7 @@
             <td>{% if c.ativo %}<span class="selo selo-ativo">Ativa</span>{% else %}<span class="selo selo-neutro">Inativa</span>{% endif %}</td>
           </tr>
         {% empty %}
-          <tr><td colspan="3" class="vazio">Nenhuma categoria ainda — crie a primeira ao lado.</td></tr>
+          <tr><td colspan="3" class="vazio">Nenhuma categoria cadastrada. Use o formulário para criar a primeira.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -62,7 +62,7 @@
             <td>{% if lo.local.ativo %}<span class="selo selo-ativo">Ativo</span>{% else %}<span class="selo selo-neutro">Inativo</span>{% endif %}</td>
           </tr>
         {% empty %}
-          <tr><td colspan="4" class="vazio">Nenhum local ainda — crie o almoxarifado central ao lado.</td></tr>
+          <tr><td colspan="4" class="vazio">Nenhum local cadastrado. Use o formulário para criar o almoxarifado central.</td></tr>
         {% endfor %}
       </tbody>
     </table>

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load nucleo_extras %}
 
-{% block titulo %}{% if pessoa %}{{ pessoa.nome }}{% else %}Nova pessoa{% endif %} — CRM Vô Testa{% endblock %}
+{% block titulo %}{% if pessoa %}{{ pessoa.nome }}{% else %}Nova pessoa{% endif %} | CRM Vô Testa{% endblock %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Cadastros</p>
@@ -69,7 +69,7 @@
     </div>
 
     {% if funcionario %}
-    <p class="ajuda">Esta pessoa também é <strong>funcionário</strong> — os dados de RH e o acesso são geridos em <a href="{% url 'funcionario_editar' funcionario.pk %}">Funcionários</a>.</p>
+    <p class="ajuda">Esta pessoa também é <strong>funcionário</strong>. Os dados de RH e o acesso são geridos em <a href="{% url 'funcionario_editar' funcionario.pk %}">Funcionários</a>.</p>
     {% endif %}
   </fieldset>
 

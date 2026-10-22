@@ -4,14 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{{ pagina.hero_titulo|default:"A casa do Vô"|truncatechars:60 }} · Pousada Vô Testa</title>
-<meta name="description" content="{{ pagina.hero_subtitulo|default:'Nem resort, nem cabana. É a casa do Vô — em Itá, Santa Catarina.'|truncatechars:150 }}">
+<meta name="description" content="{{ pagina.hero_subtitulo|default:'Conheça a Pousada Vô Testa, em Itá, Santa Catarina.'|truncatechars:150 }}">
 {# Card do link no WhatsApp/Instagram/Facebook — é por ali que a campanha circula #}
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Pousada Vô Testa">
 <meta property="og:locale" content="pt_BR">
 <meta property="og:url" content="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
 <meta property="og:title" content="{{ pagina.hero_titulo|default:'A casa do Vô'|truncatechars:70 }}">
-<meta property="og:description" content="{{ pagina.hero_subtitulo|default:'Nem resort, nem cabana. É a casa do Vô — em Itá, Santa Catarina.'|truncatechars:200 }}">
+<meta property="og:description" content="{{ pagina.hero_subtitulo|default:'Conheça a Pousada Vô Testa, em Itá, Santa Catarina.'|truncatechars:200 }}">
 <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'site/img/og-pousada.jpg' %}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -129,7 +129,7 @@ gtag('js',new Date());gtag('config','{{ pagina.google_tag_id }}');
     <img class="logo" src="{% static 'img/logotipo-pergaminho-limpo.png' %}" alt="Pousada Vô Testa">
     <h1>Nem resort.<br>Nem cabana.<br><em>É a casa do Vô.</em></h1>
     <div class="rule"></div>
-    <p class="sub">Percorra nossa planta, que ainda está em obras — mas logo estará pronta para te receber.</p>
+    <p class="sub">Conheça a planta da pousada e acompanhe o que estamos preparando para receber você.</p>
     <p class="cue">↓</p>
   </div>
 </section>

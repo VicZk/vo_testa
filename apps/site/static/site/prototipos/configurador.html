@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Protótipo — Monte sua Máquina do Tempo | Pousada Vô Testa</title>
+<title>Protótipo: Monte sua Máquina do Tempo | Pousada Vô Testa</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
 tailwind.config = { theme: { extend: { colors: {
@@ -31,7 +31,7 @@ tailwind.config = { theme: { extend: { colors: {
     <div class="flex items-center gap-2">
       <svg class="w-7 h-7 text-madeira gear on" style="--spd:12s" viewBox="0 0 100 100"><circle cx="50" cy="50" r="20" fill="none" stroke="currentColor" stroke-width="6"/><g fill="currentColor"><rect x="44" y="12" width="12" height="16" rx="3"/><rect x="44" y="72" width="12" height="16" rx="3"/><rect x="12" y="44" width="16" height="12" rx="3"/><rect x="72" y="44" width="16" height="12" rx="3"/></g></svg>
       <div><span class="font-display text-lg font-bold">Pousada Vô Testa</span>
-      <span class="block text-madeira/40 text-[11px]">Protótipo — Monte sua Máquina do Tempo (#5) · claro + musgo</span></div>
+      <span class="block text-madeira/40 text-[11px]">Protótipo: Monte sua Máquina do Tempo (#5) · claro + musgo</span></div>
     </div>
     <span class="text-madeira/30 text-xs hidden sm:block">demonstração interativa</span>
   </div>
@@ -41,7 +41,7 @@ tailwind.config = { theme: { extend: { colors: {
   <div class="text-center mb-8">
     <p class="text-musgo text-xs tracking-[0.35em] uppercase mb-2 font-semibold">10–13 Jul 2026 · 3 noites · 2 hóspedes</p>
     <h1 class="font-display text-3xl sm:text-4xl font-bold text-madeira">Monte sua Máquina do Tempo</h1>
-    <p class="text-madeira/60 text-sm mt-1">Encaixe a cabana e as peças da sua estadia — a máquina ganha vida e o valor se ajusta ao vivo.</p>
+    <p class="text-madeira/60 text-sm mt-1">Escolha a cabana e os extras da sua estadia. O valor é atualizado a cada escolha.</p>
   </div>
 
   <div class="grid lg:grid-cols-2 gap-6">
@@ -135,7 +135,7 @@ function atualizarMaquina(){
   gears.forEach((g,i)=> g.classList.toggle('on', i < Math.min(pecas, gears.length)));
   document.getElementById('pecas').textContent = pecas;
   const est = !cabanaSel ? 'comece escolhendo sua cabana'
-    : extrasSel.size===0 ? 'a base está montada — agora os detalhes ⚙'
+    : extrasSel.size===0 ? 'Cabana escolhida. Se quiser, adicione os extras.'
     : extrasSel.size>=4 ? 'que máquina magnífica! 🔥'
     : 'a engenhoca está ganhando vida...';
   document.getElementById('estado').textContent = est;

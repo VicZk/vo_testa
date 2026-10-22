@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block titulo %}Escala — CRM Vô Testa{% endblock %}
+{% block titulo %}Escala | CRM Vô Testa{% endblock %}
 
 {% block conteudo %}
 <div id="escala-page" data-editar-url="{% url 'escala:editar' %}"
@@ -60,7 +60,7 @@
   {% if publicacao %}
   <p class="escala-pub {% if publicacao.forcado %}escala-pub-forcado{% endif %}">
     {% if publicacao.forcado %}Publicada com violação{% else %}✓ Publicada{% endif %}
-    em {{ publicacao.publicado_em|date:"d/m H:i" }} por {{ publicacao.publicado_por }}{% if publicacao.justificativa %} — “{{ publicacao.justificativa }}”{% endif %}.
+    em {{ publicacao.publicado_em|date:"d/m H:i" }} por {{ publicacao.publicado_por }}{% if publicacao.justificativa %}. Justificativa: “{{ publicacao.justificativa }}”{% endif %}.
   </p>
   {% endif %}
 
@@ -80,7 +80,7 @@
   </div>
   {% else %}
   <div class="estado-vazio">
-    <p>Nenhum funcionário cadastrado ainda — é deles que sai a escala.</p>
+    <p>Cadastre os funcionários para montar a escala.</p>
     <a href="{% url 'funcionario_novo' %}" class="botao-primario">Cadastrar funcionário</a>
   </div>
   {% endif %}
@@ -215,7 +215,7 @@
     if (cell.querySelector('.he-form')) return;
     const nome = chip.dataset.nome, func = chip.dataset.func, padrao = chip.dataset.padrao, data = cell.dataset.data;
     const f = document.createElement('div'); f.className = 'he-form';
-    f.innerHTML = `<div class="tit">Hora extra — ${nome}</div>
+    f.innerHTML = `<div class="tit">Hora extra: ${nome}</div>
       <div class="lin">
         <div><label>Início</label><input type="time" class="ini" value="18:00"></div>
         <div><label>Fim</label><input type="time" class="fim" value="22:00"></div>

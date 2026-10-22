@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
-{% block titulo %}Recados do turno — CRM Vô Testa{% endblock %}
+{% block titulo %}Recados do turno | CRM Vô Testa{% endblock %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Operação</p>
 <h1>Recados do turno</h1>
-<p class="subtitulo">Ocorrências compartilhadas entre turnos — converse no tópico e feche quando resolver.</p>
+<p class="subtitulo">Compartilhe ocorrências com os outros turnos. Use os comentários para acompanhar e encerre quando resolver.</p>
 
 <form method="post" class="form-cartao lb-compose">
   {% csrf_token %}
@@ -13,7 +13,7 @@
   {{ form.texto }}
   <label class="lb-check">
     {{ form.importante }} <span>Marcar como importante</span>
-    <small>— destaca e envia pro bloco “Precisa de atenção” do painel.</small>
+    <small>Destaca a ocorrência no bloco “Precisa de atenção” do painel.</small>
   </label>
   <div class="acoes">
     <button type="submit" class="botao-primario">Registrar ocorrência</button>
@@ -36,7 +36,7 @@
     {% include "nucleo/partials/logbook_ocorrencia.html" %}
   {% empty %}
     <p class="vazio">
-      {% if filtro == 'importantes' %}Nenhum importante pendente.{% else %}Nenhuma pendência aberta. Turno tranquilo — bom trabalho.{% endif %}
+      {% if filtro == 'importantes' %}Nenhum importante pendente.{% else %}Nenhuma pendência aberta. Bom trabalho!{% endif %}
     </p>
   {% endfor %}
 </div>

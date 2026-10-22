@@ -9,7 +9,7 @@
     <title>{% block title %}Pousada Vô Testa{% endblock %}</title>
 
     {# SEO: descrição por página (override no bloco), canonical e Open Graph #}
-    <meta name="description" content="{% block meta_description %}Pousada Vô Testa — hospedagem à beira do Lago de Itá (Itá/SC): quartos, cabanas, day use com piscina e mirantes, pesca esportiva e eventos. Reserve direto pelo site.{% endblock %}">
+    <meta name="description" content="{% block meta_description %}Pousada Vô Testa: hospedagem à beira do Lago de Itá (Itá/SC): quartos, cabanas, day use com piscina e mirantes, pesca esportiva e eventos. Reserve direto pelo site.{% endblock %}">
     {# Canonical/og:url sem a query string: /reservar/?checkin=… não vira uma página nova por data. #}
     <link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
     <meta property="og:type" content="website">

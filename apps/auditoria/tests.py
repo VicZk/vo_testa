@@ -124,7 +124,7 @@ class FormatacaoTrilhaTests(TestCase):
         f = self._frase("fechamento_caixa", "SessaoCaixa",
                         {"contado": "350.00", "diferenca": "0.00"})
         self.assertIn("Fechou o caixa", f)
-        self.assertIn("contado R$ 350,00", f)
+        self.assertIn("Valor contado: R$ 350,00", f)
         self.assertIn("diferença R$ 0,00", f)
 
     def test_recebimento(self):

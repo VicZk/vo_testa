@@ -319,7 +319,7 @@ def _lancar_taxa(transacao, usuario):
             nome="Taxa de cartão", tipo=CategoriaFinanceira.Tipo.DESPESA)
         transacao.lancamento_taxa = LancamentoFinanceiro.objects.create(
             tipo=CategoriaFinanceira.Tipo.DESPESA, categoria=cat, centro=CENTRO_NUCLEO,
-            descricao=f"Taxa de cartão — NSU {transacao.nsu}", valor=taxa,
+            descricao=f"Taxa de cartão: NSU {transacao.nsu}", valor=taxa,
             data=transacao.data_liquidacao or transacao.data_venda, criado_por=usuario,
         )
 
@@ -423,7 +423,7 @@ def candidatos_para_cartao(transacao, limite: int = 20) -> list[Candidato]:
     for m in _sem_estornados(MovimentoCaixa.objects
               .filter(tipo=MovimentoCaixa.Tipo.RECEBIMENTO, forma_pagamento__tipo__in=formas)
               .exclude(id__in=usados)):
-        cands.append(Candidato("mc", m.id, f"{m.descricao} — NSU {m.autorizacao or '—'}",
+        cands.append(Candidato("mc", m.id, f"{m.descricao}: NSU {m.autorizacao or '—'}",
                                m.valor, timezone.localtime(m.criado_em).date(), m.autorizacao == transacao.nsu))
     cands.sort(key=lambda x: (not x.exato, abs(x.valor - transacao.bruto)))
     return cands[:limite]
@@ -524,19 +524,19 @@ def fechamento(inicio, fim) -> dict:
                    "sem_venda": c_sv, "bruto": bruto, "liquido": liquido, "taxa": taxa,
                    "divergencias": diverg, "pct": pct_cartao},
         "kpis": [
-            ("Extrato — linhas", ext_total),
-            ("Extrato — conciliadas", ext_conc),
-            ("Extrato — pendentes", ext_pend),
-            ("Extrato — ignoradas", ext_ign),
-            ("Extrato — % conciliado", f"{pct_ext}%"),
+            ("Extrato: linhas", ext_total),
+            ("Extrato: conciliadas", ext_conc),
+            ("Extrato: pendentes", ext_pend),
+            ("Extrato: ignoradas", ext_ign),
+            ("Extrato: % conciliado", f"{pct_ext}%"),
             ("Créditos conciliados (R$)", creditos),
             ("Débitos conciliados (R$)", debitos),
-            ("Cartão — transações", c_total),
-            ("Cartão — conciliadas", c_conc),
-            ("Cartão — sem venda", c_sv),
+            ("Cartão: transações", c_total),
+            ("Cartão: conciliadas", c_conc),
+            ("Cartão: sem venda", c_sv),
             ("Cartão bruto (R$)", bruto),
             ("Cartão líquido (R$)", liquido),
             ("Taxa de cartão (R$)", taxa),
-            ("Cartão — divergências", diverg),
+            ("Cartão: divergências", diverg),
         ],
     }

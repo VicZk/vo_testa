@@ -5,7 +5,7 @@ depois o progresso do dia, o que pede ação agora, as chegadas que dependem de
 quarto pronto e a carga de cada camareira. Tudo clicável para a ação certa — a
 lista operacional está a um toque, na aba Quartos.{% endcomment %}
 
-{% block titulo %}Governança — visão geral{% endblock %}
+{% block titulo %}Governança | visão geral{% endblock %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Hospedagem · Governança</p>
@@ -110,9 +110,9 @@ A barra mostra a casa inteira repartida pelos quatro estados.{% endcomment %}
     <p class="bloco-subtitulo">
       {% if plano.a_entregar %}
         {% if plano.atrasado %}
-          <strong>{{ plano.a_entregar }}</strong> quarto{{ plano.a_entregar|pluralize }} para entregar{% if plano.hora_checkin %} — o horário de entrada ({{ plano.hora_checkin|time:"H:i" }}) já passou{% endif %}.
+          <strong>{{ plano.a_entregar }}</strong> quarto{{ plano.a_entregar|pluralize }} para entregar{% if plano.hora_checkin %}. O horário de entrada ({{ plano.hora_checkin|time:"H:i" }}) já passou{% endif %}.
         {% else %}
-          <strong>{{ plano.a_entregar }}</strong> quarto{{ plano.a_entregar|pluralize }} para entregar antes do primeiro hóspede{% if plano.hora_checkin %}, às {{ plano.hora_checkin|time:"H:i" }}{% endif %}{% if plano.falta_tempo %} — {{ plano.falta_tempo }}{% endif %}.
+          <strong>{{ plano.a_entregar }}</strong> quarto{{ plano.a_entregar|pluralize }} para entregar antes do primeiro hóspede{% if plano.hora_checkin %}, às {{ plano.hora_checkin|time:"H:i" }}{% endif %}{% if plano.falta_tempo %}. {{ plano.falta_tempo }}{% endif %}.
         {% endif %}
       {% elif plano.a_fazer %}
         Nenhum hóspede esperando quarto: dá para seguir a casa com calma.

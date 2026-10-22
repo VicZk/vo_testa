@@ -64,7 +64,7 @@ class LocalEstoqueForm(forms.ModelForm):
 
         self.fields["modulo"] = forms.ChoiceField(
             label="Vínculo (centro)", choices=centro_choices(),
-            help_text="Área dona do depósito — o almoxarifado central é do Núcleo.",
+            help_text="Área responsável pelo depósito. O almoxarifado central pertence ao Núcleo.",
         )
         self.fields["nome"].widget.attrs["placeholder"] = "Ex.: Depósito da Loja"
 
@@ -106,11 +106,11 @@ class EntradaForm(_ComChave, _ProdutoLocalBase):
     )
     custo_unitario = forms.DecimalField(
         label="Custo unitário (R$)", min_value=Decimal("0"), decimal_places=4,
-        help_text="O que foi pago por unidade — é ele que forma o custo médio.",
+        help_text="Valor pago por unidade, usado para calcular o custo médio.",
     )
     fornecedor = forms.ModelChoiceField(
         label="Fornecedor", queryset=Pessoa.objects.none(), required=False,
-        widget=CAMPO_COMBO, help_text="Opcional — de quem veio a mercadoria.",
+        widget=CAMPO_COMBO, help_text="Fornecedor da mercadoria (opcional).",
     )
     documento = forms.CharField(label="Documento (NF)", required=False)
     observacao = forms.CharField(label="Observação", required=False)
@@ -181,7 +181,7 @@ class AjusteForm(_ProdutoLocalBase):
     )
     motivo = forms.CharField(
         label="Motivo do ajuste",
-        help_text="Fica na trilha de auditoria — escreva o que explicaria a diferença.",
+        help_text="Explique o motivo da diferença. A justificativa fica no histórico de auditoria.",
     )
 
 

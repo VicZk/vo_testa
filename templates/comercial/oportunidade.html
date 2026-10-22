@@ -3,7 +3,7 @@
 {% load static %}
 {% load comercial_extras %}
 
-{% block titulo %}{{ op.titulo }} — Comercial{% endblock %}
+{% block titulo %}{{ op.titulo }} | Comercial{% endblock %}
 
 {% block conteudo %}
 <div class="pagina-cabecalho">
@@ -13,7 +13,7 @@
     {% if op.titulo_curto %}<p class="subtitulo">{{ op.titulo_curto }}</p>{% endif %}
     {% if proxima_acao %}<p class="op-proxima op-proxima-{{ proxima_acao.nivel }}">Próxima ação: <b>{{ proxima_acao.texto }}</b></p>{% endif %}
     {% if historico_cliente %}
-    <p class="op-recorrente" title="Cliente com histórico na pousada">Cliente recorrente —
+    <p class="op-recorrente" title="Cliente com histórico na pousada">Cliente recorrente:
       {% if historico_cliente.estadias %}<b>{{ historico_cliente.estadias }}</b> estadia{{ historico_cliente.estadias|pluralize:"s" }}{% if historico_cliente.ultima %} · última em {{ historico_cliente.ultima|date:"m/Y" }}{% endif %}{% endif %}{% if historico_cliente.futuras %}{% if historico_cliente.estadias %} · {% endif %}<b>{{ historico_cliente.futuras }}</b> reserva{{ historico_cliente.futuras|pluralize }} em aberto{% endif %}
     </p>
     {% endif %}
@@ -394,10 +394,10 @@
 
     {% if pode_gerir_fechados and not op.aberta %}
     <div class="cartao op-acoes" x-data="{ tipo: '' }">
-      <p class="rot-secao">Gestão — reabrir / mover lead fechado</p>
+      <p class="rot-secao">Reabrir ou mover lead fechado</p>
       <p class="op-nota">
         Estado atual: <b>{% if op.perdida %}Perdido{% else %}Ganho{% endif %}</b>{% if op.fechado_em %} em {{ op.fechado_em|date:"d/m/Y" }}{% endif %}.
-        {% if op.perdida and op.motivo_perda %} Motivo: {{ op.motivo_perda.nome }}{% if op.motivo_perda_detalhe %} — “{{ op.motivo_perda_detalhe }}”{% endif %}.{% endif %}
+        {% if op.perdida and op.motivo_perda %} Motivo: {{ op.motivo_perda.nome }}{% if op.motivo_perda_detalhe %}: “{{ op.motivo_perda_detalhe }}”{% endif %}.{% endif %}
       </p>
       {% if reserva_vinculada %}
       {# Um só <span> ao lado do ícone: o aviso é flex, e cada pedaço solto de texto viraria uma coluna. #}
@@ -405,9 +405,9 @@
         <svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
         <span>Há a reserva <a href="{% url 'reservas:detalhe' reserva_vinculada.pk %}">#{{ reserva_vinculada.pk }}</a> ({{ reserva_vinculada.status }}).
         {% if op.status == 'ganha' %} Tirar do Ganho vai <b>cancelar</b> esta reserva.{% endif %}
-        {% if reserva_vinculada.no_caixa %}<br>O hóspede pagou <b>{{ reserva_vinculada.no_caixa|intcomma_brl }}</b> no caixa — será <b>estornado</b> ao mover (exige o seu caixa de Reservas aberto).{% endif %}
-        {% if reserva_vinculada.online %}<br><b>{{ reserva_vinculada.online|intcomma_brl }}</b> foram pagos online — estorne a cobrança em Pagamentos antes de mover.{% endif %}
-        {% if op.status == 'ganha' and not reserva_vinculada.cancelavel %}<br>A reserva não é mais cancelável ({{ reserva_vinculada.status }}) — resolva em Reservas primeiro.{% endif %}</span>
+        {% if reserva_vinculada.no_caixa %}<br>O hóspede pagou <b>{{ reserva_vinculada.no_caixa|intcomma_brl }}</b> no caixa. Esse valor será <b>estornado</b> ao mover (exige o seu caixa de Reservas aberto).{% endif %}
+        {% if reserva_vinculada.online %}<br><b>{{ reserva_vinculada.online|intcomma_brl }}</b> foram pagos online. Estorne a cobrança em Pagamentos antes de mover.{% endif %}
+        {% if op.status == 'ganha' and not reserva_vinculada.cancelavel %}<br>A reserva não é mais cancelável ({{ reserva_vinculada.status }}). Resolva em Reservas antes de continuar.{% endif %}</span>
       </p>
       {% endif %}
       <form method="post" action="{% url 'comercial:mover_fechado' op.pk %}"
@@ -443,7 +443,7 @@
     {% if r.sexo_estimado or r.uf_estimada or r.cidade_estimada or r.dispositivo or r.navegador %}
     <div class="cartao op-bloco-info">
       <p class="rot-secao">Perfil estimado</p>
-      <p class="op-nota compacta">Inferido do nome, do DDD e do dispositivo — aproximado, para segmentar o atendimento.</p>
+      <p class="op-nota compacta">Estimativa baseada no nome, no DDD e no dispositivo. Use apenas como referência no atendimento.</p>
       <div class="op-chips">
         {% if r.sexo_estimado %}<span class="chip-est">{% if r.sexo_estimado == 'F' %}Feminino{% else %}Masculino{% endif %}</span>{% endif %}
         {% if r.uf_estimada or r.cidade_estimada %}<span class="chip-est">{% if r.cidade_estimada %}{{ r.cidade_estimada }}{% if r.uf_estimada %}/{% endif %}{% endif %}{{ r.uf_estimada }}</span>{% endif %}
@@ -469,7 +469,7 @@
         <button type="submit" class="botao-mini">Reenviar conversão</button>
       </form>
       {% else %}
-      <p class="op-nota-fim">Sem clique rastreado — nada a enviar às plataformas.</p>
+      <p class="op-nota-fim">Não há clique rastreado para enviar às plataformas.</p>
       {% endif %}
     </div>
     {% endif %}

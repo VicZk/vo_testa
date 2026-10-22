@@ -42,8 +42,7 @@ def _registrar_bloqueio(uh, usuario, ordem):
 
         if reserva_conflita(uh, ordem.bloqueio_inicio, ordem.bloqueio_fim):
             raise ValidationError(
-                f"O quarto {uh.numero} tem reserva no período do bloqueio — "
-                "ajuste as datas ou realoje o hóspede antes."
+                f'O quarto {uh.numero} tem reserva no período do bloqueio. Ajuste as datas ou troque o hóspede de quarto antes de continuar.'
             )
     registrar_auditoria(usuario, "bloqueio_uh", ordem, {
         "uh": uh.numero, "motivo": ordem.titulo,
@@ -226,7 +225,7 @@ def pendencias_auditoria():
     for uh in UH.objects.filter(status=UH.Status.BLOQUEADA):
         achados.append({
             "area": "Manutenção", "tipo": "quarto_bloqueado", "gravidade": "media",
-            "descricao": f"{uh.numero} bloqueado (manutenção) — fora da disponibilidade.",
+            "descricao": f"{uh.numero} bloqueado para manutenção e indisponível para reservas.",
             "url": reverse("manutencao:painel"),
         })
     return achados

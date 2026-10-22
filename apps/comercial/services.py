@@ -179,11 +179,11 @@ def _disponibilidade_snippet(op) -> str:
             fim = co if co > ci else ci + timedelta(days=1)
             n = uhs_disponiveis(ci, fim).filter(tipo__modalidade="day_use").count()
             return (f" Temos {n} vaga(s) de day-use na data." if n
-                    else " O day-use nessa data está cheio — posso ver outra data.")
+                    else " Não há vagas para o Dia na Pousada nessa data. Posso consultar outra data.")
         if op.tipo_interesse == Oportunidade.TipoInteresse.HOSPEDAGEM:
             n = uhs_disponiveis(ci, co).exclude(tipo__modalidade="day_use").count()
             return (f" Temos {n} quarto(s) livre(s) no período." if n
-                    else " No período não há quarto livre — posso sugerir datas próximas.")
+                    else " Não há quartos livres nesse período. Posso sugerir datas próximas.")
     except Exception:
         return ""
     return ""
@@ -231,7 +231,7 @@ def proxima_acao(op):
     if cot and cot.validade:
         dias = (cot.validade - hoje).days
         if dias < 0:
-            return {"nivel": "alerta", "texto": "Cotação vencida — refazer ou cobrar"}
+            return {"nivel": "alerta", "texto": "Cotação vencida: refazer ou cobrar"}
         if dias <= 2:
             return {"nivel": "aviso",
                     "texto": f"Cotação vence em {dias} dia{'s' if dias != 1 else ''}"}
@@ -426,7 +426,7 @@ def criar_lead_manual(*, usuario, chave, pessoa=None, contato=None, **campos):
                 from apps.nucleo.models import Pessoa
                 pessoa = Pessoa.objects.create(**(contato or {}), aceita_email=False)
                 Prospecto.objects.create(pessoa=pessoa)
-            titulo = campos.pop("titulo", "") or f"Atendimento — {pessoa.nome}"[:120]
+            titulo = campos.pop("titulo", "") or f"Atendimento: {pessoa.nome}"[:120]
             campos["responsavel"] = campos.get("responsavel") or usuario
             campos["adultos"] = campos.get("hospedes", 2)
             op = criar_oportunidade(usuario=usuario, pessoa=pessoa, titulo=titulo,
@@ -582,7 +582,7 @@ def _reabrir_lead_para_campanha(op, pagina, mensagem, usuario):
                            "observacao", "atualizado_em"])
     _abrir_permanencia(op, primeira)
     atualizar_score(op)
-    nota = f"♻️ Reativado — novo interesse pela campanha “{pagina.nome}”."
+    nota = f"♻️ Reativado: novo interesse pela campanha “{pagina.nome}”."
     if motivo_anterior:
         nota += f" Perda anterior: {motivo_anterior}."
     _nota_sistema_lead(op, nota)
@@ -758,7 +758,7 @@ def capturar_lead_site(*, nome, email="", telefone="", mensagem="",
         Oportunidade.TipoInteresse.OUTRO: "Proposta",
     }
     prefixo = rotulos.get(tipo, "Proposta")
-    titulo = f"{prefixo} site — {nome}"
+    titulo = f"{prefixo} site: {nome}"
     if checkin and checkout:
         titulo = f"{prefixo} {checkin:%d/%m}→{checkout:%d/%m} — {nome}"
     rastreio = {k: v for k, v in (origem or {}).items() if v}
@@ -775,7 +775,7 @@ def capturar_lead_site(*, nome, email="", telefone="", mensagem="",
     )
     registrar_atividade(
         oportunidade=op, usuario=usuario, tipo=AtividadeComercial.Tipo.TAREFA,
-        descricao=f"1º contato (SLA 24h) — {prefixo.lower()} capturado no site",
+        descricao=f"1º contato (prazo de 24h): {prefixo.lower()} capturado no site",
         quando=timezone.now() + timedelta(hours=SLA_PRIMEIRO_CONTATO_HORAS),
         concluida=False,
     )
@@ -914,7 +914,7 @@ def marcar_perdida(oportunidade, motivo, usuario, detalhe=""):
     registrar_auditoria(usuario, "oportunidade_perdida", oportunidade,
                         {"motivo": motivo.nome, "detalhe": detalhe})
     _log_evento(oportunidade, usuario,
-                f"marcou como perdida — {motivo.nome}"
+                f"marcou como perdida. Motivo: {motivo.nome}"
                 + (f": {detalhe}" if detalhe else ""))
     transaction.on_commit(lambda: enviar_evento_crm(oportunidade, "perdido"))
     return oportunidade
@@ -965,7 +965,7 @@ def mover_lead_fechado(oportunidade, etapa_destino, usuario, justificativa="",
             from apps.reservas.services import situacao_da_venda
             situacao = situacao_da_venda(oportunidade.reserva_id)
         if not oportunidade.reserva_id or (reservas_ativo and not (situacao and situacao["ativa"])):
-            raise ValidationError("Para marcar como ganho, use «Converter em reserva» — "
+            raise ValidationError("Para marcar como ganho, use «Converter em reserva». O status de "
                                   "ganho exige uma reserva ativa.")
 
     era_ganha = oportunidade.status == Oportunidade.Status.GANHA
@@ -1202,7 +1202,7 @@ def converter_em_reserva(oportunidade, *, tipo_uh=None, uh=None, checkin, checko
         raise ValidationError("Esta oportunidade já foi convertida em reserva.")
     if not modulo_ativo(Modulo.RESERVAS):
         raise ValidationError(
-            "Módulo Reservas inativo — não é possível converter em reserva."
+            "O módulo Reservas está inativo. Ative-o para converter o lead em reserva."
         )
     if uh is not None:
         tipo_uh = uh.tipo  # venda por unidade → o tipo vem do quarto
@@ -1231,7 +1231,7 @@ def converter_em_reserva(oportunidade, *, tipo_uh=None, uh=None, checkin, checko
         except ValidationError:
             reserva = criar_prereserva(
                 tipo_uh=tipo_uh,
-                observacoes=f"{base_obs} (quarto {uh.numero} ocupado — alocado outro do tipo)",
+                observacoes=f"{base_obs} (quarto {uh.numero} ocupado; alocado outro do mesmo tipo)",
                 **reserva_kwargs)
     else:
         reserva = criar_prereserva(tipo_uh=tipo_uh, observacoes=base_obs, **reserva_kwargs)
@@ -1271,7 +1271,7 @@ def converter_em_reserva(oportunidade, *, tipo_uh=None, uh=None, checkin, checko
             _cancelar_sinal_pendente(oportunidade, usuario)
             cobranca = criar_cobranca(
                 usuario, valor=valor, metodo="pix",
-                descricao=f"Sinal — oportunidade #{oportunidade.pk} / reserva #{reserva.pk}",
+                descricao=f"Sinal: oportunidade #{oportunidade.pk} / reserva #{reserva.pk}",
                 finalidade=Cobranca.Finalidade.SINAL,
                 pagador=oportunidade.pessoa, reserva_id=reserva.pk,
             )
@@ -1280,7 +1280,7 @@ def converter_em_reserva(oportunidade, *, tipo_uh=None, uh=None, checkin, checko
             registrar_atividade(
                 oportunidade=oportunidade, usuario=usuario,
                 tipo=AtividadeComercial.Tipo.SISTEMA,
-                descricao=f"Cobrança de sinal #{cobranca.pk} — R$ {valor}",
+                descricao=f"Cobrança de sinal #{cobranca.pk}: R$ {valor}",
             )
     _log_evento(oportunidade, usuario, f"converteu em reserva #{reserva.pk}")
     if valor_diaria is not None:
@@ -1311,8 +1311,7 @@ def montar_proposta_sinal(oportunidade, cobranca, link) -> str:
     linhas = [
         saudacao,
         "",
-        "Sua estadia na *Pousada Vô Testa* está a um passo de ser sua — "
-        "separei tudo pra você:",
+        'Confira a proposta para sua estadia na *Pousada Vô Testa*:',
         "",
         f"*🏕 {quarto}*",
     ]
@@ -1453,16 +1452,14 @@ def montar_proposta_email(oportunidade, cobranca=None, link=None, corpo=None):
     if link is None:
         link = _link_sinal_da_oportunidade(op)
 
-    assunto = f"Sua estadia na Pousada Vô Testa — {quarto}"
+    assunto = f"Sua estadia na Pousada Vô Testa | {quarto}"
     if periodo:
         assunto += f" ({op.checkin_previsto:%d/%m}–{op.checkout_previsto:%d/%m})"
 
     if corpo is None:
         saud = f"Oi, {nome}!" if nome else "Olá!"
         corpo = (
-            f"{saud} Como combinamos por aqui, deixei tudo por escrito abaixo.\n\n"
-            "Qualquer ajuste de datas ou de quarto, é só responder este e-mail — "
-            "vai ser um prazer receber você."
+            f'{saud} Como combinamos por aqui, deixei tudo por escrito abaixo.\n\nQualquer ajuste de datas ou de quarto, é só responder este e-mail. Estamos à disposição.'
         )
 
     # Links de resposta no rodapé (o cliente clica e já fala com a gente).
@@ -1539,7 +1536,7 @@ def _processar_envio_email(envio_id, para, assunto, html, texto, remetente, repl
         op = Oportunidade.objects.filter(pk=oportunidade_id).first()
         user = Usuario.objects.filter(pk=usuario_id).first() if usuario_id else None
         if op:
-            _log_evento(op, user, f"enviou e-mail — {assunto}")
+            _log_evento(op, user, f"enviou e-mail: {assunto}")
 
 
 def _envio_email_em_thread(*args):
@@ -1607,7 +1604,7 @@ def templates_mensagem(oportunidade):
         f"Aguardo seu retorno 🌿"
     )
     email_proposta = (
-        f"Assunto: Proposta — Pousada Vô Testa\n\n"
+        f"Assunto: Proposta | Pousada Vô Testa\n\n"
         f"Olá, {p.nome},\n\n"
         f"Enviamos a cotação referente a {periodo}.\n"
         f"Valor estimado: {valor}.\n\n"
@@ -1616,7 +1613,7 @@ def templates_mensagem(oportunidade):
     )
     obrigado = (
         f"Olá, {nome}! Obrigado pela estadia na Pousada Vô Testa.\n"
-        f"Sua opinião importa — quando puder, avalie-nos (NPS) pelo portal do hóspede.\n"
+        f"Conte como foi sua estadia na pesquisa do portal do hóspede.\n"
         f"Esperamos você de novo 🌿"
     )
     return {
@@ -1659,8 +1656,7 @@ def anotar_reserva_encerrada(*, reserva_id, evento, motivo="", usuario=None):
         registrar_atividade(
             oportunidade=op, usuario=user, tipo=AtividadeComercial.Tipo.SISTEMA,
             descricao=(
-                f"Check-out da reserva #{reserva_id} — hand-off retenção/NPS "
-                f"(CRM do Hóspede / portal)."
+                f'Check-out da reserva #{reserva_id}. Encaminhado para acompanhamento de retenção e NPS no portal do hóspede.'
             ),
         )
         if not op.nps_convidado_em:
@@ -2047,14 +2043,14 @@ def _criar_lead_whatsapp(*, telefone, nome="", pessoa=None, reativacao=False):
     # e estourar o insert, e o webhook engole o erro (perderia a mensagem).
     op = criar_oportunidade(
         usuario=_usuario_site(), pessoa=pessoa,
-        titulo=f"WhatsApp — {pessoa.nome}"[:120], origem=Oportunidade.Origem.WHATSAPP,
+        titulo=f"WhatsApp: {pessoa.nome}"[:120], origem=Oportunidade.Origem.WHATSAPP,
         disparar_crm=False,
     )
     if reativacao:
         op.reativada_em = timezone.now()
         op.save(update_fields=["reativada_em", "atualizado_em"])
         _nota_sistema_lead(
-            op, "♻️ Reativado — hóspede anterior voltou a falar no WhatsApp (recompra).")
+            op, "♻️ Reativado: hóspede anterior retomou o contato pelo WhatsApp.")
     return op
 
 
@@ -2078,8 +2074,7 @@ def _reativar_oportunidade(op):
     _abrir_permanencia(op, primeira)
     atualizar_score(op)
     _nota_sistema_lead(
-        op, f"♻️ Reativado — cliente voltou a falar no WhatsApp. "
-            f"Perda anterior: {motivo_anterior}.")
+        op, f'♻️ Reativado: cliente retomou o contato pelo WhatsApp. Perda anterior: {motivo_anterior}.')
     return op
 
 
@@ -2329,7 +2324,7 @@ def enviar_imagem_whatsapp(*, conversa, arquivo, usuario, legenda=""):
         raise ValidationError("Imagem acima do limite de 5 MB (WhatsApp).")
     mime = (getattr(arquivo, "content_type", "") or "").lower()
     if not mime.startswith("image/") or "svg" in mime:
-        raise ValidationError("Formato não aceito — envie JPG, PNG ou WEBP.")
+        raise ValidationError("Formato não aceito. Envie uma imagem JPG, PNG ou WEBP.")
     if (getattr(settings, "WHATSAPP_GATEWAY", "simulado") != "simulado"
             and not conversa.janela_aberta):
         raise ValidationError(
@@ -2757,7 +2752,7 @@ def montar_email_boas_vindas(oportunidade):
     corpo = (
         f"{saud} Que bom ter você na lista de fundadores da Pousada Vô Testa 💛\n\n"
         "Você vai ser um dos primeiros a saber das novidades, dos pacotes e da condição "
-        "especial de fundador — antes de abrirmos ao público.\n\n"
+        "especial de fundador, antes da abertura ao público.\n\n"
         "Em breve a gente te chama."
     )
     descadastro_url = settings.SITE_PUBLIC_URL + reverse(
@@ -2980,7 +2975,7 @@ def criar_cobranca_sinal(oportunidade, usuario, valor=None, metodo="pix"):
     from decimal import Decimal as _D
 
     if not modulo_ativo(Modulo.PAGAMENTOS):
-        raise ValidationError("Módulo Pagamentos inativo — não é possível gerar o sinal.")
+        raise ValidationError("O módulo Pagamentos está inativo. Ative-o para gerar a cobrança do sinal.")
     valor = _D(str(valor)) if valor else (oportunidade.valor_estimado or _D("0")) * fracao_sinal()
     valor = valor.quantize(_D("0.01"))
     if valor <= 0:
@@ -2991,7 +2986,7 @@ def criar_cobranca_sinal(oportunidade, usuario, valor=None, metodo="pix"):
     from apps.pagamentos.services import criar_cobranca
     cobranca = criar_cobranca(
         usuario, valor=valor, metodo=metodo,
-        descricao=f"Sinal — {oportunidade.titulo}"[:120],
+        descricao=f"Sinal: {oportunidade.titulo}"[:120],
         finalidade=Cobranca.Finalidade.SINAL, pagador=oportunidade.pessoa,
     )
     Oportunidade.objects.filter(pk=oportunidade.pk).update(
@@ -3017,8 +3012,7 @@ def ganhar_por_sinal(oportunidade, cobranca, usuario=None):
         registrar_atividade(
             oportunidade=oportunidade, usuario=usuario,
             tipo=AtividadeComercial.Tipo.SISTEMA,
-            descricao="Sinal pago — converter em reserva manualmente "
-                      "(faltam datas ou quarto cotado).")
+            descricao='Sinal pago. Converta em reserva manualmente: faltam as datas ou o quarto cotado.')
         return None
 
     # O quarto cotado pode ter sido reservado por outro canal entre a cotação e o
@@ -3031,8 +3025,7 @@ def ganhar_por_sinal(oportunidade, cobranca, usuario=None):
         registrar_atividade(
             oportunidade=oportunidade, usuario=usuario,
             tipo=AtividadeComercial.Tipo.SISTEMA,
-            descricao="Sinal pago — não foi possível criar a reserva automaticamente "
-                      f"({'; '.join(e.messages)}). Converter manualmente.")
+            descricao=f'Sinal pago. Não foi possível criar a reserva automaticamente ({'; '.join(e.messages)}). Converter manualmente.')
         return None
 
     # O converter_em_reserva já amarrou o sinal pago (e creditou o valor); falta

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Protótipo — Converse com o Vô Testa | Pousada Vô Testa</title>
+<title>Protótipo: Converse com o Vô Testa | Pousada Vô Testa</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
 tailwind.config = { theme: { extend: { colors: {
@@ -29,7 +29,7 @@ tailwind.config = { theme: { extend: { colors: {
     <div class="flex items-center gap-2">
       <svg class="w-7 h-7 text-madeira gear-spin" viewBox="0 0 100 100"><circle cx="50" cy="50" r="20" fill="none" stroke="currentColor" stroke-width="6"/><g fill="currentColor"><rect x="44" y="12" width="12" height="16" rx="3"/><rect x="44" y="72" width="12" height="16" rx="3"/><rect x="12" y="44" width="16" height="12" rx="3"/><rect x="72" y="44" width="16" height="12" rx="3"/></g></svg>
       <div><span class="font-display text-lg font-bold">Pousada Vô Testa</span>
-      <span class="block text-madeira/40 text-[11px]">Protótipo — Converse com o Vô Testa (#1) · claro + musgo</span></div>
+      <span class="block text-madeira/40 text-[11px]">Protótipo: Converse com o Vô Testa (#1) · claro + musgo</span></div>
     </div>
     <span class="text-madeira/30 text-xs hidden sm:block">demonstração interativa</span>
   </div>
@@ -125,7 +125,7 @@ function responder(txt) {
       const fala = {
         romantico:'Ah, o amor… as engrenagens batem mais forte. 💛 Para quando seria essa escapada a dois?',
         familia:'Casa cheia, coração cheio! Quando a família embarca nessa viagem no tempo?',
-        natureza:'Um espírito explorador — disso eu gosto. Quando quer pisar na mata?',
+        natureza:'Que tal um passeio pela natureza? Quando você pretende vir?',
         sossego:'Entendi… o mundo lá fora pode esperar. Quando você quer desacelerar?'
       }[estado.intencao];
       add(fala);
@@ -156,7 +156,7 @@ document.getElementById('form').addEventListener('submit', e=>{
 });
 
 typing(()=>{
-  add('As engrenagens do tempo pararam só pra você. ⚙ Sou o Vô Testa — me conta: que tipo de fuga você procura?');
+  add('Olá! Sou o Vô Testa. Conte o que você procura para sua estadia.');
   setChips(['Quero sossego','Romântico a dois','Com a família','Curtir a natureza']);
 }, 600);
 </script>

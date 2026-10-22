@@ -148,7 +148,7 @@ def _creditar_na_reserva(cobranca):
         from apps.reservas.services import registrar_pagamento_online
         registrar_pagamento_online(
             cobranca_id=cobranca.pk, valor=cobranca.valor,
-            descricao=f"{cobranca.get_metodo_display()} online — cobrança #{cobranca.pk}",
+            descricao=f"{cobranca.get_metodo_display()} online, cobrança #{cobranca.pk}",
             reserva_id=cobranca.reserva_id, grupo_id=cobranca.grupo_id,
         )
 

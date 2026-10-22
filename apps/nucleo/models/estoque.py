@@ -66,7 +66,7 @@ class Produto(models.Model):
     )
     custo_medio = models.DecimalField(
         "custo médio (R$)", max_digits=12, decimal_places=4, default=ZERO,
-        help_text="Calculado pelo sistema a cada entrada — não editar à mão.",
+        help_text="Calculado automaticamente a cada entrada. Não edite manualmente.",
     )
     preco_venda = models.DecimalField(
         "preço de venda (R$)", max_digits=10, decimal_places=2, default=ZERO
@@ -150,7 +150,7 @@ class MovimentoEstoque(models.Model):
     )
     documento = models.CharField(
         "documento de origem", max_length=80, blank=True,
-        help_text="Nota fiscal, comanda, ordem — de onde veio o movimento.",
+        help_text="Documento de origem do movimento, como nota fiscal, comanda ou ordem.",
     )
     fornecedor = models.ForeignKey(
         "nucleo.Pessoa", on_delete=models.PROTECT, null=True, blank=True,
@@ -191,14 +191,14 @@ class MovimentoEstoque(models.Model):
     def save(self, *args, **kwargs):
         if not self._state.adding:
             raise ValidationError(
-                "Movimento de estoque é imutável — registre um ajuste/inverso."
+                "Movimento de estoque não pode ser alterado. Registre um ajuste ou movimento inverso."
             )
         self.full_clean()
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         raise ValidationError(
-            "Movimento de estoque não pode ser apagado — registre um ajuste."
+            "Movimento de estoque não pode ser apagado. Registre um ajuste."
         )
 
 

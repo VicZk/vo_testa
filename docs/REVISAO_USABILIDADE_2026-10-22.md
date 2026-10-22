@@ -433,3 +433,68 @@ Capturas: [cabeçalho publicado antes](evidencias/usabilidade-2026-10-22/cabecal
 [reserva em tela baixa](evidencias/usabilidade-2026-10-22/cabecalho-menu-baixo-1024.jpg)
 e [menu no celular](evidencias/usabilidade-2026-10-22/cabecalho-menu-390.jpg).
 As capturas após o ajuste foram feitas na base local fictícia antes da publicação.
+
+## Entrega 8: espaçamento, textos e controles
+
+O complemento do cabeçalho foi publicado no commit `624ed24`, com os dois jobs do
+[CI aprovados](https://github.com/VicZk/vo_testa/actions/runs/39772120715).
+A inspeção pública confirmou o menu em tablet, celular e paisagem, inclusive o
+link acrescentado pela instalação. Aplicação e banco permaneceram saudáveis;
+sete URLs responderam 200 e os 13 arquivos conferidos coincidiram entre commit,
+imagem e container.
+
+Nesta entrega, cabeçalhos, indicadores e painéis passaram a ter 24 px de
+separação nos pontos em que estavam encostados. Os indicadores da captação têm
+larguras consistentes e os painéis de link e QR ocupam a mesma altura. A correção
+também alcança formulários, caixa e PDV, preservando os espaços próprios de cada
+componente.
+
+Os botões principais usam fundo escuro uniforme; os secundários têm fundo claro
+e borda discreta. Foram retirados os gradientes e as sombras fortes dos controles
+compartilhados. As áreas de interação e o foco visível foram preservados.
+
+Na Conciliação, extrato bancário e vendas de cartão ficam lado a lado quando há
+espaço e se empilham no celular. Arquivo, conta e importação ficam alinhados;
+o nome do arquivo aparece abaixo dos controles sem deslocar os botões. As ações
+de conciliar, revisar pendências e abrir o fechamento têm uma faixa própria.
+
+O PDV mostra orientação para arrastar os produtos e destaca o carrinho desde o
+início do gesto. Os filtros por categoria, a busca, o clique e as abas móveis
+continuam disponíveis. O gesto de arraste foi novamente aprovado pelo teste de
+Chromium; não é contado como uma nova confirmação pelo controlador manual.
+
+A revisão de linguagem abrangeu o site, páginas de campanha, CRM, formulários,
+mensagens de erro e confirmações. Frases ornamentais e travessões em instruções
+foram substituídos por textos diretos. Citações, intervalos numéricos e separadores
+técnicos foram preservados. A comparação da árvore sintática de 52 arquivos Python
+de implementação confirmou mudanças somente em literais de texto. Seis migrations
+atualizam metadados de campos; o SQL de cada uma contém apenas transação, comentários
+e operações sem efeito no esquema.
+
+Validação desta entrega:
+
+- **1.858 testes aprovados em 456,231 s**, sem falhas ou pulos, incluindo **65 de
+  navegador**. Os 237 arquivos de implementação e testes permaneceram idênticos
+  antes e depois da execução, conferidos por SHA-256.
+- Regressões novas conferem separação entre blocos e alinhamento na Conciliação,
+  com nomes longos de arquivo, em larguras de 320 a 1440 px. O foco por teclado e
+  a ausência de rolagem horizontal também são verificados.
+- Nova inspeção por Computer Use de 35 telas em 390 e 1440 px: **70 verificações
+  de largura do documento**, sem transbordamento horizontal. Esse número se refere
+  a medições de DOM, não a 70 novas capturas nem a fluxos completos de gravação.
+- Ruff, consistência das migrations e verificação de espaços do Git aprovados.
+
+As evidências visuais usam dados fictícios da instalação local:
+
+- Captação [antes](evidencias/usabilidade-2026-10-22/8-captacao-antes-1440.jpg),
+  [depois](evidencias/usabilidade-2026-10-22/8-captacao-depois-1440.jpg) e
+  [no celular](evidencias/usabilidade-2026-10-22/8-captacao-depois-390.jpg).
+- Conciliação [antes](evidencias/usabilidade-2026-10-22/8-conciliacao-antes-1440.jpg),
+  [depois](evidencias/usabilidade-2026-10-22/8-conciliacao-depois-1440.jpg) e
+  [no celular](evidencias/usabilidade-2026-10-22/8-conciliacao-depois-390.jpg).
+- [PDV e carrinho](evidencias/usabilidade-2026-10-22/8-pdv-depois-1440.jpg) e
+  [matriz das 70 medições](evidencias/usabilidade-2026-10-22/8-modulos-depois.csv).
+
+A aprovação da suíte existente valida esta alteração de interface. Ela não
+certifica a prontidão operacional para inauguração; a auditoria independente dos
+fluxos da pousada tem escopo, resultados e relatório próprios.

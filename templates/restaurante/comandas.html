@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load moeda %}
 
-{% block titulo %}Restaurante — comandas{% endblock %}
+{% block titulo %}Restaurante | comandas{% endblock %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Vendas & Estoque</p>
@@ -32,8 +32,8 @@
   dizer por quê — e logo abaixo a tela mandava "abra a primeira acima". A comanda
   funciona só com hóspede ou identificação, então isto é aviso, não bloqueio.{% endcomment %}
   {% if not mesas %}
-    <p class="ajuda">Nenhum ponto de atendimento cadastrado ainda —
-      <a href="{% url 'restaurante:mesas' %}">cadastre as mesas, guarda-sóis e o bar</a>.
+    <p class="ajuda">Nenhum ponto de atendimento cadastrado.
+      <a href="{% url 'restaurante:mesas' %}">Cadastre as mesas, guarda-sóis e o bar</a>.
       Dá para abrir só com o hóspede ou com uma identificação.</p>
   {% endif %}
 </section>

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block titulo %}{{ titulo }} — CRM Vô Testa{% endblock %}
+{% block titulo %}{{ titulo }} | CRM Vô Testa{% endblock %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Cadastros</p>
@@ -13,7 +13,7 @@
 
   {% if uh %}
   <h2>Preço por quarto</h2>
-  <p class="subtitulo">Diária <strong>base (2 adultos)</strong> e valor por <strong>pessoa adicional</strong> deste quarto em cada temporada — vence a tarifa do tipo. Em branco = usa o tipo. Feriados especiais (Natal/Ano Novo) têm preço próprio na tela de Temporada.</p>
+  <p class="subtitulo">Diária <strong>base (2 adultos)</strong> e valor por <strong>pessoa adicional</strong> deste quarto em cada temporada. Esses valores substituem a tarifa do tipo. Em branco = usa o tipo. Feriados especiais (Natal/Ano Novo) têm preço próprio na tela de Temporada.</p>
   <div class="tarifas-quarto">
     {% for t in tarifas_quarto %}
       <div class="campo">
@@ -28,18 +28,18 @@
 
   {% if vitrine_form %}
   <h2>Vitrine do site</h2>
-  <p class="subtitulo">Como este quarto aparece na página pública — foto, tour 360° e destaque na home. Nome temático, qualidades e preço vêm dos campos acima.</p>
+  <p class="subtitulo">Defina a foto, o tour 360° e o destaque deste quarto no site. Nome temático, qualidades e preço vêm dos campos acima.</p>
   {% include "nucleo/partials/campos.html" with form=vitrine_form %}
   {% endif %}
 
   {% if ficha_comercial_form %}
   <h2>Descritivo comercial (usado na conversa do lead)</h2>
-  <p class="subtitulo">O que a vendedora fala no atendimento — aparece no painel «Quartos para este lead». Capacidade e camas vêm da composição abaixo; aqui é só a copy de venda.</p>
+  <p class="subtitulo">Descreva o quarto para ajudar a equipe no atendimento. O texto aparece no painel «Quartos para este lead». A capacidade e as camas são calculadas a partir da composição abaixo.</p>
   {% include "nucleo/partials/campos.html" with form=ficha_comercial_form %}
   {% endif %}
 
   <h2>Composição de camas</h2>
-  <p class="subtitulo">A capacidade e a frase de camas são calculadas daqui — não se digita capacidade.</p>
+  <p class="subtitulo">A capacidade e a descrição das camas são calculadas com base nos campos abaixo.</p>
 
   <h3>Posições de cama</h3>
   <p class="ajuda">Cada posição acomoda 2 pessoas em qualquer montagem. Marque «Excluir» para remover.</p>
@@ -70,7 +70,7 @@
   <div class="cartao bloco-respiro">
     <h3>Capacidade calculada</h3>
     <p>
-      <strong>{{ capacidade.maxima_criancas }} pessoas</strong> —
+      <strong>{{ capacidade.maxima_criancas }} pessoas</strong>,
       {{ capacidade.fixa }} em cama fixa
       {% if capacidade.sofa_adultos %}· {{ capacidade.sofa_adultos }} no sofá (ou {{ capacidade.sofa_criancas }} crianças até {{ capacidade.idade_sofa }} anos){% endif %}
       {% if capacidade.extras %}· até {{ capacidade.extras }} em colchão extra{% endif %}.

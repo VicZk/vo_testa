@@ -145,7 +145,7 @@ def cancelar_venda(venda, usuario, motivo):
         raise ValidationError("Informe o motivo do cancelamento.")
     if venda.destino == Venda.Destino.CONTA:
         raise ValidationError(
-            "Venda lançada na conta do quarto — ajuste pela conta da hospedagem."
+            "Esta venda foi lançada na conta do quarto. Faça o ajuste pela conta da hospedagem."
         )
     # Devolve o estoque (sem mexer no custo médio), travando na mesma ordem da venda.
     for item in venda.itens.select_related("produto").order_by("produto_id"):

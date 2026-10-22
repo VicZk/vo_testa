@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load moeda estoque_extras %}
 
-{% block titulo %}{{ config.titulo }} — Estoque{% endblock %}
+{% block titulo %}{{ config.titulo }} | Estoque{% endblock %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Vendas &amp; Estoque</p>
@@ -134,7 +134,7 @@ tela prometer um conteúdo que não existe.{% endcomment %}
               <span class="est-motivo-nome">{{ texto }}</span>
               <span class="est-motivo-nota">
                 {% if valor == 'saida_venda' %}Vendeu fora da Loja/Restaurante.
-                {% elif valor == 'consumo_interno' %}Usou na operação — café da equipe, limpeza, cortesia.
+                {% elif valor == 'consumo_interno' %}Uso na operação: café da equipe, limpeza ou cortesia.
                 {% else %}Quebrou, venceu, estragou. Entra no custo como perda.{% endif %}
               </span>
             </label>
@@ -223,7 +223,7 @@ tela prometer um conteúdo que não existe.{% endcomment %}
         {% endif %}
 
         <p class="est-previa-aviso" x-show="depoisNegativo" x-cloak>
-          Não há esse saldo no local. O sistema vai recusar — confira a quantidade ou o local.
+          Saldo insuficiente. Confira a quantidade e o local antes de continuar.
         </p>
       </div>
     </template>

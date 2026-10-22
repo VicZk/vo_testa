@@ -30,7 +30,7 @@
       {% for field in campos_principais %}{% include "componentes/campo.html" %}{% endfor %}
     </div>
     <details class="mkt-dobra lead-detalhes"{% if form.errors %} open{% endif %}>
-      <summary>Mais informações — período, pessoas e responsável</summary>
+      <summary>Mais informações: período, pessoas e responsável</summary>
       <p class="ajuda">Preencha o que já souber. Esses dados ajudam a preparar a proposta.</p>
       <div class="form-grade">
         {% for field in campos_detalhes %}{% include "componentes/campo.html" %}{% endfor %}

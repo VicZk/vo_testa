@@ -18,7 +18,7 @@ class VitrineQuartoForm(forms.ModelForm):
         widgets = {
             'descricao': forms.Textarea(attrs={'rows': 3}),
             'descricao_curta': forms.TextInput(
-                attrs={'placeholder': 'Ex.: Oficina do Relojoeiro — vista para o lago'}
+                attrs={'placeholder': 'Ex.: Oficina do Relojoeiro com vista para o lago'}
             ),
             'tour_360_url': forms.URLInput(
                 attrs={'placeholder': 'https://kuula.co/share/...'}
@@ -35,7 +35,7 @@ def validar_cpf(cpf):
         soma = sum(int(numeros[n]) * ((i + 1) - n) for n in range(i))
         digito = (soma * 10) % 11 % 10
         if digito != int(numeros[i]):
-            raise forms.ValidationError('CPF inválido — confira os números.')
+            raise forms.ValidationError('CPF inválido. Confira os números.')
     return numeros
 
 
@@ -159,8 +159,7 @@ class BuscaDisponibilidadeForm(forms.Form):
         criancas = (cleaned.get('criancas_0_5') or 0) + (cleaned.get('criancas_6_15') or 0)
         if hospedes and criancas >= hospedes:
             self.add_error('criancas_6_15',
-                           'As crianças estão contadas no total de hóspedes — '
-                           'informe ao menos 1 adulto.')
+                           'O total de hóspedes inclui as crianças. Informe ao menos 1 adulto.')
         return cleaned
 
 

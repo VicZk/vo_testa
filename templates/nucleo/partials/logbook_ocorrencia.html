@@ -49,7 +49,7 @@ Usado na lista e como resposta HTMX (troca o próprio <article> via outerHTML).{
 
   {% if erro %}<p class="lb-erro">{{ erro }}</p>{% endif %}
   {% if e.status == 'resolvida' %}
-    <div class="lb-resolved-by">✓ Fechada por {{ e.resolvida_por|default:"—" }}{% if e.resolvida_em %} em {{ e.resolvida_em|date:"d/m H:i" }}{% endif %}{% if e.resolucao_nota %} — “{{ e.resolucao_nota }}”{% endif %}</div>
+    <div class="lb-resolved-by">✓ Fechada por {{ e.resolvida_por|default:"—" }}{% if e.resolvida_em %} em {{ e.resolvida_em|date:"d/m H:i" }}{% endif %}{% if e.resolucao_nota %}. “{{ e.resolucao_nota }}”{% endif %}</div>
   {% else %}
     <form class="lb-replybox" hx-post="{% url 'logbook_comentar' e.pk %}"
           hx-target="#occ-{{ e.pk }}" hx-swap="outerHTML settle:200ms" hx-disabled-elt="find button"

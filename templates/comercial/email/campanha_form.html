@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block titulo %}Nova campanha — Comercial{% endblock %}
+{% block titulo %}Nova campanha | Comercial{% endblock %}
 
 {% block conteudo %}
 <div class="eleg">
@@ -16,7 +16,7 @@
     <div class="campo-el">
       <label>Usar um template (opcional)</label>
       <select id="tpl-sel" onchange="usarTemplate()">
-        <option value="">— começar do zero —</option>
+        <option value="">Começar do zero</option>
         {% for t in templates %}
           <option value="{{ t.pk }}" data-assunto="{{ t.assunto }}" data-corpo="{{ t.corpo }}">{{ t.nome }}</option>
         {% endfor %}

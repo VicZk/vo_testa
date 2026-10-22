@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block titulo %}Visão geral — CRM Vô Testa{% endblock %}
+{% block titulo %}Visão geral | CRM Vô Testa{% endblock %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">{% if tem_reservas %}Recepção · hoje{% else %}Hoje{% endif %}</p>
@@ -13,7 +13,7 @@
   </div>
   {% endif %}
 </div>
-<p class="subtitulo">{% if tem_reservas %}A casa fala primeiro — situação de cada quarto agora.{% elif atalhos_modulos %}Por onde começar hoje.{% else %}Seu resumo do dia.{% endif %}</p>
+<p class="subtitulo">{% if tem_reservas %}Acompanhe a situação dos quartos e as pendências de hoje.{% elif atalhos_modulos %}Por onde começar hoje.{% else %}Seu resumo do dia.{% endif %}</p>
 
 {% comment %}Quem não tem nenhum bloco desta tela (só Restaurante e Loja, por exemplo)
 vê os atalhos dos módulos dele, em vez de uma página vazia. Quem tem um módulo só
@@ -153,7 +153,7 @@ nem chega aqui: entra direto nele (views.dashboard).{% endcomment %}
 <div class="graficos-grid">
   {% if graficos.ocupacao %}
     <div class="grafico-card col2">
-      <h3>Ocupação — próximos 14 dias</h3>
+      <h3>Ocupação nos próximos 14 dias</h3>
       <div class="grafico-caixa"><canvas id="g-ocupacao" role="img"
         aria-label="Gráfico de linha: ocupação em % por dia, de {{ graficos.ocupacao.labels|first }} a {{ graficos.ocupacao.labels|last }}.
                     Dias: {{ graficos.ocupacao.labels|join:", " }}. Ocupação: {{ graficos.ocupacao.valores|join:"%, " }}%."></canvas></div>

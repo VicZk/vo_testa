@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load moeda %}
 
-{% block titulo %}Conciliação manual — CRM Vô Testa{% endblock %}
+{% block titulo %}Conciliação manual | CRM Vô Testa{% endblock %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Financeiro</p>
@@ -15,7 +15,7 @@
 <div class="eleg">
 
   {# ── Extrato pendente ── #}
-  <h2 class="secao-titulo letreiro respiro-curto">Extrato — pendentes</h2>
+  <h2 class="secao-titulo letreiro respiro-curto">Pendências do extrato</h2>
   <div class="quadro">
     <table class="tabela">
       <thead>
@@ -36,7 +36,7 @@
               {% csrf_token %}
               <input type="hidden" name="lancamento" value="{{ l.id }}">
               <select name="escolha" class="campo-medio">
-                <option value="">— escolher registro do CRM —</option>
+                <option value="">Escolher registro do CRM</option>
                 {% for c in cands %}
                 <option value="{{ c.origem }}:{{ c.id }}">{% if c.exato %}★ {% endif %}{{ c.rotulo }} · {{ c.valor|intcomma_brl }} · {{ c.data|date:"d/m" }}</option>
                 {% endfor %}
@@ -58,7 +58,7 @@
   </div>
 
   {# ── Cartão pendente ── #}
-  <h2 class="secao-titulo letreiro">Cartão (SafraPay) — pendentes</h2>
+  <h2 class="secao-titulo letreiro">Pendências do cartão (SafraPay)</h2>
   <div class="quadro">
     <table class="tabela">
       <thead>
@@ -75,7 +75,7 @@
                   class="form-inline-largo">
               {% csrf_token %}<input type="hidden" name="transacao" value="{{ t.id }}">
               <select name="escolha" class="campo-medio">
-                <option value="">— escolher recebimento —</option>
+                <option value="">Escolher recebimento</option>
                 {% for c in cands %}
                 <option value="{{ c.origem }}:{{ c.id }}">{% if c.exato %}★ {% endif %}{{ c.rotulo }} · {{ c.valor|intcomma_brl }}</option>
                 {% endfor %}

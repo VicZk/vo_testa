@@ -27,7 +27,7 @@ class Area(models.TextChoices):
     MARKETING = "marketing", "Marketing (analista)"
     # Gestão comercial: reabrir leads perdidos e mover leads já fechados (ganho/perdido)
     # para outra etapa — ação sensível (cancela a reserva do ganho). Gestor comercial.
-    COMERCIAL_FECHADOS = "comercial_fechados", "Comercial — reabrir/mover leads fechados"
+    COMERCIAL_FECHADOS = "comercial_fechados", "Comercial: reabrir ou mover leads fechados"
     EQUIPE = "equipe", "Equipe & Acessos"
 
 

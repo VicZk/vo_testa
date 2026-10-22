@@ -211,7 +211,8 @@ class FluxoReservaViewTests(TestCase):
         reserva = Reserva.objects.get()
         resp = self.client.get(reverse('core:reserva_confirmada', args=[reserva.token]))
         self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, 'Pagar agora')
+        self.assertContains(resp, 'Pagar R$')
+        self.assertContains(resp, 'agora')
 
     def test_resumo_mostra_formas_de_pagamento(self):
         resp = self.client.post(reverse('core:resumo_reserva'), {

@@ -73,7 +73,7 @@ class Venda(models.Model):
         ordering = ["-criado_em"]
 
     def __str__(self):
-        return f"Venda #{self.pk} — R$ {self.total}"
+        return f"Venda #{self.pk}: R$ {self.total}"
 
     @property
     def subtotal(self) -> Decimal:

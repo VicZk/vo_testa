@@ -71,7 +71,7 @@ def remover_item(item, operador):
     if not comanda.aberta:
         raise ValidationError("Esta comanda já foi fechada.")
     devolver_ao_estoque(item.produto, comanda.local, item.quantidade, operador,
-                        motivo=f"Remoção de item — comanda #{comanda.pk}")
+                        motivo=f"Remoção de item da comanda #{comanda.pk}")
     item.delete()
 
 
@@ -117,7 +117,7 @@ def fechar_comanda(comanda, operador, destino, forma=None, conta_id=None, descon
             reservas.lancar_na_conta(
                 conta, "desconto", "consumo", "Restaurante: desconto", desconto, operador
             )
-        comanda.conta_ref = f"{conta.reserva.uh.numero} — {conta.reserva.hospede.nome}"
+        comanda.conta_ref = f"{conta.reserva.uh.numero}: {conta.reserva.hospede.nome}"
 
     comanda.destino = destino
     comanda.status = Comanda.Status.FECHADA

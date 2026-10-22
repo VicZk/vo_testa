@@ -165,7 +165,7 @@ def cancelar(request, pk):
     if request.method == "POST":
         try:
             services.cancelar_venda(v, request.user, request.POST.get("motivo", ""))
-            messages.success(request, "Venda cancelada — estoque e caixa revertidos.")
+            messages.success(request, "Venda cancelada. Estoque e caixa revertidos.")
         except ValidationError as erro:
             messages.error(request, " ".join(erro.messages))
     return redirect("loja:venda", pk=pk)

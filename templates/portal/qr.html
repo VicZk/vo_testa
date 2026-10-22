@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load nucleo_extras %}
 
-{% block titulo %}{% if finalidade %}QR do pré check-in{% else %}QR do hóspede{% endif %} — Portal{% endblock %}
+{% block titulo %}{% if finalidade %}QR do pré check-in{% else %}QR do hóspede{% endif %} | Portal{% endblock %}
 
 {% block conteudo %}
 {% comment %}A mesma tela serve dois links: o portal da estadia e o pré check-in
@@ -12,11 +12,11 @@ dizia "Acesso do hóspede / acessa a própria estadia", que é outro link.{% end
 </a>
 <p class="pagina-eyebrow letreiro">Portal do Hóspede</p>
 {% if finalidade %}
-  <h1>Pré check-in (FNRH) — reserva #{{ reserva_id }}</h1>
-  <p class="subtitulo">Mostre o QR Code — ou mande o link pelo WhatsApp. O hóspede responsável preenche a ficha de todos num celular só, antes de chegar.</p>
+  <h1>Pré check-in (FNRH): reserva #{{ reserva_id }}</h1>
+  <p class="subtitulo">Mostre o QR Code ou envie o link pelo WhatsApp. O hóspede responsável preenche a ficha de todos num celular só, antes de chegar.</p>
 {% else %}
-  <h1>Acesso do hóspede — reserva #{{ reserva_id }}</h1>
-  <p class="subtitulo">Mostre ou imprima este QR Code — ou mande o link pelo WhatsApp. O hóspede acessa a própria estadia sem senha.</p>
+  <h1>Acesso do hóspede: reserva #{{ reserva_id }}</h1>
+  <p class="subtitulo">Mostre ou imprima este QR Code. Você também pode enviar o link pelo WhatsApp. O hóspede acessa a própria estadia sem senha.</p>
 {% endif %}
 
 <div class="painel-bloco qr-hospede">

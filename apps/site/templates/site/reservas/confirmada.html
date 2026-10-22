@@ -10,7 +10,7 @@
             <svg class="w-10 h-10 text-pergaminho" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
         </div>
         <h2 class="font-display text-3xl font-bold text-madeira mb-2">Reserva Registrada!</h2>
-        <p class="text-madeira/50">Sua aventura no tempo está quase garantida — falta só confirmar o pagamento.</p>
+        <p class="text-madeira/50">Recebemos sua reserva. Falta confirmar o pagamento.</p>
     </div>
 
     <!-- Código -->
@@ -53,7 +53,7 @@
     <div class="flex flex-col sm:flex-row gap-3 justify-center">
         <a href="{% url 'pagamentos:pagar' cobranca.token %}"
            class="bg-madeira text-pergaminho font-bold px-6 py-3 rounded-xl hover:bg-madeira/90 transition shadow-lg shadow-madeira/20">
-            Pagar agora — R$ {{ cobranca.valor|floatformat:2 }}
+            Pagar R$ {{ cobranca.valor|floatformat:2 }} agora
         </a>
         <a href="https://wa.me/{{ config.whatsapp }}?text=Olá!%20Quero%20confirmar%20a%20reserva%20{{ reserva.codigo }}"
            class="text-madeira border border-madeira/20 px-6 py-3 rounded-xl hover:bg-madeira hover:text-pergaminho transition font-semibold">

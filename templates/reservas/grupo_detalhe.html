@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load moeda nucleo_extras %}
 
-{% block titulo %}{{ grupo.rotulo }} — Grupo — CRM Vô Testa{% endblock %}
+{% block titulo %}{{ grupo.rotulo }} | Grupo | CRM Vô Testa{% endblock %}
 
 {% block conteudo %}
 <style>
@@ -112,7 +112,7 @@
         </td>
       </tr>
     {% empty %}
-      <tr><td colspan="7" class="vazio">Nenhum quarto no bloco ainda — adicione abaixo.</td></tr>
+      <tr><td colspan="7" class="vazio">Adicione os quartos do grupo pelo formulário abaixo.</td></tr>
     {% endfor %}
   </tbody>
 </table>
@@ -126,7 +126,7 @@
     <div class="campo"><label for="grupo-quarto">Quarto</label><select id="grupo-quarto" name="uh" required>
       <option value="">Quarto livre…</option>
       {% for uh in quartos_livres %}
-        <option value="{{ uh.pk }}">{{ uh.numero }} — {{ uh.tipo.nome }} (acomoda {{ uh|lotacao_uh }})</option>
+        <option value="{{ uh.pk }}">{{ uh.numero }} · {{ uh.tipo.nome }} (acomoda {{ uh|lotacao_uh }})</option>
       {% endfor %}
     </select></div>
     <div class="campo"><label for="id_hospede">Hóspede do quarto</label>

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load auditoria_extras %}
 
-{% block titulo %}Auditoria — CRM Vô Testa{% endblock %}
+{% block titulo %}Auditoria | CRM Vô Testa{% endblock %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Gestão</p>
@@ -10,7 +10,7 @@
   <a href="{% url 'auditoria:fechamentos' %}" class="botao-neutro">Fechamentos do dia</a>
   <a href="{% url 'auditoria:trilha' %}" class="botao-neutro">Trilha de auditoria</a>
 </div>
-<p class="subtitulo">Varredura de pendências do CRM. Só aponta — a correção é feita no módulo dono.</p>
+<p class="subtitulo">Confira as pendências do CRM e abra o módulo responsável para corrigi-las.</p>
 
 <div class="cartoes-indicadores colunas">
   <div class="cartao"><span class="indicador-rotulo letreiro">Pendências</span><span class="indicador-valor">{{ resumo.total }}</span></div>

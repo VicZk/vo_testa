@@ -165,9 +165,7 @@ def qr(request, reserva_id):
         "url": url, "svg": _qr_svg(url), "reserva_id": reserva_id, "voltar": "portal:qr",
         "rotulo_link": "Link do portal do hóspede",
         "telefone_hospede": _telefone_da_reserva(reserva_id),
-        "recado_whatsapp": "Olá! Este é o seu acesso à estadia na Pousada Vô Testa — "
-                           "aqui você vê a conta do quarto, pede no restaurante e "
-                           "solicita limpeza. Não precisa de senha:",
+        "recado_whatsapp": 'Olá! Acesse sua estadia na Pousada Vô Testa pelo link abaixo. Você pode consultar a conta do quarto, fazer pedidos ao restaurante e solicitar limpeza. Não precisa de senha:',
     })
 
 

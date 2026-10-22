@@ -710,14 +710,14 @@ class GestaoLeadFechadoTests(TestCase):
         self.client.login(username="com", password="senha-forte-123")
         r = self.client.get(reverse("comercial:oportunidade", args=[op.pk]))
         self.assertEqual(r.status_code, 200)
-        self.assertContains(r, "reabrir / mover lead fechado")
+        self.assertContains(r, "Reabrir ou mover lead fechado")
 
     def test_detalhe_ganho_com_reserva_renderiza_avisos(self):
         op, reserva = self._ganho_com_adiantamento("120.00")
         self.client.login(username="com", password="senha-forte-123")
         r = self.client.get(reverse("comercial:oportunidade", args=[op.pk]))
         self.assertEqual(r.status_code, 200)
-        self.assertContains(r, "reabrir / mover lead fechado")
+        self.assertContains(r, "Reabrir ou mover lead fechado")
         self.assertContains(r, "estornado")   # aviso do adiantamento
         self.assertContains(r, "cancelar")    # aviso de cancelamento da reserva
 

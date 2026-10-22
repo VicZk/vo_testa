@@ -113,7 +113,7 @@ def cupom(request, pk):
     if o.status == OrdemLavanderia.Status.CANCELADA:
         pagamento = "ORDEM CANCELADA"
     elif o.status != OrdemLavanderia.Status.ENTREGUE:
-        aviso = "Comprovante de recebimento — não é documento fiscal"
+        aviso = "Comprovante de recebimento. Não é documento fiscal."
     elif o.destino == OrdemLavanderia.Destino.CONTA:
         pagamento = f"Lançado na conta: {o.conta_ref}"
     elif o.forma_pagamento:
@@ -285,5 +285,5 @@ def rouparia_mover(request):
     except ValidationError as erro:
         messages.error(request, " ".join(erro.messages))
     except (ValueError, TypeError):   # quantidade não-numérica → sem 500
-        messages.error(request, "Quantidade inválida — use um número inteiro.")
+        messages.error(request, "Quantidade inválida. Informe um número inteiro.")
     return redirect("lavanderia:rouparia")

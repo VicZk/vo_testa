@@ -27,7 +27,7 @@ class FichaComercialForm(forms.ModelForm):
     pontos_atencao_txt = forms.CharField(
         label="Pontos de atenção (um por linha)", required=False,
         widget=forms.Textarea(attrs={"rows": 3,
-                                     "placeholder": "Ex.: Colchão extra não cabe — espaço apertado"}),
+                                     "placeholder": "Ex.: Não há espaço para o colchão extra"}),
         help_text="Avisos dados ANTES (nunca vão no texto ao cliente). Um por linha.",
     )
 
@@ -205,7 +205,7 @@ class ConversaoForm(_SelecaoQuartoMixin, forms.Form):
     )
     criar_sinal = forms.BooleanField(
         label="Gerar cobrança de sinal (Pix)", required=False, initial=False,
-        help_text="Se Pagamentos estiver ativo — informe o valor do sinal abaixo (R$ ou %).",
+        help_text="Com o módulo Pagamentos ativo, informe abaixo o sinal em reais ou em percentual.",
     )
     valor_sinal = forms.DecimalField(
         label="Valor do sinal (R$)", required=False, max_digits=10, decimal_places=2,

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load moeda %}
 
-{% block titulo %}Funil de vendas — Comercial{% endblock %}
+{% block titulo %}Funil de vendas | Comercial{% endblock %}
 
 {% block conteudo %}
 <style>
@@ -225,7 +225,7 @@
               {% if op.proxima_tarefa %}
                 <p class="tarefa {% if op.proxima_tarefa.quando < agora %}alerta{% endif %}">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-                  {% if op.proxima_tarefa.quando < agora %}Atrasado — {% endif %}{{ op.proxima_tarefa.quando|date:"d/m H:i" }}
+                  {% if op.proxima_tarefa.quando < agora %}Atrasado: {% endif %}{{ op.proxima_tarefa.quando|date:"d/m H:i" }}
                 </p>
               {% else %}
                 <p class="tarefa alerta">

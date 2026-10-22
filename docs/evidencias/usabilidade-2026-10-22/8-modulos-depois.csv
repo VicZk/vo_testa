@@ -1,0 +1,71 @@
+﻿rota,url,botoes,conteudo,largura,titulo
+Visão geral,http://127.0.0.1:8094/crm/,2,390,390,O corredor
+Reservas,http://127.0.0.1:8094/crm/reservas/,6,390,390,Mapa de reservas
+Governança,http://127.0.0.1:8094/crm/governanca/,1,390,390,Como está a casa
+Manutenção,http://127.0.0.1:8094/crm/manutencao/,1,390,390,Manutenção
+Estoque,http://127.0.0.1:8094/crm/estoque/,23,390,390,Posição de estoque
+Loja,http://127.0.0.1:8094/crm/loja/,1,390,390,Loja: venda no balcão
+Restaurante Piscina,http://127.0.0.1:8094/crm/restaurante/,3,390,390,Restaurante Piscina
+Lavanderia,http://127.0.0.1:8094/crm/lavanderia/,4,390,390,Lavanderia
+Pagamentos Online,http://127.0.0.1:8094/crm/pagamentos/,3,390,390,Pagamentos Online
+Fiscal,http://127.0.0.1:8094/crm/fiscal/,0,390,390,Notas fiscais eletrônicas
+Escala,http://127.0.0.1:8094/crm/escala/,5,390,390,Escala da equipe
+Comercial,http://127.0.0.1:8094/crm/comercial/,16,390,390,Funil de vendas
+LP Páginas,http://127.0.0.1:8094/crm/comercial/paginas/,3,390,390,Páginas de Captação
+Respostas rápidas,http://127.0.0.1:8094/crm/comercial/respostas/,2,390,390,Respostas rápidas
+Marketing,http://127.0.0.1:8094/crm/marketing/,1,390,390,Quadro de campanhas
+APP/Site,http://127.0.0.1:8094/hospede/recepcao/solicitacoes/,0,390,390,Portal do Hóspede
+Auditoria,http://127.0.0.1:8094/crm/auditoria/,36,390,390,Auditoria
+Relatórios,http://127.0.0.1:8094/crm/relatorios/,0,390,390,Relatórios
+NPS,http://127.0.0.1:8094/crm/nps/,0,390,390,Opinião dos hóspedes
+Caixa,http://127.0.0.1:8094/crm/caixa/,6,390,390,Caixa
+Recados do turno,http://127.0.0.1:8094/crm/logbook/,1,390,390,Recados do turno
+Hóspedes,http://127.0.0.1:8094/crm/hospedes/,2,390,390,Hóspedes
+Agências,http://127.0.0.1:8094/crm/agencias/,2,390,390,Agências
+Empresas,http://127.0.0.1:8094/crm/empresas/,2,390,390,Empresas
+Fornecedores,http://127.0.0.1:8094/crm/fornecedores/,2,390,390,Fornecedores
+Pessoas (todas),http://127.0.0.1:8094/crm/pessoas/,2,390,390,Pessoas
+Funcionários,http://127.0.0.1:8094/crm/funcionarios/,1,390,390,Funcionários
+Quartos & tipos,http://127.0.0.1:8094/crm/estrutura/,36,390,390,Quartos & tipos
+Tabela de preços,http://127.0.0.1:8094/crm/precos/,4,390,390,Tabela de preços
+Temporadas,http://127.0.0.1:8094/crm/temporadas/,2,390,390,Temporadas
+Lançamentos,http://127.0.0.1:8094/crm/financeiro/lancamentos/,1,390,390,Lançamentos
+Contas a pagar/receber,http://127.0.0.1:8094/crm/financeiro/contas/,1,390,390,Contas a pagar/receber
+Sessões de caixa,http://127.0.0.1:8094/crm/caixa/sessoes/,0,390,390,Sessões de caixa
+Conciliação,http://127.0.0.1:8094/crm/conciliacao/,7,390,390,Conciliação bancária e de cartão
+Módulos,http://127.0.0.1:8094/crm/configuracoes/modulos/,17,390,390,Central de Módulos
+Visão geral,http://127.0.0.1:8094/crm/,2,1440,1440,O corredor
+Reservas,http://127.0.0.1:8094/crm/reservas/,6,1440,1440,Mapa de reservas
+Governança,http://127.0.0.1:8094/crm/governanca/,1,1440,1440,Como está a casa
+Manutenção,http://127.0.0.1:8094/crm/manutencao/,1,1440,1440,Manutenção
+Estoque,http://127.0.0.1:8094/crm/estoque/,23,1440,1440,Posição de estoque
+Loja,http://127.0.0.1:8094/crm/loja/,2,1440,1440,Loja: venda no balcão
+Restaurante Piscina,http://127.0.0.1:8094/crm/restaurante/,3,1440,1440,Restaurante Piscina
+Lavanderia,http://127.0.0.1:8094/crm/lavanderia/,4,1440,1440,Lavanderia
+Pagamentos Online,http://127.0.0.1:8094/crm/pagamentos/,3,1440,1440,Pagamentos Online
+Fiscal,http://127.0.0.1:8094/crm/fiscal/,0,1440,1440,Notas fiscais eletrônicas
+Escala,http://127.0.0.1:8094/crm/escala/,5,1440,1440,Escala da equipe
+Comercial,http://127.0.0.1:8094/crm/comercial/,16,1440,1440,Funil de vendas
+LP Páginas,http://127.0.0.1:8094/crm/comercial/paginas/,3,1440,1440,Páginas de Captação
+Respostas rápidas,http://127.0.0.1:8094/crm/comercial/respostas/,2,1440,1440,Respostas rápidas
+Marketing,http://127.0.0.1:8094/crm/marketing/,1,1440,1440,Quadro de campanhas
+APP/Site,http://127.0.0.1:8094/hospede/recepcao/solicitacoes/,0,1440,1440,Portal do Hóspede
+Auditoria,http://127.0.0.1:8094/crm/auditoria/,36,1440,1440,Auditoria
+Relatórios,http://127.0.0.1:8094/crm/relatorios/,0,1440,1440,Relatórios
+NPS,http://127.0.0.1:8094/crm/nps/,0,1440,1440,Opinião dos hóspedes
+Caixa,http://127.0.0.1:8094/crm/caixa/,6,1440,1440,Caixa
+Recados do turno,http://127.0.0.1:8094/crm/logbook/,1,1440,1440,Recados do turno
+Hóspedes,http://127.0.0.1:8094/crm/hospedes/,2,1440,1440,Hóspedes
+Agências,http://127.0.0.1:8094/crm/agencias/,2,1440,1440,Agências
+Empresas,http://127.0.0.1:8094/crm/empresas/,2,1440,1440,Empresas
+Fornecedores,http://127.0.0.1:8094/crm/fornecedores/,2,1440,1440,Fornecedores
+Pessoas (todas),http://127.0.0.1:8094/crm/pessoas/,2,1440,1440,Pessoas
+Funcionários,http://127.0.0.1:8094/crm/funcionarios/,1,1440,1440,Funcionários
+Quartos & tipos,http://127.0.0.1:8094/crm/estrutura/,36,1440,1440,Quartos & tipos
+Tabela de preços,http://127.0.0.1:8094/crm/precos/,4,1440,1440,Tabela de preços
+Temporadas,http://127.0.0.1:8094/crm/temporadas/,2,1440,1440,Temporadas
+Lançamentos,http://127.0.0.1:8094/crm/financeiro/lancamentos/,1,1440,1440,Lançamentos
+Contas a pagar/receber,http://127.0.0.1:8094/crm/financeiro/contas/,1,1440,1440,Contas a pagar/receber
+Sessões de caixa,http://127.0.0.1:8094/crm/caixa/sessoes/,0,1440,1440,Sessões de caixa
+Conciliação,http://127.0.0.1:8094/crm/conciliacao/,7,1440,1440,Conciliação bancária e de cartão
+Módulos,http://127.0.0.1:8094/crm/configuracoes/modulos/,17,1440,1440,Central de Módulos

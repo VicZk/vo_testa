@@ -167,4 +167,4 @@ class TransacaoCartao(models.Model):
         ordering = ["data_venda", "id"]
 
     def __str__(self):
-        return f"NSU {self.nsu} — R$ {self.bruto} ({self.bandeira})"
+        return f"NSU {self.nsu}: R$ {self.bruto} ({self.bandeira})"

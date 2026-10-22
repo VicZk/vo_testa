@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load moeda %}
 
-{% block titulo %}OS #{{ os.pk }} — Manutenção{% endblock %}
+{% block titulo %}OS #{{ os.pk }} | Manutenção{% endblock %}
 
 {% block conteudo %}
 <a href="{% url 'manutencao:painel' %}" class="voltar">
@@ -9,7 +9,7 @@
 </a>
 <p class="pagina-eyebrow letreiro">Manutenção</p>
 <div class="pagina-cabecalho">
-  <h1>OS #{{ os.pk }} — {{ os.titulo }}</h1>
+  <h1>OS #{{ os.pk }}: {{ os.titulo }}</h1>
   <span class="selo {% if os.status == 'cancelada' %}selo-alerta{% elif os.status == 'concluida' %}selo-limpa{% else %}selo-em_andamento{% endif %}">
     {{ os.get_status_display }}
   </span>

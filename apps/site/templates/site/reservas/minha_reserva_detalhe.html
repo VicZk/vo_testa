@@ -46,7 +46,7 @@
     <p class="text-madeira/60 text-sm text-center mb-4">Pague online para confirmar a reserva. O quarto fica reservado até o prazo de retenção.</p>
     <a href="{% url 'pagamentos:pagar' cobranca.token %}"
        class="block w-full text-center bg-lampiao text-noturno font-bold px-6 py-3 rounded-lg hover:bg-lampiao/90 active:scale-[.99] transition">
-      Pagar agora — R$ {{ cobranca.valor|floatformat:2 }}
+      Pagar R$ {{ cobranca.valor|floatformat:2 }} agora
     </a>
   {% elif cobranca and cobranca.paga or reserva.status == 'confirmada' %}
     <div class="flex items-center justify-center gap-2 text-musgo text-sm font-semibold mb-1">

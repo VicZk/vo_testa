@@ -35,6 +35,77 @@ if _PLAYWRIGHT_OK:
 class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
     LOCALE = "pt-BR"
 
+    def test_conciliacao_alinha_controles_mesmo_com_nome_de_arquivo_longo(self):
+        p = self.page
+        for largura in (320, 390, 821, 1024, 1440):
+            with self.subTest(largura=largura):
+                p.set_viewport_size({"width": largura, "height": 900})
+                p.goto(self.url(reverse("conciliacao:painel")))
+                for com_arquivo in (False, True):
+                    if com_arquivo:
+                        for formato in ("ofx", "csv"):
+                            p.locator(f"#arq-{formato}").set_input_files({
+                                "name": "extrato_conta_da_pousada_" + "outubro_" * 12 + f".{formato}",
+                                "mimeType": "application/octet-stream", "buffer": b"arquivo ficticio QA",
+                            })
+                    for linha in p.locator(".conciliacao-campos").all():
+                        controles = linha.locator(".escolher-arquivo, input[type=text], button").evaluate_all(
+                            "els => els.map(el => {const r=el.getBoundingClientRect(); return {x:r.x,y:r.y,w:r.width,h:r.height,b:r.bottom};})"
+                        )
+                        self.assertTrue(controles)
+                        for controle in controles:
+                            self.assertGreaterEqual(controle["h"], 40)
+                            self.assertGreaterEqual(controle["x"], 0)
+                            self.assertLessEqual(controle["x"] + controle["w"], largura + 1)
+                        if largura >= 821:
+                            self.assertLessEqual(max(c["b"] for c in controles) - min(c["b"] for c in controles), 1)
+                    if largura >= 1440:
+                        bases = p.locator(".conciliacao-campos > button").evaluate_all(
+                            "els => els.map(el => el.getBoundingClientRect().bottom)")
+                        self.assertLessEqual(max(bases) - min(bases), 1)
+                    self.assertLessEqual(p.evaluate("document.documentElement.scrollWidth"), largura + 1)
+                    self._foto(f"conciliacao-{largura}-{'arquivo' if com_arquivo else 'vazio'}.png", full_page=True)
+                p.locator("#arq-ofx").focus()
+                self.assertEqual(p.locator("label.escolher-arquivo").first.evaluate(
+                    "el => getComputedStyle(el).outlineStyle"), "solid")
+
+    def test_cabecalhos_indicadores_e_paineis_tem_espaco_entre_blocos(self):
+        p = self.page
+        paginas = [
+            ("comercial:pagina_detalhe", [self.pagina.pk],
+             [(".pagina-cabecalho", ".kpis"), (".kpis", ".detalhe-2col")]),
+            ("comercial:email_campanha_detalhe", [self.email.pk],
+             [(".pagina-cabecalho", ".kpis-el"), (".kpis-el", ".cartao-el")]),
+            ("loja:pdv", [], [(".pagina-cabecalho", ".pdv-shell")]),
+            ("caixa", [], [(".cartoes-indicadores", ".colunas")]),
+            ("lancamentos", [], [(".cartoes-indicadores", ".filtros")]),
+        ]
+        for nome in ("pagina_nova", "pagina_editar", "resposta_nova", "email_campanha_nova", "email_template_novo"):
+            paginas.append((f"comercial:{nome}", [self.pagina.pk] if nome == "pagina_editar" else [],
+                            [(".pagina-cabecalho", ".eleg-form")]))
+        for nome, argumentos, pares in paginas:
+            for largura in (320, 390, 821, 1440):
+                with self.subTest(tela=nome, largura=largura):
+                    p.set_viewport_size({"width": largura, "height": 844})
+                    p.goto(self.url(reverse(nome, args=argumentos)))
+                    p.evaluate("document.fonts.ready")
+                    for anterior, seguinte in pares:
+                        a = p.locator(anterior).first.bounding_box()
+                        b = p.locator(seguinte).first.bounding_box()
+                        self.assertGreaterEqual(b["y"] - a["y"] - a["height"], 20, (anterior, seguinte))
+                    self.assertLessEqual(p.evaluate("document.documentElement.scrollWidth"), largura + 1)
+                    if nome == "comercial:pagina_detalhe":
+                        hierarquia = p.locator(".kpi").first.evaluate("""el => {
+                            const valor=getComputedStyle(el.querySelector('.kpi-valor'));
+                            const rotulo=getComputedStyle(el.querySelector('.kpi-rotulo'));
+                            return parseFloat(valor.fontSize) / parseFloat(rotulo.fontSize);
+                        }""")
+                        self.assertGreaterEqual(hierarquia, 2)
+                    if nome == "comercial:email_campanha_detalhe":
+                        larguras = p.locator(".kpis-el .kpi").evaluate_all(
+                            "els => els.map(el => el.getBoundingClientRect().width)")
+                        self.assertLessEqual(max(larguras) - min(larguras), 1)
+
     def test_navegacao_dos_modulos_mostra_todas_as_opcoes_sem_cortar(self):
         p = self.page
         for rota in ("escala:grade", "comercial:funil", "marketing:quadro", "estoque:posicao"):
@@ -426,7 +497,7 @@ class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
         ).click()
         p.locator("#id_quantidade").fill("25")
         self.enviar("Transferir")
-        expect(p.get_by_text("Saldo insuficiente", exact=False)).to_be_visible()
+        expect(p.locator(".mensagem.error").filter(has_text="Saldo insuficiente")).to_be_visible()
         self._foto("estoque-recusa-390.png", full_page=True)
         expect(p.locator("#id_quantidade")).to_have_value("25")
         expect(p.locator("input[name=produto]")).to_have_value(str(self.product.pk))

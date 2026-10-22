@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load moeda nucleo_extras %}
 
-{% block titulo %}Reserva #{{ reserva.pk }} — CRM Vô Testa{% endblock %}
+{% block titulo %}Reserva #{{ reserva.pk }} | CRM Vô Testa{% endblock %}
 {% block conteudo_classe %}tela-reservas{% endblock %}
 
 {% block conteudo %}
@@ -10,7 +10,7 @@
 </a>
 <p class="pagina-eyebrow letreiro">Reservas</p>
 <div class="pagina-cabecalho">
-  <h1>Reserva #{{ reserva.pk }} — {{ reserva.hospede.nome }}</h1>
+  <h1>Reserva #{{ reserva.pk }}: {{ reserva.hospede.nome }}</h1>
   <span class="selo mapa-cor-{{ reserva.status }} dica" data-dica="{{ reserva.status_ajuda }}">{{ reserva.get_status_display }}</span>
 </div>
 {% comment %}O dado mais consultado do produto era um parágrafo corrido com
@@ -184,7 +184,7 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
             diária(s) usada(s) + {{ politica_cancel.retencao_pct|floatformat:"-1" }}% de retenção.
           {% elif politica_cancel.dentro_arrependimento %}
             <strong>Dentro do prazo de arrependimento</strong> ({{ politica_cancel.retencao_pct|floatformat:"-1" }}%
-            não se aplica) — devolver 100%.
+            não se aplica). Devolver 100%.
           {% else %}
             <strong>Fora do prazo.</strong> Reter {{ politica_cancel.retencao_pct|floatformat:"-1" }}%
             ({{ politica_cancel.retencao_valor|intcomma_brl }}).
@@ -242,7 +242,7 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
   {% if reserva.ativa %}
     <div class="acao-painel" id="acao-trocar" x-show="acao === 'trocar'" x-cloak>
       <h2 class="acao-painel-titulo">Trocar de quarto</h2>
-      <p class="ajuda">A conta (diárias, consumo e pagamentos) vai junto — pertence à reserva, não ao quarto.</p>
+      <p class="ajuda">A conta acompanha a reserva na troca de quarto, incluindo diárias, consumo e pagamentos.</p>
       {% if quartos_livres %}
         <form method="post" action="{% url 'reservas:trocar_quarto' reserva.pk %}" class="form-cartao">
           {% csrf_token %}
@@ -352,14 +352,14 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
 
 
 {# ---------- FNRH (Ficha Nacional de Registro de Hóspedes) ---------- #}
-<h2>FNRH — Ficha de hóspedes
+<h2>Ficha de hóspedes (FNRH)
   {% if fnrh_pronta %}
     <span class="selo selo-ok">Completa</span>
   {% else %}
     <span class="selo selo-alerta">{{ fnrh_completas }}/{{ fnrh_total }} preenchida{{ fnrh_total|pluralize }}</span>
   {% endif %}
 </h2>
-<p class="subtitulo">Registro obrigatório (Embratur) de cada hóspede — uma ficha completa por
+<p class="subtitulo">Registro obrigatório (Embratur) de cada hóspede, com uma ficha completa por
   pessoa libera o check-in.</p>
 {% if reserva.fichas_fnrh.exists %}
   <table class="tabela">

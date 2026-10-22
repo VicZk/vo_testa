@@ -230,6 +230,7 @@
   --foco-anel-suave: 0 0 0 3px color-mix(in srgb, var(--lampiao) 22%, transparent);
 
   --raio-p: 10px;  --raio: 14px;  --raio-g: 20px;
+  --espaco-secao: 1.5rem;
 
   --fonte-titulo: 'Fraunces', Georgia, 'Times New Roman', serif;
   --fonte-ui: 'Hanken Grotesk', -apple-system, 'Segoe UI', sans-serif;
@@ -346,14 +347,12 @@ a:hover { color: var(--lampiao-tinta); }
 }
 
 .botao-primario {
-  font-weight: 700;
-  letter-spacing: .02em;
-  color: var(--noturno);
-  background: linear-gradient(180deg, var(--lampiao-claro), var(--lampiao));
-  border-color: color-mix(in srgb, var(--madeira) 40%, transparent);
+  color: var(--superficie);
+  background: var(--noturno);
+  border-color: var(--noturno);
 }
 
-.botao-primario:hover { filter: brightness(1.06); }
+.botao-primario:hover { background: color-mix(in srgb, var(--noturno) 85%, var(--tinta-suave)); }
 
 .mensagem {
   padding: .6rem .9rem;
@@ -432,10 +431,10 @@ input[type="radio"] { accent-color: var(--lampiao); }
   color: var(--tinta);
   background: var(--superficie);
   border-color: var(--fio-forte);
-  box-shadow: var(--sombra-1);
+  box-shadow: none;
 }
 
-.botao-neutro:hover { background: var(--superficie-2); border-color: var(--madeira); }
+.botao-neutro:hover { background: var(--superficie-2); border-color: var(--tinta-suave); }
 
 .estado-vazio { display: flex; flex-direction: column; align-items: center; gap: .5rem; padding: 2rem 1.2rem; color: var(--tinta-suave); text-align: center; }
 

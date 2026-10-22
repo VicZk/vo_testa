@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block titulo %}Colchões extra — CRM Vô Testa{% endblock %}
+{% block titulo %}Colchões extra | CRM Vô Testa{% endblock %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Reservas · Estoque</p>
@@ -8,7 +8,7 @@
   <h1>Colchões extra por noite</h1>
   <a href="{% url 'reservas:lista' %}" class="botao-neutro">Voltar às reservas</a>
 </div>
-<p class="subtitulo">A base de casal de cada quarto é garantida e não entra aqui — este painel
+<p class="subtitulo">A base de casal de cada quarto é garantida e não entra nesta contagem. Este painel
   mostra só o <strong>pool compartilhado de colchões extra</strong> ({{ painel.pool }} no total),
   usado e livre em cada noite. Avisa quando resta ≤ {{ painel.alerta_minimo }}.</p>
 

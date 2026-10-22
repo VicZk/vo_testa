@@ -135,9 +135,9 @@ class Campanha(models.Model):
         related_name="campanhas_mkt_aprovadas", verbose_name="aprovada por")
     aprovada_em = models.DateTimeField("aprovada em", null=True, blank=True)
 
-    retro_funcionou = models.TextField("retrospectiva — o que funcionou", blank=True)
-    retro_nao = models.TextField("retrospectiva — o que não funcionou", blank=True)
-    retro_diferente = models.TextField("retrospectiva — o que fazer diferente", blank=True)
+    retro_funcionou = models.TextField("retrospectiva: o que funcionou", blank=True)
+    retro_nao = models.TextField("retrospectiva: o que não funcionou", blank=True)
+    retro_diferente = models.TextField("retrospectiva: o que fazer diferente", blank=True)
 
     # Elo de origem (uma fonte só de leads/gasto). Garantido na Aprovação.
     anuncio = models.OneToOneField(
@@ -271,7 +271,7 @@ class ItemChecklist(models.Model):
         help_text="Alguns itens só fecham com um arquivo anexado (referência, briefing, arte).")
     nota = models.CharField(
         "nota", max_length=280, blank=True,
-        help_text="Observação livre do responsável (opcional) — ex.: a base da verba.")
+        help_text="Observação do responsável (opcional). Exemplo: como o orçamento foi calculado.")
 
     class Meta:
         verbose_name = "item de checklist"

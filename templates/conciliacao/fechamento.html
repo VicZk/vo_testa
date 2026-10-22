@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load moeda %}
 
-{% block titulo %}Fechamento de conciliação — CRM Vô Testa{% endblock %}
+{% block titulo %}Fechamento de conciliação | CRM Vô Testa{% endblock %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Financeiro</p>
@@ -43,13 +43,13 @@
   {# Gráficos conciliado × pendente #}
   <div class="grade-graficos">
     <div class="cartao cartao-el">
-      <span class="letreiro letreiro-medio">Extrato — conciliado × pendente</span>
+      <span class="letreiro letreiro-medio">Extrato: conciliado e pendente</span>
       {% if dados.extrato.total %}
         <div class="grafico-conciliacao"><canvas id="g-ext"></canvas></div>
       {% else %}<p class="vazio bloco-respiro-curto">Sem linhas no período.</p>{% endif %}
     </div>
     <div class="cartao cartao-el">
-      <span class="letreiro letreiro-medio">Cartão — conciliado × pendente</span>
+      <span class="letreiro letreiro-medio">Cartão: conciliado e pendente</span>
       {% if dados.cartao.total %}
         <div class="grafico-conciliacao"><canvas id="g-car"></canvas></div>
       {% else %}<p class="vazio bloco-respiro-curto">Sem transações no período.</p>{% endif %}

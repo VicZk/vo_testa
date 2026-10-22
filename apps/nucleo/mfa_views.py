@@ -65,7 +65,7 @@ def mfa_ativar(request):
             request.session.pop("mfa_secret_novo", None)
             messages.success(request, "MFA ativado! Guarde os códigos de backup.")
             return render(request, "nucleo/mfa_backup.html", {"codigos": claros})
-        erro = "Código inválido — confira o horário do celular e tente de novo."
+        erro = "Código inválido. Confira o horário do celular e tente novamente."
     uri = mfa.uri_provisionamento(request.user, secret)
     return render(request, "nucleo/mfa_ativar.html", {
         "qr_svg": mfa.qr_svg(uri), "secret": secret, "erro": erro,

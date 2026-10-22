@@ -1,7 +1,7 @@
 {% extends 'site/reservas/base_reserva.html' %}
 {% load static %}
 
-{% block title %}{% if eh_day_use %}Dia na Pousada{% else %}Reservar{% endif %} — Datas | Pousada Vô Testa{% endblock %}
+{% block title %}{% if eh_day_use %}Dia na Pousada{% else %}Reservar{% endif %} | Datas | Pousada Vô Testa{% endblock %}
 
 {% block reserva_content %}
 <div class="text-center mb-8">
@@ -24,7 +24,7 @@
     {% if quarto_escolhido %}
     <p class="mt-5 inline-flex items-center gap-2 bg-lampiao/10 text-madeira text-sm px-4 py-2 rounded-full border border-lampiao/30">
         <svg class="w-4 h-4 text-lampiao" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.7 5.3a1 1 0 010 1.4l-8 8a1 1 0 01-1.4 0l-4-4a1 1 0 011.4-1.4L8 12.6l7.3-7.3a1 1 0 011.4 0z" clip-rule="evenodd"/></svg>
-        Reservando: <strong class="font-semibold">{{ quarto_escolhido }}</strong> — escolha as datas.
+        Reservando: <strong class="font-semibold">{{ quarto_escolhido }}</strong>. Escolha as datas da estadia.
     </p>
     {% endif %}
 </div>
@@ -72,7 +72,7 @@ calendário ocupa só os 270px do topo.{% endcomment %}
                 </div>
                 {% else %}
                 <input type="hidden" id="lbl-checkout" value="">
-                <p class="text-madeira/70 text-xs py-2">Um dia na estrutura — piscina, mirantes e passeio (sem pernoite).</p>
+                <p class="text-madeira/70 text-xs py-2">Aproveite a piscina, os mirantes e os passeios durante o dia, sem pernoite.</p>
                 {% endif %}
                 <div class="flex justify-between items-center py-3 border-b border-pergaminho">
                     <div>

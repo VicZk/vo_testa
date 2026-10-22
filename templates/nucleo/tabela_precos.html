@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block titulo %}Tabela de preços — CRM Vô Testa{% endblock %}
+{% block titulo %}Tabela de preços | CRM Vô Testa{% endblock %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Núcleo</p>
@@ -90,11 +90,11 @@
           <option value="{{ valor }}"{% if valor == parametros.no_show_noites %} selected{% endif %}>{{ rotulo }}</option>
         {% endfor %}
       </select>
-      <small>Desligado, a recepção decide pela Auditoria; ligado, a reserva confirmada sem check-in vira "não compareceu" na auditoria da madrugada e o quarto volta à venda — o pago fica na conta e dá para desfazer se o hóspede aparecer</small></label>
+      <small>Desligado, a recepção decide pela Auditoria; ligado, a reserva confirmada sem check-in vira "não compareceu" na auditoria da madrugada e o quarto volta à venda. O valor pago fica na conta e dá para desfazer se o hóspede aparecer</small></label>
   </div>
 
   <h2>Custo de vender por canal</h2>
-  <p class="subtitulo">Quanto cada canal come da hospedagem vendida: comissão de OTA, taxa do meio de pagamento no site, zero no que vem direto. Alimenta o relatório <strong>Custo de distribuição por canal</strong> — é estimativa gerencial, nada é lançado no Financeiro.</p>
+  <p class="subtitulo">Custo de cada canal de venda: comissão de OTA, taxa do meio de pagamento no site, zero no que vem direto. Alimenta o relatório <strong>Custo de distribuição por canal</strong>. Os valores são estimativas gerenciais e não geram lançamentos no Financeiro.</p>
   <div class="precos-param">
     {% for c in custos_canal %}
       <label>{{ c.label }} (%)

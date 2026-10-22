@@ -315,7 +315,7 @@ def trocas(request):
         substituto = get_object_or_404(Funcionario, pk=request.POST.get("substituto"))
         try:
             services.solicitar_troca(atrib, substituto, request.POST.get("motivo", ""))
-            messages.success(request, "Troca solicitada — aguardando aprovação.")
+            messages.success(request, "Troca solicitada. Aguarde a aprovação.")
         except ValidationError as erro:
             messages.error(request, " ".join(erro.messages))
         return redirect("escala:trocas")

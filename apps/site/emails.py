@@ -111,7 +111,7 @@ def enviar_confirmacao(reserva, *, fail_silently=True) -> bool:
     if not email:
         return False
     ctx = _ctx_confirmacao(reserva)
-    assunto = f"{ctx['titulo']} {reserva.codigo} — Pousada Vô Testa"
+    assunto = f"{ctx['titulo']} {reserva.codigo} | Pousada Vô Testa"
     msg = EmailMultiAlternatives(
         assunto,
         render_to_string("site/emails/confirmacao.txt", ctx),

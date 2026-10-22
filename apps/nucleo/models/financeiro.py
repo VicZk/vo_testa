@@ -233,7 +233,7 @@ class MovimentoCaixa(models.Model):
     parcelas = models.PositiveSmallIntegerField("parcelas", default=1)
     autorizacao = models.CharField(
         "autorização / NSU", max_length=40, blank=True,
-        help_text="Código de autorização ou NSU do comprovante do cartão — "
+        help_text="Código de autorização ou NSU do comprovante do cartão, "
                   "para conciliar com a maquininha (SafraPay).",
     )
     descricao = models.CharField("descrição", max_length=200)
@@ -268,9 +268,9 @@ class MovimentoCaixa(models.Model):
         """Explicação do tipo de movimento, para dica ao passar o mouse."""
         return {
             self.Tipo.RECEBIMENTO: "Entrada de dinheiro por um pagamento.",
-            self.Tipo.REFORCO: "Reforço — dinheiro colocado no caixa (ex.: troco).",
-            self.Tipo.SANGRIA: "Sangria — retirada de dinheiro do caixa (ex.: para o cofre).",
-            self.Tipo.ESTORNO: "Estorno — devolução de um recebimento.",
+            self.Tipo.REFORCO: "Reforço: dinheiro colocado no caixa (ex.: troco).",
+            self.Tipo.SANGRIA: "Sangria: retirada de dinheiro do caixa (ex.: para o cofre).",
+            self.Tipo.ESTORNO: "Estorno: devolução de um recebimento.",
         }.get(self.tipo, "")
 
     def clean(self):
@@ -314,14 +314,14 @@ class MovimentoCaixa(models.Model):
     def save(self, *args, **kwargs):
         if not self._state.adding:
             raise ValidationError(
-                "Movimento de caixa é imutável — registre um estorno."
+                "Movimento de caixa não pode ser alterado. Registre um estorno."
             )
         self.full_clean()
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         raise ValidationError(
-            "Movimento de caixa não pode ser apagado — registre um estorno."
+            "Movimento de caixa não pode ser apagado. Registre um estorno."
         )
 
 
@@ -342,8 +342,7 @@ def receber_no_caixa(usuario, forma, valor: Decimal, descricao: str, parcelas: i
     if not sessao:
         nome = dict(centro_choices()).get(modulo, modulo)
         raise ValidationError(
-            f"Você precisa do caixa de {nome} aberto para receber — "
-            "abra em Operação → Caixa."
+            f'Você precisa do caixa de {nome} aberto para receber. Abra uma sessão em Operação → Caixa.'
         )
     movimento = MovimentoCaixa(
         sessao=sessao,

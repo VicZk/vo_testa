@@ -83,7 +83,7 @@ class TarifaUnidade(models.Model):
         choices=Temporada.Classificacao.choices,
     )
     valor = models.DecimalField(
-        "diária base — 2 adultos (R$)", max_digits=10, decimal_places=2,
+        "diária base para 2 adultos (R$)", max_digits=10, decimal_places=2,
         validators=[MinValueValidator(Decimal("0.01"))],
     )
     pessoa_adicional = models.DecimalField(
@@ -93,7 +93,7 @@ class TarifaUnidade(models.Model):
                   "Vazio = usa o do tipo. Criança 6-15 paga metade; ≤5 não paga.",
     )
     meia = models.DecimalField(
-        "meia — criança 6-15 (R$)", max_digits=10, decimal_places=2,
+        "meia diária para criança de 6 a 15 anos (R$)", max_digits=10, decimal_places=2,
         null=True, blank=True,
         help_text="Valor por criança de 6 a 15 anos. Vazio = metade da pessoa "
                   "adicional. ≤5 não paga.",
@@ -130,7 +130,7 @@ class TarifaTemporada(models.Model):
         related_name="tarifas_temporada", verbose_name="quarto",
     )
     valor = models.DecimalField(
-        "diária base — 2 adultos (R$)", max_digits=10, decimal_places=2,
+        "diária base para 2 adultos (R$)", max_digits=10, decimal_places=2,
         validators=[MinValueValidator(Decimal("0.01"))],
     )
     pessoa_adicional = models.DecimalField(
@@ -139,7 +139,7 @@ class TarifaTemporada(models.Model):
         help_text="Valor por adulto além dos 2. Vazio = usa o do tipo.",
     )
     meia = models.DecimalField(
-        "meia — criança 6-15 (R$)", max_digits=10, decimal_places=2,
+        "meia diária para criança de 6 a 15 anos (R$)", max_digits=10, decimal_places=2,
         null=True, blank=True,
         help_text="Valor por criança de 6 a 15 anos. Vazio = metade da pessoa adicional.",
     )
@@ -172,7 +172,7 @@ class TarifaDayUse(models.Model):
         validators=[MinValueValidator(Decimal("0.01"))],
     )
     valor_meia = models.DecimalField(
-        "meia — criança 6-15 (R$)", max_digits=10, decimal_places=2,
+        "meia diária para criança de 6 a 15 anos (R$)", max_digits=10, decimal_places=2,
         null=True, blank=True,
         help_text="Vazio = metade do adulto. ≤5 não paga.",
     )
@@ -359,7 +359,7 @@ class RestricaoVenda(models.Model):
         if self.inicio and self.fim and self.fim < self.inicio:
             erros["fim"] = "A última noite deve ser igual ou depois da primeira."
         if self.tipo_uh_id and self.uh_id:
-            erros["uh"] = ("Escolha o tipo OU o quarto — não os dois. Deixe os dois "
+            erros["uh"] = ("Escolha apenas o tipo OU o quarto. Deixe os dois "
                            "vazios para valer na casa inteira.")
         if not any([self.min_noites, self.fechado_chegada, self.fechado_saida,
                     self.parar_vendas]):
@@ -636,8 +636,8 @@ class Reserva(models.Model):
     def status_ajuda(self) -> str:
         """Explicação do status, para dica ao passar o mouse."""
         return {
-            self.Status.ORCAMENTO: "Cotação de preço — não segura o quarto.",
-            self.Status.PRE_RESERVA: "Reserva provisória — segura o quarto por um tempo até a confirmação.",
+            self.Status.ORCAMENTO: "Cotação de preço, sem bloqueio do quarto.",
+            self.Status.PRE_RESERVA: "Reserva provisória, com bloqueio temporário do quarto até a confirmação.",
             self.Status.CONFIRMADA: "Sinal recebido ou garantia registrada.",
             self.Status.HOSPEDADA: "Hóspede em casa (entrada já feita).",
             self.Status.CHECKOUT: "Estadia encerrada (saída já feita).",
@@ -708,7 +708,7 @@ class Reserva(models.Model):
         # FNRH obrigatória: ficha completa de cada hóspede antes de hospedar.
         if getattr(settings, "FNRH_BLOQUEAR_CHECKIN", True) and not self.fnrh_pronta:
             raise ValidationError(
-                "FNRH pendente — registre a ficha de cada hóspede antes do check-in."
+                "FNRH pendente. Preencha a ficha de cada hóspede antes do check-in."
             )
         if getattr(settings, "ECA_BLOQUEAR_CHECKIN", True):
             pendentes = self.menores_pendentes
@@ -731,8 +731,7 @@ class Reserva(models.Model):
 
             if not uh_pronta_para_checkin(self.uh):
                 raise ValidationError(
-                    f"O quarto {self.uh.numero} não está limpo/inspecionado — "
-                    "aguarde a governança."
+                    f'O quarto {self.uh.numero} ainda precisa de limpeza ou inspeção. Aguarde a liberação da governança.'
                 )
         self.status = self.Status.HOSPEDADA
         self.checkin_real = timezone.now()
@@ -786,7 +785,7 @@ class Reserva(models.Model):
             )
         if saldo != Decimal("0.00"):
             raise ValidationError(
-                f"A conta tem saldo de R$ {saldo} — receba ou ajuste antes."
+                f"A conta tem saldo de R$ {saldo}. Receba o pagamento ou ajuste a conta antes de continuar."
             )
         conta.status = ContaHospedagem.Status.FECHADA
         conta.fechada_em = timezone.now()
@@ -1105,7 +1104,7 @@ class FichaFNRH(models.Model):
         ]
 
     def __str__(self):
-        return f"FNRH — {self.nome} (reserva #{self.reserva_id})"
+        return f"FNRH: {self.nome} (reserva #{self.reserva_id})"
 
     @property
     def completa(self) -> bool:
@@ -1222,7 +1221,7 @@ class ContaHospedagem(models.Model):
             LancamentoConta.objects.create(
                 conta=self, tipo=LancamentoConta.Tipo.TAXA,
                 natureza=NaturezaFiscal.SERVICO,
-                descricao=f"ISS {pct_br(t['iss_aliquota'])}% — {reserva.uh.numero}",
+                descricao=f"ISS {pct_br(t['iss_aliquota'])}%: {reserva.uh.numero}",
                 valor=t["iss"], criado_por=usuario,
             )
         if t["taxa_turismo"] > 0:
@@ -1373,7 +1372,7 @@ class LancamentoConta(models.Model):
     def save(self, *args, **kwargs):
         if not self._state.adding:
             raise ValidationError(
-                "Lançamento de conta não é editado — lance um desconto/ajuste."
+                "Lançamento de conta não pode ser editado. Registre um desconto ou ajuste."
             )
         if self.competencia is None:
             self.competencia = timezone.localdate()
@@ -1382,7 +1381,7 @@ class LancamentoConta(models.Model):
 
     def delete(self, *args, **kwargs):
         raise ValidationError(
-            "Lançamento de conta não é apagado — lance um desconto/ajuste."
+            "Lançamento de conta não pode ser apagado. Registre um desconto ou ajuste."
         )
 
 
@@ -1451,7 +1450,7 @@ class PagamentoConta(CreditoNaReserva):
     )
     observacao = models.CharField(
         "pagador / observação", max_length=120, blank=True,
-        help_text="Quem pagou esta parte (ex.: 'Casal A', 'cartão do João') — para rateio.",
+        help_text="Quem pagou esta parte (ex.: 'Casal A', 'cartão do João'), para dividir o pagamento.",
     )
 
     class Meta:
@@ -1468,7 +1467,7 @@ class PagamentoConta(CreditoNaReserva):
         ]
 
     def __str__(self):
-        return f"Pagamento R$ {self.valor} — conta #{self.conta_id}"
+        return f"Pagamento R$ {self.valor}, conta #{self.conta_id}"
 
 
 class Adiantamento(CreditoNaReserva):
@@ -1502,7 +1501,7 @@ class Adiantamento(CreditoNaReserva):
         ]
 
     def __str__(self):
-        return f"Adiantamento R$ {self.valor} — reserva #{self.reserva_id}"
+        return f"Adiantamento R$ {self.valor}, reserva #{self.reserva_id}"
 
 
 class ColchoesExtra(models.Model):

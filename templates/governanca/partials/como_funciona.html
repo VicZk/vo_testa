@@ -8,8 +8,7 @@ nunca duas verdades.{% endcomment %}
 
   <div class="gov-ajuda-corpo">
     <p class="bloco-texto">Cada quarto anda por quatro estados, sempre nesta ordem. A
-      tela mostra em que estado ele está e qual é o próximo passo — você não precisa
-      decidir nada de cabeça.</p>
+      tela mostra em que estado ele está e qual é o próximo passo. As ações ficam indicadas na própria tela.</p>
 
     <ol class="gov-ciclo-lista">
       {% for e in ciclo %}
@@ -37,7 +36,7 @@ nunca duas verdades.{% endcomment %}
       <dt>Ronda</dt>
       <dd>A passagem da camareira pelos quartos. Ao passar, ela registra o que viu
         dentro: <em>vago</em>, <em>com mala</em> (hóspede instalado) ou
-        <em>sem mala</em> — na hotelaria, «ocupado sem bagagem».</dd>
+        <em>sem mala</em>, chamado de «ocupado sem bagagem» na hotelaria.</dd>
       <dt>Inspeção</dt>
       <dd>A conferida da supervisora depois da limpeza. Só depois dela o quarto está
         pronto para entregar a chave.</dd>
@@ -46,11 +45,11 @@ nunca duas verdades.{% endcomment %}
         embora. <strong>Arrumação</strong> é a do dia a dia, com o hóspede ainda
         hospedado: trocar toalha, fazer a cama, repor.</dd>
       <dt>Skip</dt>
-      <dd>O sistema diz que tem hóspede no quarto, mas a camareira viu o quarto vazio —
-        o hóspede foi embora sem passar na recepção, e a conta pode estar aberta.</dd>
+      <dd>O sistema diz que tem hóspede no quarto, mas a camareira viu o quarto vazio.
+        Verifique se o hóspede saiu sem passar na recepção e se a conta ainda está aberta.</dd>
       <dt>Sleeper</dt>
       <dd>O contrário: o sistema diz que o quarto está livre e tem gente (ou bagagem)
-        dentro — provavelmente um check-in que ninguém lançou.</dd>
+        dentro. Verifique se o check-in foi registrado.</dd>
     </dl>
   </div>
 </details>

@@ -9,6 +9,28 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 22/10/2026: mais espaço, botões simples e Conciliação alinhada
+
+**O que melhorou**
+
+- Cabeçalhos, indicadores e painéis têm separação consistente, inclusive na
+  captação, nos formulários e no PDV.
+- Botões principais usam fundo escuro uniforme; secundários têm borda discreta.
+  Foco e áreas de interação foram preservados.
+- Os importadores da Conciliação ficam alinhados, mesmo com nomes longos de
+  arquivo, e se adaptam ao celular. O carrinho do PDV destaca o destino do arraste.
+- Site, campanhas e CRM usam instruções e confirmações mais diretas.
+
+**O que foi modificado**
+
+- Estilos e templates compartilhados; textos da interface e metadados de campos.
+  As seis migrations não alteram o esquema do banco.
+- Suíte completa: 1.858 testes aprovados, incluindo 65 de navegador, sem pulos.
+  Inspeção adicional de 35 telas em duas larguras, sem rolagem horizontal.
+- Capturas, método e limites em `docs/REVISAO_USABILIDADE_2026-10-22.md`.
+
+---
+
 ## 22/10/2026 — Cabeçalho completo em tablets e menu com rolagem
 
 **O que melhorou**

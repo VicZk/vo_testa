@@ -92,13 +92,13 @@ APRESENTACAO: dict[str, dict] = {
     Modulo.PAGAMENTOS: {
         "grupo": "Financeiro",
         "ordem": 90,
-        "descricao": "Cartão, Pix e boleto — cobranças e conciliação.",
+        "descricao": "Cobranças e conciliação de cartão, Pix e boleto.",
         "url_name": "pagamentos:painel",
     },
     Modulo.FISCAL: {
         "grupo": "Financeiro",
         "ordem": 100,
-        "descricao": "Emissão de notas — serviço e consumo separados.",
+        "descricao": "Emissão de notas fiscais de serviços e produtos.",
         "url_name": "fiscal:painel",
     },
     Modulo.ESCALA: {
@@ -110,7 +110,7 @@ APRESENTACAO: dict[str, dict] = {
     Modulo.COMERCIAL: {
         "grupo": "Comercial",
         "ordem": 115,
-        "descricao": "Funil de vendas — leads, oportunidades e conversão em reserva.",
+        "descricao": "Gestão de leads, oportunidades e conversão em reservas.",
         "url_name": "comercial:funil",
     },
     Modulo.MARKETING: {
@@ -147,7 +147,7 @@ APRESENTACAO: dict[str, dict] = {
     Modulo.RELATORIOS: {
         "grupo": "Gestão",
         "ordem": 160,
-        "descricao": "Relatórios por período — consolidados e por módulo.",
+        "descricao": "Relatórios consolidados e por módulo, com filtro por período.",
         "url_name": "relatorios:index",
     },
 }

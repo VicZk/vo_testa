@@ -370,14 +370,12 @@ OPERACOES = {
     "saida": {
         "rotulo": "Saída", "titulo": "Saída de estoque",
         "acao": "Registrar saída", "form": SaidaForm,
-        "intro": "O que saiu sem passar pela Loja ou pelo Restaurante — "
-                 "consumo interno, perda, quebra, vencimento.",
+        "intro": 'Registre saídas por consumo interno, perda, quebra ou vencimento.',
     },
     "transferencia": {
         "rotulo": "Transferência", "titulo": "Transferência entre locais",
         "acao": "Transferir", "form": TransferenciaForm,
-        "intro": "O produto muda de depósito. O saldo total da pousada não muda — "
-                 "fica registrado dos dois lados.",
+        "intro": 'O produto muda de depósito. O saldo total da pousada não muda. A transferência fica registrada nos dois depósitos.',
     },
     "ajuste": {
         "rotulo": "Ajuste", "titulo": "Ajuste de saldo",
@@ -397,7 +395,7 @@ def _executar(operacao, dados, usuario):
             observacao=dados["observacao"], fornecedor=dados["fornecedor"],
             chave=chave,
         )
-        return "Entrada registrada — saldo e custo médio atualizados."
+        return "Entrada registrada. Saldo e custo médio atualizados."
     if operacao == "saida":
         registrar_saida(
             dados["produto"], dados["local"], dados["quantidade"], usuario,
@@ -415,7 +413,7 @@ def _executar(operacao, dados, usuario):
         dados["produto"], dados["local"], dados["quantidade"], usuario,
         motivo=dados["motivo"],
     )
-    return "Ajuste registrado — operação auditada."
+    return "Ajuste registrado no histórico de auditoria."
 
 
 def _movimentar(request, operacao):
@@ -523,7 +521,7 @@ def inventarios(request):
             )
             for produto in Produto.objects.filter(ativo=True)
         ])
-        messages.success(request, "Inventário aberto — faça a contagem.")
+        messages.success(request, "Inventário aberto. Faça a contagem dos produtos.")
         return redirect("estoque:inventario", pk=inv.pk)
 
     diferenca = (
@@ -567,7 +565,7 @@ def inventario(request, pk):
             try:
                 inv.aplicar(request.user, somente_contados=True)
                 messages.success(
-                    request, "Inventário aplicado — ajustes gerados e auditados."
+                    request, "Inventário aplicado. Ajustes registrados no histórico de auditoria."
                 )
                 return redirect("estoque:posicao")
             except ValidationError as erro:

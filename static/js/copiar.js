@@ -50,7 +50,7 @@
   function avisar(botao, ok) {
     if (!ok) {
       // Nem a API nem o plano B: o texto continua na tela para copiar à mão.
-      botao.title = "Não consegui copiar neste navegador — selecione o texto e use Ctrl+C.";
+      botao.title = "Não foi possível copiar. Selecione o texto e use Ctrl+C.";
       return;
     }
     if (navigator.vibrate) navigator.vibrate(8);

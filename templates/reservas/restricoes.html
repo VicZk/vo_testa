@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block titulo %}Restrições de venda — CRM Vô Testa{% endblock %}
+{% block titulo %}Restrições de venda | CRM Vô Testa{% endblock %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Cadastros · Temporadas</p>
@@ -9,7 +9,7 @@
   <a href="{% url 'temporadas' %}" class="botao-neutro">Temporadas</a>
   <a href="{% url 'reservas:restricao_nova' %}" class="botao-primario">Nova restrição</a>
 </div>
-<p class="subtitulo">Quando a data pode ser vendida — <strong>não</strong> por quanto.
+<p class="subtitulo">Defina regras de chegada, saída e duração da estadia.
   Serve para o feriado não sair como noite solta: no Réveillon, estadia mínima de 3
   noites; na véspera cheia, fechado para chegada. No site a regra barra e explica o
   motivo; na recepção ela vira aviso, e <em>parar vendas</em> só a gerência dispensa.</p>
@@ -57,7 +57,7 @@ o nome do período leva à edição, onde mora o "ativa". Larguras no app.css
           </td>
         </tr>
       {% empty %}
-        <tr><td colspan="6" class="vazio">Nenhuma restrição cadastrada — o site vende qualquer
+        <tr><td colspan="6" class="vazio">Nenhuma restrição cadastrada. O site vende qualquer
           data, com qualquer número de noites. Crie uma para o Réveillon e os feriados.</td></tr>
       {% endfor %}
     </tbody>

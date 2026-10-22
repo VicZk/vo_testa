@@ -1,15 +1,14 @@
 {% extends "base.html" %}
 
-{% block titulo %}Conciliação — CRM Vô Testa{% endblock %}
+{% block titulo %}Conciliação | CRM Vô Testa{% endblock %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Financeiro</p>
 <div class="pagina-cabecalho">
   <h1>Conciliação bancária e de cartão</h1>
 </div>
-<p class="subtitulo">Importe o extrato do banco (OFX) e o arquivo de vendas da SafraPay (CSV),
-  e case automaticamente com os recebimentos e contas do CRM. O que não casar fica na fila
-  para conferência manual.</p>
+<p class="subtitulo">Importe os arquivos do banco e da SafraPay para conferir os recebimentos.
+  O sistema identifica as correspondências e separa as pendências para revisão.</p>
 
 <div class="eleg">
 
@@ -33,44 +32,45 @@
     </div>
   </div>
 
-  {% comment %}Importar + conciliar. Era um bloco com 25 estilos inline, em que
-  "EXTRATO BANCÁRIO (OFX)" e "CONTA" ficavam em linhas-base diferentes, com
-  três alturas de controle (35/32/42 px) na mesma linha. Agora usa a barra de
-  filtros canônica (`.filtro-barra` + `.filtro-campo`), que já tem rótulo,
-  altura e foco padronizados.{% endcomment %}
   <div class="importar-conciliar">
     <form method="post" action="{% url 'conciliacao:importar_ofx' %}" enctype="multipart/form-data"
-          class="filtro-barra filtro-inline">
+          class="filtro-barra filtro-inline conciliacao-importacao">
       {% csrf_token %}
-      <div class="filtro-campo">
-        <label for="arq-ofx">Extrato bancário (OFX)</label>
-        <label class="botao-neutro escolher-arquivo">
-          Escolher arquivo…
-          <input type="file" id="arq-ofx" name="arquivo" accept=".ofx,.OFX" required
-                 onchange="this.closest('.filtro-campo').querySelector('.arq-nome').textContent = this.files.length ? this.files[0].name : ''">
-        </label>
-        <small class="arq-nome ajuda"></small>
+      <h2>Extrato bancário</h2>
+      <div class="conciliacao-campos">
+        <div class="filtro-campo">
+          <label for="arq-ofx">Arquivo OFX</label>
+          <label class="botao-neutro escolher-arquivo">
+            Escolher arquivo
+            <input type="file" id="arq-ofx" name="arquivo" accept=".ofx,.OFX" required aria-describedby="nome-ofx"
+                   onchange="this.closest('form').querySelector('.arq-nome').textContent = this.files.length ? this.files[0].name : ''">
+          </label>
+        </div>
+        <div class="filtro-campo conciliacao-conta">
+          <label for="conta-ofx">Conta</label>
+          <input type="text" id="conta-ofx" name="conta" placeholder="Ex.: 12345-6">
+        </div>
+        <button class="botao-neutro" type="submit">Importar OFX</button>
       </div>
-      <div class="filtro-campo">
-        <label for="conta-ofx">Conta</label>
-        <input type="text" id="conta-ofx" name="conta" placeholder="ex.: 12345-6" class="campo-curto">
-      </div>
-      <button class="botao-primario" type="submit">Importar OFX</button>
+      <small id="nome-ofx" class="arq-nome ajuda" aria-live="polite"></small>
     </form>
 
     <form method="post" action="{% url 'conciliacao:importar_cartao' %}" enctype="multipart/form-data"
-          class="filtro-barra filtro-inline">
+          class="filtro-barra filtro-inline conciliacao-importacao">
       {% csrf_token %}
-      <div class="filtro-campo">
-        <label for="arq-csv">Vendas SafraPay (CSV)</label>
-        <label class="botao-neutro escolher-arquivo">
-          Escolher arquivo…
-          <input type="file" id="arq-csv" name="arquivo" accept=".csv,.CSV" required
-                 onchange="this.closest('.filtro-campo').querySelector('.arq-nome').textContent = this.files.length ? this.files[0].name : ''">
-        </label>
-        <small class="arq-nome ajuda"></small>
+      <h2>Vendas da SafraPay</h2>
+      <div class="conciliacao-campos">
+        <div class="filtro-campo">
+          <label for="arq-csv">Arquivo CSV</label>
+          <label class="botao-neutro escolher-arquivo">
+            Escolher arquivo
+            <input type="file" id="arq-csv" name="arquivo" accept=".csv,.CSV" required aria-describedby="nome-csv"
+                   onchange="this.closest('form').querySelector('.arq-nome').textContent = this.files.length ? this.files[0].name : ''">
+          </label>
+        </div>
+        <button class="botao-neutro" type="submit">Importar cartão</button>
       </div>
-      <button class="botao-neutro" type="submit">Importar cartão</button>
+      <small id="nome-csv" class="arq-nome ajuda" aria-live="polite"></small>
     </form>
 
     <div class="acoes">
@@ -78,14 +78,14 @@
         {% csrf_token %}
         <button class="botao-primario" type="submit">Conciliar agora</button>
       </form>
-      <a href="{% url 'conciliacao:manual' %}" class="botao-neutro">Conciliação manual →</a>
-      <a href="{% url 'conciliacao:fechamento' %}" class="botao-neutro">Fechamento (mês/ano) →</a>
-      <p class="ajuda">Casa por valor+data (banco) e por NSU (cartão); o que sobrar você resolve no manual.</p>
+      <a href="{% url 'conciliacao:manual' %}" class="botao-neutro">Revisar pendências</a>
+      <a href="{% url 'conciliacao:fechamento' %}" class="botao-neutro">Fechamento mensal</a>
+      <p class="ajuda">A conferência usa valor e data para o banco, e NSU para os cartões.</p>
     </div>
   </div>
 
   {# Fila do extrato #}
-  <h2 class="secao-titulo letreiro">Extrato — pendentes de conciliação</h2>
+  <h2 class="secao-titulo letreiro">Extrato pendente de conciliação</h2>
   <div class="quadro">
     <table class="tabela">
       <thead>
@@ -110,7 +110,7 @@
   </div>
 
   {# Fila do cartão #}
-  <h2 class="secao-titulo letreiro">Cartão (SafraPay) — pendentes por NSU</h2>
+  <h2 class="secao-titulo letreiro">Cartão (SafraPay): pendências por NSU</h2>
   <div class="quadro">
     <table class="tabela">
       <thead>

@@ -491,7 +491,7 @@ class LeadManualE2ETests(_FunilComercialMixin, _BaseE2E):
         self._abrir()
         p.get_by_label("Nome do contato").fill("Contato preservado E2E")
         p.get_by_label("O que a pessoa procura?").fill("Quero um quarto com vista")
-        p.get_by_text("Mais informações — período, pessoas e responsável", exact=True).click()
+        p.get_by_text("Mais informações: período, pessoas e responsável", exact=True).click()
         p.get_by_label("Valor estimado").fill("valor inválido")
         p.get_by_role("button", name="Salvar e abrir atendimento").click()
         p.get_by_text("Confira os campos indicados.", exact=False).wait_for()
@@ -552,7 +552,7 @@ class LeadManualE2ETests(_FunilComercialMixin, _BaseE2E):
                     destino = Path(evidencia)
                     destino.mkdir(parents=True, exist_ok=True)
                     p.screenshot(path=str(destino / f"lead-{largura}.png"))
-                p.get_by_text("Mais informações — período, pessoas e responsável", exact=True).click()
+                p.get_by_text("Mais informações: período, pessoas e responsável", exact=True).click()
                 self.assertLessEqual(p.locator("#modal-conteudo .modal-acoes").bounding_box()["y"] +
                                      p.locator("#modal-conteudo .modal-acoes").bounding_box()["height"], 845)
                 self.assertTrue(p.get_by_role("button", name="Fechar cadastro de lead").is_visible())

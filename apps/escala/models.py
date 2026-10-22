@@ -129,7 +129,7 @@ class Atribuicao(models.Model):
                                     related_name="atribuicoes", verbose_name="funcionário")
     data = models.DateField("data")
     # Só relevante quando o dia é feriado: como compensar (padrão vem da ficha).
-    compensacao_feriado = models.CharField("feriado — compensação", max_length=6,
+    compensacao_feriado = models.CharField("compensação de feriado", max_length=6,
                                            choices=Compensacao.choices, blank=True)
     criado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
                                    related_name="atribuicoes_escala", null=True, blank=True)

@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
-{% block titulo %}Loja — PDV{% endblock %}
+{% block titulo %}Loja | PDV{% endblock %}
 
 {% block conteudo %}
 {% load nucleo_extras %}{% aviso_nfce %}
 <p class="pagina-eyebrow letreiro">Vendas & Estoque</p>
 <div class="pagina-cabecalho">
-  <h1>Loja — venda balcão</h1>
+  <h1>Loja: venda no balcão</h1>
   <a href="{% url 'loja:vendas' %}" class="botao-neutro">Histórico de vendas</a>
 </div>
 
@@ -70,12 +70,13 @@
     </div>
   </section>
 
-  <aside class="pdv-painel" aria-label="Carrinho da venda" :class="{'pdv-recebe-arrasto': sobreCarrinho}"
+  <aside class="pdv-painel" aria-label="Carrinho da venda" :class="{'pdv-alvo-arrasto': arrastando !== null, 'pdv-recebe-arrasto': sobreCarrinho}"
          @dragover="sobreArrasto($event)" @dragleave="sairArrasto($event)" @drop="soltarProduto($event)">
     <div class="pdv-painel-topo">
       <h2>Carrinho</h2>
       <span class="pdv-contador" x-show="cart.length" x-text="quantidade() + (quantidade() > 1 ? ' itens' : ' item')"></span>
     </div>
+    <p class="pdv-soltar" x-show="arrastando !== null" x-cloak>Solte aqui para adicionar ao carrinho</p>
 
     <div class="pdv-carrinho">
       <template x-for="(i, idx) in cart" :key="i.id">
@@ -92,8 +93,9 @@
       </template>
       <div class="pdv-vazio" x-show="!cart.length">
         <svg viewBox="0 0 24 24" class="ico"><path d="M6 6h15l-1.5 9h-12z"/><path d="M6 6L5 3H2"/><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/></svg>
-        <strong>Sua venda começa aqui</strong>
-        <span>Escolha os produtos no catálogo.</span>
+        <strong>Carrinho vazio</strong>
+        <span>Clique nos produtos para adicionar.</span>
+        <span class="pdv-dica-arrasto">Você também pode arrastá-los até aqui.</span>
       </div>
     </div>
     <p class="pdv-estoque-nota" x-show="cart.length" x-cloak>Para trocar o estoque, conclua a venda ou retire os itens do carrinho.</p>

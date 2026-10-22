@@ -45,9 +45,9 @@ explica em vez de espalhar faxina pela casa inteira.{% endcomment %}
     {% elif sem_login %}
       {# Escalada sem login no CRM não é "ninguém de turno": a correção é outra. #}
       {{ sem_login|join:", " }} {{ sem_login|pluralize:"está,estão" }} de turno hoje,
-      mas sem login no CRM — ligue o login na ficha do funcionário para poder distribuir.
+      mas sem acesso ao CRM. Ative o acesso na ficha do funcionário para distribuir os quartos.
     {% else %}
-      Ninguém de turno hoje na Escala — escolha quem limpa em cada linha.
+      Não há funcionários escalados hoje. Escolha quem limpa cada quarto.
     {% endif %}
   </p>
   {% if tem_escala %}
@@ -134,7 +134,7 @@ aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% e
         {% elif ln.conferencia %}
           <small class="ajuda">{{ ln.conferencia.registrado_em|date:"H:i" }}{% if ln.conferencia.registrado_por %} · {{ ln.conferencia.registrado_por.get_full_name|default:ln.conferencia.registrado_por.username }}{% endif %}</small>
         {% elif ln.bloqueado %}
-          <small class="ajuda">Em manutenção — fora da ronda</small>
+          <small class="ajuda">Em manutenção (fora da ronda)</small>
         {% endif %}
       </td>
 
@@ -150,7 +150,7 @@ aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% e
             cozinha, quem está de folga — era adivinhação. Sem o módulo Escala o
             grupo não existe e a lista é a de sempre.{% endcomment %}
             <select name="camareira" x-model="escolha" aria-label="Quem limpa o quarto {{ ln.uh.numero }}">
-              <option value="">— a definir —</option>
+              <option value="">A definir</option>
               {% if de_turno %}
                 <optgroup label="De turno hoje">
                   {% for u in de_turno %}<option value="{{ u.pk }}" {% if ln.tarefa.camareira_id == u.pk %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>{% endfor %}

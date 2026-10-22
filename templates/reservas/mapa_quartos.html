@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block titulo %}Mapa de quartos — CRM Vô Testa{% endblock %}
+{% block titulo %}Mapa de quartos | CRM Vô Testa{% endblock %}
 {% block conteudo_classe %}tela-reservas{% endblock %}
 
 {% block conteudo %}
@@ -13,7 +13,7 @@
     <button type="button" class="botao-primario" hx-get="{% url 'reservas:nova' %}" hx-target="#modal-conteudo">Nova reserva</button>
   </div>
 </div>
-<p class="subtitulo">Mesma visão da home — filtre, clique ou arraste um ocupado sobre um livre para trocar.</p>
+<p class="subtitulo">Veja a situação de cada quarto. Para trocar um hóspede de quarto, arraste o ocupado até um quarto livre.</p>
 
 <div class="quartos corredor-hero" x-data="{ tipos: [], sits: [] }">
   <div class="quartos-filtros">
@@ -68,7 +68,7 @@
       }
       toast(d.erro || 'Não foi possível trocar.', 'error');
     } catch (err) {
-      toast('Falha de conexão — o quarto não foi trocado.', 'error');
+      toast('Falha de conexão. O quarto não foi trocado.', 'error');
     }
     if (desfazer) desfazer();
   }

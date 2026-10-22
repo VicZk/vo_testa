@@ -121,7 +121,7 @@ def emitir_nfse_da_conta(conta_id, operador):
 
     doc = emitir(
         operador, natureza=NaturezaFiscal.SERVICO, valor=resumo["servico"],
-        descricao=f"Hospedagem em hotelaria — {resumo['uh']}",
+        descricao=f"Hospedagem: {resumo['uh']}",
         tomador=resumo["hospede"], referencia=ref,
     )
     # Anexa os parâmetros da NFS-e (o gateway real — Focus — usa na montagem).

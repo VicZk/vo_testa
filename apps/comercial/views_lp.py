@@ -292,7 +292,7 @@ def lp_fundador_lead(request):
     """Lead da LP Fundador (JSON) → funil."""
     return _receber_lead_lp(
         request, slug="fundador", origem_padrao="lp-fundador",
-        mensagem="Lista de espera — LP Fundador")
+        mensagem="Lista de espera: LP Fundador")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -368,7 +368,7 @@ def lp_fundador_2_lead(request):
     """Lead da LP Fundador II (JSON) → funil, etiquetado na campanha fundador-2."""
     return _receber_lead_lp(
         request, slug=_LP2_SLUG, origem_padrao="lp-fundador-2",
-        mensagem="Lista de espera — LP Fundador II")
+        mensagem="Lista de espera: LP Fundador II")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -420,7 +420,7 @@ def lp_inauguracao_lead(request):
     """Lead (RSVP) da LP Inauguração (JSON) → funil, etiquetado 'inauguracao_31_10_2026'."""
     return _receber_lead_lp(
         request, slug=_LPINAUG_SLUG, origem_padrao="lp-inauguracao-31-10",
-        mensagem="Inauguração 31/10 — confirmação de presença")
+        mensagem="Inauguração 31/10: confirmação de presença")
 
 
 def arquivo_lp(request, nome):

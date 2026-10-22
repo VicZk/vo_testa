@@ -1611,7 +1611,7 @@ def cancelar_grupo(grupo, usuario, motivo: str):
         raise ValidationError("Informe o motivo do cancelamento.")
     if grupo.filhas.filter(status=Reserva.Status.HOSPEDADA).exists():
         raise ValidationError(
-            "Há quarto hospedado no grupo — faça o check-out antes de cancelar."
+            "Há quarto ocupado no grupo. Faça o check-out antes de cancelar."
         )
     for filha in grupo.filhas.filter(
         status__in=[Reserva.Status.PRE_RESERVA, Reserva.Status.CONFIRMADA,
@@ -1697,12 +1697,12 @@ def encerrar_grupo(grupo, usuario):
         raise ValidationError("Este grupo já foi encerrado.")
     if grupo.filhas_ativas.exists():
         raise ValidationError(
-            "Ainda há quartos ativos no grupo — faça o check-out de todos antes."
+            "Ainda há quartos ativos no grupo. Faça o check-out de todos antes de continuar."
         )
     folio = grupo.folio
     if folio.saldo() != Decimal("0.00"):
         raise ValidationError(
-            f"O folio do grupo tem saldo de R$ {folio.saldo()} — receba ou fature antes."
+            f"O folio do grupo tem saldo de R$ {folio.saldo()}. Receba ou fature o saldo antes de continuar."
         )
     folio.status = ContaHospedagem.Status.FECHADA
     folio.fechada_em = timezone.now()
@@ -1828,13 +1828,13 @@ def estender_estadia(reserva, nova_saida, usuario) -> Decimal:
     total = cot["hospedagem"]
     if cot["desconto_nao_reembolsavel"] > 0:
         lancar_na_conta(acomodacao, LancamentoConta.Tipo.DESCONTO, NaturezaFiscal.SERVICO,
-                        f"Tarifa não reembolsável — noites estendidas, {numero}",
+                        f"Tarifa não reembolsável. Noites estendidas, {numero}",
                         cot["desconto_nao_reembolsavel"], usuario)
     if getattr(settings, "PRECO_TAXAS_ATIVAS", True):
         noites = len(cot["diarias"])
         if cot["iss"] > 0:
             lancar_na_conta(acomodacao, LancamentoConta.Tipo.TAXA, NaturezaFiscal.SERVICO,
-                            f"ISS {pct_br(cot['iss_aliquota'])}% — {numero} (estendida)",
+                            f"ISS {pct_br(cot['iss_aliquota'])}%: {numero} (estendida)",
                             cot["iss"], usuario)
             total += cot["iss"]
         if cot["taxa_turismo"] > 0:
@@ -1926,7 +1926,7 @@ def _diferenca_de_tarifa(reserva, nova_diaria, novo_uh, usuario):
     diferenca = (nova_diaria - reserva.valor_diaria) * noites
     if noites <= 0 or diferenca == 0:
         return
-    descricao = (f"Diferença de tarifa — quarto {reserva.uh.numero} → {novo_uh.numero}, "
+    descricao = (f"Diferença de tarifa do quarto {reserva.uh.numero} → {novo_uh.numero}, "
                  f"{noites} noite{'s' if noites != 1 else ''}")
     conta = reserva.conta
     if diferenca > 0:
@@ -2342,7 +2342,7 @@ def exigir_venda_desfazivel(situacao, usuario) -> None:
             status=SessaoCaixa.Status.ABERTA).exists():
         raise ValidationError(
             f"A reserva #{pk} tem {intcomma_brl(situacao['no_caixa'])} pago a devolver: "
-            "abra o seu caixa de Reservas (Operação → Caixa) antes — o estorno sai dele.")
+            "abra o seu caixa de Reservas (Operação → Caixa) antes de continuar. O estorno será feito por esse caixa.")
 
 
 @transaction.atomic

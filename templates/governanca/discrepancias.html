@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block titulo %}Discrepâncias da ronda — Governança{% endblock %}
+{% block titulo %}Discrepâncias da ronda | Governança{% endblock %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Hospedagem</p>
@@ -14,9 +14,9 @@
 
 {% if sem_base %}
   <div class="estado-vazio">
-    <p>Sem o módulo <strong>Reservas</strong> ativo não há com o que comparar a ronda —
-      a conferência de ocupação continua sendo registrada e guardada, e a comparação
-      volta assim que o módulo for ativado.</p>
+    <p>Sem o módulo <strong>Reservas</strong> ativo não é possível comparar a ronda com as reservas.
+      A conferência de ocupação continua sendo registrada. A comparação fica
+      disponível quando o módulo for ativado.</p>
   </div>
 {% else %}
 <div class="cartoes-indicadores colunas">

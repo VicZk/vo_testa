@@ -75,7 +75,7 @@ contradizia a si mesma.{% endcomment %}
                 </span>
               {% endfor %}
               {% if a.eh_feriado %}
-                <span class="fer-comp" data-atrib="{{ a.pk }}" title="Feriado trabalhado — como compensar">
+                <span class="fer-comp" data-atrib="{{ a.pk }}" title="Como compensar o feriado trabalhado">
                   <button type="button" class="fc {% if a.compensacao_efetiva == 'folga' %}on{% endif %}" data-valor="folga">folga</button>
                   <button type="button" class="fc {% if a.compensacao_efetiva == 'dobro' %}on{% endif %}" data-valor="dobro">dobro</button>
                 </span>
@@ -90,7 +90,7 @@ contradizia a si mesma.{% endcomment %}
 </div>
 {% else %}
   <div class="estado-vazio">
-    <p>Nenhum turno ativo nesta semana — a grade é montada sobre os turnos do setor.</p>
+    <p>Cadastre os turnos do setor para montar a escala desta semana.</p>
     <a href="{% url 'escala:turnos' %}" class="botao-primario">Cadastrar turnos</a>
   </div>
 {% endif %}

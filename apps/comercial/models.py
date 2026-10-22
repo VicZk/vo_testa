@@ -24,7 +24,7 @@ class EtapaFunil(models.Model):
     ordem = models.PositiveSmallIntegerField("ordem", default=0)
     probabilidade = models.PositiveSmallIntegerField(
         "probabilidade (%)", default=0,
-        help_text="Chance de fechar nesta etapa — usada na previsão ponderada.",
+        help_text="Chance de fechar a venda nesta etapa, usada na previsão ponderada.",
     )
     tipo = models.CharField("tipo", max_length=10, choices=Tipo.choices,
                             default=Tipo.ABERTA)
@@ -450,15 +450,15 @@ class AnaliseLead(models.Model):
         EMAIL = "email", "E-mail"
 
     score_jev = models.PositiveSmallIntegerField(
-        "Jev — prob. de conversão (0–100)", null=True, blank=True)
+        "Jev: prob. de conversão (0–100)", null=True, blank=True)
     confianca_jev = models.DecimalField(
-        "Jev — confiança (0–1)", max_digits=4, decimal_places=3, null=True, blank=True)
+        "Jev: confiança (0–1)", max_digits=4, decimal_places=3, null=True, blank=True)
     canal_sugerido = models.CharField(
-        "Jev — canal sugerido", max_length=10, choices=Canal.choices, blank=True)
+        "Jev: canal sugerido", max_length=10, choices=Canal.choices, blank=True)
     qualificado_jev = models.DecimalField(
-        "Jev — qualificado (0–1)", max_digits=4, decimal_places=3, null=True, blank=True)
-    jev_modelo = models.CharField("Jev — modelo/versão", max_length=40, blank=True)
-    jev_avaliado_em = models.DateTimeField("Jev — avaliado em", null=True, blank=True)
+        "Jev: qualificado (0–1)", max_digits=4, decimal_places=3, null=True, blank=True)
+    jev_modelo = models.CharField("Jev: modelo/versão", max_length=40, blank=True)
+    jev_avaliado_em = models.DateTimeField("Jev: avaliado em", null=True, blank=True)
 
     class Meta:
         verbose_name = "análise de lead"
@@ -484,7 +484,7 @@ class PaginaCaptacao(models.Model):
 
     class Tema(models.TextChoices):
         FUNDADOR = "fundador", "Fundador (inauguração)"
-        BLUEPRINT = "blueprint", "Blueprint — A casa do Vô (tour em vídeo)"
+        BLUEPRINT = "blueprint", "Blueprint: A casa do Vô (tour em vídeo)"
 
     nome = models.CharField("nome (interno)", max_length=80)
     slug = models.SlugField(
@@ -535,8 +535,7 @@ class PaginaCaptacao(models.Model):
     )
     oferta_texto = models.TextField(
         "texto da oferta", blank=True,
-        default="Ser fundador é dormir aqui antes de todo mundo — e pagar menos por isso. "
-                "A tarifa sobe a cada faixa esgotada.",
+        default='Reserve antes da abertura com a tarifa de fundador. O valor aumenta conforme as faixas se esgotam.',
     )
     cta_texto = models.CharField(
         "texto do botão", max_length=60, default="Quero minha tarifa de fundador",
@@ -672,7 +671,7 @@ class Campanha(models.Model):
     )
     id_externo = models.CharField(
         "ID na plataforma", max_length=64, blank=True,
-        help_text="ID da campanha no Meta/Google (para a Fase C — sincronizar gasto).",
+        help_text="ID da campanha no Meta/Google (para sincronização de gastos na Fase C).",
     )
     ativa = models.BooleanField("ativa", default=True)
     criado_por = models.ForeignKey(
@@ -844,7 +843,7 @@ class ConversaWhatsApp(models.Model):
         verbose_name_plural = "conversas de WhatsApp"
 
     def __str__(self):
-        return f"WhatsApp — {self.oportunidade.pessoa.nome}"
+        return f"WhatsApp: {self.oportunidade.pessoa.nome}"
 
     @property
     def janela_aberta(self) -> bool:
@@ -1110,4 +1109,4 @@ class FichaComercial(models.Model):
         verbose_name_plural = "fichas comerciais dos quartos"
 
     def __str__(self):
-        return f"Ficha comercial — {self.uh}"
+        return f"Ficha comercial: {self.uh}"

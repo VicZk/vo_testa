@@ -225,6 +225,7 @@
   --foco-anel-suave: 0 0 0 3px color-mix(in srgb, var(--lampiao) 22%, transparent);
 
   --raio-p: 10px;  --raio: 14px;  --raio-g: 20px;
+  --espaco-secao: 1.5rem;
 
   --fonte-titulo: 'Fraunces', Georgia, 'Times New Roman', serif;
   --fonte-ui: 'Hanken Grotesk', -apple-system, 'Segoe UI', sans-serif;
@@ -440,13 +441,11 @@ a:hover { color: var(--lampiao-tinta); }
 }
 
 .botao-primario {
-  font-weight: 700;
-  letter-spacing: .02em;
-  color: var(--noturno);
-  background: linear-gradient(180deg, var(--lampiao-claro), var(--lampiao));
-  border-color: color-mix(in srgb, var(--madeira) 40%, transparent);
+  color: var(--superficie);
+  background: var(--noturno);
+  border-color: var(--noturno);
 }
-.botao-primario:hover { filter: brightness(1.06); }
+.botao-primario:hover { background: color-mix(in srgb, var(--noturno) 85%, var(--tinta-suave)); }
 
 .login-cartao .botao-primario { width: 100%; margin-top: 1.4rem; padding: .7rem; }
 
@@ -613,12 +612,12 @@ a:hover { color: var(--lampiao-tinta); }
   white-space: nowrap;
   font-family: var(--fonte-ui); font-size: .9rem; font-weight: 700;
   color: var(--noturno);
-  background: linear-gradient(180deg, var(--lampiao-claro), var(--lampiao));
+  background: var(--pergaminho);
   border: none; border-radius: 10px; cursor: pointer;
-  box-shadow: 0 6px 18px color-mix(in srgb, var(--lampiao) 28%, transparent);
-  transition: filter .15s, transform .1s;
+  box-shadow: none;
+  transition: background .15s, transform .1s;
 }
-.acao-topo:hover { filter: brightness(1.05); }
+.acao-topo:hover { background: var(--superficie); }
 .acao-topo:active { transform: translateY(1px); }
 
 /* `position: relative` prende aqui dentro o que é posicionado em absoluto —
@@ -1043,6 +1042,8 @@ a.cartao-link:hover, .cartao-link:hover {
   flex-wrap: wrap;
 }
 .pagina-cabecalho h1, .pagina-cabecalho h2 { margin-right: auto; }
+/* Formulários e o PDV podem vir logo após o título, sem um subtítulo no meio. */
+.pagina-cabecalho + :is(.cartao-el, .pdv-shell) { margin-top: var(--espaco-secao); }
 
 .form-cartao {
   /* 620px era estreito demais para um formulário de duas colunas: a largura
@@ -1265,9 +1266,9 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
   color: var(--tinta);
   background: var(--superficie);
   border-color: var(--fio-forte);
-  box-shadow: var(--sombra-1);
+  box-shadow: none;
 }
-.botao-neutro:hover { background: var(--superficie-2); border-color: var(--madeira); }
+.botao-neutro:hover { background: var(--superficie-2); border-color: var(--tinta-suave); }
 
 .botao-perigo {
   font-weight: 700;
@@ -2181,7 +2182,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 .subnav { margin: .2rem 0 1.4rem; padding-bottom: .9rem; border-bottom: 1px solid var(--fio); }
 .texto-entrada { color: var(--musgo); font-weight: 600; }
 
-.cartoes-indicadores { margin: 1.4rem 0 .6rem; gap: 1rem; }
+.cartoes-indicadores { margin: var(--espaco-secao) 0; gap: 1rem; }
 .cartao-link { text-decoration: none; color: inherit; }
 
 /* BOH: filtro sticky translúcido */
@@ -2801,15 +2802,15 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
   font-size: .82rem;
   font-weight: 600;
   white-space: nowrap;
-  color: var(--madeira);
-  background: color-mix(in srgb, var(--lampiao) 14%, transparent);
-  border: 1px solid color-mix(in srgb, var(--lampiao) 50%, transparent);
+  color: var(--tinta);
+  background: var(--superficie);
+  border: 1px solid var(--fio-forte);
   border-radius: 8px;
   cursor: pointer;
   text-decoration: none;  /* como <a>, não herda o sublinhado de link */
   transition: background var(--mov-rapido) var(--curva), transform var(--mov-toque) var(--curva);
 }
-.botao-mini:hover { background: color-mix(in srgb, var(--lampiao) 24%, transparent); }
+.botao-mini:hover { background: var(--superficie-2); }
 
 /* Bloco de cadastro rápido embutido */
 .bloco-inline {
@@ -3077,7 +3078,10 @@ form.htmx-request .botao-primario {
 
 /* `display:grid` aqui (e não só a trilha): as telas de painel usam `.kpis` sozinha,
    sem `.cartoes`, e os indicadores empilhavam em coluna. */
-.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1rem; }
+.kpis {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr)); gap: 1rem;
+  margin: var(--espaco-secao) 0;
+}
 
 /* Mural de recados do turno — destacado dos cards brancos */
 .mural {
@@ -3701,7 +3705,7 @@ div.porta.dica[data-dica] { cursor: default; }
 
 .pdv-finalizar {
   width: auto; margin: 1rem 1.3rem 1.3rem !important; padding: .85rem; font-size: 1rem; border-radius: var(--raio);
-  box-shadow: 0 6px 18px color-mix(in srgb, var(--lampiao) 30%, transparent);
+  box-shadow: none;
 }
 .pdv-finalizar:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
 
@@ -3728,7 +3732,11 @@ div.porta.dica[data-dica] { cursor: default; }
 .pdv-selecionado { font-size: .72rem; font-weight: 650; color: var(--lampiao-tinta); }
 .pdv-loja .pdv-produto:active:not(:disabled) { transform: scale(.98); }
 .pdv-loja .pdv-painel { position: sticky; transition: border-color var(--mov-rapido) var(--curva), box-shadow var(--mov-rapido) var(--curva); }
-.pdv-loja .pdv-painel.pdv-recebe-arrasto { border-color: var(--lampiao); box-shadow: var(--foco-anel-suave), var(--sombra-2); }
+.pdv-loja .pdv-painel.pdv-alvo-arrasto { outline: 2px dashed var(--tinta-suave); outline-offset: 3px; }
+.pdv-loja .pdv-painel.pdv-recebe-arrasto { outline-color: var(--sucesso); border-color: var(--sucesso); }
+.pdv-soltar { margin: 0; padding: .65rem 1rem; font-size: .85rem; font-weight: 600; color: var(--sucesso); background: var(--sucesso-bg); }
+.pdv-produto[draggable="true"] { cursor: grab; }
+.pdv-produto[draggable="true"]:active { cursor: grabbing; }
 .pdv-loja .pdv-painel-topo { flex-wrap: wrap; gap: .4rem; padding: 1rem; }
 .pdv-loja .pdv-carrinho { max-height: 42dvh; padding: .4rem .6rem; }
 .pdv-loja .pdv-item { grid-template-columns: minmax(0, 1fr) auto; gap: .25rem .6rem; padding: .65rem .4rem; border-bottom: 1px solid var(--fio); border-radius: 0; }
@@ -3965,18 +3973,31 @@ form.filtros:not(.subnav) {
   background: none; border: none; box-shadow: none; padding: 0; margin: 0;
 }
 .filtro-campo { display: flex; flex-direction: column; gap: .35rem; }
-/* Barra de importação da conciliação: dois formulários + as ações, cada bloco
-   com a sua moldura, em vez de 25 estilos inline. */
+/* O nome do arquivo fica fora da linha de controles para não deslocar os botões. */
 .importar-conciliar {
-  display: grid; gap: 1.1rem; margin-top: 1.2rem;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(29rem, 100%), 1fr));
+  gap: 1.5rem; margin-top: 1.2rem;
   padding: 1.2rem 1.3rem;
   background: var(--superficie); border: 1px solid var(--fio);
   border-radius: var(--raio-g); box-shadow: var(--sombra-cartao);
 }
-.importar-conciliar .filtro-barra { gap: .85rem 1.4rem; }
-.importar-conciliar .acoes { margin-top: 0; }
+.importar-conciliar .conciliacao-importacao { display: block; min-width: 0; }
+.conciliacao-importacao h2 { margin: 0 0 1rem; font-size: 1rem; font-weight: 650; }
+.conciliacao-campos { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .75rem; }
+.conciliacao-campos .filtro-campo { flex: 1 1 10rem; min-width: 0; }
+.conciliacao-campos .conciliacao-conta { flex: 1 1 7rem; }
+.importar-conciliar .conciliacao-campos .filtro-campo input { width: 100%; min-width: 0; margin: 0; }
+.conciliacao-campos .escolher-arquivo { margin: 0; }
+.conciliacao-importacao .arq-nome { display: block; margin: .6rem 0 0; overflow-wrap: anywhere; }
+.conciliacao-importacao .arq-nome:empty { display: none; }
+.importar-conciliar .acoes { grid-column: 1 / -1; margin-top: 0; padding-top: 1.25rem; border-top: 1px solid var(--fio); }
 .importar-conciliar .acoes form { margin: 0; }
-.importar-conciliar .acoes .ajuda { margin: 0; max-width: 44ch; }
+.importar-conciliar .acoes .ajuda { flex-basis: 100%; margin: .2rem 0 0; }
+@media (max-width: 600px) {
+  .conciliacao-campos .filtro-campo, .conciliacao-campos > button { flex-basis: 100%; }
+  .importar-conciliar .acoes > form, .importar-conciliar .acoes > a { width: 100%; }
+  .importar-conciliar .acoes > form > button { width: 100%; }
+}
 /* O <input type=file> nativo não tem como ficar na linguagem da casa: fica
    escondido atrás do rótulo, que é o botão de verdade. */
 /* O rótulo-botão é um <label>, então herdava as maiúsculas do rótulo de campo. */
@@ -4726,8 +4747,8 @@ form.filtros:not(.subnav) select:focus {
 .fx-sel.largo { width: 100%; margin-top: 5px; }
 .fx-btn {
   height: 38px; padding: 0 15px; border-radius: 12px; border: none;
-  background: linear-gradient(180deg, var(--lampiao-claro), var(--lampiao));
-  color: var(--madeira); font-weight: 700; font-size: 13px; cursor: pointer;
+  background: var(--noturno);
+  color: var(--superficie); font-weight: 600; font-size: 13px; cursor: pointer;
 }
 .fx-btn[disabled] { opacity: .5; cursor: default; }
 .fx-btn-n {
@@ -5585,7 +5606,7 @@ body.escala-dragging .escala-drop { cursor: copy; }
 .he-form .tipo { display: flex; gap: 12px; margin-bottom: 8px; }
 .he-form .tipo label { text-transform: none; font-weight: 600; font-size: 11.5px; color: var(--tinta); display: inline-flex; gap: 4px; align-items: center; margin: 0; }
 .he-form .acoes { display: flex; gap: 6px; }
-.he-form .btn-ok { border: none; border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 700; cursor: pointer; background: linear-gradient(180deg,var(--lampiao-claro),var(--lampiao)); color: #3a2a08; }
+.he-form .btn-ok { border: none; border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer; background: var(--noturno); color: var(--superficie); }
 .he-form .btn-x { border: 1px solid var(--fio); border-radius: 6px; padding: 5px 11px; font-size: 12px; font-weight: 700; cursor: pointer; background: #fff; color: var(--tinta); }
 
 /* Escala — feriado trabalhado (marca + toggle folga/dobro) */
@@ -5685,14 +5706,14 @@ body.escala-dragging .escala-drop { cursor: copy; }
 .cartao-el h3 { margin: 0 0 .7rem; font-size: 1rem; }
 .rot { font-size: .7rem; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--tinta-suave); }
 
-/* KPI do painel: variante em linha (rótulo + valor empilhados) */
-.kpis-el { display: flex; gap: 1rem; flex-wrap: wrap; }
+/* Indicadores da campanha com a mesma largura, inclusive quando quebram de linha. */
+.kpis-el { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr)); gap: 1rem; }
 /* Espaçamento dos blocos da tela elegante — era `style=` repetido tela a tela. */
-.kpis-el.respiro { margin: .5rem 0 1.4rem; }
+.kpis-el.respiro { margin: var(--espaco-secao) 0; }
 .quadro-lista.quadro-lista { margin-top: 1.25rem; }
 .cartao-el.bloco-texto { padding: 1.1rem 1.3rem; margin-bottom: 1.2rem; }
 .cartao-el.centrado { text-align: center; }
-.detalhe-2col.detalhe-2col { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 1rem; align-items: start; }
+.detalhe-2col.detalhe-2col { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 1.25rem; align-items: stretch; }
 .detalhe-2col > * { min-width: 0; }
 .linha-dado.linha-dado { margin: .1rem 0; }
 .bloco-corpo.bloco-corpo { margin: .5rem 0 0; color: var(--tinta-suave); white-space: pre-wrap; }

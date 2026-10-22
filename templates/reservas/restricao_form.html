@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block titulo %}{{ titulo }} — CRM Vô Testa{% endblock %}
+{% block titulo %}{{ titulo }} | CRM Vô Testa{% endblock %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Cadastros · Temporadas</p>
@@ -23,7 +23,7 @@
 
   <h2 class="grupo-campos">Onde vale</h2>
   <p class="subtitulo subtitulo-mini">Deixe os dois vazios para valer na casa inteira.
-    Escolha o tipo <em>ou</em> o quarto — nunca os dois.</p>
+    Escolha apenas o tipo <em>ou</em> o quarto.</p>
   <div class="form-grade">
     {% include "reservas/partials/campo.html" with campo=form.tipo_uh %}
     {% include "reservas/partials/campo.html" with campo=form.uh %}

@@ -76,7 +76,7 @@
             {% csrf_token %}
             <label class="fx-anexo">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3 3 0 0 1 4.24 4.24l-9.2 9.19a1 1 0 0 1-1.41-1.41l8.49-8.49"/></svg>
-              Anexar arquivo — este item não fecha sem
+              Anexar arquivo obrigatório
               <input type="file" name="arquivo" onchange="this.form.requestSubmit()">
             </label>
           </form>
@@ -101,7 +101,7 @@
 
     <details class="mkt-dobra"><summary>Tarefas da campanha</summary>
     {# ── Etapas desta campanha ── #}
-    <h3 class="fx-h3 com-info">Etapas desta campanha{% include "marketing/_info.html" with tip="Tarefas de execução da campanha (quem faz o quê, com prazo). Organizam o trabalho — não travam o portão." %}</h3>
+    <h3 class="fx-h3 com-info">Etapas desta campanha{% include "marketing/_info.html" with tip="Tarefas de execução da campanha (quem faz o quê, com prazo). Ajudam a organizar o trabalho e não impedem a mudança de fase." %}</h3>
     <p class="fx-sub">Organize quem faz cada tarefa e até quando.</p>
     <div class="fx-lista">
       {% for e in etapas %}
@@ -134,7 +134,7 @@
 
     <details class="mkt-dobra"><summary>Responsáveis e equipe</summary>
     {# ── Quem está envolvido ── #}
-    <h3 class="fx-h3 com-info">Quem está envolvido{% include "marketing/_info.html" with tip="Os papéis da campanha: solicitante, responsável e criação. Organiza quem cuida do quê — não trava o portão." %}</h3>
+    <h3 class="fx-h3 com-info">Quem está envolvido{% include "marketing/_info.html" with tip="Os papéis da campanha: solicitante, responsável e criação. Definem quem cuida de cada parte, sem impedir a mudança de fase." %}</h3>
     <div class="fx-envolvidos">
       {% for e in envolvidos %}
       <div class="fx-row centro">
@@ -165,8 +165,8 @@
 
     <details class="mkt-dobra"><summary>Decisões e comentários</summary>
     {# ── Conversa ── #}
-    <h3 class="fx-h3 com-info">Conversa{% include "marketing/_info.html" with tip="Trilha de decisões da campanha — registre combinados, dúvidas e o porquê das escolhas." %}</h3>
-    <p class="fx-sub">O que foi decidido fica aqui, junto da campanha — não no WhatsApp.</p>
+    <h3 class="fx-h3 com-info">Conversa{% include "marketing/_info.html" with tip="Registre os combinados, as dúvidas e os motivos das decisões sobre a campanha." %}</h3>
+    <p class="fx-sub">Registre aqui as decisões para que toda a equipe possa consultar.</p>
     {% if not conversa %}<p class="fx-vazio">Ninguém comentou ainda.</p>{% endif %}
     <div class="fx-conversa">
       {% for m in conversa %}
@@ -212,7 +212,7 @@
     <details class="mkt-dobra"><summary>Peças para publicar</summary>
     {# ── Peças ── #}
     <h3 class="fx-h3 com-info">Peças{% include "marketing/_info.html" with tip="Os entregáveis com data (posts, stories, vídeo, arte do anúncio). É o que o calendário desenha." %}</h3>
-    {% if not c.pecas.all %}<p class="fx-sub">Nenhuma peça ainda — a Estruturação exige pelo menos uma.</p>{% endif %}
+    {% if not c.pecas.all %}<p class="fx-sub">Adicione pelo menos uma peça para concluir a Estruturação.</p>{% endif %}
     <div class="fx-lista">
       {% for p in c.pecas.all %}
       <div class="fx-row">
@@ -249,7 +249,7 @@
         <div class="num fx-kpi-val mk-tom-alerta">{{ c.verba_travada|intcomma_brl }}</div></div>
       <div class="fx-kpi"><div class="fx-lb fx-kpi-rot">GASTA{% include "marketing/_info.html" with tip="Quanto já foi efetivamente gasto nos anúncios desta campanha." %}</div>
         <div class="num fx-kpi-val mk-tom-perigo">{{ c.gasta|intcomma_brl }}</div></div>
-      <div class="fx-kpi"><div class="fx-lb fx-kpi-rot">DISPONÍVEL{% include "marketing/_info.html" with tip="Verba travada que ainda não foi gasta — volta ao teto do mês se a campanha encerrar." %}</div>
+      <div class="fx-kpi"><div class="fx-lb fx-kpi-rot">DISPONÍVEL{% include "marketing/_info.html" with tip="Verba reservada e ainda não utilizada. Ela volta ao orçamento do mês quando a campanha é encerrada." %}</div>
         <div class="num fx-kpi-val">{{ c.sobra_travada|intcomma_brl }}</div></div>
     </div>
 
@@ -262,7 +262,7 @@
       <input class="fx-in data" type="date" name="data">
       <button class="fx-btn-n" type="submit">Lançar</button>
     </form>
-    <p class="fx-gasto-acum">Gasto acumulado: <b class="num">{{ c.gasta|intcomma_brl }}</b> — entra no relatório do mês em que o dinheiro saiu.</p>
+    <p class="fx-gasto-acum">Gasto acumulado: <b class="num">{{ c.gasta|intcomma_brl }}</b>. O valor entra no relatório do mês em que foi pago.</p>
 
     </details>
 

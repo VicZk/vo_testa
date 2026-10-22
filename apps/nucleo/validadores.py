@@ -29,9 +29,9 @@ def validar_telefone_br(valor, *, aceitar_fixo=False) -> str:
     if digitos.startswith("55") and len(digitos) in (12, 13):
         digitos = digitos[2:]
 
-    erro_cel = ("Telefone incompleto — informe DDD + número de celular "
+    erro_cel = ("Telefone incompleto. Informe DDD + número de celular "
                 "(11 dígitos, ex.: (49) 99999-9999).")
-    erro_geral = ("Telefone incompleto — informe DDD + número "
+    erro_geral = ("Telefone incompleto. Informe DDD + número "
                   "(celular com 11 dígitos ou fixo com 10).")
 
     if len(digitos) == 11 and digitos[2] == "9":

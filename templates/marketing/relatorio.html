@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block titulo %}Relatório — Marketing{% endblock %}
+{% block titulo %}Relatório | Marketing{% endblock %}
 
 {% block conteudo %}
 {% load moeda %}
@@ -73,7 +73,7 @@
       </div>
       {% endfor %}
     </div>
-    <p class="mk-nota">Gasto realizado por mês, contra o teto daquele ciclo. A sobra não acumula — cada mês tem teto próprio.</p>
+    <p class="mk-nota">Gasto realizado por mês, contra o teto daquele ciclo. Cada mês tem seu limite. O saldo não utilizado não passa para o mês seguinte.</p>
   </div>
   {% endif %}
 </section>
@@ -81,7 +81,7 @@
 <section class="mk-secao">
   <div class="mk-secao-cab justa">
     <h2 class="mk-secao-tit">Campanha por campanha</h2>
-    <p class="mk-secao-sub">Retorno conta só a receita <strong>rastreada</strong> — fechamentos vindos de lead atribuído à campanha. A receita estimada pela janela de vigência aparece ao lado, separada: nunca somada.</p>
+    <p class="mk-secao-sub">O retorno considera apenas a receita <strong>rastreada</strong>, de vendas vinculadas a leads da campanha. A receita estimada pela janela de vigência aparece ao lado, separada: nunca somada.</p>
   </div>
   <div class="mk-linhas">
     {% for l in dados.linhas %}
@@ -107,7 +107,7 @@
       <div class="mk-linha-nums">
         <span class="mk-linha-num">gasto<br><strong class="num">{{ l.gasto|intcomma_brl }}</strong></span>
         <span class="mk-linha-num">rastreada<br><strong class="num mk-tom-musgo">{{ l.rastreada|intcomma_brl }}</strong></span>
-        <span class="mk-linha-num">na janela<br><strong class="num suave" title="Coincidência de calendário — nunca somar com a rastreada">{{ l.janela|intcomma_brl }}</strong></span>
+        <span class="mk-linha-num">na janela<br><strong class="num suave" title="Receita do mesmo período. Não some à receita rastreada.">{{ l.janela|intcomma_brl }}</strong></span>
         <span class="mk-linha-num">por venda<br><strong class="num">{% if l.cac %}{{ l.cac|intcomma_brl }}{% else %}—{% endif %}</strong></span>
         <span class="mk-linha-num">conversão<br><strong class="num">{{ l.conversao }}%</strong></span>
         <span class="mk-linha-num">ciclo<br><strong class="num">{% if l.ciclo %}{{ l.ciclo }}d{% else %}—{% endif %}</strong></span>

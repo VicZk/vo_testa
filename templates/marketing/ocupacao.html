@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block titulo %}Ocupação × campanha — Marketing{% endblock %}
+{% block titulo %}Ocupação × campanha | Marketing{% endblock %}
 
 {% block conteudo %}
 {# Transcrição do protótipo. Barra em escala absoluta, trilho hachurado, zero é zero. #}
@@ -19,7 +19,7 @@
   <div class="mk-secao-cab">
     <h2 class="mk-secao-tit">Onde estão os vazios</h2>
     <p class="mk-ocup-resumo{% if resumo_tom == 'perigo' %} perigo{% elif resumo_tom == 'alerta' %} alerta{% endif %}">{{ resumo }}</p>
-    <p class="mk-secao-sub">Ocupação semanal prevista dos próximos 90 dias, contra as campanhas que cobrem cada semana. O trilho hachurado é a casa cheia — o espaço em branco é o que está à venda.</p>
+    <p class="mk-secao-sub">Ocupação semanal prevista dos próximos 90 dias, contra as campanhas que cobrem cada semana. A faixa hachurada representa a capacidade total. O espaço em branco mostra as vagas disponíveis.</p>
   </div>
 
   <div class="mk-ocup-barras">

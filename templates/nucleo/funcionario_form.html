@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block titulo %}{% if modo == 'novo' %}Novo funcionário{% else %}{{ f.pessoa.nome }}{% endif %} — Funcionários{% endblock %}
+{% block titulo %}{% if modo == 'novo' %}Novo funcionário{% else %}{{ f.pessoa.nome }}{% endif %} | Funcionários{% endblock %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Cadastros · Pessoal</p>
@@ -9,7 +9,7 @@
   <h1>{% if modo == 'novo' %}Novo funcionário{% else %}{{ f.pessoa.nome }}{% endif %}</h1>
   <a href="{% url 'funcionarios' %}" class="botao-neutro">Voltar</a>
 </div>
-<p class="subtitulo">{% if modo == 'novo' %}Cadastre a ficha completa — dados de RH, escala e acesso, tudo numa etapa.{% else %}Ficha de RH e acesso ao sistema.{% endif %}{% if proprio %} <span class="selo selo-neutro">é você</span>{% endif %}</p>
+<p class="subtitulo">{% if modo == 'novo' %}Cadastre os dados do funcionário, a escala e o acesso ao sistema.{% else %}Ficha de RH e acesso ao sistema.{% endif %}{% if proprio %} <span class="selo selo-neutro">é você</span>{% endif %}</p>
 
 <form method="post" action="{% if modo == 'novo' %}{% url 'funcionario_novo' %}{% else %}{% url 'funcionario_editar' f.pk %}{% endif %}" class="ficha-func">
   {% csrf_token %}
@@ -61,7 +61,7 @@
           <p class="ajuda">Você não pode rebaixar/desativar a si mesmo.</p>
           {% endif %}
         {% else %}
-          <p class="ajuda">{% if modo == 'novo' %}Opcional — deixe em branco para cadastrar sem login.{% else %}Este funcionário ainda não tem login.{% endif %} Defina um usuário e senha para conceder acesso.</p>
+          <p class="ajuda">{% if modo == 'novo' %}Deixe em branco para cadastrar sem acesso ao sistema.{% else %}Este funcionário ainda não tem login.{% endif %} Defina um usuário e senha para conceder acesso.</p>
           <div class="grid2">
             <div class="campo"><label>Login (usuário)</label><input type="text" name="username" autocomplete="off"></div>
             <div class="campo"><label>Senha (mín. 8)</label><input type="password" name="password" minlength="8" autocomplete="new-password"></div>
@@ -88,7 +88,7 @@
         {% if usuario %}
         <div class="campo"><label>Redefinir senha (em branco = manter)</label><input type="password" name="password" minlength="8" autocomplete="new-password" placeholder="Nova senha (mín. 8)"></div>
         {% endif %}
-        <p class="ajuda">Equipe &amp; Acessos deriva daqui — só funcionário tem login. Usuários técnicos (<code>_portal</code>, <code>_sistema</code>) ficam à parte.</p>
+        <p class="ajuda">O acesso de cada funcionário é configurado nesta ficha. Contas técnicas são administradas separadamente.</p>
       {% else %}
         <p class="ajuda">Somente a gerência gerencia login, módulos e áreas.</p>
       {% endif %}

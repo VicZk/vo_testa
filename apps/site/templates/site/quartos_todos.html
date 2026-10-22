@@ -1,7 +1,7 @@
 {% extends 'site/base.html' %}
 {% load static %}
 
-{% block title %}Nossos Quartos — Pousada Vô Testa{% endblock %}
+{% block title %}Nossos Quartos | Pousada Vô Testa{% endblock %}
 {% block meta_description %}Conheça todos os quartos temáticos da Pousada Vô Testa, cada um com sua história, vista e diferenciais. Escolha o seu e reserve direto.{% endblock %}
 
 {% block content %}
@@ -11,8 +11,8 @@
             <p class="text-lampiao text-xs sm:text-sm tracking-[0.3em] uppercase mb-3">Acomodações</p>
             <h1 class="font-display text-3xl sm:text-4xl md:text-5xl font-black text-pergaminho mb-3">Todos os Quartos</h1>
             <p class="text-pergaminho/70 max-w-2xl mx-auto text-sm sm:text-base px-2">
-                Cada quarto tem seu nome, sua vista e seus detalhes. Escolha em qual história você quer despertar —
-                a disponibilidade e o preço aparecem ao informar as suas datas.
+                Conheça os quartos e escolha o que combina com sua estadia.
+                Informe as datas para consultar preços e disponibilidade.
             </p>
         </div>
 
@@ -129,7 +129,7 @@
     lá no fim da página. Agora o caminho para reservar acompanha quem olha.{% endcomment %}
     <div class="sticky bottom-0 z-40 mt-14 border-t border-lampiao/20 bg-noturno/90 backdrop-blur-md">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
-            <p class="text-pergaminho/70 text-xs sm:text-sm">{{ quartos|length }} quartos — a disponibilidade e o preço aparecem ao informar as datas.</p>
+            <p class="text-pergaminho/70 text-xs sm:text-sm">{{ quartos|length }} quartos. Informe as datas para consultar preços e disponibilidade.</p>
             <a href="{% url 'core:reservar' %}" class="shrink-0 bg-lampiao text-noturno font-bold px-6 py-2.5 rounded-full hover:bg-lampiao/90 transition text-sm whitespace-nowrap">
                 Ver disponibilidade
             </a>

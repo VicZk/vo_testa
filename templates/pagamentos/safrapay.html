@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block titulo %}Safrapay — Pagamentos{% endblock %}
+{% block titulo %}Safrapay | Pagamentos{% endblock %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Financeiro · Gateway</p>
@@ -46,7 +46,7 @@
       </tr>
       <tr>
         <td>Token (<code>SAFRAPAY_TOKEN</code>)</td>
-        <td>{% if safrapay.token_ok %}<span class="selo selo-ok">Preenchido</span>{% else %}<span class="selo">Ainda não — só após evidências</span>{% endif %}</td>
+        <td>{% if safrapay.token_ok %}<span class="selo selo-ok">Preenchido</span>{% else %}<span class="selo">Aguardando validação</span>{% endif %}</td>
       </tr>
     </tbody>
   </table>

@@ -81,7 +81,7 @@ class GatewaySimulado:
             dados["payload"]["linha_digitavel"] = (
                 f"23793.38128 60000.000003 00000.000400 1 {gid[-8:]}"
             )
-            dados["payload"]["instrucao"] = "Sandbox: boleto simulado — use «Já paguei»."
+            dados["payload"]["instrucao"] = "Boleto de teste. Use «Já paguei» para simular o pagamento."
         return dados
 
     def autorizar_cartao(self, cobranca, card: dict, remote_ip: str = "") -> dict:

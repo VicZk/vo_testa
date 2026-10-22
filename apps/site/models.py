@@ -126,7 +126,7 @@ class VitrineQuarto(models.Model):
         ordering = ['ordem', 'uh__numero']
 
     def __str__(self):
-        return f'Vitrine — {self.uh}'
+        return f'Vitrine: {self.uh}'
 
 
 class FotoQuarto(models.Model):
@@ -276,7 +276,7 @@ class ConfiguracaoSite(models.Model):
     telefone = models.CharField('Telefone', max_length=20, default='+49 9 9999-9999')
     whatsapp = models.CharField('WhatsApp (com DDI)', max_length=20, default='5549999999999')
     email = models.EmailField('Email', default='contato@pousadavotesta.com.br')
-    endereco = models.CharField('Endereço', max_length=200, default='Rodovia SC 117, KM 130 — Lago Azul, 89760-000 Ita - SC')
+    endereco = models.CharField('Endereço', max_length=200, default='Rodovia SC 117, KM 130, Lago Azul, 89760-000 Ita - SC')
 
     # Redes sociais
     instagram_url = models.URLField('Instagram', blank=True)

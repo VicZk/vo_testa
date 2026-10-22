@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block titulo %}Funcionários — CRM Vô Testa{% endblock %}
+{% block titulo %}Funcionários | CRM Vô Testa{% endblock %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Cadastros · Pessoal</p>
@@ -8,7 +8,7 @@
   <h1>Funcionários</h1>
   <a href="{% url 'funcionario_novo' %}" class="botao-primario">+ Novo funcionário</a>
 </div>
-<p class="subtitulo">Quem trabalha na pousada — dados de RH, jornada e vínculo com o acesso ao sistema.</p>
+<p class="subtitulo">Dados dos funcionários, jornada de trabalho e acesso ao sistema.</p>
 
 <div class="filtro-limpeza">
   <a href="{% url 'funcionarios' %}" class="chip-limpeza {% if not setor %}ativo{% endif %}">Todos <b>{{ total }}</b></a>
@@ -44,7 +44,7 @@
       </tr>
     </tbody>
   {% empty %}
-    <tbody><tr><td colspan="6" class="vazio">Nenhum funcionário ainda — cadastre o primeiro.</td></tr></tbody>
+    <tbody><tr><td colspan="6" class="vazio">Nenhum funcionário cadastrado. Cadastre o primeiro para começar.</td></tr></tbody>
   {% endfor %}
 </table>
 {% endblock %}

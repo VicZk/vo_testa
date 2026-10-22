@@ -218,7 +218,7 @@ gtag('js',new Date());gtag('config','{{ pagina.google_tag_id }}');
       <div class="card"><div class="off">−15%</div><h3>Segunda faixa</h3>
         <small>Próximas 8 diárias</small></div>
       <div class="card"><div class="off esgotada">Cheia</div><h3>Lançamento</h3>
-        <small>Demais diárias — tarifa cheia de inauguração</small></div>
+        <small>Demais diárias com a tarifa de inauguração</small></div>
     </div>
     {% if pagina.vagas_restantes %}<div class="vagas">🔥 Restam <b>{{ pagina.vagas_restantes }}</b> vagas na faixa de fundadores.</div>{% endif %}
     <div class="oferta-cta"><a href="#captura" class="btn">{{ pagina.cta_texto }}</a></div>
@@ -234,7 +234,7 @@ gtag('js',new Date());gtag('config','{{ pagina.google_tag_id }}');
     <div class="tri">
       <div><div class="ic">💑</div><h3>Casais</h3><p>Refúgio a dois, pôr do sol e o vinho da casa. A primeira noite perfeita.</p></div>
       <div><div class="ic">👨‍👩‍👧</div><h3>Famílias</h3><p>Espaço para todos respirarem e um dia inteiro de sossego.</p></div>
-      <div><div class="ic">🍷</div><h3>Bom viver</h3><p>História, engenhosidade e o vinho do inventor — uma experiência fora do tempo.</p></div>
+      <div><div class="ic">🍷</div><h3>Bom viver</h3><p>Conheça a história do Vô Testa e aproveite o vinho do inventor.</p></div>
     </div>
   </div>
 </section>
@@ -281,7 +281,7 @@ gtag('js',new Date());gtag('config','{{ pagina.google_tag_id }}');
         <button class="btn pulse" type="submit">{{ pagina.cta_texto }}</button>
       </form>
       {% if form.errors %}<script>document.getElementById('captacao-erros').focus();</script>{% endif %}
-      <small>Sem compromisso — é só para te avisar em primeira mão.</small>
+      <small>O cadastro é sem compromisso. Vamos avisar você das novidades.</small>
     {% endif %}
   </div>
 </section>
@@ -320,8 +320,8 @@ gtag('js',new Date());gtag('config','{{ pagina.google_tag_id }}');
 
 <footer>
   <img src="{% static 'site/img/logo-footer.webp' %}" alt="Pousada Vô Testa" width="327" height="160" loading="lazy" decoding="async">
-  <p><strong>Pousada Vô Testa</strong> · Itá — Santa Catarina</p>
-  <p class="frase">Engenhosidade, acolhimento e bom viver — a essência do Vô Testa.</p>
+  <p><strong>Pousada Vô Testa</strong> · Itá, Santa Catarina</p>
+  <p class="frase">Venha conhecer a pousada e a história do Vô Testa.</p>
 </footer>
 
 {% if pagina.data_evento %}

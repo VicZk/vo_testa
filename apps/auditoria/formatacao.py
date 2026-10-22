@@ -2,7 +2,7 @@
 Formatação legível da Trilha de auditoria.
 
 Transforma (ação + alvo + detalhe) numa frase em pt-BR — "Abriu o caixa de
-Reservas — fundo R$ 0,00" em vez do JSON cru. O detalhe bruto continua guardado
+Reservas. Fundo: R$ 0,00" em vez do JSON cru. O detalhe bruto continua guardado
 (forense); isto é só apresentação. O que não tem molde cai num texto genérico
 razoável, nunca quebra.
 """
@@ -116,10 +116,10 @@ def frase(registro) -> str:
         return (f"Abriu o caixa de {valores.get('modulo', '—')} "
                 f"— fundo {_rs(valores.get('fundo_troco', 0))}")
     if acao == "fechamento_caixa":
-        return (f"Fechou o caixa — contado {_rs(d.get('contado', 0))} "
+        return (f"Fechou o caixa. Valor contado: {_rs(d.get('contado', 0))} "
                 f"(diferença {_rs(d.get('diferenca', 0))})")
     if acao == "reabertura_caixa":
-        return f"Reabriu o caixa — motivo: {d.get('motivo', '—')}"
+        return f"Reabriu o caixa. Motivo: {d.get('motivo', '—')}"
 
     # Movimento de caixa (recebimento, reforço, sangria)
     if acao == "criar" and alvo == "MovimentoCaixa":
@@ -129,7 +129,7 @@ def frase(registro) -> str:
 
     # Estorno
     if acao == "estorno":
-        return f"Estornou {_rs(d.get('valor', 0))} — motivo: {d.get('motivo', '—')}"
+        return f"Estornou {_rs(d.get('valor', 0))}. Motivo: {d.get('motivo', '—')}"
 
     # Grupo de reserva
     if acao == "criar_grupo":
@@ -147,9 +147,9 @@ def frase(registro) -> str:
     if acao in semanticas:
         extra = ""
         if "de" in d and "para" in d:
-            extra = f" — de {d['de']} para {d['para']}"
+            extra = f", de {d['de']} para {d['para']}"
         elif "motivo" in d:
-            extra = f" — motivo: {d['motivo']}"
+            extra = f". Motivo: {d['motivo']}"
         return f"{semanticas[acao]}{extra}"
 
     # Genéricos da auto-auditoria (criar / editar / excluir)

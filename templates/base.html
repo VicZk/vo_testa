@@ -256,7 +256,7 @@
       {% if user|pode_area:'nps' %}
       <div class="nav-grupo">
         <span class="nav-titulo letreiro">Relacionamento</span>
-        <a href="{% url 'nps:painel' %}" class="nav-item {% if request.resolver_match.namespace == 'nps' %}ativo{% endif %}" title="Proposta NPS — fase CRM do Hóspede">
+        <a href="{% url 'nps:painel' %}" class="nav-item {% if request.resolver_match.namespace == 'nps' %}ativo{% endif %}" title="Opinião dos hóspedes">
           <svg viewBox="0 0 24 24" class="ico"><path d="M12 3l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 15.9 7.2 18l.9-5.4L4.2 8.7l5.4-.8z"/></svg>
           <span class="rotulo">NPS</span>
         </a>
@@ -964,7 +964,7 @@
         else {
           const parada = regras.some(r => r.tipo === 'parar_vendas');
           restr.classList.add(parada ? 'tarifa-hint-erro' : 'tarifa-hint-alta');
-          restr.textContent = (parada ? 'Vendas paradas — ' : 'Restrição de venda — ')
+          restr.textContent = (parada ? 'Vendas paradas: ' : 'Restrição de venda: ')
             + regras.map(r => r.mensagem).join(' ');
         }
       }

@@ -231,7 +231,7 @@ def cancelar(request, pk):
     if request.method == "POST":
         try:
             services.cancelar_comanda(c, request.user, request.POST.get("motivo", ""))
-            messages.success(request, "Comanda cancelada — estoque devolvido.")
+            messages.success(request, "Comanda cancelada. Produtos devolvidos ao estoque.")
             return redirect("restaurante:comandas")
         except ValidationError as erro:
             messages.error(request, " ".join(erro.messages))

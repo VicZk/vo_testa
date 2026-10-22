@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% load l10n moeda estoque_extras %}
 
-{% block titulo %}Contagem #{{ inventario.pk }} — Estoque{% endblock %}
+{% block titulo %}Contagem #{{ inventario.pk }} | Estoque{% endblock %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Vendas &amp; Estoque</p>
 <div class="pagina-cabecalho">
-  <h1>Contagem #{{ inventario.pk }} — {{ inventario.local.nome }}</h1>
+  <h1>Contagem #{{ inventario.pk }}: {{ inventario.local.nome }}</h1>
   <div class="linha-botoes">
     <span class="selo {% if inventario.status == 'aberto' %}selo-pendente{% elif inventario.status == 'aplicado' %}selo-concluida{% else %}selo-neutro{% endif %}">{{ inventario.get_status_display }}</span>
     <a href="{% url 'estoque:inventarios' %}" class="botao-neutro">Voltar</a>
@@ -29,7 +29,7 @@
         <span class="est-progresso-marca" :style="`width: ${progresso}%`"></span>
       </div>
       <p class="ajuda">Conte na prateleira e digite o que encontrou. O que ficar em branco
-        não entra no ajuste — fica exatamente como está.</p>
+        não entra no ajuste e mantém o saldo atual.</p>
     </div>
 
     <div class="est-contagem-resumo">

@@ -158,7 +158,7 @@ def frase_de_aprovacao(uh, dia=None) -> str:
     pms = ocupacao_pms(dia)
     ocupacao = ocupacao_do_quarto((pms or {}).get(uh.pk), sem_base=pms is None)
     if _tem_hospede(ocupacao):
-        return "conferido — arrumação do dia aprovada."
+        return "conferido. Arrumação do dia aprovada."
     return "aprovado e liberado para a recepção."
 
 
@@ -260,7 +260,7 @@ CICLO = [
                   "ocupado, já está arrumado.",
         "quem": "—",
         "ajuda": "Na hotelaria chama-se «inspecionado». É o único estado em que o "
-                 "quarto está liberado para a recepção entregar a chave — por isso "
+                 "quarto está liberado para a recepção entregar a chave. Por isso "
                  "o quarto que já tem hóspede aparece como «Arrumado».",
     },
 ]
@@ -277,11 +277,11 @@ SITUACAO_SIMPLES = {e["cod"]: e["rotulo"] for e in CICLO}
 # A ocupação vem de Reservas por service (`ocupacao_por_uh`), nunca por model.
 
 OCUPACAO = {
-    "vago": ("Vago", "Sem hóspede — o quarto está livre."),
+    "vago": ("Vago", "Quarto livre, sem hóspede."),
     "ocupado": ("Ocupado", "Hóspede em casa, continua amanhã."),
     "sai_hoje": ("Sai hoje", "O hóspede vai embora hoje: o quarto suja na saída."),
     "chega_hoje": ("Chega hoje", "Chega hóspede: tem de estar pronto antes."),
-    "bloqueado": ("Bloqueado", "Em manutenção — fora de operação."),
+    "bloqueado": ("Bloqueado", "Em manutenção, fora de operação."),
 }
 
 
@@ -318,7 +318,7 @@ _MOTIVO_DA_FAXINA = {
     "checkout": "O hóspede fez check-out.",
     "troca": "O hóspede trocou de quarto.",
     "manutencao": "O quarto saiu da manutenção.",
-    "arrumacao_diaria": "O hóspede continua no quarto — é a arrumação do dia.",
+    "arrumacao_diaria": "Arrumação do dia, com o hóspede ainda no quarto.",
     "reprovada": "A supervisora devolveu o quarto para limpar de novo.",
     "portal": "O próprio hóspede pediu limpeza pelo celular.",
     "manual": "Alguém marcou o quarto como sujo.",
@@ -361,8 +361,7 @@ def explicar_estado(situacao, tarefa, status, ocupacao=None, *, com_fila=True) -
         # Quarto em reparo não recebe hóspede nem entra em fila de ninguém, esteja
         # ele limpo ou sujo — a frase do estado dizia "pode receber hóspede".
         estado = SITUACAO_SIMPLES.get(situacao, situacao).lower()
-        return (f"Em manutenção — fora de operação até o reparo terminar "
-                f"(hoje está {estado}).")
+        return (f'Em manutenção. Fora de operação até o fim do reparo (hoje está {estado}).')
     if situacao == StatusLimpeza.Situacao.SUJA:
         motivo = _MOTIVO_DA_FAXINA.get(tarefa.origem if tarefa else "", "")
         if tarefa and tarefa.origem == "reprovada" and tarefa.observacoes:
@@ -387,7 +386,7 @@ def explicar_estado(situacao, tarefa, status, ocupacao=None, *, com_fila=True) -
         # interessa é se a arrumação do dia saiu.
         if sem_carimbo:
             return "Sem arrumação registrada hoje."
-        falta = ("O hóspede sai hoje — a faxina nasce no check-out."
+        falta = ("O hóspede sai hoje. A faxina será criada após o check-out."
                  if ocupacao["cod"] == "sai_hoje" else "O hóspede continua no quarto.")
         return f"Arrumado{quando}. {falta}"
     # "Pronto" sem ninguém no `atualizado_por` é o estado de nascimento do quarto
@@ -581,7 +580,7 @@ PLANO = [
     {
         "cod": "arrumacao", "nivel": "aviso",
         "rotulo": "Ocupados a arrumar",
-        "resumo": "Hóspede em casa — arrumação do dia, com as coisas dele dentro.",
+        "resumo": "Arrumação diária com o hóspede e seus pertences no quarto.",
     },
     {
         "cod": "resto", "nivel": "info",
@@ -975,7 +974,7 @@ def visao_geral(dia=None) -> dict:
         atencao.append({
             "nivel": "alerta",
             "rotulo": f"{n} chegada{s(n)} sem quarto pronto",
-            "detalhe": f"Quarto{s(n)} {quartos} — hóspede chega hoje.",
+            "detalhe": f"Quarto{s(n)} {quartos}. O hóspede chega hoje.",
             "url": f"{url_quartos}?estado={estados.pop()}" if len(estados) == 1 else url_quartos,
         })
     esperando = contagem[StatusLimpeza.Situacao.LIMPA]
@@ -1144,7 +1143,7 @@ _DIVERGENCIAS = {
     ),
     ConferenciaOcupacao.Divergencia.SAIDA_NAO_LANCADA: (
         "Saída não lançada", "media",
-        "Fechar a conta e lançar o check-out — o quarto está invendável até isso.",
+        "Feche a conta e registre o check-out para liberar o quarto para venda.",
     ),
     ConferenciaOcupacao.Divergencia.SLEEPER: (
         "Hóspede não lançado", "alta",
@@ -1152,7 +1151,7 @@ _DIVERGENCIAS = {
     ),
     ConferenciaOcupacao.Divergencia.SEM_BAGAGEM: (
         "Sem bagagem", "baixa",
-        "Quarto em uso e sem mala no meio da estadia — confirmar se o hóspede ficou.",
+        "Quarto em uso, sem bagagem durante a estadia. Confirme se o hóspede permanece na pousada.",
     ),
     # Frase curta de propósito: esta linha se repete uma vez por quarto sem ronda, e
     # o porquê já está no alto da tela.
@@ -1197,9 +1196,9 @@ def _acao_da_divergencia(cod, uh, pms, conferencia):
     rotulo, gravidade, o_que_fazer = _DIVERGENCIAS[cod]
     hospede = pms["hospede"] if pms else ""
     if pms and pms["ocupado"]:
-        pms_diz = f"Ocupado — {hospede} (saída {pms['checkout']:%d/%m})"
+        pms_diz = f"Ocupado: {hospede} (saída {pms['checkout']:%d/%m})"
     elif pms and pms["chegada"]:
-        pms_diz = f"Livre — chegada hoje de {hospede}"
+        pms_diz = f"Livre. Chega hoje: {hospede}"
     else:
         pms_diz = "Livre"
     if cod == "nao_conferido":
@@ -1293,7 +1292,7 @@ def pendencias_auditoria():
 
 def _nome(usuario) -> str:
     if not usuario:
-        return "— sem camareira —"
+        return "Sem camareira"
     return usuario.get_full_name() or usuario.username
 
 

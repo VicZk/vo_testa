@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load nucleo_extras %}
 
-{% block titulo %}{{ pagina.nome }} — Páginas de Captação{% endblock %}
+{% block titulo %}{{ pagina.nome }} | Páginas de Captação{% endblock %}
 
 {% block conteudo %}
 <div class="eleg">
@@ -18,12 +18,12 @@
   </div>
 
   <div class="kpis">
-    <div class="kpi"><span class="n">{{ pagina.visitas }}</span><span class="l">Visitas</span></div>
-    <div class="kpi"><span class="n">{{ pagina.leads }}</span><span class="l">Leads no funil</span></div>
-    <div class="kpi kpi-destaque"><span class="n">{{ pagina.conversao }}%</span><span class="l">Conversão</span></div>
-    <div class="kpi"><span class="n">{{ pagina.reservas_geradas }}</span><span class="l">Reservas geradas</span></div>
+    <div class="kpi"><span class="kpi-valor">{{ pagina.visitas }}</span><span class="kpi-rotulo letreiro">Visitas</span></div>
+    <div class="kpi"><span class="kpi-valor">{{ pagina.leads }}</span><span class="kpi-rotulo letreiro">Leads no funil</span></div>
+    <div class="kpi kpi-destaque"><span class="kpi-valor">{{ pagina.conversao }}%</span><span class="kpi-rotulo letreiro">Conversão</span></div>
+    <div class="kpi"><span class="kpi-valor">{{ pagina.reservas_geradas }}</span><span class="kpi-rotulo letreiro">Reservas geradas</span></div>
     {% if pagina.meta_leads %}
-    <div class="kpi"><span class="n">{{ pagina.leads }}/{{ pagina.meta_leads }}</span><span class="l">Meta de leads</span></div>
+    <div class="kpi"><span class="kpi-valor">{{ pagina.leads }}/{{ pagina.meta_leads }}</span><span class="kpi-rotulo letreiro">Meta de leads</span></div>
     {% endif %}
   </div>
 
@@ -33,7 +33,7 @@
       {# Era um input + copiar à mão, sem plano B onde a Clipboard API não existe. #}
       {% copiar url_publica recado="Olá! Esta é a página da Pousada Vô Testa com a oferta que combinamos:" %}
       {% if not pagina.publicada %}
-        <p class="eleg-intro respiro">A página está em <strong>{{ pagina.get_status_display|lower }}</strong> — o link só funciona depois de publicar.</p>
+        <p class="eleg-intro respiro">A página está em <strong>{{ pagina.get_status_display|lower }}</strong>. O link só funciona depois de publicar.</p>
       {% endif %}
       <div class="eleg-acoes respiro">
         {% if pagina.status != 'publicada' %}

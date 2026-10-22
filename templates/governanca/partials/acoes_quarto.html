@@ -17,7 +17,7 @@ Sem JavaScript tudo continua funcionando: todo formulário tem `action` e
 {% comment %}Quarto em reparo não tem próximo passo da governança: ele
 oferecia "Pedir nova limpeza" e dizia "pronto para o hóspede".{% endcomment %}
 {% if ln.bloqueado %}
-  <span class="acao-pronta">Em manutenção — fora de operação</span>
+  <span class="acao-pronta">Em manutenção (fora de operação)</span>
 
 {% elif ln.situacao == 'suja' %}
   {% if ln.tarefa %}
@@ -63,7 +63,7 @@ oferecia "Pedir nova limpeza" e dizia "pronto para o hóspede".{% endcomment %}
      {% if not sheet %}hx-get="{% url 'governanca:devolver' ln.uh.pk %}" hx-target="#modal-conteudo"{% endif %}>Devolver para limpar</a>
 
 {% elif ln.situacao == 'inspecionada' %}
-  <span class="acao-pronta">{% if ln.ocupacao.cod == 'ocupado' or ln.ocupacao.cod == 'sai_hoje' %}Nada a fazer — arrumação do dia feita{% else %}Nada a fazer — pronto para o hóspede{% endif %}</span>
+  <span class="acao-pronta">{% if ln.ocupacao.cod == 'ocupado' or ln.ocupacao.cod == 'sai_hoje' %}Arrumação do dia concluída{% else %}Pronto para receber o hóspede{% endif %}</span>
   <form method="post" action="{% url 'governanca:nova_tarefa' %}"{% if not sheet %} hx-post="{% url 'governanca:nova_tarefa' %}"{% endif %}>
     {% csrf_token %}<input type="hidden" name="uh" value="{{ ln.uh.pk }}">
     <input type="hidden" name="tipo" value="faxina_completa">

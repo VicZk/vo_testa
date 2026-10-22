@@ -472,7 +472,7 @@ class CicloDeEstadosTests(ReservasTestsBase):
         r = self.reserva(dias=1)
         with self.assertRaises(ValidationError) as ctx:
             r.fazer_checkin(self.usuario)
-        self.assertIn("limpo", str(ctx.exception).lower())
+        self.assertIn("limpeza ou inspeção", str(ctx.exception).lower())
         definir_status(self.uh, StatusLimpeza.Situacao.LIMPA, self.usuario)
         conta = r.fazer_checkin(self.usuario)
         self.assertIsNotNone(conta)
@@ -1811,13 +1811,13 @@ class MapaSemRecarregarNoErroTests(ReservasTestsBase):
         html = self.client.get(reverse("reservas:mapa")).content.decode()
         self.assertIn("recarregarNoLugar(['.mapa-rolagem'])", html)
         self.assertNotIn("setTimeout(() => location.reload()", html)
-        self.assertIn("a reserva não foi movida", html)
+        self.assertIn("A reserva não foi movida", html)
 
     def test_mapa_de_quartos_tambem(self):
         html = self.client.get(reverse("reservas:mapa_quartos")).content.decode()
         self.assertIn("recarregarNoLugar()", html)
         self.assertNotIn("setTimeout(() => location.reload()", html)
-        self.assertIn("o quarto não foi trocado", html)
+        self.assertIn("O quarto não foi trocado", html)
 
     def test_mapa_sem_quarto_explica(self):
         UH.objects.all().delete()

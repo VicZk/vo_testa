@@ -455,7 +455,7 @@ class ConfiguracaoUH(models.Model):
         verbose_name_plural = "configurações dos quartos"
 
     def __str__(self):
-        return f"Configuração — {self.uh.numero}"
+        return f"Configuração: {self.uh.numero}"
 
 
 class Temporada(models.Model):
@@ -542,23 +542,23 @@ class ConfiguracaoReservas(models.Model):
     # desconta da receita bruta para chegar na líquida. Percentual sobre a hospedagem
     # vendida. Só estimativa gerencial: nada é lançado no Financeiro por aqui.
     custo_canal_ota = models.DecimalField(
-        "custo de venda — OTA (%)", max_digits=5, decimal_places=2,
+        "custo de venda: OTA (%)", max_digits=5, decimal_places=2,
         default=Decimal("18.00"),
         help_text="Comissão de Booking/Airbnb e afins (a praticada no mercado fica "
                   "entre 15% e 20%).",
     )
     custo_canal_site = models.DecimalField(
-        "custo de venda — site (%)", max_digits=5, decimal_places=2,
+        "custo de venda: site (%)", max_digits=5, decimal_places=2,
         default=Decimal("0.00"),
         help_text="Taxa do meio de pagamento na venda direta. Zero enquanto o Pix "
                   "sair por BR Code (sem taxa de adquirente).",
     )
     custo_canal_whatsapp = models.DecimalField(
-        "custo de venda — WhatsApp (%)", max_digits=5, decimal_places=2,
+        "custo de venda: WhatsApp (%)", max_digits=5, decimal_places=2,
         default=Decimal("0.00"),
     )
     custo_canal_balcao = models.DecimalField(
-        "custo de venda — balcão/telefone (%)", max_digits=5, decimal_places=2,
+        "custo de venda: balcão/telefone (%)", max_digits=5, decimal_places=2,
         default=Decimal("0.00"),
     )
 
@@ -572,7 +572,7 @@ class ConfiguracaoReservas(models.Model):
         "no-show automático", choices=NoShowAutomatico.choices,
         default=NoShowAutomatico.DESLIGADO,
         help_text="Quantas noites depois da entrada sem check-in a auditoria da "
-                  "madrugada marca o não comparecimento — o quarto volta à venda. "
+                  "madrugada marca o não comparecimento e libera o quarto para venda. "
                   "O que o hóspede pagou fica na conta, como no no-show manual.",
     )
 

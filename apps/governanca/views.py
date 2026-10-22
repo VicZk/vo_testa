@@ -203,7 +203,7 @@ def reportar(request, pk):
     form = ReportarProblemaForm(request.POST if request.method == "POST" else None)
     if request.method == "POST" and form.is_valid():
         if not modulo_ativo(Modulo.MANUTENCAO):
-            form.add_error(None, "Módulo Manutenção desligado — avise a recepção.")
+            form.add_error(None, "O módulo Manutenção está desativado. Avise a recepção.")
         else:
             from apps.manutencao import services as manutencao
 
@@ -282,16 +282,14 @@ def distribuir(request):
         nomes = ", ".join(resultado["sem_login"])
         return _resposta_acao(
             request,
-            f"{nomes} está de turno hoje, mas sem login no CRM — ligue o login na "
-            "ficha do funcionário para poder distribuir."
+            f'{nomes} está de turno hoje, mas sem acesso ao CRM. Ative o acesso na ficha do funcionário para distribuir os quartos.'
             if len(resultado["sem_login"]) == 1 else
-            f"{nomes} estão de turno hoje, mas sem login no CRM — ligue o login na "
-            "ficha de cada um para poder distribuir.",
+            f'{nomes} estão de turno hoje, mas sem acesso ao CRM. Ative o acesso na ficha de cada funcionário para distribuir os quartos.',
             tipo="warning")
     if resultado["motivo"] == "sem_turno":
         return _resposta_acao(
             request,
-            "Ninguém de turno hoje na Escala — escolha quem limpa em cada quarto.",
+            "Não há funcionários escalados hoje. Escolha quem limpa cada quarto.",
             tipo="warning")
     if not resultado["atribuidas"]:
         return _resposta_acao(request, "Todo quarto da fila já tem camareira.")
@@ -312,7 +310,7 @@ def status_marcar(request, pk):
     if situacao == "reprovada":
         # Supervisora devolveu o quarto: volta para a fila com motivo registrado.
         services.reprovar_inspecao(uh, request.user, request.POST.get("motivo", ""))
-        aviso = f"{uh.numero} reprovado — voltou para a fila de limpeza."
+        aviso = f"{uh.numero} reprovado. Voltou para a fila de limpeza."
     elif situacao == StatusLimpeza.Situacao.INSPECIONADA:
         services.inspecionar(uh, request.user)
         # Liberar o quarto para a recepção é o gesto mais caro da tela: em vez de

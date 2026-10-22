@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block titulo %}Enviar e-mail — {{ op.pessoa.nome }} — Comercial{% endblock %}
+{% block titulo %}Enviar e-mail | {{ op.pessoa.nome }} | Comercial{% endblock %}
 
 {% block conteudo %}
 <style>
@@ -170,7 +170,7 @@
         <input type="email" id="id_destinatario" name="destinatario" value="{{ lead_email }}"
                placeholder="nome@exemplo.com" autocomplete="email">
         {% if not lead_email %}
-          <p class="em-hint">Este lead ainda não tem e-mail no cadastro — preencha aqui. Ao enviar, o e-mail é <b>salvo no contato do lead</b>.</p>
+          <p class="em-hint">Informe o e-mail deste contato. Ao enviar, o endereço será <b>salvo no cadastro</b>.</p>
         {% endif %}
       </div>
       <div class="em-campo">
@@ -180,7 +180,7 @@
       <div class="em-campo">
         <label for="id_corpo">Mensagem de abertura</label>
         <textarea id="id_corpo" name="corpo">{{ dados.corpo }}</textarea>
-        <p class="em-hint">O cartão da estadia e os valores entram automaticamente abaixo — você só escreve o toque pessoal.</p>
+        <p class="em-hint">Escreva sua mensagem. O resumo da estadia e os valores serão incluídos automaticamente.</p>
       </div>
 
       <div class="em-acoes">

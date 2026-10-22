@@ -1,12 +1,12 @@
 {% extends "portal/base.html" %}
 {% load moeda %}
 
-{% block titulo %}Conta & check-out — Pousada Vô Testa{% endblock %}
+{% block titulo %}Conta & check-out | Pousada Vô Testa{% endblock %}
 
 {% block conteudo %}
 <div class="pt-card">
   <a href="{% url 'portal:home' token %}" class="voltar">‹ Voltar</a>
-  <h2>Sua conta — {{ e.uh }}</h2>
+  <h2>Sua conta: {{ e.uh }}</h2>
   {% for l in e.lancamentos %}
     <div class="pt-linha">
       <span>{{ l.descricao }} <small class="opcional">{{ l.natureza }}</small></span>

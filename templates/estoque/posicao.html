@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load moeda estoque_extras %}
 
-{% block titulo %}Estoque — CRM Vô Testa{% endblock %}
+{% block titulo %}Estoque | CRM Vô Testa{% endblock %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Vendas &amp; Estoque</p>
@@ -184,7 +184,7 @@ rolar dentro do cartão no celular, com a 1ª coluna e a de ação grudadas.{% e
   </p>
 {% elif catalogo and local %}
   <p class="est-nota-catalogo">
-    Mostrando o catálogo inteiro — inclusive o que nunca foi estocado aqui.
+    Catálogo completo, incluindo produtos sem movimentação neste local.
     <a href="?local={{ local.pk }}">Ver só o que este depósito guarda</a>.
   </p>
 {% endif %}

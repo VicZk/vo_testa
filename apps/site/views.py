@@ -578,8 +578,7 @@ def reservar(request):
             if uh:
                 messages.info(
                     request,
-                    f'{uh.nome_tematico or "O quarto escolhido"} não está livre nessas '
-                    'datas — veja as opções disponíveis abaixo.'
+                    f'{uh.nome_tematico or 'O quarto escolhido'} não está livre nessas datas. Veja as opções disponíveis abaixo.'
                 )
         if modalidade == 'day_use':
             resultados = _buscar_quartos(checkin, checkout, hospedes, modalidade)
@@ -961,7 +960,7 @@ def finalizar_reserva(request):
                 adultos=_adultos_de(hospedes, c05, c615), criancas=0,
                 criancas_0_5=c05, criancas_6_15=c615,
                 cobra_iss=cobra_iss, cobra_taxa_turismo=cobra_turismo,
-                observacoes=f'{rotulo} pelo site — {hospede.nome}',
+                observacoes=f'{rotulo} pelo site: {hospede.nome}',
             )
         except VErr as erro:
             messages.error(request, ' '.join(erro.messages))
@@ -1078,7 +1077,7 @@ def _finalizar_reserva_unidade(request):
                 adultos=_adultos_de(hospedes, c05, c615), criancas=0,
                 criancas_0_5=c05, criancas_6_15=c615,
                 cobra_iss=cobra_iss, cobra_taxa_turismo=cobra_turismo,
-                observacoes=f'Reserva pelo site — {nome_quarto} — {hospede.nome}',
+                observacoes=f'Reserva pelo site: {nome_quarto} — {hospede.nome}',
                 **_arranjo_post(request),
             )
         except VErr as erro:
@@ -1266,7 +1265,7 @@ def llms_txt(request):
     base = request.build_absolute_uri("/").rstrip("/")
     conteudo = f"""# Pousada Vô Testa
 
-> Pousada à beira do Lago de Itá, em Itá/SC (Alto Uruguai catarinense) — hospedagem,
+> Pousada à beira do Lago de Itá, em Itá/SC (Alto Uruguai catarinense), com hospedagem,
 > day use com piscina e mirantes, pesca esportiva e eventos. Reserva direta pelo site,
 > com disponibilidade e preço em tempo real.
 
@@ -1275,7 +1274,7 @@ def llms_txt(request):
 - [Minha reserva]({base}/minha-reserva/): o hóspede acompanha a própria reserva.
 
 ## Sobre
-- Localização: Itá, Santa Catarina — Lago de Itá (Rio Uruguai).
+- Localização: Itá, Santa Catarina, Lago de Itá (Rio Uruguai).
 - Acomodações: quartos Padrão e Intermediário, Cabanas, e "Dia na Pousada" (day use).
 - Estrutura: piscina, mirantes e acesso ao lago para pesca e passeios náuticos.
 

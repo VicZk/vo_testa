@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block titulo %}Verificação em duas etapas — CRM Vô Testa{% endblock %}
+{% block titulo %}Verificação em duas etapas | CRM Vô Testa{% endblock %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Minha conta</p>
@@ -29,7 +29,7 @@
     <p class="bloco-plano"><span class="selo selo-neutro">Inativo</span></p>
     {% if obrigatorio %}
       <p class="nota-cartao alerta">
-        Sua conta exige MFA — ative agora para continuar usando o sistema.</p>
+        Sua conta exige autenticação em duas etapas (MFA). Ative para continuar usando o sistema.</p>
     {% endif %}
     <div class="barra-acao bloco-respiro">
       <a href="{{ ativar_url }}" class="botao-primario">Ativar MFA</a>
