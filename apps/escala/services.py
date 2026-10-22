@@ -223,6 +223,43 @@ def relatorio_colaborador(funcionario, inicio, fim):
     }
 
 
+# ───────── Quem está trabalhando hoje — interface pública dos outros módulos ─────────
+#
+# A Governança escala a camareira do quarto; a Manutenção, o técnico da OS. Nenhum
+# dos dois importa models daqui: perguntam quem está de turno e recebem gente.
+
+
+def de_turno(dia=None, setor=None) -> list:
+    """Os funcionários escalados para `dia` (só `setor`, se informado), sem quem
+    está de folga/férias/atestado. Duas consultas, qualquer que seja a equipe."""
+    dia = dia or timezone.localdate()
+    ausentes = set(
+        Ausencia.objects.filter(inicio__lte=dia, fim__gte=dia)
+        .values_list("funcionario_id", flat=True)
+    )
+    qs = (Atribuicao.objects.filter(data=dia)
+          .select_related("funcionario__pessoa", "funcionario__usuario", "turno")
+          .order_by("turno__inicio", "funcionario__pessoa__nome"))
+    if setor:
+        qs = qs.filter(turno__setor=setor)
+    vistos, equipe = set(), []
+    for atrib in qs:
+        func = atrib.funcionario
+        if func.pk in vistos or func.pk in ausentes:
+            continue
+        vistos.add(func.pk)
+        equipe.append(func)
+    return equipe
+
+
+def usuarios_de_turno(dia=None, setor=None) -> list:
+    """Os LOGINS de quem está de turno — para o módulo que atribui trabalho a um
+    usuário do sistema (a tarefa da Governança é de uma camareira com login).
+    Funcionário sem login no CRM não entra: não haveria a quem atribuir."""
+    return [f.usuario for f in de_turno(dia, setor)
+            if f.usuario_id and f.usuario.is_active]
+
+
 def ausencias_da_semana(inicio):
     """[(funcionario_id, 'YYYY-MM-DD')] das ausências que tocam a semana — o
     editor usa para acender de vermelho a célula inválida ao arrastar."""

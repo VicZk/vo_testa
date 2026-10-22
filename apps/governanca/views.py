@@ -34,6 +34,9 @@ def _contexto_quadro(usuario=None):
          "minhas": minhas_por_situacao.get(etapa["cod"], 0)}
         for etapa in services.CICLO
     ]
+    # Quem limpa: a Escala manda (as de turno hoje vêm primeiro, num grupo
+    # próprio do <select>); sem o módulo, a lista de sempre.
+    camareiras = services.camareiras_do_dia()
     return {
         "linhas": dados["linhas"],
         "contagem": contagem,
@@ -45,7 +48,15 @@ def _contexto_quadro(usuario=None):
         "conferidos": dados["conferidos"],
         "sem_base": dados["sem_base"],
         "vistos": ConferenciaOcupacao.botoes_da_ronda(),
-        "camareiras": Usuario.objects.filter(is_active=True).order_by("first_name", "username"),
+        "de_turno": camareiras["de_turno"],
+        "camareiras": camareiras["outras"],
+        "tem_escala": camareiras["tem_escala"],
+        # Quartos a limpar que ainda não têm quem limpe — o que o "Distribuir a
+        # fila" vai dividir.
+        "sem_camareira": sum(
+            1 for ln in dados["linhas"]
+            if ln["tarefa"] and not ln["tarefa"].camareira_id and not ln["bloqueado"]
+        ),
     }
 
 
@@ -143,6 +154,30 @@ def tarefa_acao(request, pk):
         services.concluir_tarefa(tarefa, request.user)
         aviso = f"{tarefa.uh.numero} limpo. Boa!"
     return _resposta_acao(request, aviso)
+
+
+@requer_modulo(Modulo.GOVERNANCA)
+def distribuir(request):
+    """Divide os quartos a limpar sem camareira entre quem está de turno hoje.
+
+    Um toque no lugar de abrir 12 `<select>`. Sem ninguém de turno na Escala não
+    há em quem dividir — a tela diz isso em vez de espalhar faxina pela casa.
+    """
+    if request.method != "POST":
+        return redirect("governanca:quartos")
+    resultado = services.distribuir_fila(request.user)
+    if resultado["motivo"] == "sem_turno":
+        return _resposta_acao(
+            request,
+            "Ninguém de turno hoje na Escala — escolha quem limpa em cada quarto.",
+            tipo="warning")
+    if not resultado["atribuidas"]:
+        return _resposta_acao(request, "Todo quarto da fila já tem camareira.")
+    n = resultado["atribuidas"]
+    return _resposta_acao(
+        request,
+        f"{n} quarto{'s' if n > 1 else ''} divididos entre "
+        f"{resultado['equipe']} de turno.")
 
 
 @requer_modulo(Modulo.GOVERNANCA)

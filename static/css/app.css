@@ -1725,6 +1725,18 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
   color: var(--tinta);
 }
 
+/* Distribuir a fila: a frase explica o que o botão vai fazer, e as duas coisas
+   ficam na mesma linha-base enquanto couberem. */
+.gov-distribuir {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: .5rem .9rem; margin: 0 0 1rem;
+  padding: .7rem .9rem;
+  background: var(--superficie-2); border: 1px solid var(--fio);
+  border-radius: var(--raio-p);
+}
+.gov-distribuir p { margin: 0; min-width: 0; }
+.gov-distribuir form { margin: 0; flex: none; }
+
 .filtro-limpeza { display: flex; flex-wrap: wrap; gap: 8px; margin: .2rem 0 1.1rem; }
 .chip-limpeza {
   display: inline-flex; align-items: center; gap: 7px;

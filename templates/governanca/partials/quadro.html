@@ -31,6 +31,29 @@ e as views redirecionam quando o pedido não vem do HTMX.
   {% endif %}
 </div>
 
+{% comment %}Distribuir a fila: um toque no lugar de abrir um `<select>` por quarto.
+Só aparece quando há quarto sem camareira; sem ninguém de turno na Escala o botão
+explica em vez de espalhar faxina pela casa inteira.{% endcomment %}
+{% if sem_camareira %}
+<div class="gov-distribuir">
+  <p class="ajuda">
+    <strong>{{ sem_camareira }}</strong> quarto{{ sem_camareira|pluralize }} na fila sem quem limpe.
+    {% if tem_escala %}
+      Dividir entre as {{ de_turno|length }} de turno hoje, equilibrando a carga.
+    {% else %}
+      Ninguém de turno hoje na Escala — escolha quem limpa em cada linha.
+    {% endif %}
+  </p>
+  {% if tem_escala %}
+    <form method="post" action="{% url 'governanca:distribuir' %}"
+          hx-post="{% url 'governanca:distribuir' %}">
+      {% csrf_token %}
+      <button type="submit" class="botao-neutro">Distribuir a fila</button>
+    </form>
+  {% endif %}
+</div>
+{% endif %}
+
 {% comment %}Divergência da ronda: o recado mais caro da tela (diária perdida, conta
 aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% endcomment %}
 {% if divergencias %}
@@ -111,9 +134,22 @@ aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% e
                 hx-post="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}"
                 x-data="{ original: '{{ ln.tarefa.camareira_id|default_if_none:'' }}', escolha: '{{ ln.tarefa.camareira_id|default_if_none:'' }}' }">
             {% csrf_token %}<input type="hidden" name="acao" value="atribuir">
+            {% comment %}Quem está de TURNO hoje (Escala) vem num grupo próprio, no
+            alto: escolher numa lista com a casa inteira dentro — recepção,
+            cozinha, quem está de folga — era adivinhação. Sem o módulo Escala o
+            grupo não existe e a lista é a de sempre.{% endcomment %}
             <select name="camareira" x-model="escolha" aria-label="Quem limpa o quarto {{ ln.uh.numero }}">
               <option value="">— a definir —</option>
-              {% for u in camareiras %}<option value="{{ u.pk }}" {% if ln.tarefa.camareira_id == u.pk %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>{% endfor %}
+              {% if de_turno %}
+                <optgroup label="De turno hoje">
+                  {% for u in de_turno %}<option value="{{ u.pk }}" {% if ln.tarefa.camareira_id == u.pk %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>{% endfor %}
+                </optgroup>
+                <optgroup label="Fora da escala de hoje">
+                  {% for u in camareiras %}<option value="{{ u.pk }}" {% if ln.tarefa.camareira_id == u.pk %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>{% endfor %}
+                </optgroup>
+              {% else %}
+                {% for u in camareiras %}<option value="{{ u.pk }}" {% if ln.tarefa.camareira_id == u.pk %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>{% endfor %}
+              {% endif %}
             </select>
             <button type="submit" class="botao-mini" x-show="escolha !== original" x-cloak>Salvar</button>
           </form>

@@ -614,6 +614,102 @@ def plano_do_dia(dia=None) -> dict:
     return _montar_plano(dados["linhas"], _hora_do_checkin(), dados["dia"])
 
 
+# ─────────────── Quem limpa: a Escala manda, a lista de todos degrada ───────────────
+#
+# Escolher a camareira num `<select>` com a casa inteira dentro (recepção, cozinha,
+# gerência) era adivinhação: quem está de folga aparecia na mesma lista de quem
+# está no corredor agora. A Escala sabe quem trabalha hoje — e é o único módulo
+# que sabe. Sem ela ativa, a tela não quebra: mostra todo mundo, como antes.
+
+
+def camareiras_do_dia(dia=None) -> dict:
+    """`{"de_turno": [...], "outras": [...], "tem_escala": bool}` — quem limpa.
+
+    `de_turno` vem da Escala (setor Governança) por interface pública; `outras`
+    é o resto dos usuários ativos, que continua disponível para o caso de alguém
+    cobrir fora da escala. Sem o módulo Escala, `de_turno` vem vazio e a tela cai
+    na lista de sempre.
+    """
+    from django.contrib.auth import get_user_model
+
+    from apps.nucleo.models import modulo_ativo
+    from apps.nucleo.modulos import Modulo
+
+    dia = dia or timezone.localdate()
+    de_turno = []
+    if modulo_ativo(Modulo.ESCALA):
+        from apps.escala.services import usuarios_de_turno
+
+        de_turno = usuarios_de_turno(dia, setor="governanca")
+    ids = {u.pk for u in de_turno}
+    outras = [
+        u for u in get_user_model().objects.filter(is_active=True)
+        .order_by("first_name", "username")
+        if u.pk not in ids
+    ]
+    return {"de_turno": de_turno, "outras": outras, "tem_escala": bool(de_turno)}
+
+
+def distribuir_fila(operador, dia=None) -> dict:
+    """Divide os quartos a limpar SEM camareira entre quem está de turno hoje.
+
+    Equilibrada: cada quarto vai para quem tem menos na mão naquele momento
+    (contando o que ela já tinha antes de a tela abrir), e os mais urgentes saem
+    primeiro — na mesma ordem do plano do dia. Rodar de novo não embaralha nada:
+    quarto que já tem camareira não é tocado.
+
+    Sem ninguém de turno não há em quem dividir: devolve `motivo="sem_turno"` e a
+    tela explica, em vez de espalhar faxina para a casa inteira.
+    """
+    from django.db import transaction
+    from django.db.models import Count
+
+    dia = dia or timezone.localdate()
+    equipe = camareiras_do_dia(dia)["de_turno"]
+    if not equipe:
+        return {"atribuidas": 0, "equipe": 0, "motivo": "sem_turno"}
+
+    dados = _estado_dos_quartos(dia)
+    pendentes = [
+        ln for ln in dados["linhas"]
+        if not ln["bloqueado"] and ln["tarefa"] and not ln["tarefa"].camareira_id
+    ]
+    pendentes.sort(key=lambda ln: (_ORDEM_PLANO.get(prioridade_do_quarto(ln), 9),
+                                   _ORDEM_LIMPEZA.get(ln["situacao"], 9),
+                                   ln["uh"].numero))
+    # O que cada uma já tem na mão (numa consulta) — distribuir "do zero" jogaria
+    # quatro quartos em cima de quem já está com seis.
+    carga = dict.fromkeys([u.pk for u in equipe], 0)
+    for linha in (
+        TarefaGovernanca.objects
+        .filter(camareira__in=equipe)
+        .exclude(status=TarefaGovernanca.Status.CONCLUIDA)
+        .values("camareira").annotate(n=Count("pk")).order_by()
+    ):
+        carga[linha["camareira"]] = linha["n"]
+
+    atribuidas, primeira = [], None
+    with transaction.atomic():
+        for ln in pendentes:
+            alvo = min(equipe, key=lambda u: (carga[u.pk], u.pk))
+            tarefa = ln["tarefa"]
+            tarefa.camareira = alvo
+            tarefa.save(update_fields=["camareira"])
+            carga[alvo.pk] += 1
+            atribuidas.append((ln["uh"].numero, _quem(alvo)))
+            primeira = primeira or tarefa
+        if atribuidas:
+            # Cada tarefa já entra na trilha pelos signals do núcleo; esta linha é
+            # a narrativa do gesto — quem mandou dividir, quantos e entre quem.
+            registrar_auditoria(
+                operador, "fila_distribuida", primeira,
+                {"quartos": len(atribuidas), "equipe": len(equipe),
+                 "entre": ", ".join(sorted({nome for _, nome in atribuidas}))},
+            )
+    return {"atribuidas": len(atribuidas), "equipe": len(equipe),
+            "motivo": "", "detalhe": atribuidas}
+
+
 def carga_das_camareiras(dia=None) -> list:
     """Quanto cada camareira tem na mão hoje: na fila, limpando agora e já entregue.
     Duas consultas, não uma por pessoa."""

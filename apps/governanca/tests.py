@@ -1,3 +1,4 @@
+import json
 from datetime import timedelta
 from decimal import Decimal
 
@@ -1546,3 +1547,186 @@ class PlanoDoDiaTests(RondaBase):
         services.visao_geral()          # aquece o singleton de configuração
         with self.assertNumQueries(12):
             services.visao_geral()
+
+
+class QuemLimpaVemDaEscalaTests(GovernancaBase):
+    """Escolher a camareira numa lista com a casa inteira dentro era adivinhação.
+
+    A Escala é o único módulo que sabe quem trabalha hoje. Sem ela, a tela não
+    quebra: mostra todo mundo, como antes.
+    """
+
+    def setUp(self):
+        super().setUp()
+        from datetime import time
+
+        from apps.escala.models import Turno
+        from apps.escala.services import atribuir
+        from apps.nucleo.models import Funcionario
+
+        self.hoje = timezone.localdate()
+        self.turno = Turno.objects.create(nome="Manhã", setor="governanca",
+                                          inicio=time(7, 0), fim=time(15, 0))
+        self.maria = self._camareira("Maria", "maria")
+        self.joana = self._camareira("Joana", "joana")
+        self.recepcao = Usuario.objects.create_user(
+            username="recepcao", password="senha-forte-123", first_name="Recepção")
+        for func in Funcionario.objects.filter(usuario__in=[self.maria, self.joana]):
+            atribuir(self.turno, func, self.hoje, self.user)
+        self.client.login(username="governanta", password="senha-forte-123")
+
+    def _camareira(self, nome, username):
+        from apps.nucleo.models import Funcionario, Pessoa
+
+        usuario = Usuario.objects.create_user(
+            username=username, password="senha-forte-123", first_name=nome)
+        Funcionario.objects.create(pessoa=Pessoa.objects.create(nome=nome),
+                                   cargo="Camareira", usuario=usuario)
+        return usuario
+
+    def test_de_turno_hoje_vem_separado_das_outras(self):
+        quem = services.camareiras_do_dia()
+        self.assertEqual({u.pk for u in quem["de_turno"]},
+                         {self.maria.pk, self.joana.pk})
+        self.assertIn(self.recepcao.pk, {u.pk for u in quem["outras"]})
+        self.assertTrue(quem["tem_escala"])
+
+    def test_o_seletor_poe_as_de_turno_no_alto(self):
+        services.abrir_faxina(self.uh, usuario=self.user)
+        corpo = self.client.get(reverse("governanca:quartos")).content.decode()
+        self.assertIn("De turno hoje", corpo)
+        self.assertIn("Fora da escala de hoje", corpo)
+        self.assertLess(corpo.index("De turno hoje"), corpo.index("Fora da escala"))
+
+    def test_sem_o_modulo_escala_a_lista_e_a_de_sempre(self):
+        ModuloContratado.objects.filter(codigo=Modulo.ESCALA).update(ativo=False)
+        quem = services.camareiras_do_dia()
+        self.assertEqual(quem["de_turno"], [])
+        self.assertFalse(quem["tem_escala"])
+        self.assertIn(self.maria.pk, {u.pk for u in quem["outras"]})
+        services.abrir_faxina(self.uh, usuario=self.user)
+        corpo = self.client.get(reverse("governanca:quartos")).content.decode()
+        self.assertNotIn("De turno hoje", corpo)
+        self.assertIn("Maria", corpo)
+
+
+class DistribuirAFilaTests(QuemLimpaVemDaEscalaTests):
+    """Um toque no lugar de abrir um <select> por quarto — e equilibrado."""
+
+    def setUp(self):
+        super().setUp()
+        self.quartos = [self.uh] + [
+            UH.objects.create(numero=f"Quarto {n:02d}", tipo=self.tipo)
+            for n in range(2, 6)
+        ]
+
+    def _fila(self):
+        for uh in self.quartos:
+            services.abrir_faxina(uh, usuario=self.user)
+
+    def _por_camareira(self):
+        from collections import Counter
+        return Counter(
+            t.camareira_id for t in TarefaGovernanca.objects.exclude(
+                status=TarefaGovernanca.Status.CONCLUIDA)
+        )
+
+    def test_divide_os_quartos_entre_quem_esta_de_turno(self):
+        self._fila()
+        resultado = services.distribuir_fila(self.user)
+        self.assertEqual((resultado["atribuidas"], resultado["equipe"]), (5, 2))
+        carga = self._por_camareira()
+        self.assertIsNone(carga.get(None))
+        self.assertEqual(sorted(carga.values()), [2, 3])     # equilibrado
+
+    def test_quem_ja_tem_quarto_recebe_menos(self):
+        """Distribuir "do zero" jogava quatro em cima de quem já estava com seis."""
+        self._fila()
+        for tarefa in TarefaGovernanca.objects.all()[:3]:
+            tarefa.camareira = self.maria
+            tarefa.save(update_fields=["camareira"])
+        services.distribuir_fila(self.user)
+        carga = self._por_camareira()
+        self.assertEqual(carga[self.maria.pk], 3)   # não ganhou mais nenhum
+        self.assertEqual(carga[self.joana.pk], 2)
+
+    def test_o_mais_urgente_sai_primeiro(self):
+        """A ordem é a do plano do dia: chegada de hoje antes do resto."""
+        from apps.reservas.models import Reserva
+
+        Reserva.objects.create(
+            uh=self.quartos[4], hospede=Pessoa.objects.create(nome="Chega hoje"),
+            checkin=self.hoje, checkout=self.hoje + timedelta(days=2),
+            status=Reserva.Status.CONFIRMADA, valor_diaria=Decimal("200"),
+            criado_por=self.user)
+        self._fila()
+        resultado = services.distribuir_fila(self.user)
+        self.assertEqual(resultado["detalhe"][0][0], self.quartos[4].numero)
+
+    def test_quarto_que_ja_tem_camareira_nao_e_mexido(self):
+        self._fila()
+        tarefa = TarefaGovernanca.objects.first()
+        tarefa.camareira = self.recepcao     # alguém de fora cobrindo
+        tarefa.save(update_fields=["camareira"])
+        services.distribuir_fila(self.user)
+        tarefa.refresh_from_db()
+        self.assertEqual(tarefa.camareira_id, self.recepcao.pk)
+
+    def test_rodar_de_novo_nao_embaralha(self):
+        self._fila()
+        services.distribuir_fila(self.user)
+        antes = {t.pk: t.camareira_id for t in TarefaGovernanca.objects.all()}
+        resultado = services.distribuir_fila(self.user)
+        self.assertEqual(resultado["atribuidas"], 0)
+        self.assertEqual({t.pk: t.camareira_id for t in TarefaGovernanca.objects.all()},
+                         antes)
+
+    def test_quarto_bloqueado_fica_fora_da_divisao(self):
+        self._fila()
+        bloqueado = self.quartos[0]
+        bloqueado.status = UH.Status.BLOQUEADA
+        bloqueado.save(update_fields=["status"])
+        services.distribuir_fila(self.user)
+        tarefa = TarefaGovernanca.objects.get(uh=bloqueado)
+        self.assertIsNone(tarefa.camareira_id)
+
+    def test_sem_ninguem_de_turno_a_tela_explica_em_vez_de_espalhar(self):
+        from apps.escala.models import Atribuicao
+
+        Atribuicao.objects.all().delete()
+        self._fila()
+        resultado = services.distribuir_fila(self.user)
+        self.assertEqual((resultado["atribuidas"], resultado["motivo"]),
+                         (0, "sem_turno"))
+        r = self.client.post(reverse("governanca:distribuir"), HTTP_HX_REQUEST="true")
+        aviso = json.loads(r["HX-Trigger"])["aviso"]
+        self.assertIn("Ninguém de turno hoje", aviso["texto"])
+        self.assertEqual(aviso["tipo"], "warning")
+
+    def test_o_botao_so_aparece_com_quarto_sem_camareira(self):
+        corpo = self.client.get(reverse("governanca:quartos")).content.decode()
+        self.assertNotIn("Distribuir a fila", corpo)
+        self._fila()
+        corpo = self.client.get(reverse("governanca:quartos")).content.decode()
+        self.assertIn("Distribuir a fila", corpo)
+        self.assertIn("de turno hoje, equilibrando a carga", corpo)
+
+    def test_pela_view_com_htmx_devolve_o_quadro_e_avisa(self):
+        self._fila()
+        r = self.client.post(reverse("governanca:distribuir"), HTTP_HX_REQUEST="true")
+        self.assertEqual(r.status_code, 200)
+        self.assertTemplateUsed(r, "governanca/partials/quadro.html")
+        self.assertIn("divididos entre", r["HX-Trigger"])
+
+    def test_get_nao_distribui(self):
+        self._fila()
+        self.client.get(reverse("governanca:distribuir"))
+        self.assertEqual(self._por_camareira()[None], 5)
+
+    def test_a_divisao_fica_na_trilha_com_quem_mandou(self):
+        self._fila()
+        services.distribuir_fila(self.user)
+        trilha = TrilhaAuditoria.objects.filter(acao="fila_distribuida").first()
+        self.assertIsNotNone(trilha)
+        self.assertEqual(trilha.usuario_id, self.user.pk)
+        self.assertEqual(trilha.detalhe["quartos"], 5)
