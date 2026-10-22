@@ -359,7 +359,8 @@ Peças que todo módulo usa:
 
 - **Catálogo** (`apps/nucleo/modulos.py`): o enum `Modulo` (17 códigos), `DEPENDENCIAS`
   (ex.: Governança exige Reservas; Loja exige Estoque) e `APRESENTACAO` (grupo do menu,
-  ordem, rota principal; módulo sem rota aparece como "em construção").
+  ordem, rota principal, e `url_pessoal` quando o módulo tem uma entrada de quem
+  opera — a Minha fila da camareira; módulo sem rota aparece como "em construção").
 - **Ativação** (`ModuloContratado`): uma linha por módulo, gerida na **Central de
   Módulos** (`/crm/configuracoes/modulos/`), que respeita as dependências.
 - **Áreas-core** (`apps/nucleo/areas.py`): permissões do que não é módulo (quartos,
@@ -376,6 +377,9 @@ Peças que todo módulo usa:
 Usuários, módulos e áreas de cada funcionário são concedidos a partir da tela
 **Funcionários** (`/crm/funcionarios/`), que substituiu a antiga "Equipe & Acessos". A
 sidebar, a paleta ⌘K e o dashboard se montam conforme o acesso de quem está logado.
+Quem não tem nenhum bloco do dashboard (nem Reservas, Estoque, Financeiro, Logbook ou
+gerência) entra direto no módulo dele quando só tem um — a camareira na Minha fila —, ou
+vê um cartão por módulo quando tem vários.
 
 ### 4.4 Como os módulos conversam
 

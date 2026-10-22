@@ -222,7 +222,8 @@ ativação/homologação externa; o que entrou depois está no [CHANGELOG](CHANG
   (`governanca:minha_fila`), com "Reportar problema" pela `manutencao.abrir_os`;
   "Distribuir a fila" entre quem está de turno (`escala.services.usuarios_de_turno`).
   `abrir_faxina` e `iniciar_tarefa` travam a linha e são seguros a toque duplo. Uso
-  principal em tablet e celular: desenhar a partir do toque.
+  principal em tablet e celular: desenhar a partir do toque. Quem só tem a Governança
+  entra direto na Minha fila (`APRESENTACAO["url_pessoal"]`, lido pelo dashboard).
 - **Estoque:** telas em cinco abas sobre o motor do núcleo; entrada, saída e
   transferência com `chave` de envio (idempotência, como a `Venda.chave`), fornecedor
   na entrada e inventário que aplica só o contado.

@@ -9,6 +9,36 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 22/10/2026 — Cada um entra no que é seu: a camareira cai direto na fila dela (`b0630e0`)
+
+Achado testando o login da camareira na VPS: depois de entrar, ela via uma "Visão
+geral" vazia — só "Seu resumo do dia." e nada abaixo — e precisava abrir o menu e achar
+a Governança para começar.
+
+**O que melhorou**
+- **Quem tem um módulo só entra direto nele:** a camareira cai na "Minha fila"; a moça
+  da Loja, no PDV; o garçom, no Restaurante.
+- **Quem tem vários módulos e nenhum bloco da Visão geral** (Loja + Restaurante, por
+  exemplo) vê um cartão por módulo, com o nome e o que se faz nele, em vez da página
+  vazia.
+- O rótulo "Recepção · hoje" no alto da Visão geral vira "Hoje" para quem não é da
+  recepção.
+- Gerência e recepção não mudam: o painel continua o mesmo.
+
+**O que foi modificado**
+- `apps/nucleo/views.py` (`dashboard`): sem nenhum bloco do painel, redireciona para o
+  único módulo ou entrega os atalhos; `apps/nucleo/modulos.py`: a Governança ganhou
+  `url_pessoal` (a Minha fila); `templates/nucleo/dashboard.html` e `app.css`: os
+  atalhos reaproveitam o cartão-atalho dos Relatórios.
+
+**Como foi testado**
+- `EntradaPorPerfilTests`: só Governança, Loja + Restaurante e superusuário; o teste do
+  menu por permissão segue a nova entrada. `apps.nucleo`, `apps.governanca` e
+  `apps.loja` OK; ruff zero.
+- Navegador a 390 e 1440 px, sem rolagem lateral.
+
+---
+
 ## 22/10/2026 — Governança para tablet e celular: quem está no quarto, o plano do dia e a fila da camareira (`1bd56a0` a `603a797`)
 
 Pedido do dono: "a governança, a maioria do uso vai ser por tablet/mobile, então tem
