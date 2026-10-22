@@ -50,7 +50,8 @@ class LoginComLimite(LoginView):
             )
             return self.form_invalid(form)
         if self._trava_ligada() and (
-                falhas_da_conta("login", self._usuario_digitado()) >= FALHAS_POR_CONTA):
+                falhas_da_conta("login", self._usuario_digitado(), JANELA_CONTA_SEG)
+                >= FALHAS_POR_CONTA):
             # Mesma resposta exista ou não a conta: não confirma quem é usuário.
             form = self.get_form()
             form.add_error(None, "Muitas tentativas para este usuário. Aguarde 15 minutos "
@@ -69,7 +70,7 @@ class LoginComLimite(LoginView):
 
     def form_valid(self, form):
         """Senha correta. Se o usuário tem MFA, não loga ainda — manda pro desafio."""
-        limpar_falhas_da_conta("login", self._usuario_digitado())
+        limpar_falhas_da_conta("login", self._usuario_digitado(), JANELA_CONTA_SEG)
         user = form.get_user()
         if user.mfa_ativo and user.mfa_secret:
             self.request.session["mfa_pending_user"] = user.pk

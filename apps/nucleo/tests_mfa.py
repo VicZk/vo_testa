@@ -159,6 +159,65 @@ class TravaPorContaTests(TestCase):
         self.assertContains(self._entrar("errada"), "Usuário ou senha incorretos")
 
 
+@override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.db.DatabaseCache",
+                                       "LOCATION": "nucleo_cache_teste"}})
+class JanelaDoLimiteTests(TestCase):
+    """Os limites de tentativa valem a janela pedida também no cache em banco — o
+    padrão sem REDIS_URL. Lá o incr() regrava a chave com o prazo padrão do cache
+    (300 s): um limite por hora virava "5 minutos desde a última tentativa"."""
+
+    def setUp(self):
+        from django.core.management import call_command
+
+        call_command("createcachetable", verbosity=0)
+
+    def _pedido(self):
+        from django.test import RequestFactory
+
+        return RequestFactory().post("/", REMOTE_ADDR="203.0.113.7")
+
+    def _segundos_ate_expirar(self, trecho):
+        from django.db import connection
+        from django.utils import timezone
+
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT expires FROM nucleo_cache_teste WHERE cache_key LIKE %s",
+                           [f"%{trecho}%"])
+            (expira,) = cursor.fetchone()
+        return (expira - timezone.now()).total_seconds()
+
+    def test_janela_de_uma_hora_continua_de_uma_hora_depois_da_segunda_tentativa(self):
+        from .ratelimit import limite_excedido
+
+        for _ in range(3):
+            self.assertFalse(limite_excedido(self._pedido(), "teste_hora", 10, 3600))
+        # O que resta da janela corrente — nunca os 300 s do padrão do cache.
+        from .ratelimit import janela_atual
+        _, resta = janela_atual(3600)
+        self.assertGreater(self._segundos_ate_expirar("rl:teste_hora:"), resta - 5)
+
+    def test_falhas_da_conta_somam_e_somem_juntas(self):
+        from .ratelimit import falhas_da_conta, limpar_falhas_da_conta, registrar_falha_da_conta
+
+        for n in range(1, 4):
+            self.assertEqual(registrar_falha_da_conta("login", "Recepcao ", 900), n)
+        self.assertEqual(falhas_da_conta("login", "recepcao", 900), 3)
+        limpar_falhas_da_conta("login", "recepcao", 900)
+        self.assertEqual(falhas_da_conta("login", "recepcao", 900), 0)
+
+    def test_contagem_zera_na_virada_da_janela(self):
+        from unittest import mock
+
+        from .ratelimit import limite_excedido
+
+        inicio = 1_800_000_000  # múltiplo de 60: começo de uma janela de 1 minuto
+        with mock.patch("apps.nucleo.ratelimit.time.time", return_value=inicio + 5):
+            resultados = [limite_excedido(self._pedido(), "teste_minuto", 2, 60) for _ in range(3)]
+        self.assertEqual(resultados, [False, False, True])
+        with mock.patch("apps.nucleo.ratelimit.time.time", return_value=inicio + 61):
+            self.assertFalse(limite_excedido(self._pedido(), "teste_minuto", 2, 60))
+
+
 class RecuperarSenhaTests(TestCase):
     def setUp(self):
         self.u = Usuario.objects.create_user(username="recepcao", password="senha-antiga-123",
