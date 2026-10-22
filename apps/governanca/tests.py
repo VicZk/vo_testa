@@ -1929,3 +1929,36 @@ class ReportarProblemaTests(RondaBase):
     def test_com_o_modulo_ativo_o_botao_aparece_na_fila(self):
         self.assertContains(self.client.get(reverse("governanca:minha_fila")),
                             "Reportar problema")
+
+
+class QuartoBloqueadoTests(RondaBase):
+    """Quarto em reparo não recebe hóspede nem entra na fila de ninguém."""
+
+    def setUp(self):
+        super().setUp()
+        self.uh.status = UH.Status.BLOQUEADA
+        self.uh.save(update_fields=["status"])
+        self.client.login(username="governanta", password="senha-forte-123")
+
+    def _linha(self):
+        return next(ln for ln in services.painel_limpeza()["linhas"]
+                    if ln["uh"].pk == self.uh.pk)
+
+    def test_a_frase_fala_do_reparo_e_nao_de_receber_hospede(self):
+        services.inspecionar(self.uh, self.user)
+        explicacao = self._linha()["explicacao"]
+        self.assertIn("Em manutenção", explicacao)
+        self.assertNotIn("Pode receber hóspede", explicacao)
+
+    def test_a_frase_diz_tambem_como_esta_a_limpeza(self):
+        services.abrir_faxina(self.uh, usuario=self.user)
+        self.assertIn("a limpar", self._linha()["explicacao"])
+
+    def test_a_linha_nao_oferece_proximo_passo_de_limpeza(self):
+        services.inspecionar(self.uh, self.user)
+        corpo = self.client.get(reverse("governanca:quartos")).content.decode()
+        linha = corpo[corpo.index(f'id="quarto-{self.uh.pk}"'):]
+        linha = linha[:linha.index("</tr>")]
+        self.assertIn("Em manutenção — fora de operação", linha)
+        self.assertNotIn("pronto para o hóspede", linha)
+        self.assertNotIn("Pedir nova limpeza", linha)

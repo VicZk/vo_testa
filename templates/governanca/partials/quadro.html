@@ -163,7 +163,12 @@ aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% e
       diferentes brigando (era a queixa do dono).{% endcomment %}
       <td class="col-acao" data-rotulo="Próximo passo">
         <div class="acoes-quarto">
-        {% if ln.situacao == 'suja' %}
+        {% comment %}Quarto em reparo não tem próximo passo da governança: ele
+        oferecia "Pedir nova limpeza" e dizia "pronto para o hóspede".{% endcomment %}
+        {% if ln.bloqueado %}
+          <span class="acao-pronta">Em manutenção — fora de operação</span>
+
+        {% elif ln.situacao == 'suja' %}
           {% if ln.tarefa %}
             <form method="post" action="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}" hx-post="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}">
               {% csrf_token %}<input type="hidden" name="acao" value="iniciar">

@@ -317,6 +317,12 @@ def explicar_estado(situacao, tarefa, status, ocupacao=None, *, com_fila=True) -
     """
     quando = f" às {timezone.localtime(status.atualizado_em):%H:%M}" if status.atualizado_em else ""
     quem = _quem(getattr(status, "atualizado_por", None))
+    if ocupacao and ocupacao.get("cod") == "bloqueado":
+        # Quarto em reparo não recebe hóspede nem entra em fila de ninguém, esteja
+        # ele limpo ou sujo — a frase do estado dizia "pode receber hóspede".
+        estado = SITUACAO_SIMPLES.get(situacao, situacao).lower()
+        return (f"Em manutenção — fora de operação até o reparo terminar "
+                f"(hoje está {estado}).")
     if situacao == StatusLimpeza.Situacao.SUJA:
         motivo = _MOTIVO_DA_FAXINA.get(tarefa.origem if tarefa else "", "")
         if tarefa and tarefa.origem == "reprovada" and tarefa.observacoes:
