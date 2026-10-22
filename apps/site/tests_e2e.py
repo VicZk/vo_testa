@@ -1130,7 +1130,9 @@ class SiteNoCelularE2ETests(_UnidadeVendavelMixin, _BaseE2E):
         p.set_viewport_size({"width": 1024, "height": 390})
         p.get_by_role("button", name="Abrir menu", exact=True).click()
         cta = p.locator("#mobileMenu").get_by_role("link", name="Fazer Reserva", exact=True)
-        cta.scroll_into_view_if_needed()
+        # A gaveta ainda desliza após o toque. O trial aguarda o alvo estável,
+        # descoberto e clicável antes de medir, sem navegar para a reserva.
+        cta.click(trial=True)
         medida = cta.evaluate("""el => {
             const r=el.getBoundingClientRect(), alvo=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);
             return {top:r.top,bottom:r.bottom,header:document.querySelector('header').getBoundingClientRect().bottom,
@@ -1138,7 +1140,7 @@ class SiteNoCelularE2ETests(_UnidadeVendavelMixin, _BaseE2E):
         }""")
         self.assertGreaterEqual(medida["top"], medida["header"])
         self.assertLessEqual(medida["bottom"], 390)
-        self.assertTrue(medida["acessivel"])
+        self.assertTrue(medida["acessivel"], medida)
         p.set_viewport_size({"width": 1440, "height": 900})
         p.wait_for_function("document.body.style.overflow !== 'hidden' && document.querySelector('#menuBtn').getAttribute('aria-expanded') === 'false'")
         self.assertGreater(p.evaluate("document.activeElement.getBoundingClientRect().width"), 0)
