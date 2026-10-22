@@ -443,6 +443,85 @@ class CorredorLegivelTests(TestCase):
         self.assertGreaterEqual(_contraste(achado.group(1), "#FFFFFF"), 4.5)
 
 
+class CorredorDaGovernancaTests(TestCase):
+    """O painel escuro da Governança é lido de longe — e dizia a coisa errada.
+
+    O ESTADO do quarto saía num rótulo de 9 px em maiúsculas (o "Pronto" azul
+    quase desaparecia no fundo azul-noite), o maior texto do bloco era o TIPO do
+    quarto, e "a limpar" e "em limpeza" tinham o mesmo fundo. Esta seção é a
+    exceção de hex da casa (paleta noturna própria): o contrato é que todo estado
+    passe 4,5:1 nas DUAS pontas do gradiente do seu bloco.
+    """
+
+    # Fundo de cada estado (topo, base do gradiente) e a cor do texto do estado.
+    ESTADOS = {
+        "limp-suja": ("#4A2E22", "#2E1A14"),
+        "limp-em_limpeza": ("#4A3C1E", "#2C2310"),
+        "limp-limpa": ("#1B3B33", "#102722"),
+        "limp-inspecionada": ("#1C3A4E", "#112636"),
+        "limp-bloqueada": ("#2A343A", "#1B2328"),
+    }
+
+    def setUp(self):
+        self.css = CSS.read_text(encoding="utf-8").replace("\r\n", "\n")
+
+    def _cor(self, seletor):
+        achado = re.search(rf"{re.escape(seletor)} \{{ color: (#[0-9A-Fa-f]{{6}}); \}}",
+                           self.css)
+        self.assertIsNotNone(achado, seletor)
+        return achado.group(1)
+
+    def test_cada_estado_passa_contraste_nas_duas_pontas_do_gradiente(self):
+        for classe, fundos in self.ESTADOS.items():
+            cor = self._cor(f".corredor-gov .{classe} .porta-estado")
+            for fundo in fundos:
+                self.assertGreaterEqual(
+                    _contraste(cor, fundo), 4.5,
+                    f"{classe}: {cor} sobre {fundo} não passa 4,5:1")
+
+    def test_o_indicador_de_estado_tem_a_cor_do_texto_do_estado(self):
+        """Porta com trinco de uma cor e texto de outra dava dois sinais."""
+        for classe in self.ESTADOS:
+            texto = self._cor(f".corredor-gov .{classe} .porta-estado")
+            trinco = re.search(
+                rf"\.corredor-gov \.{re.escape(classe)} \.porta-fecho \{{ background: (#[0-9A-Fa-f]{{6}})",
+                self.css)
+            self.assertIsNotNone(trinco, classe)
+            self.assertEqual(trinco.group(1), texto, classe)
+
+    def test_a_limpar_e_em_limpeza_nao_compartilham_o_fundo(self):
+        fundos = {}
+        for classe in ("limp-suja", "limp-em_limpeza"):
+            achado = re.search(
+                rf"\.corredor-gov \.porta\.{re.escape(classe)} \{{ background: ([^;]+);",
+                self.css)
+            self.assertIsNotNone(achado, classe)
+            fundos[classe] = achado.group(1)
+        self.assertNotEqual(fundos["limp-suja"], fundos["limp-em_limpeza"])
+
+    def test_quarto_bloqueado_nao_e_desbotado(self):
+        """`opacity` no bloco inteiro apaga o texto junto: quarto em reparo é
+        informação, não enfeite."""
+        bloco = re.search(r"\.corredor-gov \.porta\.limp-bloqueada \{([^}]*)\}", self.css)
+        self.assertIsNotNone(bloco)
+        self.assertNotIn("opacity", bloco.group(1))
+        self.assertNotIn("grayscale", bloco.group(1))
+
+    def test_o_estado_e_mais_forte_que_o_rotulo_de_9px_que_substituiu(self):
+        bloco = re.search(r"\n\.porta-estado \{([^}]*)\}", self.css)
+        self.assertIsNotNone(bloco)
+        self.assertIn("font-weight: 700", bloco.group(1))
+        self.assertIn("clamp(", bloco.group(1))
+        self.assertNotIn("text-transform: uppercase", bloco.group(1))
+
+    def test_o_bloco_da_governanca_e_mais_baixo_que_a_porta_da_recepcao(self):
+        """Lá cabem nome, período e saldo; aqui a proporção 4/5 só deixava a
+        metade de baixo vazia."""
+        bloco = re.search(r"\n\.corredor-gov \.porta \{([^}]*)\}", self.css)
+        self.assertIsNotNone(bloco)
+        self.assertIn("aspect-ratio: auto", bloco.group(1))
+
+
 class MovimentoDaNavegacaoTests(TestCase):
     """Havia 43 pontos de troca HTMX e nenhum com transição: clicar no menu
     trocava a página de estalo e a lista da comanda piscava."""

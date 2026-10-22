@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% comment %}Mesmo formulário do modal, como página: é o caminho de quem está sem
+JavaScript (o botão da fila é um link de verdade).{% endcomment %}
+
+{% block titulo %}Problema no {{ uh.numero }} — Governança{% endblock %}
+
+{% block conteudo %}
+<p class="pagina-eyebrow letreiro">Hospedagem · Governança</p>
+<div class="pagina-cabecalho">
+  <h1>Problema no {{ uh.numero }}</h1>
+</div>
+
+<form class="form-cartao" method="post" action="{% url 'governanca:reportar' uh.pk %}">
+  {% include "governanca/partials/reportar_campos.html" %}
+  <div class="acoes">
+    <button type="submit" class="botao-primario">Abrir chamado</button>
+    <a href="{% url 'governanca:minha_fila' %}" class="botao-neutro">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

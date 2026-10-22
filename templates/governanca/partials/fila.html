@@ -1,0 +1,73 @@
+{% comment %}A fila da camareira, no celular dela. É este trecho que as ações
+trocam (hx-target="#gov-fila"), então a ordem e os botões chegam certos sem
+recarregar a página.
+
+Regra desta tela: UM cartão por quarto, UM botão grande ("Começar" / "Terminei")
+e nada que ela não vá tocar com a mão ocupada. O `fila=1` de cada formulário diz
+à view que a resposta é a fila, não o quadro da supervisora.
+
+Sem JavaScript continua funcionando: todo formulário tem `action` e `method`, e a
+view redireciona para a fila quando o pedido não vem do HTMX.
+{% endcomment %}
+{% if fila %}
+  <ol class="gov-fila" hx-target="#gov-fila" hx-swap="innerHTML" hx-indicator="#gov-fila">
+    {% for q in fila %}
+      <li class="gov-fila-item{% if q.fazendo %} fazendo{% endif %}">
+        <div class="gov-fila-topo">
+          <span class="gov-fila-num">{{ q.uh.numero }}</span>
+          <span class="selo selo-{{ q.situacao }}">{{ q.rotulo }}</span>
+        </div>
+        <p class="gov-fila-porque">{{ q.explicacao }}</p>
+        {% if q.ocupacao %}
+          <p class="gov-fila-dado">
+            <span class="rotulo-dado">{{ q.ocupacao }}</span>{% if q.hospede %}<span class="rotulo-dado">{{ q.hospede }}</span>{% endif %}<span class="rotulo-dado">{{ q.tipo }}</span>
+          </p>
+        {% endif %}
+        {% if q.observacoes %}
+          <p class="gov-fila-recado"><strong>Refazer:</strong> {{ q.observacoes }}</p>
+        {% endif %}
+        <div class="gov-fila-acoes">
+          {% if q.fazendo %}
+            <form method="post" action="{% url 'governanca:tarefa_acao' q.tarefa.pk %}"
+                  hx-post="{% url 'governanca:tarefa_acao' q.tarefa.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="acao" value="concluir">
+              <input type="hidden" name="fila" value="1">
+              <button type="submit" class="botao-primario gov-fila-botao">Terminei</button>
+            </form>
+          {% else %}
+            <form method="post" action="{% url 'governanca:tarefa_acao' q.tarefa.pk %}"
+                  hx-post="{% url 'governanca:tarefa_acao' q.tarefa.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="acao" value="iniciar">
+              <input type="hidden" name="fila" value="1">
+              <button type="submit" class="botao-primario gov-fila-botao">Começar</button>
+            </form>
+          {% endif %}
+          {% if tem_manutencao %}
+            {# Link de verdade: com JS abre o modal da casa; sem JS, abre a página. #}
+            <a href="{% url 'governanca:reportar' q.uh.pk %}" class="botao-neutro gov-fila-botao"
+               hx-get="{% url 'governanca:reportar' q.uh.pk %}" hx-target="#modal-conteudo">Reportar problema</a>
+          {% endif %}
+        </div>
+      </li>
+    {% endfor %}
+  </ol>
+{% else %}
+  <div class="estado-vazio">
+    <p>Nenhum quarto na sua fila agora.</p>
+    <p class="ajuda">Quando a supervisora distribuir a fila — ou um hóspede fizer
+      check-out no seu andar — o quarto aparece aqui.</p>
+  </div>
+{% endif %}
+
+{% if feitas %}
+  {% comment %}O que ela já entregou hoje: recibo do próprio trabalho, no fim da
+  tela para não disputar espaço com o que ainda falta.{% endcomment %}
+  <section class="gov-fila-feitas">
+    <h2>Já entreguei hoje <b>{{ feitas|length }}</b></h2>
+    <p class="gov-fila-dado">
+      {% for t in feitas %}<span class="rotulo-dado">{{ t.uh.numero }}{% if t.concluida_em %} · {{ t.concluida_em|date:"H:i" }}{% endif %}</span>{% endfor %}
+    </p>
+  </section>
+{% endif %}

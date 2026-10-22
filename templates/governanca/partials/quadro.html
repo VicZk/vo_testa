@@ -31,6 +31,33 @@ e as views redirecionam quando o pedido não vem do HTMX.
   {% endif %}
 </div>
 
+{% comment %}Distribuir a fila: um toque no lugar de abrir um `<select>` por quarto.
+Só aparece quando há quarto sem camareira; sem ninguém de turno na Escala o botão
+explica em vez de espalhar faxina pela casa inteira.{% endcomment %}
+{% if sem_camareira %}
+<div class="gov-distribuir">
+  <p class="ajuda">
+    <strong>{{ sem_camareira }}</strong> quarto{{ sem_camareira|pluralize }} na fila sem quem limpe.
+    {% if tem_escala %}
+      Dividir entre as {{ de_turno|length }} de turno hoje, equilibrando a carga.
+    {% elif sem_login %}
+      {# Escalada sem login no CRM não é "ninguém de turno": a correção é outra. #}
+      {{ sem_login|join:", " }} {{ sem_login|pluralize:"está,estão" }} de turno hoje,
+      mas sem login no CRM — ligue o login na ficha do funcionário para poder distribuir.
+    {% else %}
+      Ninguém de turno hoje na Escala — escolha quem limpa em cada linha.
+    {% endif %}
+  </p>
+  {% if tem_escala %}
+    <form method="post" action="{% url 'governanca:distribuir' %}"
+          hx-post="{% url 'governanca:distribuir' %}">
+      {% csrf_token %}
+      <button type="submit" class="botao-neutro">Distribuir a fila</button>
+    </form>
+  {% endif %}
+</div>
+{% endif %}
+
 {% comment %}Divergência da ronda: o recado mais caro da tela (diária perdida, conta
 aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% endcomment %}
 {% if divergencias %}
@@ -57,7 +84,20 @@ aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% e
     <tr id="quarto-{{ ln.uh.pk }}"
         x-show="(f==='todas' || f==='{{ ln.situacao }}') && (!soMeus || {{ ln.minha|yesno:'true,false' }})"
         x-transition.opacity>
-      <td data-rotulo="Quarto"><strong>{{ ln.uh.numero }}</strong><small class="ajuda">{{ ln.uh.tipo.nome }}</small></td>
+      {% comment %}Quem está no quarto (ocupação, de Reservas) é o dado que a
+      supervisora ia buscar no mapa ao lado: "Sai hoje · Ana Lima". O TIPO do
+      quarto é dado secundário e foi para a dica — ocupava a linha de baixo e
+      nunca mudava nada do que fazer agora.{% endcomment %}
+      <td data-rotulo="Quarto" class="col-quarto dica" data-dica="- {{ ln.uh.numero }}&#10;- {{ ln.uh.tipo.nome }}{% if ln.ocupacao.ajuda %}&#10;- {{ ln.ocupacao.ajuda }}{% endif %}">
+        <strong>{{ ln.uh.numero }}</strong>
+        {% if ln.ocupacao.rotulo %}
+          <span class="gov-ocupacao">
+            <span class="rotulo-dado">{{ ln.ocupacao.rotulo }}</span>{% if ln.ocupacao.hospede %}<span class="rotulo-dado gov-ocupacao-nome">{{ ln.ocupacao.hospede }}</span>{% endif %}{% if ln.ocupacao.cod == 'sai_hoje' and ln.ocupacao.chegada %}<span class="rotulo-dado">Chega outro</span>{% endif %}
+          </span>
+        {% else %}
+          <small class="ajuda">{{ ln.uh.tipo.nome }}</small>
+        {% endif %}
+      </td>
 
       {% comment %}O estado nunca vem sozinho: vem com a frase que diz por que ele
       está assim e o que falta. É o que ensina o fluxo linha a linha.{% endcomment %}
@@ -98,9 +138,22 @@ aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% e
                 hx-post="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}"
                 x-data="{ original: '{{ ln.tarefa.camareira_id|default_if_none:'' }}', escolha: '{{ ln.tarefa.camareira_id|default_if_none:'' }}' }">
             {% csrf_token %}<input type="hidden" name="acao" value="atribuir">
+            {% comment %}Quem está de TURNO hoje (Escala) vem num grupo próprio, no
+            alto: escolher numa lista com a casa inteira dentro — recepção,
+            cozinha, quem está de folga — era adivinhação. Sem o módulo Escala o
+            grupo não existe e a lista é a de sempre.{% endcomment %}
             <select name="camareira" x-model="escolha" aria-label="Quem limpa o quarto {{ ln.uh.numero }}">
               <option value="">— a definir —</option>
-              {% for u in camareiras %}<option value="{{ u.pk }}" {% if ln.tarefa.camareira_id == u.pk %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>{% endfor %}
+              {% if de_turno %}
+                <optgroup label="De turno hoje">
+                  {% for u in de_turno %}<option value="{{ u.pk }}" {% if ln.tarefa.camareira_id == u.pk %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>{% endfor %}
+                </optgroup>
+                <optgroup label="Fora da escala de hoje">
+                  {% for u in camareiras %}<option value="{{ u.pk }}" {% if ln.tarefa.camareira_id == u.pk %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>{% endfor %}
+                </optgroup>
+              {% else %}
+                {% for u in camareiras %}<option value="{{ u.pk }}" {% if ln.tarefa.camareira_id == u.pk %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>{% endfor %}
+              {% endif %}
             </select>
             <button type="submit" class="botao-mini" x-show="escolha !== original" x-cloak>Salvar</button>
           </form>
@@ -114,7 +167,12 @@ aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% e
       diferentes brigando (era a queixa do dono).{% endcomment %}
       <td class="col-acao" data-rotulo="Próximo passo">
         <div class="acoes-quarto">
-        {% if ln.situacao == 'suja' %}
+        {% comment %}Quarto em reparo não tem próximo passo da governança: ele
+        oferecia "Pedir nova limpeza" e dizia "pronto para o hóspede".{% endcomment %}
+        {% if ln.bloqueado %}
+          <span class="acao-pronta">Em manutenção — fora de operação</span>
+
+        {% elif ln.situacao == 'suja' %}
           {% if ln.tarefa %}
             <form method="post" action="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}" hx-post="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}">
               {% csrf_token %}<input type="hidden" name="acao" value="iniciar">

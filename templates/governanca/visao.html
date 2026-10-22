@@ -37,13 +37,16 @@ A barra mostra a casa inteira repartida pelos quatro estados.{% endcomment %}
       <span class="kpi-rotulo letreiro">Progresso do dia</span>
       <p class="gov-progresso-num"><strong>{{ prontos }}</strong> de {{ total }} prontos</p>
     </div>
+    {% comment %}A hora da entrada é o prazo do dia e aparece SEMPRE que Reservas
+    diz qual é — antes ela sumia junto com o "faltam N quartos", e a casa pronta
+    deixava de mostrar até quando ela precisa continuar pronta.{% endcomment %}
     <p class="gov-progresso-nota">
       {% if falta_para_pronto %}
-        Falta{{ falta_para_pronto|pluralize:"m" }} <strong>{{ falta_para_pronto }}</strong> quarto{{ falta_para_pronto|pluralize }} para a casa toda ficar pronta{% if hora_checkin %};
-        o primeiro hóspede pode entrar às {{ hora_checkin|time:"H:i" }}{% endif %}.
+        Falta{{ falta_para_pronto|pluralize:"m" }} <strong>{{ falta_para_pronto }}</strong> quarto{{ falta_para_pronto|pluralize }} para a casa toda ficar pronta.
       {% else %}
         Casa inteira pronta para receber hóspede.
       {% endif %}
+      {% if hora_checkin %}O primeiro hóspede pode entrar às {{ hora_checkin|time:"H:i" }}.{% endif %}
     </p>
   </div>
   <div class="gov-barra" role="img"
@@ -86,30 +89,49 @@ A barra mostra a casa inteira repartida pelos quatro estados.{% endcomment %}
 {% endif %}
 
 <div class="gov-colunas">
+  {% comment %}O plano do dia: a ordem de atacar, que era a conta que a supervisora
+  fazia de cabeça cruzando esta tela com o mapa de reservas. Os grupos vêm na
+  ordem fixa — chegada sem quarto pronto, saída de hoje, ocupado a arrumar, o
+  resto — e só aparecem quando têm quarto dentro.{% endcomment %}
   <section class="cartao gov-bloco">
     <div class="secao-cabecalho">
-      <h2>Chegadas de hoje</h2>
-      {% if chegadas %}<span class="secao-contagem">{{ chegadas|length }}</span>{% endif %}
+      <h2>Plano do dia</h2>
+      {% if plano.a_fazer %}<span class="secao-contagem">{{ plano.a_fazer }}</span>{% endif %}
     </div>
     {% if sem_base %}
-      <p class="ajuda">Sem o módulo Reservas ativo não há como saber quem chega hoje.</p>
-    {% elif chegadas %}
-      <p class="bloco-subtitulo">Quarto precisa estar <strong>pronto</strong> antes do hóspede chegar.</p>
-      {% comment %}Lista, não tabela: são dois dados por chegada (o quarto e como
-      ele está) e assim a linha quebra sozinha no celular, sem rolagem dentro do
-      cartão.{% endcomment %}
-      <ul class="gov-chegadas">
-        {% for c in chegadas %}
-          <li>
-            <a href="{% url 'governanca:quartos' %}#quarto-{{ c.uh.pk }}" class="gov-chegada-quarto">
-              {{ c.uh.numero }}<small class="ajuda">{{ c.hospede }}</small>
-            </a>
-            <span class="selo selo-{{ c.situacao }}">{{ c.rotulo }}</span>
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p class="ajuda">Nenhuma chegada prevista para hoje.</p>
+      <p class="ajuda">Sem o módulo Reservas ativo não há como saber quem chega e quem sai hoje.</p>
+    {% endif %}
+    <p class="bloco-subtitulo">
+      {% if plano.a_entregar %}
+        {% if plano.atrasado %}
+          <strong>{{ plano.a_entregar }}</strong> quarto{{ plano.a_entregar|pluralize }} para entregar{% if plano.hora_checkin %} — o horário de entrada ({{ plano.hora_checkin|time:"H:i" }}) já passou{% endif %}.
+        {% else %}
+          <strong>{{ plano.a_entregar }}</strong> quarto{{ plano.a_entregar|pluralize }} para entregar antes do primeiro hóspede{% if plano.hora_checkin %}, às {{ plano.hora_checkin|time:"H:i" }}{% endif %}{% if plano.falta_tempo %} — {{ plano.falta_tempo }}{% endif %}.
+        {% endif %}
+      {% elif plano.a_fazer %}
+        Nenhum hóspede esperando quarto: dá para seguir a casa com calma.
+      {% else %}
+        Nada na fila da governança agora.
+      {% endif %}
+    </p>
+    {% for g in plano.grupos %}
+      <div class="gov-plano-grupo gov-plano-{{ g.nivel }}">
+        <p class="gov-plano-titulo"><span class="gov-plano-ponto" aria-hidden="true"></span>{{ g.rotulo }} <b>{{ g.quartos|length }}</b></p>
+        <p class="ajuda">{{ g.resumo }}</p>
+        <ul class="gov-chegadas">
+          {% for q in g.quartos %}
+            <li>
+              <a href="{% url 'governanca:quartos' %}#quarto-{{ q.uh.pk }}" class="gov-chegada-quarto">
+                {{ q.uh.numero }}{% if q.hospede %}<small class="ajuda">{{ q.hospede }}</small>{% endif %}
+              </a>
+              <span class="selo selo-{{ q.situacao }}">{{ q.rotulo }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endfor %}
+    {% if plano.tranquilos %}
+      <p class="ajuda gov-plano-sobra">Os outros <strong>{{ plano.tranquilos }}</strong> quarto{{ plano.tranquilos|pluralize }} não pedem nada agora.</p>
     {% endif %}
   </section>
 

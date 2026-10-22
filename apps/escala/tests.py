@@ -488,3 +488,65 @@ class RelatorioCalendarioTests(TestCase):
         # semanas: cada uma com 7 células, 1º de março (domingo) → 6 blanks à frente
         self.assertTrue(all(len(s) == 7 for s in d["semanas"]))
         self.assertEqual(d["semanas"][0][:6], [None] * 6)
+
+
+class DeTurnoTests(EscalaBase):
+    """Quem está trabalhando hoje — a pergunta que os outros módulos fazem.
+
+    A Governança escala a camareira do quarto e a Manutenção, o técnico da OS;
+    nenhum dos dois importa models daqui.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.gov = Turno.objects.create(nome="Manhã", setor="governanca",
+                                        inicio=time(7, 0), fim=time(15, 0))
+        self.maria = self._func("Maria")
+        self.joana = self._func("Joana")
+
+    def _com_login(self, func, username):
+        func.usuario = Usuario.objects.create_user(
+            username=username, password="senha-forte-123",
+            first_name=func.pessoa.nome)
+        func.save(update_fields=["usuario"])
+        return func.usuario
+
+    def test_lista_quem_esta_escalado_no_dia(self):
+        services.atribuir(self.gov, self.maria, self.hoje, self.op)
+        self.assertEqual([f.pk for f in services.de_turno(self.hoje)], [self.maria.pk])
+
+    def test_filtra_por_setor(self):
+        services.atribuir(self.gov, self.maria, self.hoje, self.op)
+        services.atribuir(self.turno, self.f1, self.hoje, self.op)   # recepção
+        equipe = services.de_turno(self.hoje, setor="governanca")
+        self.assertEqual([f.pk for f in equipe], [self.maria.pk])
+
+    def test_quem_esta_de_folga_nao_esta_de_turno(self):
+        services.atribuir(self.gov, self.maria, self.hoje, self.op)
+        services.registrar_ausencia(self.maria, "atestado", self.hoje, self.hoje, self.op)
+        self.assertEqual(services.de_turno(self.hoje, setor="governanca"), [])
+
+    def test_amanha_nao_e_hoje(self):
+        services.atribuir(self.gov, self.maria, self.hoje + timedelta(days=1), self.op)
+        self.assertEqual(services.de_turno(self.hoje, setor="governanca"), [])
+
+    def test_usuarios_de_turno_so_traz_quem_tem_login(self):
+        services.atribuir(self.gov, self.maria, self.hoje, self.op)
+        services.atribuir(self.gov, self.joana, self.hoje, self.op)
+        login = self._com_login(self.maria, "maria")
+        self.assertEqual(services.usuarios_de_turno(self.hoje, setor="governanca"),
+                         [login])
+
+    def test_login_desativado_fica_de_fora(self):
+        services.atribuir(self.gov, self.maria, self.hoje, self.op)
+        login = self._com_login(self.maria, "maria")
+        login.is_active = False
+        login.save(update_fields=["is_active"])
+        self.assertEqual(services.usuarios_de_turno(self.hoje, setor="governanca"), [])
+
+    def test_consultas_constantes(self):
+        """Uma equipe maior não vira uma consulta por pessoa."""
+        for nome in ("Ana2", "Bia", "Cida", "Dora"):
+            services.atribuir(self.gov, self._func(nome), self.hoje, self.op)
+        with self.assertNumQueries(2):
+            services.de_turno(self.hoje, setor="governanca")

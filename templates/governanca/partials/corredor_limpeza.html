@@ -1,11 +1,18 @@
 {% comment %}A casa inteira numa olhada — o mesmo corredor de portas do Mapa de
 quartos, só que pintado pelo estado da LIMPEZA. Cada porta leva para a linha
-daquele quarto na lista, onde está o próximo passo.{% endcomment %}
+daquele quarto na lista, onde está o próximo passo.
+
+Ordem de leitura do bloco, da mais forte para a mais fraca: NÚMERO → ESTADO →
+quem está no quarto → quem limpa. O estado saía num rótulo de 9 px em maiúsculas
+e o maior texto do bloco era o TIPO do quarto (dado que não muda nada do que
+fazer agora) — o dono vê isso de longe, e lia a coisa errada. O tipo foi para a
+dica; o rodapé só existe quando tem o que dizer, em vez de uma metade vazia.
+{% endcomment %}
 <div class="corredor corredor-gov" aria-label="Quartos por estado de limpeza">
   {% for p in portas %}
     <a href="{% url 'governanca:quartos' %}#quarto-{{ p.uh.pk }}"
-       class="porta {{ p.cor }} dica"
-       data-dica="- {{ p.uh.numero }}&#10;- {{ p.rotulo }}&#10;- {{ p.explicacao }}{% if p.camareira %}&#10;- {{ p.camareira }}{% endif %}{% if p.chegada %}&#10;- Chega hóspede hoje{% endif %}{% if p.divergente %}&#10;- {{ p.divergencia_rotulo }}{% endif %}">
+       class="porta porta-gov {{ p.cor }} dica"
+       data-dica="- {{ p.uh.numero }}&#10;- {{ p.rotulo }}&#10;- {{ p.explicacao }}{% if p.ocupacao %}&#10;- {{ p.ocupacao }}{% if p.hospede %}: {{ p.hospede }}{% endif %}{% endif %}&#10;- {{ p.tipo }}{% if p.camareira %}&#10;- Limpa: {{ p.camareira }}{% endif %}{% if p.chegada %}&#10;- Chega hóspede hoje{% endif %}{% if p.divergente %}&#10;- {{ p.divergencia_rotulo }}{% endif %}">
       <span class="porta-topo">
         <span class="porta-num">{{ p.uh.numero|cut:"Quarto " }}</span>
         <span class="porta-topo-marcas">
@@ -13,11 +20,18 @@ daquele quarto na lista, onde está o próximo passo.{% endcomment %}
           <span class="porta-fecho" aria-hidden="true"></span>
         </span>
       </span>
-      <span class="porta-selo">{{ p.rotulo }}</span>
-      <span class="porta-nome">{% if p.camareira %}{{ p.camareira }}{% elif p.bloqueado %}Manutenção{% else %}{{ p.uh.tipo.nome }}{% endif %}</span>
-      <span class="porta-rodape">
-        {% if p.divergente %}<span class="porta-flag">{{ p.divergencia_rotulo }}</span>{% endif %}
-      </span>
+      {% comment %}O estado é o que mais se lê depois do número: texto grande, na
+      cor do próprio estado (contraste AA sobre o painel escuro).{% endcomment %}
+      <span class="porta-estado">{{ p.rotulo }}</span>
+      {% if p.ocupacao %}
+        <span class="porta-ocupacao">{{ p.ocupacao }}{% if p.hospede %} · {{ p.hospede }}{% endif %}</span>
+      {% endif %}
+      {% if p.camareira or p.divergente %}
+        <span class="porta-rodape">
+          {% if p.camareira %}<span class="porta-quem">{{ p.camareira }}</span>{% endif %}
+          {% if p.divergente %}<span class="porta-flag">{{ p.divergencia_rotulo }}</span>{% endif %}
+        </span>
+      {% endif %}
     </a>
   {% endfor %}
 </div>
@@ -27,3 +41,12 @@ daquele quarto na lista, onde está o próximo passo.{% endcomment %}
        data-dica="{{ e.resumo }}"><i></i>{{ e.rotulo }} <b>{{ e.n }}</b></a>
   {% endfor %}
 </div>
+{% comment %}A outra metade da leitura: a casa por OCUPAÇÃO. Texto, não cápsula —
+quem está dentro é dado, e o estado da limpeza (que pede ação) já tem os chips
+acima.{% endcomment %}
+{% if ocupacao %}
+<p class="corredor-ocupacao">
+  <span class="letreiro">A casa hoje</span>
+  {% for o in ocupacao %}<span class="rotulo-dado dica" data-dica="{{ o.ajuda }}">{{ o.rotulo }} <b>{{ o.n }}</b></span>{% endfor %}
+</p>
+{% endif %}

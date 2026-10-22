@@ -1,0 +1,19 @@
+{% comment %}Modal da casa: a camareira abre o chamado da manutenção sem sair da
+fila. Troca só a fila e fecha sozinho.{% endcomment %}
+<form class="modal-form" method="post"
+      action="{% url 'governanca:reportar' uh.pk %}"
+      hx-post="{% url 'governanca:reportar' uh.pk %}"
+      hx-target="#gov-fila" hx-swap="innerHTML"
+      hx-on::after-request="if (event.detail.successful) fecharModal()">
+  <header class="modal-cabecalho">
+    <h2>Problema no {{ uh.numero }}</h2>
+    <button type="button" class="modal-fechar" onclick="fecharModal()" aria-label="Fechar">&times;</button>
+  </header>
+  <div class="modal-corpo">
+    {% include "governanca/partials/reportar_campos.html" %}
+  </div>
+  <div class="modal-acoes">
+    <button type="button" class="botao-neutro" onclick="fecharModal()">Cancelar</button>
+    <button type="submit" class="botao-primario">Abrir chamado</button>
+  </div>
+</form>
