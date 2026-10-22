@@ -37,13 +37,16 @@ A barra mostra a casa inteira repartida pelos quatro estados.{% endcomment %}
       <span class="kpi-rotulo letreiro">Progresso do dia</span>
       <p class="gov-progresso-num"><strong>{{ prontos }}</strong> de {{ total }} prontos</p>
     </div>
+    {% comment %}A hora da entrada é o prazo do dia e aparece SEMPRE que Reservas
+    diz qual é — antes ela sumia junto com o "faltam N quartos", e a casa pronta
+    deixava de mostrar até quando ela precisa continuar pronta.{% endcomment %}
     <p class="gov-progresso-nota">
       {% if falta_para_pronto %}
-        Falta{{ falta_para_pronto|pluralize:"m" }} <strong>{{ falta_para_pronto }}</strong> quarto{{ falta_para_pronto|pluralize }} para a casa toda ficar pronta{% if hora_checkin %};
-        o primeiro hóspede pode entrar às {{ hora_checkin|time:"H:i" }}{% endif %}.
+        Falta{{ falta_para_pronto|pluralize:"m" }} <strong>{{ falta_para_pronto }}</strong> quarto{{ falta_para_pronto|pluralize }} para a casa toda ficar pronta.
       {% else %}
         Casa inteira pronta para receber hóspede.
       {% endif %}
+      {% if hora_checkin %}O primeiro hóspede pode entrar às {{ hora_checkin|time:"H:i" }}.{% endif %}
     </p>
   </div>
   <div class="gov-barra" role="img"

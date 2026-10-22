@@ -11,7 +11,18 @@ from django.db import models
 
 
 class StatusLimpeza(models.Model):
-    """Situação de limpeza atual de cada quarto."""
+    """Situação de limpeza atual de cada quarto.
+
+    **Quarto sem registro aqui = disponível.** O padrão era "Limpo", e num banco
+    novo (ou no dia em que a Governança é ativada numa casa que já roda) os 24
+    quartos apareciam como "Limpo — falta a supervisora conferir" e a tela
+    anunciava "Faltam 23 quartos para a casa ficar pronta": uma fila de inspeção
+    inventada, de quartos em que ninguém entrou. Quem nunca foi sujado não tem
+    nada pendente, então o padrão é o estado liberado (`INSPECIONADA` = "Pronto"),
+    que é o que o Mapa de quartos já assumia (`limpeza_cod` nulo → livre). A frase
+    da linha não finge inspeção: sem `atualizado_por`, a tela diz "sem faxina
+    registrada ainda" (ver `explicar_estado`).
+    """
 
     class Situacao(models.TextChoices):
         # Rótulos no masculino — concordam com "quarto" (Quarto 06 está limpo/sujo).
@@ -25,7 +36,8 @@ class StatusLimpeza(models.Model):
         related_name="limpeza", verbose_name="quarto",
     )
     situacao = models.CharField(
-        "situação", max_length=12, choices=Situacao.choices, default=Situacao.LIMPA
+        "situação", max_length=12, choices=Situacao.choices,
+        default=Situacao.INSPECIONADA,
     )
     atualizado_em = models.DateTimeField("atualizado em", auto_now=True)
     atualizado_por = models.ForeignKey(

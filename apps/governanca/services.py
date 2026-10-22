@@ -264,6 +264,11 @@ def explicar_estado(situacao, tarefa, status) -> str:
     if situacao == StatusLimpeza.Situacao.LIMPA:
         por = f" por {quem}" if quem else ""
         return f"Limpo{quando}{por}. Falta a supervisora conferir."
+    # "Pronto" sem ninguém no `atualizado_por` é o estado de nascimento do quarto
+    # (banco novo, ou módulo ativado numa casa que já roda): ninguém inspecionou,
+    # e a tela não inventa um carimbo que não existe.
+    if not getattr(status, "atualizado_por_id", None):
+        return "Sem faxina registrada ainda. Disponível para a recepção."
     return f"Conferido e aprovado{quando}. Pode receber hóspede."
 
 
@@ -289,7 +294,7 @@ def _estado_dos_quartos(dia=None) -> dict:
     )
     # Todos os status numa consulta só (com quem mexeu por último — a frase da linha
     # diz "limpo por Maria"). Quarto ainda sem registro aparece com a situação padrão
-    # (limpo) sem gravar nada: abrir a tela não escreve no banco.
+    # («Pronto» — ver `StatusLimpeza`) sem gravar nada: abrir a tela não escreve no banco.
     existentes = {
         s.uh_id: s for s in
         StatusLimpeza.objects.filter(uh__in=quartos).select_related("atualizado_por")
@@ -541,11 +546,20 @@ def visao_geral(dia=None) -> dict:
             "detalhe": "Ninguém na fila: escolha quem limpa.",
             "url": f"{url_quartos}?estado={StatusLimpeza.Situacao.SUJA}",
         })
-    a_conferir = sum(1 for ln in linhas if not ln["conferencia"] and not ln["bloqueado"])
+    # Só os quartos que o PMS diz OCUPADOS: a ronda existe para achar o hóspede que
+    # saiu sem baixa e o que entrou sem check-in. Contando a casa inteira, um banco
+    # novo (e toda manhã antes da ronda) abria com "24 quartos sem ronda hoje" — a
+    # mesma regra que a varredura da Auditoria já aplica.
+    a_conferir = sum(
+        1 for ln in linhas
+        if not ln["conferencia"] and not ln["bloqueado"]
+        and (pms.get(ln["uh"].pk) or {}).get("ocupado")
+    )
     if a_conferir and not dados["sem_base"]:
         atencao.append({
             "nivel": "info",
-            "rotulo": f"{a_conferir} quarto{s(a_conferir)} sem ronda hoje",
+            "rotulo": f"{a_conferir} quarto{s(a_conferir)} ocupado{s(a_conferir)} "
+                      "sem ronda hoje",
             "detalhe": "Ninguém registrou o que viu dentro.",
             "url": url_quartos,
         })

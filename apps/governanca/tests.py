@@ -156,7 +156,60 @@ class PainelSemEscritaTests(TestCase):
         dados = painel_limpeza()
         self.assertEqual(StatusLimpeza.objects.count(), 0)
         self.assertEqual(len(dados["linhas"]), 3)
-        self.assertTrue(all(ln["situacao"] == StatusLimpeza.Situacao.LIMPA for ln in dados["linhas"]))
+        self.assertTrue(all(ln["situacao"] == StatusLimpeza.Situacao.INSPECIONADA
+                            for ln in dados["linhas"]))
+
+
+class BancoNovoTests(TestCase):
+    """Casa que acabou de entrar no sistema não tem fila de inspeção inventada.
+
+    O padrão era "Limpo", que na nossa tela significa "limpeza feita, falta a
+    supervisora conferir": num banco novo os 24 quartos entravam na fila da
+    supervisora e a visão geral dizia "Faltam 23 quartos" sem ninguém ter sujado
+    nada. Quarto sem registro de limpeza = disponível.
+    """
+
+    def setUp(self):
+        self.user = Usuario.objects.create_superuser(
+            username="nova", password="senha-forte-123")
+        self.tipo = TipoUH.objects.create(nome="Std", tarifa_base=Decimal("200"))
+        for n in range(1, 25):
+            UH.objects.create(numero=f"Quarto {n:02d}", tipo=self.tipo)
+        StatusLimpeza.objects.all().delete()   # é o que um banco novo tem: nada
+
+    def test_casa_inteira_pronta_sem_nenhum_registro(self):
+        dados = services.visao_geral()
+        self.assertEqual(dados["total"], 24)
+        self.assertEqual(dados["prontos"], 24)
+        self.assertEqual(dados["falta_para_pronto"], 0)
+        self.assertEqual(StatusLimpeza.objects.count(), 0)   # a tela não escreve
+
+    def test_casa_vazia_nao_cobra_ronda_de_quarto_nenhum(self):
+        """A ronda procura hóspede sem check-in e saída sem baixa: sem ninguém em
+        casa não há nada para conferir (antes: "24 quartos sem ronda hoje")."""
+        dados = services.visao_geral()
+        self.assertEqual(dados["atencao"], [])
+        self.assertEqual(dados["contagem"][StatusLimpeza.Situacao.LIMPA], 0)
+
+    def test_a_tela_nao_finge_que_a_supervisora_conferiu(self):
+        """"Pronto" sem ninguém no `atualizado_por` não vira carimbo de inspeção."""
+        linha = services.painel_limpeza()["linhas"][0]
+        self.assertEqual(linha["situacao_label"], "Pronto")
+        self.assertIn("Sem faxina registrada ainda", linha["explicacao"])
+        self.assertNotIn("Conferido", linha["explicacao"])
+
+    def test_inspecao_de_verdade_diz_que_foi_conferida(self):
+        uh = UH.objects.get(numero="Quarto 01")
+        services.inspecionar(uh, self.user)
+        linha = next(ln for ln in services.painel_limpeza()["linhas"]
+                     if ln["uh"].pk == uh.pk)
+        self.assertIn("Conferido e aprovado", linha["explicacao"])
+
+    def test_checkout_tira_o_quarto_do_pronto(self):
+        services.abrir_faxina(UH.objects.get(numero="Quarto 01"), usuario=self.user)
+        dados = services.visao_geral()
+        self.assertEqual(dados["prontos"], 23)
+        self.assertEqual(dados["falta_para_pronto"], 1)
 
 
 class PainelHtmxTests(GovernancaBase):
@@ -962,6 +1015,8 @@ class VisaoGeralTests(GovernancaBase):
 
     def test_progresso_do_dia_conta_os_prontos(self):
         services.inspecionar(self.uh, self.user)
+        for uh in (self.uh2, self.uh3):
+            services.abrir_faxina(uh, usuario=self.user)
         dados = services.visao_geral()
         self.assertEqual((dados["prontos"], dados["total"]), (1, 3))
         self.assertEqual(dados["falta_para_pronto"], 2)
@@ -970,6 +1025,7 @@ class VisaoGeralTests(GovernancaBase):
     def test_a_porta_ganha_a_cor_do_estado(self):
         services.abrir_faxina(self.uh, usuario=self.user)
         services.inspecionar(self.uh2, self.user)
+        services.definir_status(self.uh3, StatusLimpeza.Situacao.LIMPA, self.user)
         cores = {p["uh"].numero: p["cor"] for p in services.visao_geral()["portas"]}
         self.assertEqual(cores["Quarto 01"], "limp-suja")
         self.assertEqual(cores["Quarto 02"], "limp-inspecionada")   # pronto
@@ -983,6 +1039,7 @@ class VisaoGeralTests(GovernancaBase):
         self.assertTrue(porta["bloqueado"])
 
     def test_atencao_aponta_inspecao_esperando_e_leva_a_lista_filtrada(self):
+        services.definir_status(self.uh, StatusLimpeza.Situacao.LIMPA, self.user)
         dados = services.visao_geral()
         item = next(a for a in dados["atencao"] if "esperando inspeção" in a["rotulo"])
         self.assertEqual(item["nivel"], "aviso")
@@ -1074,8 +1131,13 @@ class VisaoGeralComReservasTests(RondaBase):
         self.assertEqual(dados["chegadas"][0]["hospede"], "Quem chega")
 
     def test_a_tela_mostra_o_horario_de_entrada_do_hospede(self):
+        """O prazo do dia aparece com a casa pronta e com a casa atrasada."""
         self.assertContains(self.client.get(reverse("governanca:painel")),
-                            "o primeiro hóspede pode entrar")
+                            "O primeiro hóspede pode entrar")
+        services.abrir_faxina(self.uh, usuario=self.user)
+        r = self.client.get(reverse("governanca:painel"))
+        self.assertContains(r, "O primeiro hóspede pode entrar")
+        self.assertContains(r, "para a casa toda ficar pronta")
 
     def test_o_bloco_de_chegadas_lista_quarto_e_hospede(self):
         self._chegada_hoje(self.uh, nome="Ana Chegando")
