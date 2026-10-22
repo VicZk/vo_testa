@@ -321,6 +321,10 @@ CSRF_COOKIE_NAME = "vo_testa_csrftoken"
 # serve vários projetos por caminho): o nginx tira o prefixo e o Django o devolve em
 # toda URL que gera ({% url %}, reverse, redirect, STATIC_URL/MEDIA_URL, que são
 # relativos de propósito). Vazio na produção: nada muda lá.
+# O SecurityMiddleware compara a isenção de HTTPS com o caminho COMPLETO: sob um
+# prefixo ele é "votesta/healthz/", e um "^healthz" deixava o healthcheck em HTTP
+# levando 301 (o container nunca ficava saudável).
+HEALTHZ_SEM_REDIRECT = r"(^|/)healthz/?$"
 URL_PREFIX = os.environ.get("URL_PREFIX", "").strip().strip("/")
 if URL_PREFIX:
     FORCE_SCRIPT_NAME = "/" + URL_PREFIX
@@ -352,7 +356,7 @@ if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SECURE_SSL_REDIRECT = True
     # Healthcheck do Railway chega em HTTP — não redirecionar.
-    SECURE_REDIRECT_EXEMPT = [r"^healthz/?$"]
+    SECURE_REDIRECT_EXEMPT = [HEALTHZ_SEM_REDIRECT]
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_HSTS_SECONDS = 60 * 60 * 24 * 30

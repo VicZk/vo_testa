@@ -1472,6 +1472,22 @@ class PrefixoDeUrlTests(TestCase):
         self.assertEqual(req.path, "/votesta/hospede/abc/")
         self.assertEqual(_ator(req).username, "_portal")
 
+    def test_healthcheck_em_http_nao_e_redirecionado_sob_prefixo(self):
+        """O SecurityMiddleware compara a isenção com o caminho COMPLETO; sob /votesta o
+        "^healthz" não casava e o healthcheck em HTTP levava 301 (achado na VPS)."""
+        from django.conf import settings
+        from django.middleware.security import SecurityMiddleware
+        from django.test import RequestFactory
+
+        isencao = [settings.HEALTHZ_SEM_REDIRECT]
+        with override_settings(SECURE_SSL_REDIRECT=True, SECURE_REDIRECT_EXEMPT=isencao):
+            mw = SecurityMiddleware(lambda request: None)
+            for script, caminho in (("", "/healthz/"), ("/votesta", "/healthz/")):
+                req = RequestFactory().get(caminho, SCRIPT_NAME=script)
+                self.assertIsNone(mw.process_request(req), f"{script}{caminho}")
+            req = RequestFactory().get("/crm/", SCRIPT_NAME="/votesta")
+            self.assertEqual(mw.process_request(req).status_code, 301)
+
     def test_sem_prefixo_nada_muda(self):
         from django.conf import settings
 
