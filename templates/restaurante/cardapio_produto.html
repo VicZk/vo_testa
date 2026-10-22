@@ -1,4 +1,4 @@
-{% extends "base.html" %}{% load moeda %}
+{% extends "base.html" %}{% load moeda nucleo_extras %}
 {% block titulo %}Escolhas · {{ produto.nome }}{% endblock %}
 {% block conteudo %}
 <a class="voltar" href="{% url 'restaurante:cardapio_config' %}">Cardápio e adicionais</a>
@@ -10,10 +10,10 @@
   <form class="painel-bloco" method="post">
     {% csrf_token %}<h2>{% if grupo.pk %}Editar {{ grupo.nome }}{% else %}Novo grupo{% endif %}</h2>
     {{ form.non_field_errors }}
-    <div class="cardapio-campos">{% for campo in form %}<div class="campo">{{ campo.label_tag }}{{ campo }}{{ campo.errors }}</div>{% endfor %}</div>
+    <div class="cardapio-campos">{% for campo in form %}<div class="campo">{{ campo|rotulo }}{{ campo }}{{ campo.errors }}</div>{% endfor %}</div>
     <h3>Opções do cliente</h3><p class="ajuda">O adicional é cobrado por unidade. Se consumir um produto separado, informe o produto e a quantidade na unidade do estoque. Desative opções que saíram do cardápio.</p>
     {{ opcoes.management_form }}{{ opcoes.non_form_errors }}
-    {% for opcao in opcoes %}<fieldset class="cardapio-opcao"><legend>Opção {{ forloop.counter }}</legend>{{ opcao.non_field_errors }}{% for campo in opcao %}{% if campo.is_hidden %}{{ campo }}{% else %}<div class="campo">{{ campo.label_tag }}{{ campo }}{{ campo.errors }}</div>{% endif %}{% endfor %}</fieldset>{% endfor %}
+    {% for opcao in opcoes %}<fieldset class="cardapio-opcao"><legend>Opção {{ forloop.counter }}</legend>{{ opcao.non_field_errors }}{% for campo in opcao %}{% if campo.is_hidden %}{{ campo }}{% else %}<div class="campo">{{ campo|rotulo }}{{ campo }}{{ campo.errors }}</div>{% endif %}{% endfor %}</fieldset>{% endfor %}
     <div class="acoes"><button class="botao-primario" type="submit">Salvar escolhas</button></div>
   </form>
 </div>

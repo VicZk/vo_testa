@@ -1,5 +1,6 @@
 from datetime import timedelta
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -28,7 +29,9 @@ class VarreduraTests(TestCase):
             checkout=hoje + timedelta(days=checkout_offset),
             status=Reserva.Status.CONFIRMADA, valor_diaria=Decimal("200"), criado_por=self.op,
         )
-        r.fazer_checkin(self.op)
+        # A entrada ocorreu no início da estadia; a auditoria roda hoje, com saída atrasada.
+        with patch("apps.reservas.services.timezone.localdate", return_value=r.checkin):
+            r.fazer_checkin(self.op)
         return r
 
     def test_detecta_checkout_vencido(self):

@@ -188,7 +188,7 @@ class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
             ("comercial:email_campanha_detalhe", [self.email.pk],
              [(".pagina-cabecalho", ".kpis-el"), (".kpis-el", ".cartao-el")]),
             ("loja:pdv", [], [(".pagina-cabecalho", ".pdv-shell")]),
-            ("caixa", [], [(".cartoes-indicadores", ".colunas")]),
+            ("caixa", [], [(".caixa-indicadores", ".caixa-operacao")]),
             ("lancamentos", [], [(".cartoes-indicadores", ".filtros")]),
         ]
         for nome in ("pagina_nova", "pagina_editar", "resposta_nova", "email_campanha_nova", "email_template_novo"):

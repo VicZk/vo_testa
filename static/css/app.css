@@ -6895,7 +6895,7 @@ body.escala-dragging .escala-drop { cursor: copy; }
 .cozinha-quadro { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; align-items:start; }
 .cozinha-coluna { min-width:0; padding:1rem; background:var(--papel); border:1px solid var(--fio); border-radius:16px; }
 .cozinha-coluna > h2 { display:flex; justify-content:space-between; gap:.5rem; font-size:1.05rem; }
-.cozinha-pedido { background:var(--branco, #fff); padding:1rem; margin-block:.8rem; border:1px solid var(--fio); border-radius:12px; overflow-wrap:anywhere; }
+.cozinha-pedido { background:var(--superficie); padding:1rem; margin-block:.8rem; border:1px solid var(--fio); border-radius:12px; overflow-wrap:anywhere; }
 .cozinha-pedido header, .cozinha-pedido form { display:flex; justify-content:space-between; flex-wrap:wrap; gap:.6rem; }
 .cozinha-pedido header { font-size:.82rem; }
 .cozinha-pedido h3 { font-size:1.05rem; margin:.8rem 0; }
