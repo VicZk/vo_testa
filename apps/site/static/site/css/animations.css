@@ -158,7 +158,16 @@ header { view-transition-name: site-header; }
 }
 
 /* Menu mobile */
+/* A navegação completa, incluindo os acessos, precisa desta largura. Em
+   tablets a gaveta evita que os últimos links saiam do cabeçalho. */
+.site-nav-desktop { display: none; }
+@media (min-width: 1440px) {
+    .site-nav-desktop { display: flex; }
+    .site-nav-toggle, .site-nav-mobile { display: none; }
+}
 .mobile-menu {
+    height: 100dvh; overflow-y: auto; overscroll-behavior: contain;
+    padding-top: calc(var(--header-offset, 5.5rem) + .5rem); padding-bottom: 1.5rem;
     transform: translateX(100%);
     /* Fechado, sai da ordem de tabulação. Estava só fora da tela por
        translateX: no celular o Tab percorria os 11 links invisíveis do menu

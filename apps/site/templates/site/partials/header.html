@@ -10,7 +10,7 @@
         </a>
 
         <!-- Nav Desktop -->
-        <nav class="hidden lg:flex items-center gap-4 xl:gap-6 text-sm text-pergaminho/80 whitespace-nowrap">
+        <nav class="site-nav-desktop items-center gap-4 xl:gap-6 text-sm text-pergaminho/80 whitespace-nowrap">
             <a href="{% url 'core:home' %}#inicio" class="hover:text-lampiao transition">Início</a>
             <a href="{% url 'core:home' %}#sobre" class="hover:text-lampiao transition">Nossa História</a>
             <a href="{% url 'core:home' %}#experiencias" class="hover:text-lampiao transition">Experiências</a>
@@ -22,7 +22,7 @@
         </nav>
 
         <!-- Acessos + CTA Desktop -->
-        <div class="hidden lg:flex items-center gap-4 xl:gap-5 text-sm whitespace-nowrap shrink-0">
+        <div class="site-nav-desktop items-center gap-4 xl:gap-5 text-sm whitespace-nowrap shrink-0">
             <a href="{% url 'core:minha_reserva' %}" class="text-pergaminho/80 hover:text-lampiao transition">Minha reserva</a>
             {# /45 sobre o noturno dava ~2,2:1 — texto ilegível, não "discreto". #}
             <a href="{% url 'login' %}" class="text-pergaminho/70 hover:text-lampiao transition">Acesso da equipe</a>
@@ -34,7 +34,7 @@
 
         <!-- Mobile menu button -->
         {# p-3 (48px) e não p-2 (40px): é o alvo de toque mais usado do site. #}
-        <button id="menuBtn" class="lg:hidden text-pergaminho p-3 -mr-3 shrink-0"
+        <button id="menuBtn" class="site-nav-toggle text-pergaminho p-3 -mr-3 shrink-0"
                 aria-controls="mobileMenu" aria-expanded="false" aria-label="Abrir menu">
             <svg id="menuIcon" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
             <svg id="closeIcon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
@@ -43,10 +43,10 @@
 </header>
 
 <!-- Overlay -->
-<div id="menuOverlay" class="fixed inset-0 bg-noturno/60 z-40 mobile-overlay lg:hidden"></div>
+<div id="menuOverlay" class="fixed inset-0 bg-noturno/60 z-40 mobile-overlay site-nav-mobile"></div>
 
 <!-- Menu Mobile Slide-in -->
-<nav id="mobileMenu" class="mobile-menu fixed top-0 right-0 h-full w-72 bg-noturno z-40 lg:hidden shadow-2xl pt-20 px-6">
+<nav id="mobileMenu" class="mobile-menu fixed top-0 right-0 w-72 bg-noturno z-40 site-nav-mobile shadow-2xl px-6">
     <div class="flex flex-col gap-1">
         <a href="{% url 'core:home' %}#inicio" class="mobile-link text-pergaminho/80 text-lg py-3 border-b border-pergaminho/10 hover:text-lampiao transition">Início</a>
         <a href="{% url 'core:home' %}#sobre" class="mobile-link text-pergaminho/80 text-lg py-3 border-b border-pergaminho/10 hover:text-lampiao transition">Nossa História</a>

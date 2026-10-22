@@ -1078,6 +1078,49 @@ class SiteNoCelularE2ETests(_UnidadeVendavelMixin, _BaseE2E):
         self.page.evaluate("() => window.scrollTo(0, document.scrollingElement.scrollHeight)")
         self.page.wait_for_timeout(250)
 
+    def test_cabecalho_cabe_no_tablet_e_menu_curto_permite_reservar(self):
+        p = self.page
+        p.goto(self.url("/"))
+        p.evaluate("document.fonts.ready")
+        # A instalação publicada acrescenta este comparador ao cabeçalho.
+        # Ele também precisa caber, sem alterar o proxy durante o teste.
+        p.evaluate("""() => {
+            for (const selector of ['header nav', '#mobileMenu > div']) {
+                const nav = document.querySelector(selector), link = document.createElement('a');
+                link.href = '#'; link.textContent = 'Versão anterior';
+                link.className = nav.querySelector('a').className;
+                nav.append(link);
+            }
+        }""")
+        for largura in (320, 390, 821, 1024, 1152, 1280, 1366, 1440, 1600):
+            with self.subTest(largura=largura):
+                p.set_viewport_size({"width": largura, "height": 900})
+                self.assertEqual(p.locator("#menuBtn").is_visible(), largura < 1440)
+                caixas = p.locator("header a, header button").evaluate_all("""els => els
+                    .map(e => { const r=e.getBoundingClientRect();
+                        return {nome:e.textContent.trim(),left:r.left,right:r.right,width:r.width,height:r.height}; })
+                    .filter(r => r.width && r.height).sort((a,b) => a.left-b.left)""")
+                for i, caixa in enumerate(caixas):
+                    self.assertGreaterEqual(caixa["left"], 0, caixa)
+                    self.assertLessEqual(caixa["right"], largura, caixa)
+                    if i:
+                        self.assertGreaterEqual(caixa["left"], caixas[i - 1]["right"] - 1, caixas)
+        p.set_viewport_size({"width": 1024, "height": 390})
+        p.get_by_role("button", name="Abrir menu", exact=True).click()
+        cta = p.locator("#mobileMenu").get_by_role("link", name="Fazer Reserva", exact=True)
+        cta.scroll_into_view_if_needed()
+        medida = cta.evaluate("""el => {
+            const r=el.getBoundingClientRect(), alvo=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);
+            return {top:r.top,bottom:r.bottom,header:document.querySelector('header').getBoundingClientRect().bottom,
+                acessivel:alvo===el || el.contains(alvo)};
+        }""")
+        self.assertGreaterEqual(medida["top"], medida["header"])
+        self.assertLessEqual(medida["bottom"], 390)
+        self.assertTrue(medida["acessivel"])
+        p.set_viewport_size({"width": 1440, "height": 900})
+        p.wait_for_function("document.body.style.overflow !== 'hidden' && document.querySelector('#menuBtn').getAttribute('aria-expanded') === 'false'")
+        self.assertGreater(p.evaluate("document.activeElement.getBoundingClientRect().width"), 0)
+
     def test_aviso_de_cookies_reserva_o_proprio_espaco(self):
         """Sem a folga, quem abre o site pela primeira vez não vê o que está
         embaixo do aviso — e não há como rolar mais, a página já acabou."""

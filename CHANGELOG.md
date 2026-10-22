@@ -9,6 +9,25 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 22/10/2026 — Cabeçalho completo em tablets e menu com rolagem
+
+**O que melhorou**
+- Os acessos da equipe e da reserva permanecem disponíveis em tablets: abaixo
+  de 1440 px, o site usa o menu lateral. O ajuste inclui o link de comparação
+  acrescentado pela instalação publicada.
+- Em telas baixas, o menu permite rolar até Fazer Reserva. Ao ampliar para
+  desktop, ele fecha e libera a rolagem da página, mantendo o foco visível.
+
+**O que foi modificado**
+- Template do cabeçalho, estilos públicos e tratamento de redimensionamento.
+- Regressão em nove larguras, de 320 a 1600 px, com teste de rolagem em paisagem.
+  Conferência manual em celular, tablet, tela baixa e transição para desktop.
+- Suíte completa aprovada: 1.856 testes, incluindo 63 de navegador, em 420,729 s,
+  sem falhas ou pulos; Ruff e sintaxe do JavaScript aprovados.
+- Evidências antes e depois em `docs/REVISAO_USABILIDADE_2026-10-22.md`.
+
+---
+
 ## 22/10/2026 — PDV por categorias, galeria dentro da tela e revisão visual do CRM
 
 **O que melhorou**

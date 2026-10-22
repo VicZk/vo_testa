@@ -394,3 +394,42 @@ Capturas da sessão de Computer Use, com dados e imagens de teste:
   [computador](evidencias/usabilidade-2026-10-22/galeria-depois-1440.jpg).
 - [Fornecedor no Marketing](evidencias/usabilidade-2026-10-22/marketing-fornecedor-depois-390.jpg)
   e [resposta aos recados](evidencias/usabilidade-2026-10-22/recados-resposta-depois-390.jpg).
+
+Publicação da entrega 6 confirmada: commit `5bd4c5f6b8f1ab43c72fc5e7f1fb33c3b372914b`,
+[CI aprovado](https://github.com/VicZk/vo_testa/actions/runs/39768873701), aplicação
+ativada às 08:21:37 de 22/10 (Brasília). O CI executou 1.855 casos na tarefa de
+Django, com os 62 de navegador separados para a tarefa dedicada, que também
+passou. Os 12 arquivos conferidos coincidiram entre commit, checkout, imagem e
+container; aplicação e banco saudáveis, sem reinícios ou migrations pendentes,
+sete URLs públicas com resposta 200 e backup conferido por SHA-256.
+
+## Complemento — Cabeçalho em tablets e menu em telas baixas
+
+A checagem visual da publicação revelou um corte adicional em 1024 px: os
+acessos da equipe e da reserva escapavam pela direita. A instalação pública
+inclui também o link de comparação com a versão anterior, ausente na base
+local. A regressão reproduz esse link para medir o cabeçalho completo.
+
+A navegação passa a usar o menu lateral abaixo de 1440 px, largura na qual os
+links completos cabem. O menu ocupa a altura visível, tem rolagem própria e
+espaço acima do primeiro item. Em telas baixas, é possível alcançar a reserva
+sem perder o botão de fechar. Ao ampliar para desktop com o menu aberto, ele
+fecha, libera a rolagem da página e transfere o foco a um link visível.
+
+O teste confere limites e ausência de sobreposição em 320, 390, 821, 1024,
+1152, 1280, 1366, 1440 e 1600 px; também verifica a reserva em 1024 × 390 e a
+transição para desktop. Os seis testes públicos focados passaram em 18,485 s.
+A sessão de Computer Use confirmou abertura em 1024 px, rolagem até a reserva
+em 1024 × 390, fechamento ao ampliar para 1440 px e menu em 390 × 844.
+
+A rodada integral final passou: **1.856 testes em 420,729 s, sem falhas ou pulos**,
+incluindo 63 testes de navegador. Os 13 arquivos de implementação e testes
+conferidos permaneceram idênticos antes e depois da execução. Ruff, sintaxe do
+JavaScript e verificação de espaços do Git aprovados; Tailwind recompilado com
+a versão fixada 3.4.19. Nenhum model ou migration foi alterado.
+
+Capturas: [cabeçalho publicado antes](evidencias/usabilidade-2026-10-22/cabecalho-antes-1024.jpg),
+[menu corrigido em tablet](evidencias/usabilidade-2026-10-22/cabecalho-depois-1024.jpg),
+[reserva em tela baixa](evidencias/usabilidade-2026-10-22/cabecalho-menu-baixo-1024.jpg)
+e [menu no celular](evidencias/usabilidade-2026-10-22/cabecalho-menu-390.jpg).
+As capturas após o ajuste foram feitas na base local fictícia antes da publicação.

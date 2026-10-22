@@ -45,6 +45,13 @@ if (menuBtn) {
     menuBtn.addEventListener('click', toggleMenu);
     menuOverlay.addEventListener('click', toggleMenu);
 
+    window.addEventListener('resize', () => {
+        if (menuOpen && !menuBtn.getClientRects().length) {
+            toggleMenu();
+            document.querySelector('.site-nav-desktop a')?.focus({ preventScroll: true });
+        }
+    });
+
     document.querySelectorAll('.mobile-link').forEach(link => {
         link.addEventListener('click', () => {
             if (menuOpen) toggleMenu();
