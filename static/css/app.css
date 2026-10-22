@@ -3707,6 +3707,59 @@ div.porta.dica[data-dica] { cursor: default; }
 
 @media (max-width: 900px) { .pdv { grid-template-columns: 1fr; } .pdv-painel { position: static; } }
 
+/* A Loja responde à largura útil, inclusive com o menu lateral aberto. */
+.pdv-shell { container: pdv / inline-size; min-width: 0; }
+.pdv-loja { grid-template-columns: minmax(0, 1.35fr) minmax(min(320px, 100%), 1fr); }
+.pdv-loja > *, .pdv-loja .pdv-produtos-topo > * { min-width: 0; }
+.pdv-loja .pdv-local { flex: 0 1 220px; }
+.pdv-etapas { display: none; }
+.pdv-categorias { display: flex; flex-wrap: wrap; gap: .4rem; }
+.pdv-categorias .filtro-chip { min-height: 44px; gap: .5rem; white-space: normal; overflow-wrap: anywhere; }
+.pdv-categorias .filtro-chip[aria-pressed="true"] { color: var(--noturno); background: var(--lampiao-claro); border-color: var(--lampiao); }
+.pdv-categorias .filtro-chip span:last-child { font-variant-numeric: tabular-nums; }
+.pdv-catalogo-nota { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .4rem; margin: .75rem 0; font-size: .78rem; color: var(--tinta-suave); }
+.pdv-catalogo-nota .botao-texto { min-height: 44px; }
+.pdv-loja .pdv-lista { grid-template-columns: repeat(auto-fill, minmax(min(172px, 100%), 1fr)); }
+.pdv-loja .pdv-produto { min-width: 0; min-height: 142px; gap: .45rem; transition: border-color var(--mov-rapido) var(--curva), box-shadow var(--mov-rapido) var(--curva), transform var(--mov-toque) var(--curva); }
+.pdv-loja .pdv-produto-nome { overflow-wrap: anywhere; flex: 1; }
+.pdv-loja .pdv-produto-meta { align-items: flex-start; flex-direction: column; gap: .2rem; }
+.pdv-produto-categoria { color: var(--tinta-suave); font-size: .68rem; text-transform: uppercase; letter-spacing: .06em; overflow-wrap: anywhere; }
+.pdv-loja .pdv-produto.selecionado { border-color: var(--lampiao); background: color-mix(in srgb, var(--lampiao) 10%, var(--superficie)); opacity: 1; }
+.pdv-selecionado { font-size: .72rem; font-weight: 650; color: var(--lampiao-tinta); }
+.pdv-loja .pdv-produto:active:not(:disabled) { transform: scale(.98); }
+.pdv-loja .pdv-painel { position: sticky; transition: border-color var(--mov-rapido) var(--curva), box-shadow var(--mov-rapido) var(--curva); }
+.pdv-loja .pdv-painel.pdv-recebe-arrasto { border-color: var(--lampiao); box-shadow: var(--foco-anel-suave), var(--sombra-2); }
+.pdv-loja .pdv-painel-topo { flex-wrap: wrap; gap: .4rem; padding: 1rem; }
+.pdv-loja .pdv-carrinho { max-height: 42dvh; padding: .4rem .6rem; }
+.pdv-loja .pdv-item { grid-template-columns: minmax(0, 1fr) auto; gap: .25rem .6rem; padding: .65rem .4rem; border-bottom: 1px solid var(--fio); border-radius: 0; }
+.pdv-loja .pdv-item:last-child { border-bottom: 0; }
+.pdv-loja .pdv-item-nome { white-space: normal; overflow-wrap: anywhere; line-height: 1.4; }
+.pdv-loja .pdv-qtd { justify-self: start; border-radius: var(--raio-p); padding: 0; }
+.pdv-loja .pdv-qtd button, .pdv-loja .pdv-x { width: 44px; height: 44px; min-width: 44px; border-radius: var(--raio-p); }
+.pdv-loja .pdv-qtd button:disabled { opacity: .4; cursor: not-allowed; }
+.pdv-loja .pdv-sub { justify-self: end; font-size: .95rem; }
+.pdv-estoque-nota { margin: .4rem 1rem .8rem; font-size: .72rem; line-height: 1.4; color: var(--tinta-suave); }
+.pdv-loja .pdv-resumo { padding: 1rem; }
+.pdv-loja .pdv-painel .pdv-cliente, .pdv-loja .pdv-painel .pdv-seg, .pdv-loja .pdv-painel > .select-wrap { margin-left: 1rem; margin-right: 1rem; }
+.pdv-loja .pdv-seg { border-radius: var(--raio); }
+.pdv-loja .pdv-seg button { min-height: 44px; border-radius: var(--raio-p); }
+.pdv-loja .input-reais input { min-height: 44px; }
+.pdv-loja .pdv-finalizar { margin: 1rem !important; flex-wrap: wrap; }
+.pdv-aviso { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+@media (pointer: coarse) { .pdv-dica-arrasto { display: none; } }
+@container pdv (max-width: 760px) {
+  .pdv-loja { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+  .pdv-etapas { display: grid; grid-template-columns: 1fr 1.4fr; gap: .3rem; position: sticky; top: calc(var(--topbar-h) + .4rem); z-index: 8; padding: .3rem; border: 1px solid var(--fio); border-radius: var(--raio); background: var(--superficie); box-shadow: var(--sombra-1); scroll-margin-top: calc(var(--topbar-h) + .4rem); }
+  .pdv-etapas button { min-height: 52px; min-width: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: .1rem; padding: .35rem; border: 0; border-radius: var(--raio-p); background: none; color: var(--tinta-suave); font: inherit; font-size: .83rem; cursor: pointer; }
+  .pdv-etapas button[aria-pressed="true"] { background: var(--lampiao-claro); color: var(--noturno); }
+  .pdv-etapas strong { color: var(--noturno); font-variant-numeric: tabular-nums; }
+  .pdv-loja[data-painel="produtos"] .pdv-painel, .pdv-loja[data-painel="carrinho"] .pdv-produtos { display: none; }
+  .pdv-loja .pdv-painel { position: static; }
+  .pdv-loja .pdv-lista { grid-template-columns: repeat(auto-fill, minmax(min(145px, 100%), 1fr)); }
+  .pdv-loja .pdv-carrinho { max-height: none; }
+  .pdv-dica-arrasto { display: none; }
+}
+
 /* Restaurante — comandas */
 .abrir-comanda { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; }
 .abrir-comanda .select-wrap { flex: 1; min-width: 150px; }
@@ -4754,6 +4807,13 @@ form.filtros:not(.subnav) select:focus {
 .fx-portao-itens { display: flex; flex-direction: column; gap: 7px; margin-bottom: 20px; }
 .fx-lista { display: flex; flex-direction: column; gap: 7px; margin-bottom: 9px; }
 .fx-envolvidos { display: flex; flex-direction: column; gap: 7px; margin-bottom: 22px; }
+.fx-envolvidos .fx-row { flex-wrap: wrap; }
+.fx-envolvidos .mk-elastico { flex: 1 1 130px; }
+.fx-envolvidos .fx-row > form {
+  display: flex; flex: 1 1 240px; min-width: 0; flex-wrap: wrap; gap: .5rem;
+}
+.fx-envolvidos .fx-sel { width: 100%; min-width: 0; }
+.fx-envolvidos .fx-in.fornecedor { flex: 1 1 150px; min-width: 0; max-width: 100%; }
 .fx-conversa { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
 .fx-item-tit { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
 .fx-item-rot { font-size: 13px; font-weight: 600; color: var(--tinta); }
@@ -4926,17 +4986,17 @@ body.sem-rolagem { overflow: hidden; }
 
 /* Controle segmentado CANÔNICO (links) — usado no funil, relatórios, etc. */
 .seg-filtro, .segmentado {
-  display: inline-flex; gap: .15rem; background: var(--superficie-2);
-  border: 1px solid var(--fio); border-radius: 999px; padding: .25rem;
-  /* Com a tela estreita o segmentado rola dentro de si; antes empurrava a
-     página inteira para o lado (o funil estourava 60 px a 390 px). */
-  max-width: 100%; overflow-x: auto; scrollbar-width: none;
+  display: inline-flex; flex-wrap: wrap; gap: .15rem; background: var(--superficie-2);
+  border: 1px solid var(--fio); border-radius: var(--raio); padding: .25rem;
+  /* Todas as opções ficam visíveis mesmo com o menu aberto. A rolagem sem
+     barra escondia Trocas/Relatório e os últimos filtros no celular. */
+  max-width: 100%;
 }
-.seg-filtro::-webkit-scrollbar, .segmentado::-webkit-scrollbar { display: none; }
 .seg-filtro a, .segmentado .chip {
-  padding: .34rem .9rem; border-radius: 999px; font-size: .84rem;
+  padding: .34rem .9rem; border-radius: var(--raio-p); font-size: .84rem;
   font-weight: 500; color: var(--tinta-suave); text-decoration: none;
-  white-space: nowrap; transition: color .12s, background .12s, box-shadow .12s, transform .1s;
+  max-width: 100%; white-space: normal; overflow-wrap: anywhere;
+  transition: color var(--mov-rapido) var(--curva), background var(--mov-rapido) var(--curva), box-shadow var(--mov-rapido) var(--curva), transform var(--mov-toque) var(--curva);
 }
 .seg-filtro a:hover, .segmentado .chip:hover { color: var(--tinta); }
 .seg-filtro a:active, .segmentado .chip:active { transform: scale(.97); }  /* resposta no toque (§1) */
@@ -5399,8 +5459,13 @@ body.sem-rolagem { overflow: hidden; }
 .lb-rmeta .lb-when { margin-left: .4rem; }
 .lb-rtext { font-size: .9rem; margin-top: .05rem; }
 
-.lb-replybox { display: flex; gap: .5rem; align-items: center; padding: .6rem 1.15rem 1rem 3.6rem; }
-.lb-replybox input { flex: 1; padding: .5rem .75rem; font-size: .88rem; }
+.lb-replybox { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; padding: .6rem 1.15rem 1rem 3.6rem; }
+.lb-replybox input {
+  flex: 1 1 180px; min-width: 0; padding: .6rem .75rem;
+  font-family: var(--fonte-ui); font-size: .88rem; color: var(--tinta);
+  background: var(--superficie); border: 1px solid var(--fio-forte); border-radius: var(--raio-p);
+}
+.lb-replybox input:focus { border-color: var(--lampiao); box-shadow: var(--foco-anel-suave); }
 .lb-resolved-by { padding: .5rem 1.15rem .9rem 3.6rem; font-size: .82rem; color: var(--sucesso); }
 .lb-erro { padding: 0 1.15rem; color: var(--perigo); font-size: .85rem; margin: .2rem 0; }
 
@@ -5454,9 +5519,9 @@ form.htmx-request input { opacity: .7; }
   box-shadow: var(--sombra-1); padding: .7rem .9rem; margin-bottom: 1rem;
 }
 .escala-roster-lbl { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--tinta-suave); }
-.escala-roster-pills { display: flex; gap: .4rem; flex-wrap: wrap; flex: 1; }
+.escala-roster-pills { display: flex; gap: .4rem; flex-wrap: wrap; flex: 1 1 320px; min-width: 0; }
 .rpill {
-  display: inline-flex; align-items: center; background: #fff; border: 1px solid var(--fio);
+  display: inline-flex; align-items: center; background: var(--superficie); border: 1px solid var(--fio);
   color: var(--tinta); border-radius: 999px; padding: .32rem .8rem; font-size: .82rem; font-weight: 600;
   cursor: grab; transition: box-shadow .12s, transform .1s, border-color .12s;
 }

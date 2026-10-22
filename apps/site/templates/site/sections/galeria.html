@@ -17,6 +17,7 @@
                     data-src="{% if foto.imagem %}{{ foto.imagem.url }}{% endif %}"
                     data-legenda="{{ foto.legenda|default:'' }}"
                     data-categoria="{{ foto.get_categoria_display }}"
+                    {% if not foto.imagem %}disabled{% endif %}
                     class="aspect-square rounded-2xl overflow-hidden relative group cursor-pointer
                            bg-noturno/40 shadow-lg transition-all duration-300
                            hover:-translate-y-1 hover:shadow-2xl
@@ -45,62 +46,36 @@
         </div>
     </div>
 
-    <!-- LIGHTBOX / CARROSSEL (foto grande + cartão + Instagram) -->
-    <div id="galeria-lightbox" class="fixed inset-0 z-[100] hidden items-center justify-center bg-noturno/90 backdrop-blur-sm p-4 sm:p-8"
-         data-instagram="{{ config.instagram_url|default:'https://www.instagram.com/pousadavotesta' }}"
-         aria-modal="true" role="dialog" aria-label="Galeria de fotos">
+</section>
 
-        <!-- Fechar -->
-        <button type="button" data-gl-close aria-label="Fechar"
-                class="absolute top-4 right-4 sm:top-6 sm:right-6 w-11 h-11 rounded-full bg-pergaminho/10 hover:bg-pergaminho/20 text-pergaminho flex items-center justify-center transition-colors z-10">
+{% comment %}A top layer do dialog não herda o transform das seções animadas e
+deixa o restante da página inerte, inclusive cabeçalho, cookies e WhatsApp.{% endcomment %}
+<dialog id="galeria-lightbox" class="galeria-dialog text-pergaminho"
+        aria-label="Galeria de fotos"
+        data-instagram="{{ config.instagram_url|default:'https://www.instagram.com/pousadavotesta' }}">
+    <div class="galeria-topo">
+        <span class="text-lampiao text-sm uppercase tracking-widest">Momentos no Tempo</span>
+        <button type="button" data-gl-close autofocus aria-label="Fechar galeria" class="galeria-controle">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
-
-        <div class="w-full max-w-5xl mx-auto">
-            <!-- Desktop: foto + cartão sobreposto -->
-            <div class="hidden md:flex relative items-center">
-                <div class="w-[440px] h-[440px] rounded-3xl overflow-hidden bg-noturno flex-shrink-0 shadow-2xl">
-                    <img data-gl-img class="w-full h-full object-cover transition-opacity duration-300" alt="" draggable="false">
-                </div>
-                <div class="bg-pergaminho rounded-3xl shadow-2xl p-8 ml-[-80px] z-10 max-w-xl flex-1 transition-opacity duration-300" data-gl-card>
-                    <p data-gl-categoria class="text-madeira text-xs font-medium uppercase tracking-[0.2em] mb-2"></p>
-                    <h3 data-gl-legenda class="font-display text-2xl font-black text-noturno mb-6 leading-snug"></h3>
-                    <a data-gl-insta href="#" target="_blank" rel="noopener noreferrer"
-                       class="inline-flex items-center gap-2 bg-lampiao text-noturno font-bold text-sm px-5 py-3 rounded-full hover:bg-lampiao/90 transition-colors">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor" stroke="none"/></svg>
-                        Ver no Instagram
-                    </a>
-                </div>
-            </div>
-
-            <!-- Mobile: empilhado -->
-            <div class="md:hidden max-w-sm mx-auto text-center">
-                <div class="w-full aspect-square bg-noturno rounded-3xl overflow-hidden mb-5 shadow-2xl">
-                    <img data-gl-img-m class="w-full h-full object-cover transition-opacity duration-300" alt="" draggable="false">
-                </div>
-                <div data-gl-card-m class="transition-opacity duration-300">
-                    <p data-gl-categoria-m class="text-lampiao text-xs font-medium uppercase tracking-[0.2em] mb-1"></p>
-                    <h3 data-gl-legenda-m class="font-display text-xl font-black text-pergaminho mb-5 leading-snug"></h3>
-                    <a data-gl-insta-m href="#" target="_blank" rel="noopener noreferrer"
-                       class="inline-flex items-center gap-2 bg-lampiao text-noturno font-bold text-sm px-5 py-3 rounded-full hover:bg-lampiao/90 transition-colors">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor" stroke="none"/></svg>
-                        Ver no Instagram
-                    </a>
-                </div>
-            </div>
-
-            <!-- Navegação -->
-            <div class="flex justify-center items-center gap-6 mt-8">
-                <button type="button" data-gl-prev aria-label="Foto anterior"
-                        class="w-12 h-12 rounded-full bg-pergaminho/10 hover:bg-pergaminho/20 text-pergaminho flex items-center justify-center transition-colors">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
-                </button>
-                <div data-gl-dots class="flex gap-2"></div>
-                <button type="button" data-gl-next aria-label="Próxima foto"
-                        class="w-12 h-12 rounded-full bg-pergaminho/10 hover:bg-pergaminho/20 text-pergaminho flex items-center justify-center transition-colors">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
-                </button>
-            </div>
-        </div>
     </div>
-</section>
+    <div class="galeria-imagem">
+        <img data-gl-img alt="" draggable="false">
+    </div>
+    <div class="galeria-rodape">
+        <div class="galeria-legenda" aria-live="polite" aria-atomic="true">
+            <p data-gl-categoria class="text-lampiao text-xs uppercase tracking-widest"></p>
+            <h3 data-gl-legenda class="font-display text-xl font-bold"></h3>
+            <a data-gl-insta href="#" target="_blank" rel="noopener noreferrer" class="galeria-instagram text-lampiao">Ver no Instagram ↗</a>
+        </div>
+        <nav class="galeria-navegacao" aria-label="Navegação das fotos">
+            <button type="button" data-gl-prev aria-label="Foto anterior" class="galeria-controle">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <span data-gl-contador aria-live="polite"></span>
+            <button type="button" data-gl-next aria-label="Próxima foto" class="galeria-controle">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+        </nav>
+    </div>
+</dialog>

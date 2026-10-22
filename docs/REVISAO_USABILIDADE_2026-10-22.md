@@ -12,10 +12,12 @@ salvamento, recuperação de erros e detalhes apresentados quando necessários.
 
 - Base local isolada com dados fictícios e perfis de gestão, atendimento,
   marketing e camareira. Envios externos e pagamentos reais não integram esses testes.
-- Inspeção inicial e interação por Computer Use. A conexão deixou de responder
-  durante o trabalho e a reconferência manual continua pendente. As rodadas
-  seguintes usam testes reproduzíveis de navegador, capturas inspecionadas
-  visualmente e testes Django contra PostgreSQL 16.
+- Inspeção e interação por Computer Use, retomadas após a reconexão em 22/10.
+  A entrega 6 encerra a pendência de reconferência manual das rodadas anteriores:
+  os 35 módulos do menu foram visitados em 390 e 1440 px, com 70 capturas
+  inspecionadas, além dos formulários e diálogos descritos abaixo.
+- Testes reproduzíveis de navegador, capturas inspecionadas visualmente e testes
+  Django contra PostgreSQL 16 complementam a sessão manual.
 - Larguras: 320, 390, 821 com menu aberto e 1440 px. Conferência de sobreposição,
   rolagem, teclado, alterações pendentes e preferência por movimento reduzido.
 - A indicação de uma tela como inspecionada registra observação desta revisão;
@@ -73,7 +75,7 @@ Capturas do teste automatizado com dados fictícios:
 
 A conexão de Computer Use deixou de responder durante a rodada final. Os oito
 cenários de navegador foram executados e aprovados pelo teste automatizado; a
-reconferência visual final está pendente da retomada da conexão.
+reconferência visual ficou pendente naquela rodada e foi retomada na entrega 6.
 
 Publicação confirmada: commit `e12cb510e319d01ebad87cefb555308b1d0c9b35`,
 [CI aprovado](https://github.com/VicZk/vo_testa/actions/runs/39727416864), VPS
@@ -113,7 +115,8 @@ segunda entrega passou em 1.813 testes (719,514 s), sem pulos. Ruff, sintaxe dos
 scripts, comparação das migrations e verificação do diff não indicaram pendências.
 A fixture do teste de limpeza de reservas passou a criar sua própria etapa do
 funil; o teste de concorrência encerra as conexões dos dois trabalhadores.
-A conferência manual por Computer Use segue pendente da conexão.
+A conferência manual por Computer Use ficou pendente naquela rodada e foi
+retomada na entrega 6.
 
 Capturas do teste automatizado com dados fictícios:
 [celular de 390 px](evidencias/usabilidade-2026-10-22/lead-390.png) e
@@ -305,3 +308,89 @@ Capturas automatizadas inspecionadas: [formulários do grupo](evidencias/usabili
 [confirmação no desktop](evidencias/usabilidade-2026-10-22/lp-inauguracao-sucesso-1440.png),
 [recuperação no celular](evidencias/usabilidade-2026-10-22/senha-recuperacao-390.png) e
 [recuperação no desktop](evidencias/usabilidade-2026-10-22/senha-recuperacao-1440.png).
+
+Publicação confirmada: commit `61af5f0df7748c001d088101f09e23ca0141ee5d`,
+[CI aprovado](https://github.com/VicZk/vo_testa/actions/runs/39740626887), aplicação
+ativada às 04:36:24 de 22/10 (Brasília). Os 16 arquivos conferidos coincidem entre
+commit, checkout da VPS, imagem e container ativo; as diferenças locais de CRLF
+foram normalizadas para comparar com os blobs do Git. Aplicação e banco saudáveis,
+sem reinícios ou migrations pendentes; seis URLs públicas responderam 200.
+
+## Entrega 6 — Galeria, PDV e reconferência visual do CRM
+
+A sessão de Computer Use foi reconectada e a prioridade voltou ao CRM. Foram
+percorridos os 35 módulos do menu em celular de 390 px e computador de 1440 px,
+com o menu lateral aberto no computador. A revisão abriu também busca global,
+nova reserva em 320 px, cadastro de lead expandido em 390/821/1440 px, atendimento
+e comparação de quartos, criação e detalhe de campanha, seções de responsáveis
+e peças, guia da Governança, início de limpeza, comanda e respostas aos recados.
+Os nove blocos principais da homepage foram inspecionados em 390 e 1440 px.
+Todos os dados usados são fictícios, na base local isolada.
+
+O PDV da Loja agora usa as categorias já cadastradas, como Bebidas e Lanches,
+para filtrar o catálogo. A busca aceita palavras sem acento e pode ser limpa em
+um clique. Os cartões mostram a quantidade escolhida e o saldo ainda disponível;
+o carrinho exibe nomes completos, quantidade, subtotal e botões de 44 px. Em uma
+área estreita, Produtos e Carrinho se alternam por uma barra que mantém quantidade
+e total visíveis. O carrinho é preservado entre as abas e ao redimensionar a tela.
+O local de estoque fica bloqueado enquanto há itens, para evitar perder a seleção.
+
+No computador, um produto pode ser arrastado para o carrinho. O gesto aceita
+somente o produto iniciado no próprio catálogo e não grava uma venda. A
+finalização mantém a chave única existente: o teste faz o servidor gravar,
+descarta a resposta e repete o envio, comprovando uma única venda e uma única
+baixa de estoque. Regras financeiras e serviços de venda não foram alterados.
+O arraste foi confirmado pelo teste de Chromium com `drag_to`; a tentativa pelo
+controlador manual não incluiu o produto e não é contada como confirmação manual
+desse gesto. Filtros, seleção por clique e uso do carrinho foram operados manualmente.
+
+A galeria estava dentro de uma seção com transformação visual, que mudava a
+referência de posicionamento e deixava a janela escapar da tela. Ela agora usa
+um diálogo nativo fora da seção, acima do cabeçalho e do botão de WhatsApp. A foto
+permanece inteira, sem corte, com legenda e contador; fechar, avançar e voltar
+têm área de 44 px. Escape devolve o foco à foto de origem e libera a rolagem.
+Uma foto ausente não desloca o índice das seguintes. A conferência manual incluiu
+320 × 568, 390 × 844, 844 × 390 e 1440 × 844 px; a regressão automatizada também
+cobre 821 px e navegação da última para a primeira foto.
+
+Outros ajustes encontrados durante a navegação:
+
+- Opções de Escala, Comercial e outros controles segmentados quebram linha,
+  deixando visíveis os itens antes escondidos pela rolagem sem barra.
+- A lista de funcionários da Escala aproveita a largura disponível no celular.
+- O campo de resposta dos recados usa o estilo e o foco visível do sistema.
+- Ao abrir Responsáveis e equipe no Marketing, o fornecedor e seu botão saíam
+  do cartão. Campos e ações agora quebram linha; a regressão abre todas as seções
+  da ficha e confere seus limites nas quatro larguras.
+- Textos públicos de contato, eventos e Dia na Pousada descrevem o atendimento
+  ao visitante sem expor termos internos de CRM e funil.
+
+A matriz adicional foi repetida: 380 combinações operacionais, 148 complementares
+e 132 de detalhes, totalizando **660 combinações**, aprovadas em 400,632 s. Ela
+verifica resposta, erros de JavaScript e largura, mas não equivale a 660 fluxos de
+gravação. A sessão manual complementa essa matriz ao abrir os estados recolhidos.
+O [índice manual](evidencias/usabilidade-2026-10-22/revisao-6-telas.csv) registra as
+70 capturas dos módulos, e a [matriz de larguras](evidencias/usabilidade-2026-10-22/revisao-6-matriz.csv)
+registra as 660 verificações. As capturas integrais permanecem no ambiente local.
+
+Validação focada: 136 testes de design, galeria, PDV e navegação aprovados em
+22,379 s; depois, 131 testes de design e da ficha expandida de Marketing aprovados
+em 9,176 s. A suíte integral contém 1.855 casos, incluindo 62 de navegador.
+A rodada integral final passou: **1.855 testes em 422,020 s, sem falhas ou pulos**.
+Os 12 arquivos de implementação e testes permaneceram idênticos durante a rodada,
+conferidos por SHA-256 antes e depois da execução.
+Ruff, sintaxe do JavaScript e `makemigrations --check --dry-run` aprovados.
+Nenhum model ou migration foi alterado. A configuração temporária para acelerar
+senhas fictícias segue o método descrito na entrega 5; ela não integra o deploy.
+
+Capturas da sessão de Computer Use, com dados e imagens de teste:
+
+- [Carrinho antes](evidencias/usabilidade-2026-10-22/pdv-antes-carrinho-390.jpg),
+  [catálogo depois](evidencias/usabilidade-2026-10-22/pdv-depois-produtos-390.jpg) e
+  [carrinho depois](evidencias/usabilidade-2026-10-22/pdv-depois-carrinho-390.jpg).
+- [Galeria antes](evidencias/usabilidade-2026-10-22/galeria-antes-aberta-390.jpg),
+  [depois em 320 px](evidencias/usabilidade-2026-10-22/galeria-depois-320.jpg),
+  [paisagem](evidencias/usabilidade-2026-10-22/galeria-depois-paisagem.jpg) e
+  [computador](evidencias/usabilidade-2026-10-22/galeria-depois-1440.jpg).
+- [Fornecedor no Marketing](evidencias/usabilidade-2026-10-22/marketing-fornecedor-depois-390.jpg)
+  e [resposta aos recados](evidencias/usabilidade-2026-10-22/recados-resposta-depois-390.jpg).

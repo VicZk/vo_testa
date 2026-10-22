@@ -9,6 +9,33 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 22/10/2026 — PDV por categorias, galeria dentro da tela e revisão visual do CRM
+
+**O que melhorou**
+- A Loja organiza o catálogo por categoria, busca palavras sem acentos e mostra
+  o saldo restante e os itens escolhidos. Produtos e Carrinho têm abas no celular,
+  com quantidade e total visíveis; os nomes ficam completos e os botões maiores.
+- No computador, produtos podem ser arrastados para o carrinho. A proteção contra
+  venda duplicada foi exercitada também com perda da resposta e novo envio.
+- A galeria abre acima de toda a página, preserva a foto inteira e mantém fechar,
+  navegação e legenda acessíveis inclusive no celular deitado.
+- A navegação mostra todas as opções; a Escala aproveita a largura do celular;
+  os recados têm campo de resposta consistente. No Marketing, fornecedor e botão
+  de salvar permanecem dentro do cartão com a seção expandida.
+
+**O que foi modificado**
+- Templates e estilos da Loja, galeria, recados e controles compartilhados;
+  textos de atendimento nas seções públicas; seis regressões de navegador e
+  reforço da inspeção das seções expandidas do Marketing.
+- Computer Use reconectado: 35 módulos em celular e computador, além dos diálogos
+  e homepage. Matriz adicional com 660 combinações de tela e largura aprovada.
+- Suíte integral final aprovada: 1.855 testes, incluindo 62 de navegador,
+  sem falhas ou pulos. Ruff, migrations e sintaxe do JavaScript aprovados.
+- Nenhum model ou migration alterado. Resultados, capturas e limites do método
+  em `docs/REVISAO_USABILIDADE_2026-10-22.md`.
+
+---
+
 ## 22/10/2026 — Captação com confirmação real, grupos no celular e acesso visível
 
 **O que melhorou**

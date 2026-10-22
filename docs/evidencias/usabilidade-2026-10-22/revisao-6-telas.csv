@@ -1,0 +1,71 @@
+modulo,rota_local,largura,altura,captura_local
+Visão geral,/crm/,390,844,modulo-0-390.jpg
+Visão geral,/crm/,1440,844,modulo-0-1440.jpg
+Reservas,/crm/reservas/,390,844,modulo-1-390.jpg
+Reservas,/crm/reservas/,1440,844,modulo-1-1440.jpg
+Governança,/crm/governanca/,390,844,modulo-2-390.jpg
+Governança,/crm/governanca/,1440,844,modulo-2-1440.jpg
+Manutenção,/crm/manutencao/,390,844,modulo-3-390.jpg
+Manutenção,/crm/manutencao/,1440,844,modulo-3-1440.jpg
+Estoque,/crm/estoque/,390,844,modulo-4-390.jpg
+Estoque,/crm/estoque/,1440,844,modulo-4-1440.jpg
+Loja,/crm/loja/,390,844,modulo-5-390.jpg
+Loja,/crm/loja/,1440,844,modulo-5-1440.jpg
+Restaurante Piscina,/crm/restaurante/,390,844,modulo-6-390.jpg
+Restaurante Piscina,/crm/restaurante/,1440,844,modulo-6-1440.jpg
+Lavanderia,/crm/lavanderia/,390,844,modulo-7-390.jpg
+Lavanderia,/crm/lavanderia/,1440,844,modulo-7-1440.jpg
+Pagamentos Online,/crm/pagamentos/,390,844,modulo-8-390.jpg
+Pagamentos Online,/crm/pagamentos/,1440,844,modulo-8-1440.jpg
+Fiscal,/crm/fiscal/,390,844,modulo-9-390.jpg
+Fiscal,/crm/fiscal/,1440,844,modulo-9-1440.jpg
+Escala,/crm/escala/,390,844,modulo-10-390.jpg
+Escala,/crm/escala/,1440,844,modulo-10-1440.jpg
+Comercial,/crm/comercial/,390,844,modulo-11-390.jpg
+Comercial,/crm/comercial/,1440,844,modulo-11-1440.jpg
+LP Páginas,/crm/comercial/paginas/,390,844,modulo-12-390.jpg
+LP Páginas,/crm/comercial/paginas/,1440,844,modulo-12-1440.jpg
+Respostas rápidas,/crm/comercial/respostas/,390,844,modulo-13-390.jpg
+Respostas rápidas,/crm/comercial/respostas/,1440,844,modulo-13-1440.jpg
+Marketing,/crm/marketing/,390,844,modulo-14-390.jpg
+Marketing,/crm/marketing/,1440,844,modulo-14-1440.jpg
+APP/Site,/hospede/recepcao/solicitacoes/,390,844,modulo-15-390.jpg
+APP/Site,/hospede/recepcao/solicitacoes/,1440,844,modulo-15-1440.jpg
+Auditoria,/crm/auditoria/,390,844,modulo-16-390.jpg
+Auditoria,/crm/auditoria/,1440,844,modulo-16-1440.jpg
+Relatórios,/crm/relatorios/,390,844,modulo-17-390.jpg
+Relatórios,/crm/relatorios/,1440,844,modulo-17-1440.jpg
+NPS,/crm/nps/,390,844,modulo-18-390.jpg
+NPS,/crm/nps/,1440,844,modulo-18-1440.jpg
+Caixa,/crm/caixa/,390,844,modulo-19-390.jpg
+Caixa,/crm/caixa/,1440,844,modulo-19-1440.jpg
+Recados do turno,/crm/logbook/,390,844,modulo-20-390.jpg
+Recados do turno,/crm/logbook/,1440,844,modulo-20-1440.jpg
+Hóspedes,/crm/hospedes/,390,844,modulo-21-390.jpg
+Hóspedes,/crm/hospedes/,1440,844,modulo-21-1440.jpg
+Agências,/crm/agencias/,390,844,modulo-22-390.jpg
+Agências,/crm/agencias/,1440,844,modulo-22-1440.jpg
+Empresas,/crm/empresas/,390,844,modulo-23-390.jpg
+Empresas,/crm/empresas/,1440,844,modulo-23-1440.jpg
+Fornecedores,/crm/fornecedores/,390,844,modulo-24-390.jpg
+Fornecedores,/crm/fornecedores/,1440,844,modulo-24-1440.jpg
+Pessoas (todas),/crm/pessoas/,390,844,modulo-25-390.jpg
+Pessoas (todas),/crm/pessoas/,1440,844,modulo-25-1440.jpg
+Funcionários,/crm/funcionarios/,390,844,modulo-26-390.jpg
+Funcionários,/crm/funcionarios/,1440,844,modulo-26-1440.jpg
+Quartos & tipos,/crm/estrutura/,390,844,modulo-27-390.jpg
+Quartos & tipos,/crm/estrutura/,1440,844,modulo-27-1440.jpg
+Tabela de preços,/crm/precos/,390,844,modulo-28-390.jpg
+Tabela de preços,/crm/precos/,1440,844,modulo-28-1440.jpg
+Temporadas,/crm/temporadas/,390,844,modulo-29-390.jpg
+Temporadas,/crm/temporadas/,1440,844,modulo-29-1440.jpg
+Lançamentos,/crm/financeiro/lancamentos/,390,844,modulo-30-390.jpg
+Lançamentos,/crm/financeiro/lancamentos/,1440,844,modulo-30-1440.jpg
+Contas a pagar/receber,/crm/financeiro/contas/,390,844,modulo-31-390.jpg
+Contas a pagar/receber,/crm/financeiro/contas/,1440,844,modulo-31-1440.jpg
+Sessões de caixa,/crm/caixa/sessoes/,390,844,modulo-32-390.jpg
+Sessões de caixa,/crm/caixa/sessoes/,1440,844,modulo-32-1440.jpg
+Conciliação,/crm/conciliacao/,390,844,modulo-33-390.jpg
+Conciliação,/crm/conciliacao/,1440,844,modulo-33-1440.jpg
+Módulos,/crm/configuracoes/modulos/,390,844,modulo-34-390.jpg
+Módulos,/crm/configuracoes/modulos/,1440,844,modulo-34-1440.jpg

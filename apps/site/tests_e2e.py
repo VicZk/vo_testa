@@ -336,6 +336,22 @@ class CampanhaEdicaoE2ETests(_FunilComercialMixin, _BaseE2E):
                 self.assertLessEqual(medida["largura"], medida["tela"], medida)
                 self.assertTrue(medida["fechar"], medida)
                 self.assertTrue(medida["trava"], medida)
+                # Os campos de responsáveis ficam escondidos na primeira vista.
+                # Com a seção aberta, fornecedor e botão escapavam do cartão.
+                for dobra in p.locator(".mkt-dobra").all():
+                    if dobra.get_attribute("open") is None:
+                        dobra.locator(":scope > summary").click()
+                p.evaluate("document.fonts.ready")
+                fora = p.locator(".fx-envolvidos .fx-row").evaluate_all("""rows => rows.flatMap(row => {
+                    const r = row.getBoundingClientRect();
+                    return [...row.querySelectorAll('input:not([type=hidden]),select,button,.fx-papel')]
+                        .filter(el => { const b = el.getBoundingClientRect();
+                            return b.width && (b.left < r.left - 1 || b.right > r.right + 1); })
+                        .map(el => el.getAttribute('aria-label') || el.textContent.trim());
+                })""")
+                self.assertFalse(fora, fora)
+                self.assertLessEqual(p.locator(".fx-corpo").evaluate("el => el.scrollWidth"),
+                                     p.locator(".fx-corpo").evaluate("el => el.clientWidth") + 1)
                 if os.environ.get("E2E_EVIDENCIAS"):
                     from pathlib import Path
                     pasta = Path(os.environ["E2E_EVIDENCIAS"])
@@ -1006,6 +1022,7 @@ class ComboNoPainelE2ETests(_BaseE2E):
         p.wait_for_load_state("networkidle")
         p.goto(self.url("/crm/loja/"))
         p.wait_for_load_state("networkidle")
+        p.get_by_role("button", name="Carrinho (0) R$ 0,00", exact=True).click()
         campo = p.locator(".pdv-painel .combo-input").first
         campo.scroll_into_view_if_needed()
         campo.click()

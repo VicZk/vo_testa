@@ -35,6 +35,27 @@ if _PLAYWRIGHT_OK:
 class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
     LOCALE = "pt-BR"
 
+    def test_navegacao_dos_modulos_mostra_todas_as_opcoes_sem_cortar(self):
+        p = self.page
+        for rota in ("escala:grade", "comercial:funil", "marketing:quadro", "estoque:posicao"):
+            for largura in (320, 390, 821, 1440):
+                with self.subTest(rota=rota, largura=largura):
+                    p.set_viewport_size({"width": largura, "height": 844})
+                    p.goto(self.url(reverse(rota)))
+                    p.evaluate("document.fonts.ready")
+                    grupos = p.locator(".seg-filtro, .segmentado, .est-abas").evaluate_all("""els => els.map(el => {
+                        const r = el.getBoundingClientRect();
+                        return {largura:el.clientWidth, conteudo:el.scrollWidth,
+                            fora:[...el.querySelectorAll('a,button')].filter(a => {
+                                const b=a.getBoundingClientRect();
+                                return b.left<r.left-1 || b.right>r.right+1 || b.top<r.top-1 || b.bottom>r.bottom+1;
+                            }).map(a=>a.textContent.trim())};
+                    })""")
+                    self.assertTrue(grupos)
+                    for grupo in grupos:
+                        self.assertLessEqual(grupo["conteudo"], grupo["largura"] + 1)
+                        self.assertFalse(grupo["fora"], grupo)
+
     def test_telas_acesso_mostram_formulario_com_e_sem_sessao(self):
         p = self.page
         paginas = [("login", [], "Entrar no sistema"),
@@ -426,6 +447,7 @@ class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
         produto = p.locator(".pdv-produto").filter(has_text="QA Água")
         produto.click()
         produto.click()
+        p.get_by_role("button", name="Carrinho (2) R$ 14,00", exact=True).click()
         p.locator(".pdv-finalizar").click()
         expect(p.get_by_text("Escolha a forma de pagamento.", exact=True)).to_be_visible()
         self.assertEqual(Venda.objects.count(), 0)
@@ -728,3 +750,200 @@ class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
         self.assertEqual(envio.email, "guest@example.invalid")
         self.assertEqual(envio.assunto, "Proposta fictícia QA")
         self.assertEqual(len(mail.outbox), 1)
+
+
+@unittest.skipUnless(_PLAYWRIGHT_OK, "playwright não instalado (ver tests_e2e)")
+class PdvVisualE2ETests(_FunilComercialMixin, _BaseE2E):
+    """Catálogo e carrinho reais, incluindo arraste, toque e reenvio da venda."""
+
+    def setUp(self):
+        super().setUp()
+        from apps.nucleo.models import (
+            CategoriaProduto,
+            FormaPagamento,
+            LocalEstoque,
+            ModuloContratado,
+            Produto,
+            SessaoCaixa,
+            Usuario,
+            registrar_entrada,
+        )
+        cache.clear()
+        self.op = Usuario.objects.create_superuser(username="pdv-ui", password="forte-123-abc")
+        for codigo in ("estoque", "loja"):
+            ModuloContratado.objects.update_or_create(codigo=codigo, defaults={"ativo": True})
+        self.local = LocalEstoque.objects.create(nome="Balcão QA", modulo="loja")
+        self.forma = FormaPagamento.objects.create(nome="Dinheiro QA", tipo="dinheiro")
+        SessaoCaixa.objects.create(operador=self.op, modulo="loja", fundo_troco=0)
+        bebidas = CategoriaProduto.objects.create(nome="Bebidas")
+        lanches = CategoriaProduto.objects.create(nome="Lanches")
+        self.agua = Produto.objects.create(nome="Água mineral com gás", categoria=bebidas, preco_venda="5.50")
+        self.lanche = Produto.objects.create(
+            nome="Hambúrguer artesanal com cebola caramelizada e queijo colonial",
+            categoria=lanches, preco_venda="34.90",
+        )
+        Produto.objects.create(nome="Suco esgotado", categoria=bebidas, preco_venda="9.00")
+        registrar_entrada(self.agua, self.local, 2, Decimal("1"), self.op)
+        registrar_entrada(self.lanche, self.local, 12, Decimal("8"), self.op)
+        self.page.add_init_script("localStorage.setItem('sidebar', 'aberta')")
+        self._login("pdv-ui", "forte-123-abc")
+
+    def abrir(self, largura=390):
+        self.page.set_viewport_size({"width": largura, "height": 844})
+        self.page.goto(self.url(reverse("loja:pdv")))
+        expect(self.page.get_by_role("button", name="Adicionar Água mineral com gás ao carrinho", exact=True)).to_be_visible()
+
+    def carrinho(self):
+        self.page.locator(".pdv-etapas button").filter(has_text="Carrinho").click()
+
+    def test_categoria_busca_sem_acento_e_limite_do_estoque(self):
+        p = self.page
+        self.abrir()
+        p.get_by_role("button", name="Lanches 1", exact=True).click()
+        expect(p.locator(".pdv-produto")).to_have_count(1)
+        p.get_by_label("Buscar produto", exact=True).fill("hamburguer queijo")
+        expect(p.locator(".pdv-produto")).to_have_count(1)
+        p.get_by_role("button", name="Limpar filtros", exact=True).click()
+        expect(p.locator(".pdv-produto")).to_have_count(3)
+        p.get_by_label("Buscar produto", exact=True).fill("agua gas")
+        agua = p.get_by_role("button", name="Adicionar Água mineral com gás ao carrinho", exact=True)
+        agua.click()
+        agua.click()
+        expect(agua).to_be_disabled()
+        expect(p.get_by_label("Local de estoque", exact=True)).to_be_disabled()
+        self.carrinho()
+        expect(p.get_by_role("button", name="Aumentar Água mineral com gás", exact=True)).to_be_disabled()
+        p.get_by_role("button", name="Diminuir Água mineral com gás", exact=True).click()
+        p.get_by_role("button", name="Produtos", exact=True).click()
+        expect(agua).to_be_enabled()
+        self.assertEqual(saldo(self.agua, self.local), Decimal("2"))
+
+    def test_carrinho_cabe_no_celular_e_menu_aberto_sem_perder_itens(self):
+        p = self.page
+        self.abrir(1440)
+        p.get_by_role("button", name=f"Adicionar {self.lanche.nome} ao carrinho", exact=True).click()
+        for largura in (320, 390, 821, 1440):
+            with self.subTest(largura=largura):
+                p.set_viewport_size({"width": largura, "height": 844})
+                if p.locator(".pdv-etapas").is_visible():
+                    self.carrinho()
+                expect(p.locator(".pdv-item-nome")).to_have_text(self.lanche.nome)
+                self.assertLessEqual(p.evaluate("document.documentElement.scrollWidth"), largura + 1)
+                medidas = p.locator(".pdv-item").evaluate("""el => ({
+                    largura: el.clientWidth, conteudo: el.scrollWidth,
+                    botoes: [...el.querySelectorAll('button')].map(b => ({w:b.offsetWidth,h:b.offsetHeight})),
+                    nome: getComputedStyle(el.querySelector('.pdv-item-nome')).whiteSpace
+                })""")
+                self.assertLessEqual(medidas["conteudo"], medidas["largura"] + 1)
+                self.assertEqual(medidas["nome"], "normal")
+                self.assertTrue(all(b["w"] >= 44 and b["h"] >= 44 for b in medidas["botoes"]))
+                if os.environ.get("E2E_EVIDENCIAS"):
+                    p.screenshot(path=str(Path(os.environ["E2E_EVIDENCIAS"]) / f"pdv-carrinho-{largura}.png"))
+        expect(p.locator(".pdv-etapas")).to_be_hidden()
+        expect(p.locator(".pdv-produtos")).to_be_visible()
+        expect(p.locator(".pdv-painel")).to_be_visible()
+        self.assertEqual(p.locator(".pdv-item").count(), 1)
+
+    def test_arraste_real_adiciona_so_o_produto_conhecido_e_nao_cobra(self):
+        from apps.loja.models import Venda
+        p = self.page
+        self.abrir(1440)
+        origem = p.get_by_role("button", name="Adicionar Água mineral com gás ao carrinho", exact=True)
+        origem.drag_to(p.locator(".pdv-painel"))
+        expect(p.locator(".pdv-item-nome")).to_have_text(self.agua.nome)
+        expect(p.locator(".pdv-qtd span")).to_have_text("1")
+        p.locator(".pdv-painel").evaluate("""el => {
+            const dt = new DataTransfer();
+            dt.setData('text/plain', '9999');
+            el.dispatchEvent(new DragEvent('drop', {bubbles:true, dataTransfer:dt}));
+        }""")
+        expect(p.locator(".pdv-qtd span")).to_have_text("1")
+        self.assertEqual(Venda.objects.count(), 0)
+        self.assertEqual(saldo(self.agua, self.local), Decimal("2"))
+
+    def test_falha_de_conexao_mantem_carrinho_e_reenvia_mesma_chave(self):
+        from apps.loja.models import Venda
+        p = self.page
+        self.abrir()
+        p.get_by_role("button", name="Adicionar Água mineral com gás ao carrinho", exact=True).click()
+        self.carrinho()
+        p.get_by_label("Forma de pagamento", exact=True).select_option(str(self.forma.pk))
+        requisicoes = []
+        url = self.url(reverse("loja:finalizar"))
+
+        def perder_resposta(route):
+            requisicoes.append(route.request.post_data_json)
+            route.fetch()  # o servidor gravou, mas a resposta se perdeu
+            route.abort()
+
+        p.route(url, perder_resposta)
+        p.locator(".pdv-finalizar").click()
+        expect(p.get_by_text("Falha de conexão. Tente de novo: a venda não sai em dobro.", exact=True)).to_be_visible()
+        expect(p.locator(".pdv-item-nome")).to_have_text(self.agua.nome)
+        p.unroute(url, perder_resposta)
+        p.on("request", lambda req: requisicoes.append(req.post_data_json) if req.url == url else None)
+        with p.expect_navigation():
+            p.locator(".pdv-finalizar").click()
+        self.assertEqual(len(requisicoes), 2)
+        self.assertEqual(requisicoes[0]["chave"], requisicoes[1]["chave"])
+        self.assertEqual(Venda.objects.count(), 1)
+        self.assertEqual(saldo(self.agua, self.local), Decimal("1"))
+
+
+@unittest.skipUnless(_PLAYWRIGHT_OK, "playwright não instalado (ver tests_e2e)")
+class GaleriaVisualE2ETests(_BaseE2E):
+    def setUp(self):
+        super().setUp()
+        from apps.site.models import FotoGaleria
+        cache.clear()
+        FotoGaleria.objects.create(imagem="", legenda="Foto indisponível", categoria="pousada", ordem=0)
+        for numero in range(1, 12):
+            FotoGaleria.objects.create(
+                imagem=f"galeria/qa-{numero}.svg", legenda=f"Paisagem de teste {numero}",
+                categoria="natureza", ordem=numero,
+            )
+        self.page.route("**/media/galeria/*", lambda r: r.fulfill(
+            content_type="image/svg+xml", body='<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="1200" height="800" fill="#2E483E"/></svg>'
+        ))
+
+    def test_galeria_na_top_layer_cabe_em_telas_pequenas_e_paisagem(self):
+        p = self.page
+        for largura, altura in ((320, 568), (390, 844), (821, 844), (844, 390), (1440, 900)):
+            with self.subTest(largura=largura, altura=altura):
+                p.set_viewport_size({"width": largura, "height": altura})
+                p.goto(self.url(reverse("core:home")))
+                if p.get_by_role("button", name="Recusar", exact=True).is_visible():
+                    p.get_by_role("button", name="Recusar", exact=True).click()
+                origem = p.locator('[data-galeria-item][data-src$="qa-11.svg"]')
+                origem.click()
+                dialog = p.get_by_role("dialog", name="Galeria de fotos", exact=True)
+                expect(dialog).to_be_visible()
+                expect(dialog.locator("[data-gl-legenda]")).to_have_text("Paisagem de teste 11")
+                expect(dialog.locator("[data-gl-contador]")).to_have_text("11 / 11")
+                geometria = dialog.evaluate("""el => ({
+                    modal:el.matches(':modal'), largura:el.scrollWidth, altura:el.scrollHeight,
+                    botoes:[...el.querySelectorAll('button,a')].map(b => {
+                        const r=b.getBoundingClientRect();
+                        return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,w:r.width,h:r.height};
+                    }), imagem:getComputedStyle(el.querySelector('img')).objectFit
+                })""")
+                self.assertTrue(geometria["modal"])
+                self.assertEqual(geometria["imagem"], "contain")
+                self.assertLessEqual(geometria["largura"], largura + 1)
+                self.assertLessEqual(geometria["altura"], altura + 1)
+                for botao in geometria["botoes"]:
+                    self.assertGreaterEqual(botao["x"], 0)
+                    self.assertGreaterEqual(botao["y"], 0)
+                    self.assertLessEqual(botao["right"], largura)
+                    self.assertLessEqual(botao["bottom"], altura)
+                    self.assertGreaterEqual(botao["w"], 44)
+                    self.assertGreaterEqual(botao["h"], 44)
+                dialog.get_by_role("button", name="Próxima foto", exact=True).click()
+                expect(dialog.locator("[data-gl-legenda]")).to_have_text("Paisagem de teste 1")
+                p.keyboard.press("ArrowLeft")
+                expect(dialog.locator("[data-gl-contador]")).to_have_text("11 / 11")
+                p.keyboard.press("Escape")
+                expect(dialog).to_be_hidden()
+                expect(origem).to_be_focused()
+                p.wait_for_function("document.body.style.overflow !== 'hidden'")
+                self.assertNotEqual(p.evaluate("document.body.style.overflow"), "hidden")
