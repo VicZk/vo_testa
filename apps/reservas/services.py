@@ -2474,7 +2474,6 @@ def conta_aberta(conta_id):
 def travar_conta_aberta(conta_id=None, *, reserva_id=None):
     """Pedido só nasce em estadia ainda aberta; mesma trava usada pelo checkout."""
     from apps.nucleo.sistema import travar
-
     from apps.nucleo.validadores import identificador_valido
 
     pk = identificador_valido(conta_id if conta_id is not None else reserva_id, nome="Estadia")
