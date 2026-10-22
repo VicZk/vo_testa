@@ -6326,3 +6326,10 @@ body.escala-dragging .escala-drop { cursor: copy; }
     display: inline-block; padding-block: .8rem; margin-block: -.8rem;
   }
 }
+
+/* Bolinha de iniciais (recados do turno, ficha do Marketing, avatar do topo):
+   o conteúdo é cortado no círculo. Um nome inteiro escapava pelos dois lados e
+   ficava escrito POR CIMA do cartão — foi o que o dono viu no celular. O
+   template já manda só as iniciais; isto é o cinto de segurança para o dia em
+   que um valor vier maior. */
+.lb-avatar, .lb-av, .fx-av, .avatar { overflow: hidden; }

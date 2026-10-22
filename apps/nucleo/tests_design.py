@@ -6,6 +6,7 @@ auditoria que voltaria sozinho na próxima tela nova.
 
 import re
 from pathlib import Path
+from types import SimpleNamespace
 
 from django.conf import settings
 from django.test import TestCase
@@ -1314,3 +1315,36 @@ class AlvoDeToqueTests(TestCase):
         especificidade — por isso a exceção é repetida com o mesmo peso."""
         self.assertRegex(self.coarse, r"\.botao-mini, \.mk-pil \{ min-width: 44px; \}")
         self.assertIn(".escala-semana .botao-neutro { min-width: 44px; }", self.coarse)
+
+
+class IniciaisNaBolinhaTests(TestCase):
+    """A bolinha de iniciais tem 34px e o conteúdo tem de caber nela.
+
+    `get_short_name` devolve o primeiro nome, e quem é cadastrado só com login
+    não tem um. Aí o `|default:` caía no OBJETO `Usuario` — e `|slice:":2"` num
+    objeto não fatia nada (o filtro engole o erro e devolve o que recebeu): a
+    bolinha saía escrita "AUDITOR", vazando por cima do cartão. Foi o "ícone com
+    overlap" que o dono viu no celular. O default agora é o `username`, que é
+    texto, e o CSS corta o que passar."""
+
+    def test_bolinha_mostra_duas_letras_quando_nao_ha_primeiro_nome(self):
+        from django.template import engines
+
+        from apps.nucleo.models import Usuario
+
+        u = Usuario(username="auditor")
+        self.assertEqual(u.get_short_name(), "", "o caso só existe sem primeiro nome")
+        tpl = (Path(settings.BASE_DIR) / "templates" / "nucleo" / "partials"
+               / "logbook_ocorrencia.html").read_text(encoding="utf-8")
+        dono = SimpleNamespace(autor=u)
+        achados = re.findall(r"\{\{ [ce]\.autor\.get_short_name[^}]*\}\}", tpl)
+        self.assertEqual(len(achados), 2, "as duas bolinhas do recado têm de estar lá")
+        for trecho in achados:
+            saida = engines["django"].from_string(trecho).render({"e": dono, "c": dono})
+            self.assertEqual(saida, "AU", f"{trecho} não virou iniciais")
+
+    def test_a_bolinha_corta_o_que_passar(self):
+        css = CSS.read_text(encoding="utf-8").replace("\r\n", "\n")
+        bloco = re.search(r"\n\.lb-avatar, \.lb-av, \.fx-av, \.avatar \{([^}]*)\}", css)
+        self.assertIsNotNone(bloco, "as bolinhas de iniciais precisam recortar o conteúdo")
+        self.assertIn("overflow: hidden", bloco.group(1))
