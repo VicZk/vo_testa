@@ -29,6 +29,11 @@ paleta da marca no site, que não carrega o app.css.
     font-family: inherit;
   }
   .aviso-cookies[hidden] { display: none; }
+  /* Enquanto o aviso está na tela, o fim da página ganha a altura dele de folga
+     — senão o que estiver embaixo (um formulário, o botão do WhatsApp, um link
+     de ajuda) fica coberto e ninguém descobre que existe. O JS mede e põe a
+     classe; quando o aviso some, a folga some junto. */
+  html.com-aviso-cookies body { padding-bottom: var(--aviso-cookies-altura, 0px); }
   .aviso-cookies-caixa {
     display: flex; align-items: center; gap: 16px 20px; flex-wrap: wrap;
     max-width: 960px; margin: 0 auto; padding: 16px 20px;

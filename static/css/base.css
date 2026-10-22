@@ -717,3 +717,8 @@ input[type="radio"] { accent-color: var(--lampiao); }
 .fnrh-ficha-cab h3 { min-width: 0; }
 
 .fnrh-ficha-cab h3 > span:not(.fnrh-ficha-ico) { min-width: 0; }
+
+@media (pointer: coarse), (max-width: 820px) {
+  .botao-primario,
+  .botao-neutro { min-width: 44px; }
+}

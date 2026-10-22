@@ -2718,15 +2718,9 @@ def montar_email_boas_vindas(oportunidade):
 
 def _cabe_no_teto_diario(nome, teto) -> bool:
     """Conta um envio no dia (cache compartilhado) e diz se ainda cabe no teto."""
-    from django.core.cache import cache
+    from apps.nucleo.ratelimit import somar
 
-    chave = f"teto:{nome}:{timezone.localdate():%Y%m%d}"
-    cache.add(chave, 0, 26 * 3600)
-    try:
-        return cache.incr(chave) <= teto
-    except ValueError:
-        cache.set(chave, 1, 26 * 3600)
-        return True
+    return somar(f"teto:{nome}:{timezone.localdate():%Y%m%d}", 26 * 3600) <= teto
 
 
 def enviar_boas_vindas(op_id):

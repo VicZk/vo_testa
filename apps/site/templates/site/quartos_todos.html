@@ -89,7 +89,7 @@
                 <div class="p-5 sm:p-6 flex flex-col flex-1">
                     {# A nota saiu: era idêntica nos 24 cartões, então 24 selos informavam zero. #}
                     <p class="text-lampiao/60 text-xs uppercase tracking-wider mb-2">{{ quarto.categoria.nome }}</p>
-                    <a href="{% url 'core:quarto_detalhe' quarto.uh_id %}" class="block"><h3 class="font-display text-xl font-bold text-pergaminho mb-2 hover:text-lampiao transition">{{ quarto.nome }}</h3></a>
+                    <a href="{% url 'core:quarto_detalhe' quarto.uh_id %}" class="flex items-center min-h-[44px]"><h3 class="font-display text-xl font-bold text-pergaminho mb-2 hover:text-lampiao transition">{{ quarto.nome }}</h3></a>
                     {% if quarto.descricao_curta and quarto.descricao_curta != quarto.nome %}
                     <p class="text-pergaminho/70 text-sm mb-3">{{ quarto.descricao_curta }}</p>
                     {% endif %}
@@ -104,7 +104,7 @@
                             <span class="text-lampiao font-body text-2xl font-bold">R$ {{ quarto.preco_base|floatformat:0 }}</span>
                             <span class="text-pergaminho/70 text-xs"> /noite</span>
                         </div>
-                        <a href="{% url 'core:reservar' %}?uh={{ quarto.uh_id }}" class="bg-lampiao text-noturno text-sm font-semibold px-4 py-2 rounded-lg border border-lampiao hover:bg-lampiao/90 transition">
+                        <a href="{% url 'core:reservar' %}?uh={{ quarto.uh_id }}" class="bg-lampiao text-noturno text-sm font-semibold inline-flex items-center min-h-[44px] px-4 py-2 rounded-lg border border-lampiao hover:bg-lampiao/90 transition">
                             Reservar
                         </a>
                     </div>

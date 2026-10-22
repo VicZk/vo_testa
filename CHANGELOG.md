@@ -9,6 +9,43 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 22/10/2026 — Varredura do CRM no celular e limites de tentativa com o prazo certo (`ba026c7`, `f26b04e`)
+
+Uma varredura automática passou por 168 telas do CRM a 390 px com toque, procurando
+rolagem lateral, elementos encavalados e alvos de toque pequenos. Rolagem lateral:
+nenhuma. Encavalado de verdade: um. Os alvos pequenos que sobraram (Marketing,
+Lavanderia, Comercial) foram para a rodada de polimento do celular, que está em
+andamento.
+
+**O que melhorou**
+- **Lead no celular:** a lista "Quartos para este lead" não rola mais dentro da
+  página. O teto de 420 px cortava o segundo quarto no meio dos botões, e o "Ver
+  todos" parecia estar em cima de "Ver ficha" e "Enviar ao cliente". No desktop com
+  mouse, nada muda.
+- **Limites de tentativa com o prazo certo:** sem Redis, o cache fica numa tabela do
+  Postgres, e lá cada tentativa encurtava a janela para 5 minutos. Os limites de 1
+  hora (cartão, proposta e reserva no site) e de 10-15 minutos (trava de login por
+  conta, "Já paguei", leads das LPs) zeravam 5 minutos depois da última tentativa. Os
+  de 1 minuto (webhook) só zeravam depois de 5 minutos de silêncio, e o teto diário
+  de envios do Comercial zerava a cada 5 minutos sem envio. Agora cada janela vale o
+  tempo pedido.
+
+**O que foi modificado**
+- `templates/comercial/oportunidade.html`: a lista dos quartos que servem cresce com a
+  página no toque e até 820 px; a dos indisponíveis segue com rolagem própria.
+- `apps/nucleo/ratelimit.py`: `janela_atual()` e `somar()` (reafirma o prazo a cada
+  soma); o limite por IP, a trava por conta, o limite do site, o de leads das LPs e o
+  teto diário de envios passam por eles.
+
+**Como foi testado**
+- `JanelaDoLimiteTests` com o cache em banco: a janela de 1 hora continua de 1 hora
+  depois da terceira tentativa, a contagem zera na virada, e as falhas da conta somam
+  e somem juntas. Trava por conta e limites dos pagamentos seguem passando.
+- Lead de demonstração no navegador a 390 px (seis quartos inteiros, "Ver todos"
+  abaixo) e a 1440 px (lista de 420 px com rolagem, como antes).
+
+---
+
 ## 22/10/2026 — Cada um entra no que é seu: a camareira cai direto na fila dela (`b0630e0`)
 
 Achado testando o login da camareira na VPS: depois de entrar, ela via uma "Visão

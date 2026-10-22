@@ -3551,3 +3551,35 @@ class CampoDeDataPrePreenchidoTests(TestCase):
         from .forms import DataHoraInput
 
         self.assertEqual(DataHoraInput().format, "%Y-%m-%dT%H:%M")
+
+
+class ToqueNasLPsTests(TestCase):
+    """O HTML das LPs vem pronto do design e é servido como está; o pouco que
+    falta para o dedo entra por um `<style>` injetado no fim do <head>.
+
+    Medido em 390px: o caminho de conversão já estava certo (campos de 52 a 54px,
+    as cápsulas de "quantas pessoas" com rótulo de 46px, o consentimento com
+    rótulo de 292 a 350px de largura). O que faltava era secundário — a pergunta
+    do FAQ (31 a 35px) e o "Inscrever outra pessoa" (31px)."""
+
+    def test_as_tres_lps_saem_com_a_regra_de_toque(self):
+        for rota in ("lp:fundador", "lp:fundador_2", "lp:inauguracao"):
+            r = self.client.get(reverse(rota))
+            self.assertEqual(r.status_code, 200, rota)
+            html = r.content.decode("utf-8")
+            self.assertIn("@media (pointer: coarse)", html, rota)
+            self.assertIn("summary { min-height: 44px; }", html, rota)
+            # dentro do <head>, antes do conteúdo — e uma vez só
+            self.assertEqual(html.count("summary { min-height: 44px; }"), 1, rota)
+            self.assertLess(html.index("summary { min-height: 44px; }"),
+                            html.index("</head>"), f"{rota}: a regra saiu fora do <head>")
+
+    def test_a_regra_injetada_nao_inventa_classe_na_pagina_do_design(self):
+        """A lição do aviso de cookies, que nasceu com `.consent` — a mesma classe
+        do checkbox de LGPD das LPs — e arrancava o checkbox do formulário: o que
+        se injeta numa página de terceiros não cria classe nova nem apanha
+        seletor genérico demais."""
+        from .views_lp import _TOQUE_LP
+        self.assertNotIn("class=", _TOQUE_LP)
+        for generico in ("a {", "input {", "button {", "label {", "* {"):
+            self.assertNotIn(generico, _TOQUE_LP, generico)

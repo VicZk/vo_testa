@@ -34,7 +34,11 @@
   </thead>
   <tbody>
     {% for r in reservas %}
-      <tr>
+      {% comment %}A linha inteira abre a reserva — mesmo padrão de Manutenção,
+      Pagamentos, Lavanderia e Restaurante. No celular o único jeito de entrar era
+      acertar o "#16", um alvo de 26 px de largura; agora a linha toda, de 358 px,
+      é o alvo, e o link continua ali para teclado e leitor de tela.{% endcomment %}
+      <tr class="linha-clique" onclick="location.href='{% url 'reservas:detalhe' r.pk %}'">
         <td><a href="{% url 'reservas:detalhe' r.pk %}">#{{ r.pk }}</a></td>
         <td>{{ r.hospede.nome }}</td>
         <td>{{ r.uh.numero }}</td>

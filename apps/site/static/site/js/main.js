@@ -24,6 +24,10 @@ function toggleMenu() {
     menuIcon.classList.toggle('hidden', menuOpen);
     closeIcon.classList.toggle('hidden', !menuOpen);
     document.body.style.overflow = menuOpen ? 'hidden' : '';
+    // Aberta, a gaveta é um diálogo: o aviso de cookies e os botões flutuantes
+    // saem da frente (regra no animations.css). Sem isto, o aviso (z-index 90)
+    // cobria o "Fazer Reserva" do fim da gaveta.
+    document.documentElement.classList.toggle('menu-do-site-aberto', menuOpen);
     // O botão dizia "Abrir menu" mesmo com o menu aberto.
     menuBtn.setAttribute('aria-expanded', menuOpen ? 'true' : 'false');
     menuBtn.setAttribute('aria-label', menuOpen ? 'Fechar menu' : 'Abrir menu');

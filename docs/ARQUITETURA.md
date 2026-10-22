@@ -752,7 +752,7 @@ não pagam esse custo).
 | Settings de produção | `config/settings.py` | Com `DEBUG=0`: `SECURE_PROXY_SSL_HEADER`, `SECURE_SSL_REDIRECT` (isentando `^healthz/?$`), cookies `Secure`, HSTS 30 dias com subdomínios e preload. |
 | Sempre ligados | `config/settings.py` | Cookies com nome próprio (`vo_testa_sessionid`/`vo_testa_csrftoken`), `SECURE_REFERRER_POLICY="same-origin"` (protege tokens em URL do portal/pagamento), `SECURE_CONTENT_TYPE_NOSNIFF`, sessão de 10 h renovada por atividade, `SameSite=Lax`. |
 | `SECRET_KEY` | `config/settings.py` | Em produção (`DEBUG=0` e não `TESTING`), chave ausente ou com o prefixo de dev → `ImproperlyConfigured` na subida. |
-| `rate limit` em rotas públicas | `apps/nucleo/ratelimit.py` | `limite_excedido(request, escopo, limite, janela, sufixo)` sobre o cache; usado em login, webhook, link de pagamento e portal. O docstring avisa que com múltiplos workers o `LocMemCache` torna o limite por processo. |
+| `rate limit` em rotas públicas | `apps/nucleo/ratelimit.py` | `limite_excedido(request, escopo, limite, janela, sufixo)` sobre o cache; usado em login, webhook, link de pagamento e portal. Janela fixa (`janela_atual`: o início vai na chave) e contador por `somar(chave, prazo)`, que reafirma o prazo a cada soma — o `incr()` do `DatabaseCache` regrava a chave com o prazo padrão do cache (300 s). O limite do site, o de leads das LPs e o teto diário de envios do Comercial passam pelo mesmo `somar`. |
 | CSV | `apps/nucleo/export.py` | `sanitizar_celula` neutraliza fórmulas em todo export. |
 
 ---
@@ -1274,10 +1274,13 @@ ambiente de hospedagem, não de uma etapa de deploy nestes workflows.
   acima do timeout do cliente HTTP dos gateways.
 - **Cache compartilhado** (`CACHES`): Redis com `REDIS_URL`; sem ele, `DatabaseCache` na
   tabela `nucleo_cache` (criada pela migration `nucleo.0046`). Vale para os limites de
-  tentativa e o token da Safrapay entre workers e deploys.
+  tentativa e o token da Safrapay entre workers e deploys. Contador nesse cache passa
+  por `apps.nucleo.ratelimit.somar()`: no banco, o `incr()` troca o prazo da chave pelo
+  padrão de 300 s.
 - **Healthcheck** em `/healthz/` (`config/urls.py`: roda `SELECT 1` e responde 503 se
   o banco não atender, para um container sem banco não substituir o saudável), isento do
-  `SECURE_SSL_REDIRECT` por `SECURE_REDIRECT_EXEMPT = [r"^healthz/?$"]`, e
+  `SECURE_SSL_REDIRECT` por `SECURE_REDIRECT_EXEMPT = [HEALTHZ_SEM_REDIRECT]`
+  (`r"(^|/)healthz/?$"`, que casa também sob o `URL_PREFIX`), e
   `healthcheck.railway.app` está em `ALLOWED_HOSTS`.
 - **Estáticos** servidos por WhiteNoise (`WhiteNoiseMiddleware` logo abaixo do
   `SecurityMiddleware`) com `CompressedManifestStaticFilesStorage` em produção e

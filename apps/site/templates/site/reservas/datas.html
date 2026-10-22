@@ -13,11 +13,11 @@
     </h2>
     <div class="mt-4 flex flex-wrap justify-center gap-2 text-sm">
         <a href="{% url 'core:reservar' %}"
-           class="px-4 py-1.5 rounded-full border {% if not eh_day_use %}bg-madeira text-pergaminho border-madeira{% else %}border-madeira/20 text-madeira/60 hover:border-madeira{% endif %}">
+           class="inline-flex items-center min-h-[44px] px-4 py-1.5 rounded-full border {% if not eh_day_use %}bg-madeira text-pergaminho border-madeira{% else %}border-madeira/20 text-madeira/60 hover:border-madeira{% endif %}">
             Hospedagem
         </a>
         <a href="{% url 'core:reservar' %}?modalidade=day_use"
-           class="px-4 py-1.5 rounded-full border {% if eh_day_use %}bg-madeira text-pergaminho border-madeira{% else %}border-madeira/20 text-madeira/60 hover:border-madeira{% endif %}">
+           class="inline-flex items-center min-h-[44px] px-4 py-1.5 rounded-full border {% if eh_day_use %}bg-madeira text-pergaminho border-madeira{% else %}border-madeira/20 text-madeira/60 hover:border-madeira{% endif %}">
             Dia na Pousada
         </a>
     </div>
@@ -80,9 +80,9 @@ calendário ocupa só os 270px do topo.{% endcomment %}
                         <p class="text-madeira font-semibold"><span id="lbl-hospedes">2</span> <span id="lbl-hospedes-palavra">pessoas</span></p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button type="button" id="hosp-menos" class="w-7 h-7 rounded-full border border-madeira/15 text-madeira/50 flex items-center justify-center hover:border-madeira hover:text-madeira transition">−</button>
+                        <button type="button" id="hosp-menos" class="w-11 h-11 rounded-full border border-madeira/15 text-madeira/50 flex items-center justify-center hover:border-madeira hover:text-madeira transition">−</button>
                         <span class="text-madeira font-bold w-6 text-center" id="cnt-hospedes">2</span>
-                        <button type="button" id="hosp-mais" class="w-7 h-7 rounded-full border border-madeira/15 text-madeira/50 flex items-center justify-center hover:border-madeira hover:text-madeira transition">+</button>
+                        <button type="button" id="hosp-mais" class="w-11 h-11 rounded-full border border-madeira/15 text-madeira/50 flex items-center justify-center hover:border-madeira hover:text-madeira transition">+</button>
                     </div>
                 </div>
                 <div class="flex justify-between items-center py-3 border-b border-pergaminho">
@@ -91,9 +91,9 @@ calendário ocupa só os 270px do topo.{% endcomment %}
                         <p class="text-madeira/70 text-[11px]">Pagam meia</p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button type="button" data-ch="c615" data-d="-1" class="ch-btn w-7 h-7 rounded-full border border-madeira/15 text-madeira/50 flex items-center justify-center hover:border-madeira hover:text-madeira transition">−</button>
+                        <button type="button" data-ch="c615" data-d="-1" class="ch-btn w-11 h-11 rounded-full border border-madeira/15 text-madeira/50 flex items-center justify-center hover:border-madeira hover:text-madeira transition">−</button>
                         <span class="text-madeira font-bold w-6 text-center" id="cnt-c615">0</span>
-                        <button type="button" data-ch="c615" data-d="1" class="ch-btn w-7 h-7 rounded-full border border-madeira/15 text-madeira/50 flex items-center justify-center hover:border-madeira hover:text-madeira transition">+</button>
+                        <button type="button" data-ch="c615" data-d="1" class="ch-btn w-11 h-11 rounded-full border border-madeira/15 text-madeira/50 flex items-center justify-center hover:border-madeira hover:text-madeira transition">+</button>
                     </div>
                 </div>
                 <div class="flex justify-between items-center py-3 border-b border-pergaminho">
@@ -102,9 +102,9 @@ calendário ocupa só os 270px do topo.{% endcomment %}
                         <p class="text-madeira/70 text-[11px]">Não pagam</p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button type="button" data-ch="c05" data-d="-1" class="ch-btn w-7 h-7 rounded-full border border-madeira/15 text-madeira/50 flex items-center justify-center hover:border-madeira hover:text-madeira transition">−</button>
+                        <button type="button" data-ch="c05" data-d="-1" class="ch-btn w-11 h-11 rounded-full border border-madeira/15 text-madeira/50 flex items-center justify-center hover:border-madeira hover:text-madeira transition">−</button>
                         <span class="text-madeira font-bold w-6 text-center" id="cnt-c05">0</span>
-                        <button type="button" data-ch="c05" data-d="1" class="ch-btn w-7 h-7 rounded-full border border-madeira/15 text-madeira/50 flex items-center justify-center hover:border-madeira hover:text-madeira transition">+</button>
+                        <button type="button" data-ch="c05" data-d="1" class="ch-btn w-11 h-11 rounded-full border border-madeira/15 text-madeira/50 flex items-center justify-center hover:border-madeira hover:text-madeira transition">+</button>
                     </div>
                 </div>
                 <div id="info-datas"></div>

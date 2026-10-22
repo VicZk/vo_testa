@@ -6,6 +6,7 @@ auditoria que voltaria sozinho na próxima tela nova.
 
 import re
 from pathlib import Path
+from types import SimpleNamespace
 
 from django.conf import settings
 from django.test import TestCase
@@ -431,6 +432,39 @@ class CorredorLegivelTests(TestCase):
         tpl = (Path(settings.BASE_DIR) / "templates" / "reservas" / "partials"
                / "corredor.html").read_text(encoding="utf-8")
         self.assertNotIn("hospede.nome|truncatechars", tpl)
+
+    def test_no_toque_a_porta_tem_a_altura_do_conteudo(self):
+        """A proporção 4/5 é gesto de tela grande. No dedo ela virava vão morto:
+        26px entre a data e o dinheiro num cartão de 130px a 390px, e 66px num
+        de 169px no tablet de 1024px — 39% do cartão vazio, com 24 quartos para
+        rolar. No mouse a porta continua porta."""
+        coarse = "\n".join(
+            re.findall(r"@media \(pointer: coarse\), \(max-width: 820px\) \{([\s\S]*?)\n\}",
+                       self.css))
+        bloco = re.search(r"\.corredor:not\(\.corredor-gov\) \.porta \{([^}]*)\}", coarse)
+        self.assertIsNotNone(bloco, "a porta ficou sem a regra de toque")
+        self.assertIn("aspect-ratio: auto", bloco.group(1))
+        # e a proporção segue valendo fora dali
+        fora = re.search(r"\n\.porta \{([^}]*)\}", self.css)
+        self.assertIn("aspect-ratio: 4 / 5", fora.group(1))
+
+    def test_a_regra_de_toque_nao_mexe_no_corredor_da_governanca(self):
+        """As duas telas usam as mesmas classes (`class="corredor corredor-gov"`)
+        e a Governança já resolveu isto à sua maneira, em qualquer largura:
+        `aspect-ratio: auto` com `min-height: 94px`, porque lá o bloco mostra
+        menos coisa. Sem a exceção, a regra de toque vem depois no arquivo e
+        zeraria aquele piso justamente no dedo, que é onde aquela tela vive."""
+        coarse = "\n".join(
+            re.findall(r"@media \(pointer: coarse\), \(max-width: 820px\) \{([\s\S]*?)\n\}",
+                       self.css))
+        for regra in re.findall(r"([^\n{}]*\.porta[^\n{}]*)\{", coarse):
+            if ".corredor" not in regra:
+                continue
+            self.assertIn(":not(.corredor-gov)", regra,
+                          f"{regra.strip()} também pega o corredor da Governança")
+        gov = re.search(r"\n\.corredor-gov \.porta \{([^}]*)\}", self.css)
+        self.assertIsNotNone(gov)
+        self.assertIn("min-height: 94px", gov.group(1))
 
     def test_ouro_nao_vira_texto_sobre_claro(self):
         """--lampiao sobre branco dá 2,11:1; como texto, usa-se --lampiao-tinta."""
@@ -1017,6 +1051,26 @@ class FlutuantesTests(TestCase):
         for sel in (".pt-wrap input", ".pay input", ".voltar-site"):
             self.assertIn(sel, corpo, sel)
 
+    def test_o_modal_tambem_fica_fora_do_conteudo(self):
+        """O `.modal-caixa` é filho do `.modal-overlay`, que é `position: fixed`
+        fora do `.conteudo` — e ali está a ação mais repetida da recepção. Medido
+        a 390px, a janela de "Nova reserva" saía com campos de 40 a 42px e os
+        rótulos de "Usa o sofá-cama"/"Cobrar ISS" com 19px de altura.
+
+        A caixa de marcar fica FORA da regra de altura de propósito: com largura
+        e altura fixas, o `min-height` esticaria o desenho em vez da área de
+        toque — quem aciona ali é o rótulo."""
+        corpo = "\n".join(
+            re.findall(r"@media \(pointer: coarse\), \(max-width: 820px\) \{([\s\S]*?)\n\}",
+                       self.css))
+        campos = re.search(
+            r"(\.modal-caixa input:not\(\[type=\"checkbox\"\]\):not\(\[type=\"radio\"\]\),"
+            r"[^}]*\})", corpo)
+        self.assertIsNotNone(campos, "o campo do modal ficou sem a regra de toque")
+        self.assertIn("min-height: 44px", campos.group(1))
+        self.assertIn(".modal-caixa .check-inline", corpo,
+                      "o rótulo da caixa de marcar do modal ficou sem alvo")
+
 
 class MenuDoSiteTests(TestCase):
     """O menu do celular do site tinha os mesmos buracos do menu do CRM: fechado
@@ -1422,3 +1476,73 @@ class ComentarioQueNaoVazaTests(TestCase):
                     linha = texto[:achado.start()].count("\n") + 1
                     vazando.append(f"{arq.relative_to(raiz).as_posix()}:{linha}")
         self.assertEqual(vazando, [], "comentário {# #} em várias linhas vaza na tela")
+
+
+class AlvoDeToqueTests(TestCase):
+    """Controle pequeno que vive DENTRO de outra coisa (um chip, uma célula) não
+    aparecia na regra geral de 44px, e era onde o dedo mais errava: 56 alvos de
+    14–16px só na grade da Escala, medidos em 390×844 com toque emulado.
+
+    O contrato é a receita, não o número solto: a CAIXA DE TOQUE cresce e o
+    DESENHO fica. O "+" da hora extra é o caso-limite — 44px de caixa com o
+    círculo de 16px pintado só no conteúdo (`background-clip`)."""
+
+    def setUp(self):
+        self.css = CSS.read_text(encoding="utf-8").replace("\r\n", "\n")
+        self.coarse = "\n".join(
+            re.findall(r"@media \(pointer: coarse\), \(max-width: 820px\) \{([\s\S]*?)\n\}",
+                       self.css))
+
+    def test_controles_pequenos_entram_na_regra_de_toque(self):
+        for sel in (".escala-chip", ".chip-x", ".he-selo .he-x", ".pdv-seg a",
+                    ".lb-btn-ghost", ".mk-pil-acao", "a.est-produto-nome"):
+            self.assertIn(sel, self.coarse, f"{sel} ficou fora do alvo de toque")
+
+    def test_mais_da_hora_extra_cresce_a_caixa_sem_inchar_o_desenho(self):
+        bloco = re.search(r"\.escala-chip \.he-add \{([^}]*)\}", self.coarse)
+        self.assertIsNotNone(bloco, "o '+' da escala saiu da regra de toque")
+        corpo = bloco.group(1)
+        self.assertIn("width: 44px", corpo)
+        self.assertIn("padding", corpo)
+        self.assertIn("background-clip: content-box", corpo,
+                      "sem background-clip o círculo de 16px vira uma bola de 44px")
+
+    def test_botao_de_um_simbolo_so_tem_largura_de_alvo(self):
+        """Altura já vinha da regra de cima; o '‹' da semana da Escala tinha 35px
+        de largura porque `.escala-semana .botao-neutro` fixa 2.2rem e vence pela
+        especificidade — por isso a exceção é repetida com o mesmo peso."""
+        self.assertRegex(self.coarse, r"\.botao-mini, \.mk-pil \{ min-width: 44px; \}")
+        self.assertIn(".escala-semana .botao-neutro { min-width: 44px; }", self.coarse)
+
+
+class IniciaisNaBolinhaTests(TestCase):
+    """A bolinha de iniciais tem 34px e o conteúdo tem de caber nela.
+
+    `get_short_name` devolve o primeiro nome, e quem é cadastrado só com login
+    não tem um. Aí o `|default:` caía no OBJETO `Usuario` — e `|slice:":2"` num
+    objeto não fatia nada (o filtro engole o erro e devolve o que recebeu): a
+    bolinha saía escrita "AUDITOR", vazando por cima do cartão. Foi o "ícone com
+    overlap" que o dono viu no celular. O default agora é o `username`, que é
+    texto, e o CSS corta o que passar."""
+
+    def test_bolinha_mostra_duas_letras_quando_nao_ha_primeiro_nome(self):
+        from django.template import engines
+
+        from apps.nucleo.models import Usuario
+
+        u = Usuario(username="auditor")
+        self.assertEqual(u.get_short_name(), "", "o caso só existe sem primeiro nome")
+        tpl = (Path(settings.BASE_DIR) / "templates" / "nucleo" / "partials"
+               / "logbook_ocorrencia.html").read_text(encoding="utf-8")
+        dono = SimpleNamespace(autor=u)
+        achados = re.findall(r"\{\{ [ce]\.autor\.get_short_name[^}]*\}\}", tpl)
+        self.assertEqual(len(achados), 2, "as duas bolinhas do recado têm de estar lá")
+        for trecho in achados:
+            saida = engines["django"].from_string(trecho).render({"e": dono, "c": dono})
+            self.assertEqual(saida, "AU", f"{trecho} não virou iniciais")
+
+    def test_a_bolinha_corta_o_que_passar(self):
+        css = CSS.read_text(encoding="utf-8").replace("\r\n", "\n")
+        bloco = re.search(r"\n\.lb-avatar, \.lb-av, \.fx-av, \.avatar \{([^}]*)\}", css)
+        self.assertIsNotNone(bloco, "as bolinhas de iniciais precisam recortar o conteúdo")
+        self.assertIn("overflow: hidden", bloco.group(1))

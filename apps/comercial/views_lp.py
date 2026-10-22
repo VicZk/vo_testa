@@ -10,7 +10,6 @@ import re
 from pathlib import Path
 
 from django.conf import settings
-from django.core.cache import cache
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.template.loader import render_to_string
@@ -19,6 +18,8 @@ from django.utils.cache import patch_cache_control
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+
+from apps.nucleo.ratelimit import janela_atual, somar
 
 from . import services
 
@@ -68,6 +69,36 @@ def _com_aviso_de_cookies(html: str) -> str:
     return antes + render_to_string("componentes/consentimento.html") + fecho + depois
 
 
+# O HTML das LPs vem pronto do design e é servido como está. Medido em 390px com
+# toque emulado, o caminho de conversão já está certo — campos de 52 a 54px, as
+# cápsulas de "quantas pessoas" com rótulo de 46px e o consentimento com rótulo de
+# 292 a 350px de largura. O que ficou pequeno é secundário: a pergunta do FAQ
+# (31 a 35px) e o "Inscrever outra pessoa" (31px). Só esses dois entram aqui, só
+# no dedo, e só crescendo por dentro — os dois já centram o próprio texto, então
+# ganham altura sem mexer no desenho. O que NÃO entra, de propósito, está no
+# comentário do fim: mexer na marca da campanha é decisão do dono, não polimento.
+_TOQUE_LP = """
+<style>
+@media (pointer: coarse) {
+  summary { min-height: 44px; }
+  .ticket-again { min-height: 44px; }
+}
+</style>
+"""
+# Fora daqui: a logo do topo (22 a 40px) e o "Entrar para a lista" (42px) — crescer
+# qualquer um dos dois empurra o cabeçalho de uma campanha que já está no ar, e o
+# ganho é pequeno. Os links "Privacidade" dentro da frase de consentimento ficam
+# como estão: alvo dentro de texto corrido é isento pela WCAG 2.5.8.
+
+
+def _com_toque_no_celular(html: str) -> str:
+    """Acrescenta ao fim do <head> da LP o mínimo de alvo de toque (ver _TOQUE_LP)."""
+    antes, fecho, depois = html.rpartition("</head>")
+    if not fecho:
+        return html
+    return antes + _TOQUE_LP + fecho + depois
+
+
 # Fotos e fontes embutidas. O HTML chega do design autocontido, com as imagens e as
 # fontes em base64 dentro do próprio arquivo: a Inauguração tem 2,1 MB, e as fontes e a
 # foto do hero moram no <style> do <head> — o celular baixava 800 KB antes de pintar a
@@ -98,8 +129,8 @@ def _desembutir(html: str) -> str:
 def _lp_html() -> str:
     # Em produção lê uma vez (cache em memória); em DEBUG relê p/ editar ao vivo.
     if _LP_CACHE["html"] is None or settings.DEBUG:
-        _LP_CACHE["html"] = _com_aviso_de_cookies(
-            _desembutir(_LP_PATH.read_text(encoding="utf-8")))
+        _LP_CACHE["html"] = _com_toque_no_celular(_com_aviso_de_cookies(
+            _desembutir(_LP_PATH.read_text(encoding="utf-8"))))
     return _LP_CACHE["html"]
 
 
@@ -183,9 +214,8 @@ def _receber_lead_lp(request, *, slug, origem_padrao, mensagem):
     # Rate limit por IP (corta flood de leads/CAPI). Best-effort — cache pode faltar.
     ip = _ip(request)
     try:
-        chave = f"lp_lead_rate:{ip}"
-        cache.add(chave, 0, _RATE_JANELA)
-        if cache.incr(chave) > _RATE_MAX:
+        inicio, resta = janela_atual(_RATE_JANELA)
+        if somar(f"lp_lead_rate:{ip}:{inicio}", resta) > _RATE_MAX:
             return JsonResponse({"ok": True})  # silencioso
     except Exception:  # noqa: BLE001 — sem cache, segue sem rate limit
         pass
@@ -255,8 +285,8 @@ _VISITA2_COOKIE = "lpv_fundador_2"       # conta 1 visita por navegador (dedupe 
 
 def _lp2_html() -> str:
     if _LP2_CACHE["html"] is None or settings.DEBUG:
-        _LP2_CACHE["html"] = _com_aviso_de_cookies(
-            _desembutir(_LP2_PATH.read_text(encoding="utf-8")))
+        _LP2_CACHE["html"] = _com_toque_no_celular(_com_aviso_de_cookies(
+            _desembutir(_LP2_PATH.read_text(encoding="utf-8"))))
     return _LP2_CACHE["html"]
 
 
@@ -342,7 +372,7 @@ def _lpinaug_html() -> str:
         html = html.replace("/lp/inauguracao/assets/img/og-inauguracao-v2.jpg",
                             "/static/lp/og-inauguracao.jpg")
         html = html.replace("/lp/inauguracao/", f"/lp/{_LPINAUG_SLUG}/")
-        _LPINAUG_CACHE["html"] = _com_aviso_de_cookies(_desembutir(html))
+        _LPINAUG_CACHE["html"] = _com_toque_no_celular(_com_aviso_de_cookies(_desembutir(html)))
     return _LPINAUG_CACHE["html"]
 
 
