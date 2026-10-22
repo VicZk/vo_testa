@@ -5731,10 +5731,11 @@ body.escala-dragging .escala-drop { cursor: copy; }
      limpar», lado a lado no tablet. */
   .botao-ronda, .acoes-quarto .botao-mini,
   .acoes-quarto .botao-primario, .acoes-quarto .botao-neutro,
-  /* A legenda do corredor também filtra a lista: é botão, não enfeite — e vale
-     para a legenda inteira, não só a da Governança (o corredor da recepção tem a
-     dele, com os mesmos chips). */
-  .chip-legenda {
+  /* A legenda do corredor da Governança também filtra a lista: é botão, não
+     enfeite. Só o MODIFICADOR de quem é link — a legenda do painel do núcleo usa
+     os mesmos chips como `<span>`, e inchar texto que ninguém toca é só espaço
+     perdido numa tela de celular. */
+  .chip-legenda-link {
     min-height: 44px;
   }
   /* O menu é o controle mais tocado do sistema no celular, e era o que tinha
@@ -5788,9 +5789,15 @@ body.escala-dragging .escala-drop { cursor: copy; }
      embaixo, o botão principal fica onde a mão já está. */
   .modal-overlay { align-items: flex-end; padding: 0; }
   .modal-caixa {
-    max-width: none; max-height: 88vh; overflow-y: auto;
+    max-width: none; overflow-y: auto;
     border-radius: var(--raio-g) var(--raio-g) 0 0;
     border-bottom: none;
+    /* `vh` no iPhone é a viewport GRANDE (a da barra do Safari escondida): com a
+       barra à vista, uma gaveta de 88vh encostada embaixo sobe além do topo da
+       tela e o título dela some. `dvh` é a altura que existe AGORA; o `vh` fica
+       antes como plano B de quem não conhece a unidade. */
+    max-height: 88vh;
+    max-height: 88dvh;
   }
   .modal-caixa.estreita { max-width: none; }
   @keyframes modal-entra {

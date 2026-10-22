@@ -529,6 +529,25 @@ class DesenhadoParaODedoTests(TestCase):
         self.assertIsNotNone(caixa)
         self.assertIn("max-height", caixa.group(1))
 
+    def test_a_altura_da_gaveta_e_a_tela_que_existe_agora(self):
+        """`vh` no iPhone é a viewport GRANDE (barra do Safari escondida): com a
+        barra à vista, 88vh encostado embaixo sobe além do topo e o título some.
+        `dvh` com o `vh` antes, como plano B."""
+        caixa = re.search(r"\n  \.modal-caixa \{([^}]*)\}", self.toque)
+        self.assertIsNotNone(caixa)
+        alturas = re.findall(r"max-height: (\d+)(dvh|vh)", caixa.group(1))
+        self.assertEqual([u for _, u in alturas], ["vh", "dvh"],
+                         "o dvh tem de vir DEPOIS do vh (plano B primeiro)")
+
+    def test_so_quem_e_alvo_cresce_para_44px(self):
+        """A legenda do corredor da Governança filtra (é botão); a do painel do
+        núcleo é `<span>`. Inchar texto que ninguém toca é espaço perdido."""
+        alvos = re.search(r"\n  \.botao-primario, [^{]*\{[^}]*min-height: 44px;[^}]*\}",
+                          self.toque)
+        self.assertIsNotNone(alvos)
+        self.assertIn(".chip-legenda-link", alvos.group(0))
+        self.assertNotIn("\n  .chip-legenda {", self.toque)
+
     def test_o_botao_da_gaveta_nao_foge_da_tela(self):
         acoes = re.search(r"\n  \.modal-acoes \{([^}]*)\}", self.toque)
         self.assertIsNotNone(acoes)
