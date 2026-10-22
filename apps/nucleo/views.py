@@ -80,7 +80,8 @@ def dashboard(request):
     for m in modulos:
         apres = APRESENTACAO.get(m.codigo, {})
         grupos.setdefault(apres.get("grupo", "Outros"), []).append(
-            {"nome": m.get_codigo_display(), "url": _url(apres)}
+            {"nome": m.get_codigo_display(), "url": _url(apres),
+             "descricao": apres.get("descricao", "")}
         )
     grupos_modulos = [
         {"titulo": titulo, "itens": itens} for titulo, itens in grupos.items()
@@ -224,6 +225,17 @@ def dashboard(request):
                 "url": reverse("estoque:posicao") + "?alerta=1",
             })
 
+    # Nada desta tela é do usuário (a camareira só tem a Governança, o garçom só o
+    # Restaurante): em vez de uma "Visão geral" vazia, ele entra no próprio módulo —
+    # ou vê os atalhos dos que tem.
+    sem_blocos = not (tem_reservas or tem_estoque or tem_financeiro or tem_graficos
+                      or tem_logbook)
+    if sem_blocos:
+        com_tela = [m for m in modulos if _url(APRESENTACAO.get(m.codigo, {}))]
+        if len(com_tela) == 1:
+            apres = APRESENTACAO.get(com_tela[0].codigo, {})
+            return redirect(apres.get("url_pessoal") or apres["url_name"])
+
     if tem_logbook:
         indicadores["logbook_hoje"] = EntradaLogbook.objects.filter(
             criado_em__date=hoje
@@ -248,6 +260,8 @@ def dashboard(request):
             "tem_reservas": tem_reservas,
             "tem_financeiro": tem_financeiro,
             "tem_logbook": tem_logbook,
+            # Vários módulos e nenhum bloco desta tela: os atalhos deles.
+            "atalhos_modulos": sem_blocos,
         },
     )
 

@@ -56,6 +56,8 @@ APRESENTACAO: dict[str, dict] = {
         "ordem": 20,
         "descricao": "Limpeza e arrumação, status quarto a quarto.",
         "url_name": "governanca:painel",
+        # Quem só tem a Governança (a camareira) entra direto na fila dela.
+        "url_pessoal": "governanca:minha_fila",
     },
     Modulo.MANUTENCAO: {
         "grupo": "Hospedagem",
