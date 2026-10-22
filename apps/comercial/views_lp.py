@@ -10,7 +10,6 @@ import re
 from pathlib import Path
 
 from django.conf import settings
-from django.core.cache import cache
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.template.loader import render_to_string
@@ -19,6 +18,8 @@ from django.utils.cache import patch_cache_control
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+
+from apps.nucleo.ratelimit import janela_atual, somar
 
 from . import services
 
@@ -213,9 +214,8 @@ def _receber_lead_lp(request, *, slug, origem_padrao, mensagem):
     # Rate limit por IP (corta flood de leads/CAPI). Best-effort — cache pode faltar.
     ip = _ip(request)
     try:
-        chave = f"lp_lead_rate:{ip}"
-        cache.add(chave, 0, _RATE_JANELA)
-        if cache.incr(chave) > _RATE_MAX:
+        inicio, resta = janela_atual(_RATE_JANELA)
+        if somar(f"lp_lead_rate:{ip}:{inicio}", resta) > _RATE_MAX:
             return JsonResponse({"ok": True})  # silencioso
     except Exception:  # noqa: BLE001 — sem cache, segue sem rate limit
         pass

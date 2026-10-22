@@ -613,8 +613,12 @@ class SiteNoCelularE2ETests(_UnidadeVendavelMixin, _BaseE2E):
     def test_botao_do_whatsapp_nao_cobre_o_fim_do_rodape(self):
         p = self.page
         p.goto(self.url("/"))
+        # A escolha dos cookies vem primeiro: no celular o botão só entra em cena
+        # depois dela (regra do próprio whatsapp.html), e a folga do rodapé só
+        # faz diferença com o botão na tela.
+        p.wait_for_selector("#consentimento:not([hidden])", timeout=10000)
+        p.click("[data-consent-aceitar]")
         p.wait_for_selector(".zap-flutuante", timeout=10000)
-        p.click("[data-consent-aceitar]")          # tira o aviso da frente
         p.wait_for_timeout(250)
         self._fim_da_pagina()
         tapado = p.evaluate("""() => {
@@ -627,6 +631,31 @@ class SiteNoCelularE2ETests(_UnidadeVendavelMixin, _BaseE2E):
           return {cruza, zap: Math.round(z.top), creditos: Math.round(c.bottom)};
         }""")
         self.assertFalse(tapado["cruza"], f"o WhatsApp está em cima dos créditos: {tapado}")
+
+    def test_whatsapp_nao_encavala_no_formulario_da_primeira_tela(self):
+        """Na primeira visita, com o aviso de cookies no pé da tela, o botão do
+        WhatsApp subia para cima dele e caía no canto do "Ver Disponibilidade" —
+        o "ícone com overlap" que o dono viu na home. No celular ele espera a
+        escolha e volta depois."""
+        p = self.page
+        p.goto(self.url("/"))
+        p.wait_for_selector("#consentimento:not([hidden])", timeout=10000)
+        p.wait_for_timeout(250)
+        medida = p.evaluate("""() => {
+          const zap = document.querySelector('.zap-flutuante');
+          const z = zap.getBoundingClientRect();
+          const f = document.querySelector('#hero-hospedes').closest('form').getBoundingClientRect();
+          const cruza = Math.max(z.left, f.left) < Math.min(z.right, f.right)
+                     && Math.max(z.top, f.top) < Math.min(z.bottom, f.bottom);
+          return {visivel: getComputedStyle(zap).visibility === 'visible', cruza};
+        }""")
+        self.assertFalse(medida["visivel"] and medida["cruza"],
+                         f"o WhatsApp está em cima do formulário de datas: {medida}")
+        p.click("[data-consent-aceitar]")
+        p.wait_for_timeout(250)
+        self.assertEqual(
+            p.evaluate("() => getComputedStyle(document.querySelector('.zap-flutuante')).visibility"),
+            "visible", "o WhatsApp não voltou depois da escolha")
 
     def test_caminho_da_reserva_tem_alvo_de_44px(self):
         """Campo de data, botão do hero, CTA do quarto e a escolha das camas —
@@ -690,10 +719,26 @@ class SiteNoCelularE2ETests(_UnidadeVendavelMixin, _BaseE2E):
         self.assertEqual(estado["aviso"], "hidden", estado)
         self.assertEqual(estado["zap"], "hidden", estado)
 
-        # Fechada a gaveta, os dois voltam — o aviso ainda precisa ser respondido.
+        # Fechada a gaveta, o aviso volta — ele ainda precisa ser respondido.
+        # O botão do WhatsApp não: no celular ele espera a escolha dos cookies
+        # (whatsapp.html), e aqui ela ainda não foi feita.
         p.click("#menuBtn")
         p.wait_for_timeout(500)
-        volta = p.evaluate("""() => ({
-            aviso: getComputedStyle(document.getElementById('consentimento')).visibility,
-            zap: getComputedStyle(document.querySelector('.zap-flutuante')).visibility})""")
-        self.assertEqual(volta, {"aviso": "visible", "zap": "visible"})
+        aviso = p.evaluate(
+            "() => getComputedStyle(document.getElementById('consentimento')).visibility")
+        self.assertEqual(aviso, "visible", "o aviso não voltou ao fechar a gaveta")
+
+        # Respondido o aviso, o botão entra; e a gaveta volta a ser a única
+        # coisa na tela enquanto está aberta.
+        p.click("[data-consent-aceitar]")
+        p.wait_for_selector(".zap-flutuante", timeout=10000)
+        p.click("#menuBtn")
+        p.wait_for_timeout(500)
+        com_gaveta = p.evaluate(
+            "() => getComputedStyle(document.querySelector('.zap-flutuante')).visibility")
+        self.assertEqual(com_gaveta, "hidden", "o WhatsApp ficou por cima da gaveta")
+        p.click("#menuBtn")
+        p.wait_for_timeout(500)
+        sem_gaveta = p.evaluate(
+            "() => getComputedStyle(document.querySelector('.zap-flutuante')).visibility")
+        self.assertEqual(sem_gaveta, "visible", "o WhatsApp não voltou ao fechar a gaveta")

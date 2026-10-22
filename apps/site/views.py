@@ -3,7 +3,6 @@ from decimal import Decimal
 from types import SimpleNamespace
 
 from django.contrib import messages
-from django.core.cache import cache
 from django.db import transaction
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -37,15 +36,11 @@ def _limite_excedido(request, escopo, limite, janela_seg):
 
     Obs.: em produção use um cache compartilhado (Redis); o LocMemCache é por processo.
     """
+    from apps.nucleo.ratelimit import janela_atual, somar
+
     ip = request.META.get('REMOTE_ADDR', 'desconhecido')
-    chave = f'ratelimit:{escopo}:{ip}'
-    cache.add(chave, 0, janela_seg)
-    try:
-        atual = cache.incr(chave)
-    except ValueError:
-        cache.set(chave, 1, janela_seg)
-        atual = 1
-    return atual > limite
+    inicio, resta = janela_atual(janela_seg)
+    return somar(f'ratelimit:{escopo}:{ip}:{inicio}', resta) > limite
 
 
 def _usuario_sistema():
