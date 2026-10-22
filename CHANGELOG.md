@@ -9,7 +9,7 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
-## 21/10/2026 — O sistema roda sob um prefixo de URL e o ambiente de teste vai para viczk.cloud/votesta (`c37ae9a`)
+## 21/10/2026 — O sistema roda sob um prefixo de URL e o ambiente de teste vai para viczk.cloud/votesta (`c37ae9a` a `d0d2d57`)
 
 Décimo quarto bloco, pequeno: para o ambiente de teste morar num caminho do domínio
 pessoal do dono (onde outros projetos vivem lado a lado), e não num endereço próprio.
@@ -27,6 +27,9 @@ pessoal do dono (onde outros projetos vivem lado a lado), e não num endereço p
 - **LPs:** o HTML das landing pages vem pronto do design, com caminhos absolutos; sob um
   prefixo, eles são reescritos na hora (fotos, vídeo, política de privacidade, envio do
   lead), sem duplicar o que já vem certo.
+- **Healthcheck sob prefixo (`d0d2d57`):** a isenção de HTTPS do `/healthz/` comparava
+  com o caminho sem o prefixo; sob `/votesta` o healthcheck em HTTP levava 301 e o
+  container nunca ficava saudável. Achado pelo próprio deploy.
 
 **O que foi modificado**
 - `config/settings.py`: `URL_PREFIX` → `FORCE_SCRIPT_NAME`, cookies de sessão e CSRF
