@@ -542,7 +542,10 @@ com a hora do check-in), o que pede ação agora, o **plano do dia** na ordem de
 camareira. A camareira tem a **Minha fila** no celular: um cartão por quarto, na ordem de
 prioridade, com "Começar"/"Terminei" e "Reportar problema" (abre OS na Manutenção). Quem
 está de turno na Escala aparece primeiro no seletor de quem limpa, e "Distribuir a fila"
-divide os quartos a limpar entre essas pessoas. Quarto nunca mexido nasce "Pronto". A aba Quartos é a
+divide os quartos a limpar entre essas pessoas. Quarto nunca mexido nasce "Pronto". Tocar
+num bloco abre a **ficha do quarto** (gaveta de baixo no toque; página própria sem
+JavaScript): estado, porquê, quem está dentro e o próximo passo. Liberar o quarto tem
+"Desfazer" logo depois, em vez de "tem certeza?" antes. A aba Quartos é a
 lista de trabalho: o ciclo **A limpar › Em limpeza › Limpo › Pronto** à vista (e
 filtrando), uma frase por linha dizendo por que o quarto está ali e **um** botão por
 quarto com o nome do que acontece ("Começar limpeza", "Terminei a limpeza", "Aprovar
@@ -843,6 +846,9 @@ Toda tela do CRM nasce no design system; nada de estilo paralelo nem cor fixa no
   ponteiro grosso, inclusive no portal, no pagamento, no login e dentro dos modais.
   Controle pequeno que mora dentro de outra coisa (chip, célula, linha) segue a seção
   "Polimento mobile" do `app.css`: a caixa de toque cresce, o desenho fica onde está.
+- **Modal no toque é gaveta de baixo:** encostada no pé da tela, com `.modal-acoes`
+  presas embaixo e altura em `88dvh` (com `88vh` antes, para navegador antigo); o toast
+  sobe para o topo para não cair nos botões dela. No mouse o modal segue centrado.
 - **Nada fixo por cima do conteúdo:** o aviso de cookies reserva a própria altura no
   fim da página (`--aviso-cookies-altura`); com o menu do site aberto, aviso e botões
   flutuantes saem da frente; no celular, o WhatsApp só aparece depois da escolha dos

@@ -9,6 +9,62 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 22/10/2026 — Governança no toque: ficha do quarto, "Desfazer" e a gaveta de baixo (`85fa82e` a `42010f3`, merge `4d7f1e0`, `306bba4`)
+
+Segunda rodada do pedido "a governança vai ser usada mais no tablet e no celular, tem
+que ser bem intuitiva". Feita pelo mesmo agente da Governança v2, revisada no
+navegador com toque emulado antes do merge.
+
+**O que melhorou**
+- **Ficha do quarto:** tocar numa porta do corredor abre uma gaveta com o estado, o
+  porquê, quem está no quarto e o próximo passo ("Começar limpeza", "Aprovar
+  limpeza"…). O que antes só aparecia passando o mouse agora está escrito, a um toque.
+- **"Desfazer" no lugar de "tem certeza?":** ao liberar o quarto, a ação acontece na
+  hora e um aviso verde oferece desfazer.
+- **Check-in barrado pela limpeza:** o link do aviso na reserva abre a ficha daquele
+  quarto ("Ver a limpeza do quarto"), e não a Governança inteira.
+- **No toque, em todo o CRM:**
+  - o modal vira gaveta encostada embaixo, com os botões presos ao pé, onde o polegar
+    já está; a altura acompanha a tela que existe, mesmo com a barra do Safari à vista;
+  - o aviso (toast) sobe para o topo, para não cair em cima desses botões;
+  - os botões vizinhos ganham 10 px de folga;
+  - o texto de apoio, os rótulos e os selos de estado ficam legíveis sem zoom.
+- A legenda do corredor da Governança, que filtra a lista, tem 44 px; a do painel, que
+  é só legenda, continua compacta.
+
+**O que ficou de fora, de propósito**
+- Do commit antigo `01dcaaf`, que nunca tinha entrado:
+  - o gráfico "Ritmo do dia" (o número de cada barra seria uma dica de passar o mouse,
+    a pergunta já está escrita no Plano do dia e ele traria o Chart.js de fora ao
+    celular da camareira; se for útil, o lugar é Relatórios);
+  - o botão "Meus quartos", que a Minha fila já substitui.
+- "Terminei a limpeza" não tem "Desfazer": concluir avisa a Lavanderia, que recolhe o
+  enxoval num registro que não se apaga. O caminho de volta é "Devolver para limpar".
+
+**O que foi modificado**
+- `apps/governanca`: rota `governanca:quarto` (ficha; gaveta com HTMX e página sem
+  JavaScript), `desfazer_aprovacao`, parciais `acoes_quarto`, `quarto_ficha`,
+  `quarto_sheet` e `desfazer`.
+- `apps/reservas/views.py`: o link do aviso de check-in.
+- `static/css/app.css`: ficha do quarto e, no bloco de toque, a gaveta de baixo
+  (`88dvh`, com `88vh` antes), o toast no topo, as folgas e o texto legível (escopo
+  `.conteudo`, fora do recorte público).
+- `306bba4`: na ficha, "Devolver para limpar" empilha abaixo de "Aprovar limpeza" no
+  celular, em vez de se espremer em três linhas.
+
+**Como foi testado**
+- Testes novos: `FichaDoQuartoTests`, `DesfazerAprovacaoTests`, `AvisoDeCheckinSujoTests`,
+  `SemHoverTests` e o contrato de toque `DesenhadoParaODedoTests`.
+- Governança, escala, manutenção, reservas e design: 696 testes no branch.
+- Navegador:
+  - a 390 × 844, 768 × 1024 e 1024 × 768 com toque, sem alvo abaixo de 44 px nem
+    rolagem lateral;
+  - as gavetas de Nova reserva, Novo grupo, ficha do quarto e Devolver para limpar
+    com os botões à vista e o combobox de pessoa inteiro dentro da gaveta;
+  - a 1440 px, o modal continua centrado.
+
+---
+
 ## 22/10/2026 — Polimento do celular: o dedo acerta, nada flutua por cima, o site cabe na mão (`246e590` a `d532dc7`, merge `3bf4f7c`, `486f501`)
 
 Pedido do dono, testando no celular: "só tem que polir a interface no mobile e tudo —
