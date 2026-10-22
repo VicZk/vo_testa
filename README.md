@@ -530,9 +530,15 @@ documento fiscal (a NFC-e sai pelo Fiscal).
 rouparia interna como livro-razão de enxoval (limpa, em uso, suja, lavando). O mesmo
 cupom de 80 mm serve de comprovante na recepção da roupa e de recibo na entrega.
 
-**Governança.** A entrada é "Como está a casa": os quartos em blocos pintados pelo
-estado da limpeza, o progresso do dia ("22 de 24 prontos", com a hora do check-in), o que
-pede ação agora, as chegadas de hoje e a carga de cada camareira. A aba Quartos é a
+**Governança** (pensada para tablet e celular). A entrada é "Como está a casa": os
+quartos em blocos com o número e o estado na frente e quem está dentro (vago, ocupado,
+chega hoje, sai hoje, bloqueado, com o hóspede), o progresso do dia ("22 de 24 prontos",
+com a hora do check-in), o que pede ação agora, o **plano do dia** na ordem de atacar
+(chegadas, saídas, ocupados a arrumar, o resto — e se dá tempo) e a carga de cada
+camareira. A camareira tem a **Minha fila** no celular: um cartão por quarto, na ordem de
+prioridade, com "Começar"/"Terminei" e "Reportar problema" (abre OS na Manutenção). Quem
+está de turno na Escala aparece primeiro no seletor de quem limpa, e "Distribuir a fila"
+divide os quartos a limpar entre essas pessoas. Quarto nunca mexido nasce "Pronto". A aba Quartos é a
 lista de trabalho: o ciclo **A limpar › Em limpeza › Limpo › Pronto** à vista (e
 filtrando), uma frase por linha dizendo por que o quarto está ali e **um** botão por
 quarto com o nome do que acontece ("Começar limpeza", "Terminei a limpeza", "Aprovar
