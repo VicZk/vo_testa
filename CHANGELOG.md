@@ -9,6 +9,25 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 22/10/2026 — Dois arremates do toque (`03549c9`, `40280ee`; merges `f9c5832` e `3e72743`)
+
+**O que melhorou**
+- O "Mais opções — camas, taxas e observações" da gaveta de nova reserva passa de 39
+  para 44 px: a regra de toque do `<summary>` só alcançava o conteúdo da página, e a
+  gaveta mora fora dele.
+- A linha do plano do dia da Governança fica travada por teste como alvo inteiro (não
+  só o número do quarto), para nenhuma mexida futura no cartão desfazer isso.
+
+**O que foi modificado**
+- `static/css/app.css` (`.modal-caixa summary` no bloco de toque) e
+  `apps/nucleo/tests_design.py`.
+
+**Como foi testado**
+- `tests_design` e `apps.reservas` (479) OK; base.css em dia; as gavetas de Nova
+  reserva e da ficha do quarto percorridas controle a controle a 390 px.
+
+---
+
 ## 22/10/2026 — Celular, última rodada: ficha de campanha, "×" dos carrinhos e e-mail do lead (`5a20346`, merge `8e11d6c`)
 
 Fecha a lista da varredura do CRM a 390 px com toque.
