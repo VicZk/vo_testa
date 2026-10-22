@@ -9,6 +9,27 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 22/10/2026 — A lista do combo cabe no painel no celular (`35c01ac`)
+
+**O que melhorou**
+- No celular, a lista de um combo (cliente, hóspede, quarto, produto, fornecedor)
+  que mora dentro de um painel com rolagem própria abria para baixo e era cortada
+  por ele — no PDV da Loja, metade da lista do cliente ficava fora do carrinho e da
+  tela. Agora a lista escolhe o lado com espaço e não passa do painel nem da parte
+  visível da tela (com o teclado aberto, inclusive).
+
+**O que foi modificado**
+- `templates/base.html` (`posicionar()` dos combos: visualViewport + ancestrais que
+  cortam) e `.combo-lista` com `--combo-max` no `app.css`.
+
+**Como foi testado**
+- Novo `ComboNoPainelE2ETests` (navegador, 390 px): falha no código anterior (a
+  lista ia até 924 px; o painel acaba em 805) e passa agora.
+- Todos os combos medidos em 390 px com toque emulado: nenhum cortado, coberto ou
+  fora da tela. `apps.site.tests_e2e`, `apps.loja` e `apps.nucleo.tests_design` OK.
+
+---
+
 ## 21/10/2026 — O sistema roda sob um prefixo de URL e o ambiente de teste vai para viczk.cloud/votesta (`c37ae9a` a `ac3d522`)
 
 Décimo quarto bloco, pequeno: para o ambiente de teste morar num caminho do domínio
