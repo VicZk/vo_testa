@@ -1358,3 +1358,57 @@ class BlocoDoQuartoTests(RondaBase):
                      if p["uh"].pk == self.uh.pk)
         self.assertEqual(porta["ocupacao"], "Bloqueado")
         self.assertEqual(porta["cor"], "limp-bloqueada")
+
+
+class QuartoOcupadoNaoDizProntoTests(RondaBase):
+    """"Pronto" quer dizer «pode receber hóspede» — e o quarto já tem um.
+
+    Com a casa cheia a tela mostrava 21 blocos anunciando "pode receber hóspede"
+    sobre quartos ocupados. Com gente dentro, limpo e conferido é ARRUMADO: o
+    serviço do dia saiu, não é uma unidade vendável.
+    """
+
+    def _linha(self, uh):
+        return next(ln for ln in services.painel_limpeza()["linhas"]
+                    if ln["uh"].pk == uh.pk)
+
+    def test_quarto_vago_e_conferido_continua_pronto(self):
+        services.inspecionar(self.uh, self.user)
+        linha = self._linha(self.uh)
+        self.assertEqual(linha["situacao_label"], "Pronto")
+        self.assertIn("Pode receber hóspede", linha["explicacao"])
+
+    def test_quarto_ocupado_e_conferido_diz_arrumado(self):
+        self._hospedar(self.uh, sai_em_dias=3)
+        services.inspecionar(self.uh, self.user)
+        linha = self._linha(self.uh)
+        self.assertEqual(linha["situacao_label"], "Arrumado")
+        self.assertIn("O hóspede continua no quarto", linha["explicacao"])
+        self.assertNotIn("Pode receber hóspede", linha["explicacao"])
+
+    def test_quem_sai_hoje_lembra_que_a_faxina_vem_no_checkout(self):
+        self._hospedar(self.uh, sai_em_dias=0)
+        services.inspecionar(self.uh, self.user)
+        self.assertIn("sai hoje", self._linha(self.uh)["explicacao"])
+
+    def test_ocupado_sem_nenhum_registro_nao_finge_arrumacao(self):
+        self._hospedar(self.uh, sai_em_dias=3)
+        StatusLimpeza.objects.filter(uh=self.uh).delete()
+        linha = self._linha(self.uh)
+        self.assertEqual(linha["situacao_label"], "Arrumado")
+        self.assertEqual(linha["explicacao"], "Sem arrumação registrada hoje.")
+
+    def test_o_estado_do_banco_nao_muda_so_o_rotulo_da_tela(self):
+        """A palavra é da tela: o model, o filtro e o Mapa seguem em
+        `inspecionada`."""
+        self._hospedar(self.uh, sai_em_dias=3)
+        services.inspecionar(self.uh, self.user)
+        self.assertEqual(self._linha(self.uh)["situacao"],
+                         StatusLimpeza.Situacao.INSPECIONADA)
+        self.assertEqual(services.status_por_uh()[self.uh.pk], "inspecionada")
+
+    def test_quarto_sujo_ocupado_segue_a_limpar(self):
+        self._hospedar(self.uh, sai_em_dias=3)
+        services.abrir_faxina(self.uh, tipo=TarefaGovernanca.Tipo.ARRUMACAO,
+                              usuario=self.user, origem="arrumacao_diaria")
+        self.assertEqual(self._linha(self.uh)["situacao_label"], "A limpar")

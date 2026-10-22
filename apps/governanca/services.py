@@ -216,10 +216,12 @@ CICLO = [
     {
         "cod": StatusLimpeza.Situacao.INSPECIONADA,
         "rotulo": "Pronto",
-        "resumo": "Conferido pela supervisora — pode receber hóspede.",
+        "resumo": "Conferido pela supervisora. Vago, pode receber hóspede; "
+                  "ocupado, já está arrumado.",
         "quem": "—",
         "ajuda": "Na hotelaria chama-se «inspecionado». É o único estado em que o "
-                 "quarto está liberado para a recepção entregar a chave.",
+                 "quarto está liberado para a recepção entregar a chave — por isso "
+                 "o quarto que já tem hóspede aparece como «Arrumado».",
     },
 ]
 SITUACAO_SIMPLES = {e["cod"]: e["rotulo"] for e in CICLO}
@@ -287,7 +289,24 @@ def _quem(usuario) -> str:
     return (usuario.get_full_name() or usuario.username) if usuario else ""
 
 
-def explicar_estado(situacao, tarefa, status) -> str:
+def _tem_hospede(ocupacao) -> bool:
+    return bool(ocupacao) and ocupacao.get("cod") in ("ocupado", "sai_hoje")
+
+
+def rotulo_do_estado(situacao, ocupacao=None) -> str:
+    """O nome do estado na TELA, lido junto com a ocupação.
+
+    "Pronto" quer dizer «conferido, pode receber hóspede» — e não serve para um
+    quarto que já tem um dentro. Com gente no quarto, limpo e conferido é
+    **Arrumado**: é o serviço do dia feito, não uma unidade vendável. Sem essa
+    distinção a casa cheia mostrava 21 blocos dizendo "pode receber hóspede".
+    """
+    if situacao == StatusLimpeza.Situacao.INSPECIONADA and _tem_hospede(ocupacao):
+        return "Arrumado"
+    return SITUACAO_SIMPLES.get(situacao, situacao)
+
+
+def explicar_estado(situacao, tarefa, status, ocupacao=None) -> str:
     """Uma frase curta dizendo POR QUE o quarto está neste estado e o que falta.
 
     É o que ensina o fluxo a quem pega o sistema pela primeira vez: a tela não diz
@@ -311,10 +330,19 @@ def explicar_estado(situacao, tarefa, status) -> str:
     if situacao == StatusLimpeza.Situacao.LIMPA:
         por = f" por {quem}" if quem else ""
         return f"Limpo{quando}{por}. Falta a supervisora conferir."
+    sem_carimbo = not getattr(status, "atualizado_por_id", None)
+    if _tem_hospede(ocupacao):
+        # Com hóspede dentro, "pode receber hóspede" não quer dizer nada: o que
+        # interessa é se a arrumação do dia saiu.
+        if sem_carimbo:
+            return "Sem arrumação registrada hoje."
+        falta = ("O hóspede sai hoje — a faxina nasce no check-out."
+                 if ocupacao["cod"] == "sai_hoje" else "O hóspede continua no quarto.")
+        return f"Arrumado{quando}. {falta}"
     # "Pronto" sem ninguém no `atualizado_por` é o estado de nascimento do quarto
     # (banco novo, ou módulo ativado numa casa que já roda): ninguém inspecionou,
     # e a tela não inventa um carimbo que não existe.
-    if not getattr(status, "atualizado_por_id", None):
+    if sem_carimbo:
         return "Sem faxina registrada ainda. Disponível para a recepção."
     return f"Conferido e aprovado{quando}. Pode receber hóspede."
 
@@ -361,19 +389,20 @@ def _estado_dos_quartos(dia=None) -> dict:
             if conf else ""
         )
         tarefa = tarefas.get(uh.pk)
+        # A outra metade da pergunta: limpeza diz como o quarto está, ocupação diz
+        # quem está dentro (e se alguém chega hoje). Sai do `pms` que já foi
+        # consultado — nenhuma consulta nova por quarto. Vem ANTES do rótulo e da
+        # frase porque as duas mudam de acordo com ela.
+        ocupacao = ocupacao_do_quarto(info, bloqueado=bloqueado,
+                                      sem_base=pms is None)
         linhas.append({
             "uh": uh,
             "situacao": status.situacao,
-            # A outra metade da pergunta: limpeza diz como o quarto está, ocupação
-            # diz quem está dentro (e se alguém chega hoje). Sai do `pms` que já
-            # foi consultado — nenhuma consulta nova por quarto.
-            "ocupacao": ocupacao_do_quarto(info, bloqueado=bloqueado,
-                                           sem_base=pms is None),
+            "ocupacao": ocupacao,
             # Rótulo da TELA (plain) + a frase que explica por que o quarto está
             # assim e o que falta — é o que ensina o fluxo a quem está começando.
-            "situacao_label": SITUACAO_SIMPLES.get(status.situacao,
-                                                   status.get_situacao_display()),
-            "explicacao": explicar_estado(status.situacao, tarefa, status),
+            "situacao_label": rotulo_do_estado(status.situacao, ocupacao),
+            "explicacao": explicar_estado(status.situacao, tarefa, status, ocupacao),
             "tarefa": tarefa,
             "atualizado_em": status.atualizado_em,
             "conferencia": conf,
