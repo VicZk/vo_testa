@@ -9,6 +9,35 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 22/10/2026 — Celular, última rodada: ficha de campanha, "×" dos carrinhos e e-mail do lead (`5a20346`, merge `8e11d6c`)
+
+Fecha a lista da varredura do CRM a 390 px com toque.
+
+**O que melhorou**
+- **Ficha da campanha (Marketing):** os botões dela passam a ter 44 px, e a caixa de
+  marcar das etapas continua com o desenho de 20 px, mas com 44 × 44 de área de toque.
+  São eles:
+  - os chips de canal, "Adicionar", "Salvar dados" e "Dispensar";
+  - copiar e fechar no cabeçalho;
+  - o ✕ de cada etapa.
+- **"×" de tirar item** do carrinho da Loja, da comanda do Restaurante e da ordem da
+  Lavanderia com 44 × 44.
+- **E-mail do lead:** "Aplicar" e "Biblioteca" com 44 px.
+
+**O que ficou de fora, de propósito**
+- As barras do calendário do Marketing: a altura já tem 44 px, e a largura é a duração
+  da campanha no mês — esticar faria a barra mentir.
+
+**O que foi modificado**
+- `static/css/app.css` (seção "Polimento mobile"), `templates/comercial/email/enviar.html`;
+  `tests_design` com o contrato novo.
+
+**Como foi testado**
+- E2E do site (18), `tests_design` (122) e os módulos tocados (405) no branch; varredura
+  em 320, 390, 821 com o menu aberto e 1440 px sem rolagem lateral.
+
+---
+
 ## 22/10/2026 — Governança no toque: ficha do quarto, "Desfazer" e a gaveta de baixo (`85fa82e` a `42010f3`, merge `4d7f1e0`, `306bba4`)
 
 Segunda rodada do pedido "a governança vai ser usada mais no tablet e no celular, tem
