@@ -65,14 +65,41 @@ class PendenciasOperacionaisE2ETests(_BaseE2E):
             pasta.mkdir(parents=True, exist_ok=True)
             self.page.screenshot(path=str(pasta / f"pendencias-{nome}.png"), full_page=True)
 
+    def _conferir_atualizacoes(self, badge, central, pendentes):
+        # Cada endpoint tem seu próprio fetch. Esperar o corpo completo também
+        # impede que uma resposta inicial ainda em voo seja confundida com o poll.
+        for resposta, campo in ((badge.value, "pendentes"), (central.value, "total")):
+            self.assertEqual(resposta.status, 200)
+            self.assertIsNone(resposta.finished())
+            self.assertEqual(resposta.json()[campo], pendentes)
+
+    def _avancar_polling(self, pendentes):
+        p = self.page
+        with (
+            p.expect_response(lambda r: reverse("governanca:atualizacoes") in r.url) as badge,
+            p.expect_response(lambda r: reverse("pendencias_atualizacoes") in r.url) as central,
+        ):
+            p.clock.run_for(60001)
+        self._conferir_atualizacoes(badge, central, pendentes)
+
     def test_badge_abre_lista_exata_polling_preserva_filtro_e_limpa_zero(self):
         p = self.page
         p.clock.install()
-        p.goto(self.url(reverse("governanca:quartos")), wait_until="load")
+        with p.expect_response(lambda r: reverse("governanca:atualizacoes") in r.url) as inicial:
+            p.goto(self.url(reverse("governanca:quartos")), wait_until="load")
+        self.assertIsNone(inicial.value.finished())
+        self.assertEqual(inicial.value.json()["pendentes"], 3)
         badge = p.get_by_role("link", name="3 serviço(s) de limpeza pendente(s)", exact=True)
         expect(badge).to_be_visible()
         expect(badge).to_have_attribute("href", reverse("pendencias") + "?origem=governanca&estado=pendente")
-        badge.click()
+        # A navegação HTMX inicia os dois fetches no afterSettle. Concluí-los
+        # antes de mudar os dados evita adiantar 60s virtuais com o badge ocupado.
+        with (
+            p.expect_response(lambda r: reverse("governanca:atualizacoes") in r.url) as aviso,
+            p.expect_response(lambda r: reverse("pendencias_atualizacoes") in r.url) as central,
+        ):
+            badge.click()
+        self._conferir_atualizacoes(aviso, central, 3)
         expect(p.get_by_role("heading", name="Pendências", exact=True)).to_be_visible()
         expect(p.locator("[data-pendencia-id]")).to_have_count(3)
         expect(p.locator("[data-pendencias-total]")).to_have_text("3 pendências")
@@ -81,8 +108,7 @@ class PendenciasOperacionaisE2ETests(_BaseE2E):
         expect(p.locator("#pendencias-resultados")).not_to_contain_text("QA inspeção")
 
         governanca.iniciar_tarefa(self.tarefas[0], self.usuario)
-        with p.expect_response(lambda r: reverse("pendencias_atualizacoes") in r.url):
-            p.clock.run_for(60001)
+        self._avancar_polling(2)
         expect(p.locator("[data-pendencia-id]")).to_have_count(2)
         expect(p.locator("[data-governanca-avisos]")).to_have_text("2")
         expect(p.get_by_role("combobox", name="Origem das pendências")).to_have_value("governanca")
@@ -92,8 +118,7 @@ class PendenciasOperacionaisE2ETests(_BaseE2E):
         p.locator("[data-pendencia-id] a").first.focus()
         governanca.concluir_tarefa(self.tarefas[1], self.usuario)
         governanca.concluir_tarefa(self.tarefas[2], self.usuario)
-        with p.expect_response(lambda r: reverse("pendencias_atualizacoes") in r.url):
-            p.clock.run_for(60001)
+        self._avancar_polling(0)
         expect(p.locator("[data-pendencia-id]")).to_have_count(0)
         expect(p.locator("[data-pendencias-total]")).to_have_text("0 pendências")
         expect(p.locator("[data-pendencias-vazio]")).to_be_visible()

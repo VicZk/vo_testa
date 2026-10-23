@@ -915,7 +915,7 @@ class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
                 requestAnimationFrame(medir);
             });
         }""")
-        for rota in ("governanca:painel", "marketing:quadro", "escala:grade", "estoque:posicao"):
+        for rota in ("governanca:painel", "marketing:entregas", "escala:grade", "estoque:posicao"):
             p.locator(f'#menu-principal a[href="{reverse(rota)}"]').click()
             p.wait_for_url("**"+reverse(rota))
             p.wait_for_function("!document.querySelector('.htmx-request')")
