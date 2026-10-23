@@ -255,10 +255,11 @@
   /* Largura da sidebar aberta e do trilho (recolhida). `--sidebar-w` é a que
      vale agora: o trilho a redefine em `.app.recolhida`. */
   --sidebar-w-aberta: 258px;
-  --trilho-w: 72px;
+  --trilho-w: 128px;
   --sidebar-w: var(--sidebar-w-aberta);
   /* Onde moram os ícones do menu: no MESMO x aberto e recolhido — o centro do
-     trilho (72px menos a borda de 1px, ÷ 2 = 35,5px). Ícones, "Nova reserva",
+     trilho (128px menos a borda de 1px, ÷ 2 = 63,5px). O espaço lateral também
+     acomoda o contador sem cobrir o desenho. Ícones, "Nova reserva",
      símbolo, botão de recolher e avatar se alinham por aqui; ao alternar o
      menu, nada anda de lado. `--sidebar-ico-x` = borda esquerda do ícone de 19px. */
   --trilho-centro: calc((var(--trilho-w) - 1px) / 2);
@@ -521,6 +522,8 @@ a:hover { color: var(--lampiao-tinta); }
   /* Alvos do rodapé e do botão de recolher: 30px no mouse, 44px no dedo
      (ver ALVOS DE TOQUE). As posições abaixo são calculadas a partir deles. */
   --alvo: 30px;
+  --menu-scrollbar: 0px;
+  --menu-inset: max(.55rem, var(--menu-scrollbar));
   --faixa-botao: calc(1rem + var(--alvo) + .5rem);   /* faixa do botão de recolher / Sair */
   position: sticky;
   top: 0;
@@ -566,6 +569,7 @@ a:hover { color: var(--lampiao-tinta); }
   top: 0; bottom: 0;
   left: 1.15rem; right: var(--faixa-botao);
   overflow: hidden;
+  transition: right var(--mov-padrao) var(--curva);
 }
 .marca-full, .marca-icone {
   position: absolute;
@@ -633,8 +637,11 @@ a:hover { color: var(--lampiao-tinta); }
    aberta, o dedo arrastava o conteúdo de baixo. */
 .sidebar nav {
   position: relative;
-  flex: 1; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
-  padding: .5rem .55rem 1rem;
+  flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  /* A barra clássica ocupa largura; a sobreposta não. Compensar a largura
+     medida mantém a caixa do item no mesmo centro dos ícones nos dois casos. */
+  padding: .5rem max(0px, calc(var(--menu-inset) - var(--menu-scrollbar))) 1rem var(--menu-inset);
 }
 .sidebar nav::-webkit-scrollbar { width: 8px; }
 .sidebar nav::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--pergaminho) 16%, transparent); border-radius: 8px; }
@@ -649,7 +656,7 @@ a:hover { color: var(--lampiao-tinta); }
   position: relative;
   display: block;
   overflow: hidden;
-  padding: 0 .75rem .35rem calc(var(--sidebar-ico-x) - .55rem);
+  padding: 0 .75rem .35rem calc(var(--sidebar-ico-x) - var(--menu-inset));
   font-size: .62rem;
   color: color-mix(in srgb, var(--lampiao) 70%, transparent);
 }
@@ -658,7 +665,7 @@ a:hover { color: var(--lampiao-tinta); }
   position: absolute;
   /* centro do trilho, descontado o padding da <nav>; a 3px do topo fica no
      meio do vão entre os grupos (margem .95rem + altura do título) */
-  left: calc(var(--trilho-centro) - .55rem - 8px); top: 3px;
+  left: calc(var(--trilho-centro) - var(--menu-inset) - 8px); top: 3px;
   width: 16px; height: 1px;
   background: color-mix(in srgb, var(--pergaminho) 22%, transparent);
   opacity: 0;
@@ -666,12 +673,15 @@ a:hover { color: var(--lampiao-tinta); }
 }
 
 .nav-badge {
-  position: absolute; top: 4px; right: 8px;
-  min-width: 18px; height: 18px; padding: 0 5px;
-  display: inline-flex; align-items: center; justify-content: center;
+  position: absolute; top: 50%; right: 8px;
+  transform: translateY(-50%);
+  min-width: 20px; height: 20px; padding: 0 3px;
+  display: inline-grid; place-items: center;
   background: var(--sucesso); color: #fff;
   font-size: 11px; font-weight: 800; line-height: 1; border-radius: 100px;
+  font-variant-numeric: tabular-nums;
 }
+.nav-badge-numero { display: block; line-height: 1; }
 /* Ícone no x do trilho (padding da <nav> + padding do item). O rótulo que não
    cabe é recortado pela própria pílula (`overflow: hidden`). */
 .nav-item {
@@ -679,7 +689,7 @@ a:hover { color: var(--lampiao-tinta); }
   display: flex;
   align-items: center;
   gap: .7rem;
-  padding: .5rem .75rem .5rem calc(var(--sidebar-ico-x) - .55rem);
+  padding: .5rem .75rem .5rem calc(var(--sidebar-ico-x) - var(--menu-inset));
   overflow: hidden;
   margin-bottom: 1px;
   font-size: .875rem;
@@ -690,6 +700,7 @@ a:hover { color: var(--lampiao-tinta); }
   white-space: nowrap;
   transition: background .14s, color .14s;
 }
+.nav-item:has(.nav-badge:not([hidden])) .rotulo { margin-right: 24px; }
 a.nav-item:hover { color: var(--pergaminho); background: rgba(255, 255, 255, .05); }
 
 .nav-item.ativo {
@@ -721,7 +732,8 @@ a.nav-item:hover { color: var(--pergaminho); background: rgba(255, 255, 255, .05
 }
 .usuario-mini {
   display: flex; align-items: center; gap: .55rem;
-  min-width: 0; max-width: calc(100% - var(--alvo) - .5rem);
+  min-width: 0; max-width: max(30px, calc(100% - var(--alvo) - .5rem));
+  transition: max-width var(--mov-padrao) var(--curva);
 }
 /* Janela do nome + cápsula: anda com a borda e termina sempre antes do Sair. */
 .usuario-texto { display: flex; align-items: center; gap: .55rem; min-width: 0; overflow: hidden; }
@@ -738,7 +750,7 @@ a.nav-item:hover { color: var(--pergaminho); background: rgba(255, 255, 255, .05
 }
 /* MFA desligado, no trilho: a cápsula "MFA off" esmaece e um ponto aparece no
    canto do avatar (o texto da cápsula segue no leitor de tela). */
-.usuario-mini .avatar { position: relative; }
+.usuario-mini .avatar { position: relative; overflow: visible; }
 .usuario-mini:has(.selo) .avatar::after {
   content: "";
   position: absolute; top: -2px; right: -2px;
@@ -786,6 +798,8 @@ button.link:hover { color: var(--lampiao); background: rgba(255, 255, 255, .05);
    cabem inteiros perto do fim da largura, e antes disso o nome apareceria
    com reticências, crescendo. */
 .nav-item .rotulo, .acao-topo .rotulo {
+  min-width: 0; flex: 1;
+  overflow: hidden; text-overflow: ellipsis;
   white-space: nowrap;   /* nunca quebra em duas linhas no meio da animação */
   transition: opacity var(--mov-rapido) var(--curva) var(--mov-toque);
 }
@@ -803,6 +817,7 @@ button.link:hover { color: var(--lampiao); background: rgba(255, 255, 255, .05);
      o símbolo surge no centro do trilho, o botão desliza para baixo dele e a
      seta gira. O link da marca vira a área acima do botão. */
   .app.recolhida .marca { width: 100%; height: 66px; }
+  .app.recolhida .marca-janela { right: calc(var(--trilho-centro) + var(--alvo) / 2 + .5rem); }
   .app.recolhida .marca-full { opacity: 0; transition: opacity var(--mov-toque) var(--curva); }
   .app.recolhida .marca-icone {
     opacity: 1;
@@ -810,7 +825,6 @@ button.link:hover { color: var(--lampiao); background: rgba(255, 255, 255, .05);
   }
   .app.recolhida .sidebar-toggle { top: 69px; right: calc(var(--trilho-centro) - var(--alvo) / 2); }
   .app.recolhida .sidebar-toggle .ico { transform: rotate(180deg); }
-  .app.recolhida .nav-badge { top: 2px; right: 6px; }
 
   /* Recolhendo, os rótulos SAEM antes de a largura fechar (sem espera). */
   .app.recolhida .acao-topo .rotulo,
@@ -832,6 +846,9 @@ button.link:hover { color: var(--lampiao); background: rgba(255, 255, 255, .05);
   .app.recolhida .sidebar-rodape button.link {
     right: calc(var(--trilho-centro) - var(--alvo) / 2);
     bottom: calc(.75rem + var(--alvo) + .5rem);
+  }
+  .app.recolhida .usuario-mini {
+    max-width: max(30px, calc(100% - var(--trilho-centro) - var(--alvo) / 2 + .5rem));
   }
   .app.recolhida .usuario-mini:has(.selo) .avatar::after {
     opacity: 1;
@@ -4085,6 +4102,9 @@ form.filtros:not(.subnav) {
 .campo-curto { max-width: 130px; }
 
 /* Marketing — barra de seções + contador de coluna do quadro. */
+.mkt-cabecalho { align-items: flex-start; margin-bottom: 1rem; }
+.mkt-cabecalho > div { flex: 1 1 32rem; }
+.mkt-cabecalho .subtitulo { margin: .45rem 0 0; }
 .mkt-barra { display: flex; align-items: center; gap: .9rem; flex-wrap: wrap; margin-bottom: 1.1rem; }
 .mkt-barra .filtro-chip .ico { width: 16px; height: 16px; }
 .mkt-conta {

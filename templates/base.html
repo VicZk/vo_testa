@@ -25,6 +25,7 @@
   {# Botão "Copiar" de qualquer `data-copiar` (componentes/copiar.html). #}
   <script src="{% static 'js/copiar.js' %}" defer></script>
   <script src="{% static 'js/governanca-avisos.js' %}" defer></script>
+  <script src="{% static 'js/sidebar.js' %}" defer></script>
   {% comment %}Movimento na navegação: a View Transition vale só para a troca de
   página (o hx-boost do menu leva `transition:true`; a navegação comum, o
   `@view-transition` do app.css). As trocas parciais do HTMX (item na comanda,
@@ -216,7 +217,7 @@
     </button>
     {% endif %}
 
-    <nav id="menu-principal" aria-label="Menu principal"
+    <nav id="menu-principal" aria-label="Menu principal" data-rolagem-chave="votesta:menu:{% url 'dashboard' %}:{{ user.pk }}"
          hx-boost="true" hx-target="#conteudo" hx-select="#conteudo" hx-swap="outerHTML show:window:top transition:true">
       <div class="nav-grupo">
         <a href="{% url 'dashboard' %}" class="nav-item {% if atual == 'dashboard' %}ativo{% endif %}" title="Visão geral">
@@ -233,8 +234,8 @@
               <a href="{{ m.url }}" class="nav-item {% if request.resolver_match.namespace == m.codigo %}ativo{% endif %}" title="{{ m.nome }}">
                 {% include "componentes/icone_modulo.html" with codigo=m.codigo %}
                 <span class="rotulo">{{ m.nome }}</span>
-                {% if m.codigo == 'governanca' %}<span class="nav-badge" data-governanca-avisos="{% url 'governanca:atualizacoes' %}" title="Serviços de limpeza pendentes"{% if not governanca_pendentes %} hidden{% endif %}>{{ governanca_pendentes|default:0 }}</span>{% endif %}
-                {% if m.codigo == 'comercial' and wpp_nao_lidas_total %}<span class="nav-badge" title="{{ wpp_nao_lidas_total }} conversa(s) de WhatsApp aguardando resposta">{{ wpp_nao_lidas_total }}</span>{% endif %}
+                {% if m.codigo == 'governanca' %}<span class="nav-badge" role="img" data-governanca-avisos="{% url 'governanca:atualizacoes' %}" title="{{ governanca_pendentes|default:0 }} serviço(s) de limpeza pendente(s)" aria-label="{{ governanca_pendentes|default:0 }} serviço(s) de limpeza pendente(s)"{% if not governanca_pendentes %} hidden{% endif %}><span class="nav-badge-numero">{% if governanca_pendentes > 99 %}99+{% else %}{{ governanca_pendentes|default:0 }}{% endif %}</span></span>{% endif %}
+                {% if m.codigo == 'comercial' and wpp_nao_lidas_total %}<span class="nav-badge" role="img" title="{{ wpp_nao_lidas_total }} conversa(s) de WhatsApp aguardando resposta" aria-label="{{ wpp_nao_lidas_total }} conversa(s) de WhatsApp aguardando resposta"><span class="nav-badge-numero">{% if wpp_nao_lidas_total > 99 %}99+{% else %}{{ wpp_nao_lidas_total }}{% endif %}</span></span>{% endif %}
               </a>
               {% if m.codigo == 'comercial' %}
               <a href="{% url 'comercial:paginas' %}" class="nav-item {% if request.resolver_match.namespace == 'comercial' and 'pagina' in request.resolver_match.url_name %}ativo{% endif %}" title="Páginas de Captação (Landing Pages)">
@@ -403,7 +404,7 @@
       </button>
     </header>
 
-    <main id="conteudo" class="conteudo {% block conteudo_classe %}{% endblock %}">
+    <main id="conteudo" hx-history-elt class="conteudo {% block conteudo_classe %}{% endblock %}">
       {% block conteudo %}{% endblock %}
     </main>
   </div>
@@ -449,7 +450,9 @@
   // ---------- Sidebar ----------
   const APP = document.getElementById('app');
   // Rail ícone-só por padrão (Operação Lampião); usuário pode expandir (⌘\).
-  if (localStorage.getItem('sidebar') !== 'aberta') APP.classList.add('recolhida');
+  try {
+    if (localStorage.getItem('sidebar') !== 'aberta') APP.classList.add('recolhida');
+  } catch (_) { APP.classList.add('recolhida'); }
 
   // O botão dizia "Recolher menu" mesmo já recolhido, e o title mostrava a
   // barra invertida dobrada do template. Agora o rótulo acompanha o estado.
@@ -487,7 +490,7 @@
 
   function alternarSidebar() {
     APP.classList.toggle('recolhida');
-    localStorage.setItem('sidebar', APP.classList.contains('recolhida') ? 'recolhida' : 'aberta');
+    try { localStorage.setItem('sidebar', APP.classList.contains('recolhida') ? 'recolhida' : 'aberta'); } catch (_) { /* Preferência opcional. */ }
     rotularSidebar();
   }
 
@@ -515,6 +518,9 @@
     if (b) { b.setAttribute('aria-expanded', 'false'); b.setAttribute('aria-label', 'Abrir menu'); }
     if (estava) devolverFoco();
   }
+  GAVETA.addEventListener('change', () => {
+    if (!GAVETA.matches) fecharSidebarMobile();
+  });
 
   // Máscara de dinheiro BRL (10.000,00) — trata os dígitos como centavos.
   function mascararMoeda(el) {
@@ -538,6 +544,7 @@
     if (melhor) melhor.classList.add('ativo');
   }
   document.body.addEventListener('htmx:pushedIntoHistory', () => { marcarNavAtiva(); fecharSidebarMobile(); });
+  document.body.addEventListener('htmx:historyRestore', () => { marcarNavAtiva(); fecharSidebarMobile(); });
 
   // ---------- Foco: preso dentro da caixa e devolvido a quem abriu ----------
   // Modal e paleta são diálogos: o Tab circula dentro deles (WCAG 2.1.2) e, ao

@@ -4,30 +4,28 @@
 
 {% block conteudo %}
 {% load moeda %}
-{# Transcrição do protótipo. Seleção de período em pílulas (sem controle nativo). #}
-
-<p class="pagina-eyebrow letreiro">Marketing</p>
-<div class="pagina-cabecalho"><h1>Resultados do marketing</h1></div>
-{% include "marketing/_tabs.html" %}
+{% include "marketing/_cabecalho.html" with titulo="Resultados do marketing" descricao="Compare o investimento e o retorno das campanhas no período escolhido." %}
 
 <section class="mk-secao">
-  {# filtro em pílulas #}
   <div class="mk-filtros">
-    <div class="mk-filtro-linha">
+    <div class="mk-filtro-linha" role="group" aria-label="Mês do relatório">
       <span class="mk-filtro-rotulo">MÊS</span>
       {% for n, nome in meses %}
-      <a href="?mes={{ n }}&ano={{ ano_sel }}" class="mk-pil{% if n == mes_sel %} on{% endif %}">{{ nome|slice:":3" }}</a>
+      <a href="?mes={{ n }}&ano={{ ano_sel }}" class="mk-pil{% if n == mes_sel %} on{% endif %}"{% if n == mes_sel %} aria-current="page"{% endif %} aria-label="{{ nome }}">{{ nome|slice:":3" }}</a>
+      {% endfor %}
+    </div>
+    <div class="mk-filtro-linha" role="group" aria-label="Ano do relatório">
+      <span class="mk-filtro-rotulo">ANO</span>
+      {% for a in anos %}
+      <a href="?mes={{ mes_sel }}&ano={{ a }}" class="mk-pil{% if a == ano_sel %} on{% endif %}"{% if a == ano_sel %} aria-current="page"{% endif %}>{{ a }}</a>
       {% endfor %}
     </div>
     <div class="mk-filtro-linha">
-      <span class="mk-filtro-rotulo">ANO</span>
-      {% for a in anos %}
-      <a href="?mes={{ mes_sel }}&ano={{ a }}" class="mk-pil{% if a == ano_sel %} on{% endif %}">{{ a }}</a>
-      {% endfor %}
-      <span class="mk-sep"></span>
-      <a href="?mes={{ mes_sel }}&ano={{ ano_sel }}&export=csv" class="mk-pil-acao">Exportar CSV</a>
-      <button type="button" onclick="window.print()" class="mk-pil-acao">Imprimir</button>
       <span class="mk-periodo">Período: <b>{{ rotulo }}</b></span>
+      <div class="linha-botoes">
+        <a href="?mes={{ mes_sel }}&ano={{ ano_sel }}&export=csv" class="botao-neutro">Exportar CSV</a>
+        <button type="button" onclick="window.print()" class="botao-neutro">Imprimir</button>
+      </div>
     </div>
   </div>
 

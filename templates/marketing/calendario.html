@@ -1,24 +1,19 @@
 {% extends "base.html" %}
-{% block conteudo_classe %}conteudo-largo{% endblock %}
 {% load l10n %}
 
 {% block titulo %}Calendário | Marketing{% endblock %}
 
 {% block conteudo %}
-{# Transcrição do protótipo (linha do tempo). Cores → tokens; terra → --madeira. #}
+{% include "marketing/_cabecalho.html" with titulo="Calendário de campanhas" descricao="Veja quando cada campanha acontece e acompanhe os prazos das peças." %}
 
-<p class="pagina-eyebrow letreiro">Marketing</p>
-<div class="pagina-cabecalho"><h1>Calendário de campanhas</h1></div>
-{% include "marketing/_tabs.html" %}
-
-<section class="mk-secao tom fim">
+<section class="mk-secao fim">
   <div class="mk-cal-cab">
-    <a href="?vista={{ escala }}&ano={{ prev.ano }}&mes={{ prev.mes }}" class="mk-cal-nav" aria-label="Anterior">‹</a>
+    <a href="?vista={{ escala }}&ano={{ prev.ano }}&mes={{ prev.mes }}" class="mk-cal-nav" aria-label="{% if escala == 'ano' %}Ano anterior{% else %}Mês anterior{% endif %}">‹</a>
     <h2 class="mk-cal-mes">{{ tl.titulo }}</h2>
-    <a href="?vista={{ escala }}&ano={{ next.ano }}&mes={{ next.mes }}" class="mk-cal-nav" aria-label="Próximo">›</a>
+    <a href="?vista={{ escala }}&ano={{ next.ano }}&mes={{ next.mes }}" class="mk-cal-nav" aria-label="{% if escala == 'ano' %}Próximo ano{% else %}Próximo mês{% endif %}">›</a>
     <span class="mk-sep"></span>
-    <a href="?vista=mes&ano={{ ano }}&mes={{ mes }}" class="mk-pil larga{% if escala == 'mes' %} on{% endif %}">Mês</a>
-    <a href="?vista=ano&ano={{ ano }}&mes={{ mes }}" class="mk-pil larga{% if escala == 'ano' %} on{% endif %}">Ano</a>
+    <a href="?vista=mes&ano={{ ano }}&mes={{ mes }}" class="mk-pil larga{% if escala == 'mes' %} on{% endif %}"{% if escala == 'mes' %} aria-current="page"{% endif %}>Mês</a>
+    <a href="?vista=ano&ano={{ ano }}&mes={{ mes }}" class="mk-pil larga{% if escala == 'ano' %} on{% endif %}"{% if escala == 'ano' %} aria-current="page"{% endif %}>Ano</a>
   </div>
 
   {% comment %}As posições das barras saem em % — forçar PONTO decimal: a localização

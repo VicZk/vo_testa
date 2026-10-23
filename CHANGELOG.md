@@ -9,6 +9,20 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 23/10/2026: navegação estável, categorias ilustradas e Marketing consistente
+
+- O menu lateral conserva a posição ao trocar de página, recarregar e voltar.
+  A abertura e o recolhimento mantêm ícones alinhados, inclusive com barras de
+  rolagem clássicas e telas de toque. Indicadores têm números centralizados,
+  espaço nas bordas e contagem completa para leitores de tela.
+- O histórico troca só o conteúdo da página, preservando o funcionamento do
+  menu e da gaveta. Ao sair da largura de celular, a gaveta libera foco e rolagem.
+- Os filtros de categoria da Loja mostram miniícones de bebidas, alimentos e
+  outros grupos, usando as mesmas ilustrações locais do catálogo.
+- As quatro telas de Marketing compartilham cabeçalho, largura e ação de criar
+  campanha. Os períodos selecionados ficam identificados e as ações de exportar
+  e imprimir seguem o padrão dos demais módulos.
+
 ## 22/10/2026: catálogo com ícones e escolha visual no cadastro
 
 - Loja, Restaurante e lista de produtos compartilham ilustrações por nome e

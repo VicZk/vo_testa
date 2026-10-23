@@ -64,7 +64,7 @@ _REGRAS = (
     (r"\b(sabonete|shampoo|xampu|protetor|repelente|creme|higiene|limpeza|detergente|alcool)\b", "spray-can"),
     (r"\b(camiseta|camisetas|camisa|roupa|roupas|bone|chinelo|moda)\b", "shirt"),
     (r"\b(presente|presentes|lembranca|lembrancas|souvenir|artesanato)\b", "shopping-bag"),
-    (r"\b(refeicao|refeicoes|prato|pratos|porcao|porcoes|almoco|jantar|restaurante)\b", "utensils"),
+    (r"\b(alimento|alimentos|refeicao|refeicoes|prato|pratos|porcao|porcoes|almoco|jantar|restaurante)\b", "utensils"),
     (r"\b(bebida|bebidas)\b", "glass-water"),
 )
 _PADROES = tuple((re.compile(padrao), icone) for padrao, icone in _REGRAS)

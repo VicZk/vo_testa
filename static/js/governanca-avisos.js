@@ -13,8 +13,14 @@
       });
       if (!resposta.ok || !resposta.headers.get('content-type')?.includes('application/json')) return;
       const dados = await resposta.json();
-      badge.textContent = dados.pendentes;
-      badge.hidden = !dados.pendentes;
+      const pendentes = Number(dados.pendentes);
+      if (!Number.isSafeInteger(pendentes) || pendentes < 0) return;
+      const numero = badge.querySelector('.nav-badge-numero');
+      if (numero) numero.textContent = pendentes > 99 ? '99+' : String(pendentes);
+      const descricao = `${pendentes} serviço(s) de limpeza pendente(s)`;
+      badge.setAttribute('aria-label', descricao);
+      badge.title = descricao;
+      badge.hidden = pendentes === 0;
       const atual = JSON.stringify([dados.ultima, dados.quartos_atualizados_em, dados.total]);
       if (urlAtual !== location.href) { versao = null; urlAtual = location.href; }
       if (versao && versao !== atual) {

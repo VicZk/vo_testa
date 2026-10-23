@@ -5,23 +5,8 @@
 {% block conteudo %}
 {% load moeda %}
 <div id="marketing-quadro">
-{% comment %}Transcrição do protótipo (ABRIR-Marketing.html). Cores → tokens app.css;
-terra(#9A4429/#B25837) → --madeira (não há --terra); texto < 11px pisado em 11px
-(Parte 3). Estrutura/medidas/textos copiados do DOM. Ordem: breadcrumb → título →
-descrição → abas → faixa → verba → quadro. Papel vem de request.user (sem seletor).{% endcomment %}
-
-{# ── Título (breadcrumb → título → descrição) ── #}
-<div class="mk-pagina-tit">
-  <div class="mk-trilha">MARKETING<span aria-hidden="true">›</span><span class="mk-trilha-atual">CAMPANHAS</span></div>
-  <h1 class="mk-titulo">Quadro de campanhas</h1>
-  <p class="mk-descricao">Crie a campanha, organize o trabalho e acompanhe os resultados. Abra uma campanha para ver o próximo passo.</p>
-</div>
-
-{% comment %}Navegação e filtro nos componentes da casa: eram cinco cápsulas
-desenhadas à mão, indistinguíveis dos chips de dado do quadro.{% endcomment %}
-{% include "marketing/_tabs.html" %}
+{% include "marketing/_cabecalho.html" with titulo="Quadro de campanhas" descricao="Organize as campanhas por fase. Abra uma campanha para ver o próximo passo." %}
 <div class="mkt-barra">
-  <a href="{% url 'marketing:nova_campanha' %}" hx-get="{% url 'marketing:nova_campanha' %}" hx-target="#modal-conteudo" class="botao-primario">Nova campanha</a>
   <a href="?{% if not so_meus %}meus=1{% endif %}" class="filtro-chip"{% if so_meus %} aria-current="page"{% endif %}>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ico"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Só os meus
     <span class="n">{{ meus_label }}</span>

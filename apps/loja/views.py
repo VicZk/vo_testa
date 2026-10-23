@@ -7,6 +7,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
+from apps.nucleo.catalogo import ilustracao_produto
 from apps.nucleo.models import (
     FormaPagamento,
     LocalEstoque,
@@ -38,12 +39,15 @@ def _local_da_loja(request):
 def pdv(request):
     local = _local_da_loja(request)
     produtos = []
+    icones_categorias = {}
     if local:
         vendaveis = Produto.objects.filter(
             ativo=True, preco_venda__gt=0
         ).select_related("categoria")
         saldos = disponibilidade_produtos(vendaveis, local)
         for p in vendaveis:
+            if p.categoria.nome not in icones_categorias:
+                icones_categorias[p.categoria.nome] = ilustracao_produto(p.categoria.nome)["icone"]
             produtos.append({
                 "id": p.pk, "nome": p.nome,
                 "categoria": p.categoria.nome,
@@ -67,6 +71,7 @@ def pdv(request):
         "local": local,
         "locais": LocalEstoque.objects.filter(ativo=True),
         "produtos_json": json.dumps(produtos),
+        "icones_categorias_json": json.dumps(icones_categorias),
         "formas": FormaPagamento.objects.filter(ativo=True),
         "clientes": pessoas_agrupadas(),
         "contas": contas,

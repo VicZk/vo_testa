@@ -3,13 +3,9 @@
 {% block titulo %}Ocupação × campanha | Marketing{% endblock %}
 
 {% block conteudo %}
-{# Transcrição do protótipo. Barra em escala absoluta, trilho hachurado, zero é zero. #}
+{% include "marketing/_cabecalho.html" with titulo="Ocupação e campanhas" descricao="Encontre semanas com vagas e planeje campanhas para as próximas datas." %}
 
-<p class="pagina-eyebrow letreiro">Marketing</p>
-<div class="pagina-cabecalho"><h1>Ocupação e campanhas</h1></div>
-{% include "marketing/_tabs.html" %}
-
-<section class="mk-secao tom">
+<section class="mk-secao">
   <div class="mk-secao-cab">
     <h2 class="mk-secao-tit">Onde estão os vazios</h2>
     <p class="mk-ocup-resumo{% if resumo_tom == 'perigo' %} perigo{% elif resumo_tom == 'alerta' %} alerta{% endif %}">{{ resumo }}</p>
@@ -54,7 +50,7 @@
   </div>
 </section>
 
-<section class="mk-secao tom fim">
+<section class="mk-secao fim">
   <div class="mk-secao-cab">
     <h2 class="mk-secao-tit">Datas que puxam reserva</h2>
     <p class="mk-secao-sub respiro">Campanha de feriado precisa de antecedência: planejar em cima destas datas é metade do trabalho.</p>

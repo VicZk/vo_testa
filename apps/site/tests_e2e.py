@@ -935,7 +935,8 @@ class MenuLateralE2ETests(_BaseE2E):
         aberta = self.page.evaluate(self.MEDIR)
         self.page.click("#btn-recolher")
         self.page.wait_for_function(
-            "() => Math.round(document.querySelector('.sidebar').getBoundingClientRect().width) < 100")
+            "() => Math.round(document.querySelector('.sidebar').getBoundingClientRect().width) === "
+            "parseFloat(getComputedStyle(document.querySelector('.app')).getPropertyValue('--trilho-w'))")
         self.page.wait_for_timeout(200)
         trilho = self.page.evaluate(self.MEDIR)
 

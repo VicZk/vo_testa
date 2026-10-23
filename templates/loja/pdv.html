@@ -42,9 +42,15 @@
     </div>
 
     <div class="pdv-categorias" role="group" aria-label="Categorias de produtos">
-      <button type="button" class="filtro-chip" :aria-pressed="categoria === ''" @click="categoria = ''">Todos <span x-text="produtos.length"></span></button>
+      <button type="button" class="filtro-chip" :aria-pressed="categoria === ''" @click="categoria = ''">
+        <svg viewBox="0 0 24 24" class="ico" aria-hidden="true" focusable="false"><use href="{% static 'vendor/lucide/catalogo.svg' %}#package"></use></svg>
+        <span>Todos</span> <span x-text="produtos.length"></span>
+      </button>
       <template x-for="c in categorias()" :key="c.nome">
-        <button type="button" class="filtro-chip" :aria-pressed="categoria === c.nome" @click="categoria = c.nome"><span x-text="c.nome"></span> <span x-text="c.total"></span></button>
+        <button type="button" class="filtro-chip" :aria-pressed="categoria === c.nome" @click="categoria = c.nome">
+          <svg viewBox="0 0 24 24" class="ico" aria-hidden="true" focusable="false"><use :href="iconesUrl + '#' + (iconesCategorias[c.nome] || 'package')"></use></svg>
+          <span x-text="c.nome"></span> <span x-text="c.total"></span>
+        </button>
       </template>
     </div>
     <div class="pdv-catalogo-nota">
@@ -149,6 +155,7 @@
   function pdv() {
     return {
       produtos: JSON.parse('{{ produtos_json|escapejs }}'),
+      iconesCategorias: JSON.parse('{{ icones_categorias_json|escapejs }}'),
       iconesUrl: '{% static "vendor/lucide/catalogo.svg" %}',
       cart: [], filtro: '', categoria: '', painel: 'produtos', aviso: '',
       arrastando: null, sobreCarrinho: false, desconto: 0, destino: 'caixa',
