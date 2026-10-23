@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block titulo %}Entregas | Marketing{% endblock %}
+{% block conteudo %}
+<div class="eleg mkt-entregas" id="marketing-entregas">
+  <p class="pagina-eyebrow letreiro">Marketing</p>
+  <div class="pagina-cabecalho mkt-cabecalho">
+    <div><h1>Entregas</h1><p class="subtitulo">Veja os materiais prontos e o que falta produzir, separados por tipo.</p></div>
+    <a href="{% url 'marketing:nova_entrega' %}?voltar={{ request.get_full_path|urlencode }}{% if filtros.campanha.value %}&amp;campanha={{ filtros.campanha.value }}{% endif %}" class="botao-primario">Nova entrega</a>
+  </div>
+  {% include "marketing/_tabs.html" %}
+  <section class="kpis mkt-entregas-resumo" aria-label="Entregas por tipo">
+    {% for tipo in resumo_tipos %}
+    <div class="kpi" data-tipo="{{ tipo.tipo }}">
+      <h2 class="kpi-rotulo">{{ tipo.nome }}</h2>
+      <span class="kpi-valor num">{{ tipo.total }}</span>
+      <div class="mkt-entrega-contagens">
+        <a href="{{ tipo.url_pronta }}">{{ tipo.prontas }} pronta{{ tipo.prontas|pluralize }}</a>
+        <a href="{{ tipo.url_pendentes }}">{{ tipo.pendentes }} pendente{{ tipo.pendentes|pluralize }}</a>
+      </div>
+    </div>
+    {% endfor %}
+  </section>
+  <form method="get" class="filtros mkt-entregas-filtros" aria-label="Filtrar entregas">
+    {% for field in filtros %}
+    <div class="filtro-campo{% if field.errors %} campo-erro{% endif %}">
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+      {% for erro in field.errors %}<small class="erro">{{ erro }}</small>{% endfor %}
+    </div>
+    {% endfor %}
+    <button type="submit" class="botao-primario">Filtrar</button>
+    <a href="{% url 'marketing:entregas' %}" class="botao-neutro">Limpar</a>
+  </form>
+  <p class="subtitulo">{{ pagina.paginator.count }} entrega{{ pagina.paginator.count|pluralize }} encontrada{{ pagina.paginator.count|pluralize }}. Pronta indica produção concluída.</p>
+  {% regroup pagina.object_list by get_tipo_display as grupos %}
+  <div class="mkt-entregas-grupos">
+    {% for grupo in grupos %}
+    <section class="painel-bloco" aria-label="{{ grupo.grouper }}">
+      <h2>{{ grupo.grouper }}</h2>
+      {% for p in grupo.list %}{% include "marketing/_entrega_linha.html" %}{% endfor %}
+    </section>
+    {% empty %}
+    <div class="painel-bloco"><h2>Nenhuma entrega encontrada</h2><p class="subtitulo">Ajuste os filtros ou registre uma entrega dentro de uma campanha.</p></div>
+    {% endfor %}
+  </div>
+  {% include "componentes/paginacao.html" with pagina=pagina %}
+</div>
+<div hidden hx-get="{{ request.get_full_path }}" hx-trigger="marketing:atualizar from:body" hx-target="#marketing-entregas" hx-select="#marketing-entregas" hx-swap="outerHTML"></div>
+{% endblock %}

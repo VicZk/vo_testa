@@ -93,7 +93,8 @@ aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% e
     {% for ln in linhas %}
     {# `id` por quarto: a porta da visão geral aponta para a linha dele. #}
     <tr id="quarto-{{ ln.uh.pk }}"
-        x-show="(f==='todas' || f==='{{ ln.situacao }}') && (!soMeus || {{ ln.minha|yesno:'true,false' }})"
+        data-servicos-estados="{{ ln.servicos_estados|join:' ' }}"
+        x-show="(!t || '{{ ln.servicos_estados|join:' ' }}'.split(' ').includes(t)) && (f==='todas' || f==='{{ ln.situacao }}') && (!soMeus || {{ ln.minha|yesno:'true,false' }})"
         x-transition.opacity>
       {% comment %}Ocupação (ocupação, de Reservas) é o dado que a
       supervisora ia buscar no mapa ao lado: "Sai hoje · Ana Lima". O TIPO do

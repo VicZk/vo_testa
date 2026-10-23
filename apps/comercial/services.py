@@ -3051,3 +3051,30 @@ def ganhar_por_sinal(oportunidade, cobranca, usuario=None):
                    f"Sinal pago → oportunidade ganha e reserva #{reserva.pk} criada "
                    f"(confirme a reserva manualmente)."))
     return reserva
+
+
+def paginas_para_marketing(*, usuario, ids=None):
+    """Referências de LPs, sem conteúdo/leads e sem criar ou publicar registros.
+
+    A permissão continua sendo do Comercial. O cadastro não comprova que uma LP
+    especial esteja publicada, por isso o contrato entrega somente nome e URLs.
+    """
+    from django.urls import reverse
+
+    from apps.nucleo.models import modulo_ativo
+    from apps.nucleo.modulos import Modulo
+
+    from .models import PaginaCaptacao
+
+    if not (usuario.is_authenticated and usuario.pode_acessar(Modulo.COMERCIAL)
+            and modulo_ativo(Modulo.COMERCIAL)):
+        return []
+    paginas = PaginaCaptacao.objects.only("id", "nome", "slug").order_by("nome", "id")
+    if ids is not None:
+        paginas = paginas.filter(pk__in=ids)
+    return [
+        {"id": pagina.pk, "nome": pagina.nome,
+         "url": pagina.get_absolute_url(),
+         "url_gestao": reverse("comercial:pagina_detalhe", args=[pagina.pk])}
+        for pagina in paginas
+    ]

@@ -30,6 +30,8 @@ original. Uma checklist marcada ou um teste antigo não comprova o ambiente atua
 | Documento | Classificação e leitura |
 |---|---|
 | [Compras, perecíveis e pratos](ESTOQUE_COMPRAS.md) | Embalagens, lotes, validade, perdas, fichas técnicas e controle auxiliar de aprovação |
+| [Operação do Restaurante](RESTAURANTE.md) | Pedido, cozinha, fechamento, estorno e limites comparados ao Odoo |
+| [Pendências da operação](PENDENCIAS.md) | Contagem da Governança, filtros, acesso por área e resolução na origem |
 | [FNRH Digital](Implementar_FNRH_API.md) | Guia de integração; adapter escrito, ativação/homologação a validar |
 | [Canais e OTAs](CANAIS.md) | Channex, preparação, conferência e limites; credenciais e homologação real pendentes |
 | [Safrapay](Implementar_Safrapay.md) | Guia e evidências HML datadas; não atesta produção |
@@ -70,6 +72,7 @@ original. Uma checklist marcada ou um teste antigo não comprova o ambiente atua
 | Documento | Classificação e leitura |
 |---|---|
 | [Plano comercial](Plano_Comercial.md) | Estratégia e decisões de operação |
+| [Entregas de Marketing](MARKETING_ENTREGAS.md) | Impressos, anúncios, posts e LPs por situação e campanha |
 | [Manual da vendedora](Comercial/Manual_Vendedora.md) | Referência operacional; alinhar com políticas e configuração vigentes |
 | [Religar funil — fase 6](Comercial/Religar_Funil_Fase6.md) | Checklist/procedimento de uma etapa específica |
 | [Plano de inauguração](Marketing/Plano_Marketing_Inauguracao.md) | Campanha e planejamento datados; não confirma agenda realizada |

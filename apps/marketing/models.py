@@ -13,7 +13,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.validators import FileExtensionValidator
+from django.core.validators import FileExtensionValidator, URLValidator
 from django.db import models
 from django.db.models import Sum
 from django.utils import timezone
@@ -207,7 +207,15 @@ class Campanha(models.Model):
 
 
 class PecaCampanha(models.Model):
-    """Peça com DATA: é o que o calendário desenha e o que a equipe consulta hoje."""
+    """Entrega da campanha; tipo, produção e material não alteram sua publicação."""
+
+    class Tipo(models.TextChoices):
+        IMPRESSO = "impresso", "Impresso"
+        ANUNCIO = "anuncio", "Anúncio"
+        POST = "post", "Post / conteúdo social"
+        LP = "lp", "Landing page"
+        OUTRO = "outro", "Outro"
+        NAO_CLASSIFICADO = "nao_classificado", "Não classificado"
 
     class Status(models.TextChoices):
         A_FAZER = "a_fazer", "A fazer"
@@ -217,10 +225,27 @@ class PecaCampanha(models.Model):
     campanha = models.ForeignKey(
         Campanha, on_delete=models.CASCADE, related_name="pecas", verbose_name="campanha")
     nome = models.CharField("nome", max_length=140)
+    tipo = models.CharField(
+        "tipo", max_length=20, choices=Tipo.choices, default=Tipo.NAO_CLASSIFICADO,
+        db_index=True)
     canal = models.CharField("canal", max_length=40, blank=True)
     data = models.DateField("data", null=True, blank=True)
     status = models.CharField(
         "status", max_length=14, choices=Status.choices, default=Status.A_FAZER)
+    url_material = models.URLField(
+        "link do material", max_length=2048, blank=True,
+        validators=[URLValidator(schemes=["http", "https"])])
+    material_checklist = models.ForeignKey(
+        "ItemChecklist", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="entregas", verbose_name="anexo da campanha")
+    pagina_captacao = models.ForeignKey(
+        "comercial.PaginaCaptacao", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="entregas_marketing", verbose_name="LP existente")
+    concluida_em = models.DateTimeField("concluída em", null=True, blank=True, editable=False)
+    versao = models.PositiveIntegerField(default=1, editable=False)
+    concluida_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="entregas_mkt_concluidas", verbose_name="concluída por", editable=False)
 
     class Meta:
         verbose_name = "peça de campanha"
@@ -229,6 +254,24 @@ class PecaCampanha(models.Model):
 
     def __str__(self):
         return f"{self.nome} ({self.get_status_display()})"
+
+    @property
+    def url_material_segura(self):
+        """Também protege a apresentação de dados antigos importados sem validação."""
+        try:
+            URLValidator(schemes=["http", "https"])(self.url_material)
+        except ValidationError:
+            return ""
+        return self.url_material
+
+    def clean(self):
+        super().clean()
+        if self.material_checklist_id:
+            material = self.material_checklist
+            if material.campanha_id != self.campanha_id or not material.arquivo:
+                raise ValidationError({"material_checklist": "Escolha um anexo desta campanha."})
+        if self.pagina_captacao_id and self.tipo != self.Tipo.LP:
+            raise ValidationError({"pagina_captacao": "Uma LP só pode ser vinculada a uma entrega do tipo Landing page."})
 
 
 class EtapaCampanha(models.Model):

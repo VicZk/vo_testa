@@ -209,37 +209,18 @@
 
     </details>
 
-    <details class="mkt-dobra"><summary>Peças para publicar</summary>
-    {# ── Peças ── #}
-    <h3 class="fx-h3 com-info">Peças{% include "marketing/_info.html" with tip="Os entregáveis com data (posts, stories, vídeo, arte do anúncio). É o que o calendário desenha." %}</h3>
-    {% if not c.pecas.all %}<p class="fx-sub">Adicione pelo menos uma peça para concluir a Estruturação.</p>{% endif %}
-    <div class="fx-lista">
-      {% for p in c.pecas.all %}
-      <div class="fx-row">
-        <form method="post" action="{% url 'marketing:marcar_peca' p.pk %}" hx-post="{% url 'marketing:marcar_peca' p.pk %}" hx-target="#ficha-slot" hx-swap="innerHTML">
-          {% csrf_token %}
-          <input type="hidden" name="status" value="{% if p.status == 'pronta' %}a_fazer{% else %}pronta{% endif %}">
-          <button class="fx-chk {% if p.status == 'pronta' %}on{% endif %}" type="submit" aria-label="Alternar pronta">{% if p.status == 'pronta' %}✓{% endif %}</button>
-        </form>
-        <span class="mk-elastico">
-          <span class="fx-peca-nome">{{ p.nome }}</span>
-          <span class="mkt-meta fx-peca-meta">{{ p.canal|default:"sem canal" }} · {{ p.data|date:"d/m/Y"|default:"sem data" }}</span>
-        </span>
-        <form method="post" action="{% url 'marketing:remover_peca' p.pk %}" hx-post="{% url 'marketing:remover_peca' p.pk %}" hx-target="#ficha-slot" hx-swap="innerHTML">
-          {% csrf_token %}<button type="submit" class="fx-x" aria-label="Remover">✕</button>
-        </form>
-      </div>
-      {% endfor %}
-    </div>
-    <form method="post" action="{% url 'marketing:adicionar_peca' c.pk %}" hx-post="{% url 'marketing:adicionar_peca' c.pk %}" hx-target="#ficha-slot" hx-swap="innerHTML"
-          class="fx-form-linha">
-      {% csrf_token %}
-      <input class="fx-in cresce" type="text" name="nome" placeholder="Nova peça" required>
-      <input class="fx-in canal" type="text" name="canal" placeholder="Canal">
-      <input class="fx-in data" type="date" name="data">
-      <button class="fx-btn-n" type="submit">Adicionar</button>
-    </form>
-
+    <details class="mkt-dobra" open><summary>Entregas da campanha</summary>
+      <p class="fx-sub">Pronta indica produção concluída. A publicação e a distribuição são acompanhadas separadamente.</p>
+      <a href="{% url 'marketing:nova_entrega' %}?campanha={{ c.pk }}&amp;voltar={{ voltar_entrega|urlencode }}" class="botao-neutro">Adicionar entrega</a>
+      {% regroup entregas by get_tipo_display as grupos_entregas %}
+      {% for grupo in grupos_entregas %}
+      <h3 class="fx-h3">{{ grupo.grouper }}</h3>
+      {% for p in grupo.list %}{% include "marketing/_entrega_linha.html" with na_ficha=True %}{% endfor %}
+      {% empty %}<p class="fx-sub">Adicione pelo menos uma entrega para concluir a Estruturação.</p>{% endfor %}
+      {% if materiais %}
+      <h3 class="fx-h3">Materiais já anexados</h3>
+      <div class="mkt-entrega-acoes">{% for material in materiais %}<a href="{% url 'marketing:abrir_material' material.id %}" class="botao-mini">{{ material.nome }}</a>{% endfor %}</div>
+      {% endif %}
     </details>
 
     <details class="mkt-dobra"><summary>Investimento e gastos</summary>

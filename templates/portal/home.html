@@ -25,6 +25,7 @@
   {% if cardapio %}
   <form method="post" action="{% url 'portal:pedir' token %}">
     {% csrf_token %}
+    <input type="hidden" name="chave_pedido" value="{{ chave_pedido }}">
     {% for item in cardapio %}
       <div class="pt-cardapio-item">
         <span class="nome">{{ item.nome }}<br><span class="preco">{{ item.preco|intcomma_brl }}</span></span>

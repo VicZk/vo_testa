@@ -4,6 +4,7 @@
   let vista = null;
   let quadroMudou = false;
   let focoNoQuadro = null;
+  let focoNaEntrega = null;
 
   document.addEventListener('modal:antesFechar', ev => {
     if (ev.defaultPrevented) return;
@@ -12,6 +13,10 @@
   });
   window.fecharFichaMarketing = function (el) { window.fecharEdicao(el); };
   document.addEventListener('htmx:beforeSwap', ev => {
+    if (ev.detail.target.id === 'modal-conteudo') {
+      const entrega = document.activeElement && document.activeElement.closest('[data-entrega]');
+      if (entrega) focoNaEntrega = entrega.dataset.entrega;
+    }
     if (ev.detail.target.id === 'marketing-quadro') {
       const card = document.activeElement && document.activeElement.closest('[data-camp]');
       focoNoQuadro = (card && card.dataset.camp) || focoNoQuadro;
@@ -26,6 +31,11 @@
     };
   });
   document.addEventListener('htmx:afterSwap', ev => {
+    if (ev.detail.target.id === 'marketing-entregas' && focoNaEntrega) {
+      const entrega = document.querySelector('#marketing-entregas [data-entrega="' + CSS.escape(focoNaEntrega) + '"] .mkt-entrega-editar');
+      if (entrega) entrega.focus({ preventScroll: true });
+      focoNaEntrega = null;
+    }
     if (ev.detail.target.id === 'marketing-quadro' && focoNoQuadro) {
       const card = document.querySelector('#marketing-quadro [data-camp="' + CSS.escape(focoNoQuadro) + '"] .mk-card-nome');
       if (card) card.focus({ preventScroll: true });
@@ -46,7 +56,7 @@
   });
   document.addEventListener('marketing:alterado', () => { quadroMudou = true; });
   document.addEventListener('modal:fechado', () => {
-    if (quadroMudou && document.getElementById('marketing-quadro')) {
+    if (quadroMudou && (document.getElementById('marketing-quadro') || document.getElementById('marketing-entregas'))) {
       quadroMudou = false;
       htmx.trigger(document.body, 'marketing:atualizar');
     }

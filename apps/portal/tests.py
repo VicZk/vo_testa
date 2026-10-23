@@ -1,6 +1,7 @@
 from datetime import timedelta
 from decimal import Decimal
 from unittest.mock import patch
+from uuid import uuid4
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -284,7 +285,7 @@ class PedidoValidacaoTests(PedidoTests):
     def test_post_com_lixo_volta_com_mensagem_e_nao_500(self):
         self._estoque_restaurante()
         token = services.get_acesso(self.reserva.pk).token
-        r = self.client.post(reverse("portal:pedir", args=[token]), {"qtd_abc": "1"})
+        r = self.client.post(reverse("portal:pedir", args=[token]), {"qtd_abc": "1", "chave_pedido": str(uuid4())})
         self.assertEqual(r.status_code, 200)
         self.assertContains(r, "selecione um registro válido")
         self.assertIn("no-store", r["Cache-Control"])

@@ -1,0 +1,49 @@
+{% if indisponiveis %}
+<div class="aviso aviso-alerta" role="status">
+  <p>Não foi possível atualizar {% for o in indisponiveis %}{{ o.rotulo }}{% if not forloop.last %}, {% endif %}{% endfor %}. Tente novamente; os demais resultados continuam disponíveis.</p>
+</div>
+{% endif %}
+
+<nav class="filtros" aria-label="Pendências por situação">
+  <a class="filtro-chip" href="{{ url_sem_estado }}"{% if not estado %} aria-current="page"{% endif %}>Todas as situações</a>
+  {% for e in estados %}
+  <a class="filtro-chip" href="{{ e.url }}"{% if estado == e.codigo %} aria-current="page"{% endif %}>{{ e.rotulo }} <span class="num">{{ e.n }}</span></a>
+  {% endfor %}
+</nav>
+
+{% if not origem and origens %}
+<nav class="filtros" aria-label="Pendências por origem">
+  {% for o in origens %}<a class="filtro-chip" href="{{ o.url }}">{{ o.rotulo }} <span class="num">{{ o.n }}</span></a>{% endfor %}
+</nav>
+{% endif %}
+
+<div class="pendencias-cabecalho">
+  <h2>{{ origem_rotulo }}{% if estado %} · {{ estado_rotulo }}{% endif %}</h2>
+  <span class="pendencias-total num" data-pendencias-total role="status" aria-live="polite">{{ total }} pendência{{ total|pluralize }}</span>
+</div>
+
+{% if itens %}
+<div class="quadro">
+  <table class="tabela tabela-cartoes tabela-registros pendencias-lista">
+    <thead><tr><th>Origem</th><th>Pendência</th><th>Situação</th><th>Ação</th></tr></thead>
+    <tbody>
+      {% for item in itens %}
+      <tr data-pendencia-id="{{ item.id }}" data-pendencia-estado="{{ item.estado }}" data-pendencia-origem="{{ item.origem }}">
+        <td data-rotulo="Origem"><span class="rotulo-dado">{{ item.origem_rotulo }}</span></td>
+        <td class="registro-principal"><strong>{{ item.titulo }}</strong><small class="ajuda">{{ item.descricao }}</small></td>
+        <td class="registro-status" data-rotulo="Situação"><span class="selo{% if item.estado == 'pendente' %} selo--acao{% elif item.gravidade == 'alta' %} selo-alerta{% endif %}">{{ item.estado_rotulo }}</span></td>
+        <td class="registro-acoes">
+          {% if item.url %}<a class="botao-neutro" href="{{ item.url }}">{{ item.acao }}</a>{% else %}<span class="ajuda">{{ item.acao }}</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include "componentes/paginacao.html" with pagina=pagina %}
+{% else %}
+<div class="cartao vazio" data-pendencias-vazio>
+  <h2>Nenhuma pendência{% if origem or estado %} neste filtro{% endif %}</h2>
+  <p>{% if indisponiveis %}Confira as origens que não puderam ser atualizadas acima.{% elif origem or estado %}A lista acompanha a situação atual. Você pode consultar outras origens ou situações.{% else %}As verificações disponíveis para suas áreas não apontam ações pendentes agora.{% endif %}</p>
+</div>
+{% endif %}

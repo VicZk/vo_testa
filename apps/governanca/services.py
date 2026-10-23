@@ -323,6 +323,83 @@ def tarefas_ativas():
     )
 
 
+def tarefas_operacionais():
+    """Serviços abertos de quartos físicos em operação: fonte do contador e da lista.
+
+    Um quarto pode ter mais de um serviço. O contador mede serviços, não quartos,
+    e não mistura a tarefa aguardando início com a limpeza já em andamento.
+    """
+    from apps.nucleo.models import UH, TipoUH
+
+    return tarefas_ativas().exclude(uh__status=UH.Status.INATIVA).exclude(
+        uh__tipo__modalidade=TipoUH.Modalidade.DAY_USE)
+
+
+def resumo_pendencias():
+    """Contagens e versão de leitura usadas pelo menu e por seu polling."""
+    from django.db.models import Count, Max, Q
+
+    from apps.nucleo.models import UH, TipoUH
+
+    dados = tarefas_operacionais().aggregate(
+        ultima=Max("atualizada_em"), total=Count("pk"),
+        pendentes=Count("pk", filter=Q(status=TarefaGovernanca.Status.PENDENTE)),
+        em_andamento=Count("pk", filter=Q(status=TarefaGovernanca.Status.EM_ANDAMENTO)),
+    )
+    dados["quartos_atualizados_em"] = (
+        StatusLimpeza.objects.exclude(uh__status=UH.Status.INATIVA)
+        .exclude(uh__tipo__modalidade=TipoUH.Modalidade.DAY_USE)
+        .aggregate(ultima=Max("atualizado_em"))["ultima"]
+    )
+    return dados
+
+
+def pendencias_operacionais():
+    """Serviços e inspeções com destino no quarto, sem alterar estados ou criar filas.
+
+    A inspeção segue o ciclo vigente: LIMPA aguarda conferência; INSPECIONADA
+    encerrou a limpeza. Não se inventa inspeção para quarto sem registro de status.
+    Ronda e discrepâncias continuam na interface pública pendencias_auditoria().
+    """
+    from django.urls import reverse
+
+    from apps.nucleo.models import UH, TipoUH
+
+    tarefas = list(tarefas_operacionais().order_by("gerada_em", "pk"))
+    itens = []
+    for tarefa in tarefas:
+        pendente = tarefa.status == TarefaGovernanca.Status.PENDENTE
+        responsavel = _quem(tarefa.camareira) or "Sem responsável atribuído"
+        itens.append({
+            "id": f"tarefa-{tarefa.pk}", "tipo": "servico_limpeza",
+            "titulo": f"{tarefa.uh.numero} · {tarefa.get_tipo_display()}",
+            "descricao": responsavel,
+            "estado": tarefa.status,
+            "estado_rotulo": "Aguardando início" if pendente else "Em andamento",
+            "gravidade": "media" if pendente else "baixa",
+            "url": reverse("governanca:quarto", args=[tarefa.uh_id]),
+            "acao": "Abrir serviço", "uh_id": tarefa.uh_id,
+        })
+    # Uma inspeção por quarto, apenas depois de encerrados todos os seus serviços.
+    inspecoes = (
+        StatusLimpeza.objects.filter(situacao=StatusLimpeza.Situacao.LIMPA)
+        .exclude(uh__status=UH.Status.INATIVA)
+        .exclude(uh__tipo__modalidade=TipoUH.Modalidade.DAY_USE)
+        .exclude(uh_id__in=[t.uh_id for t in tarefas])
+        .select_related("uh").order_by("uh__numero", "pk")
+    )
+    for status in inspecoes:
+        itens.append({
+            "id": f"inspecao-{status.uh_id}", "tipo": "inspecao_limpeza",
+            "titulo": f"{status.uh.numero} · Conferência da limpeza",
+            "descricao": SITUACAO_SIMPLES[StatusLimpeza.Situacao.LIMPA],
+            "estado": "inspecao", "estado_rotulo": SITUACAO_SIMPLES[StatusLimpeza.Situacao.LIMPA],
+            "gravidade": "media", "url": reverse("governanca:quarto", args=[status.uh_id]),
+            "acao": "Conferir quarto", "uh_id": status.uh_id,
+        })
+    return itens
+
+
 @transaction.atomic
 def atribuir_tarefa(tarefa, camareira_id, usuario=None):
     from django.contrib.auth import get_user_model

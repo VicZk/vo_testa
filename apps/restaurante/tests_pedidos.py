@@ -1,4 +1,5 @@
 from decimal import Decimal
+from uuid import uuid4
 
 from django.core.exceptions import ValidationError
 from django.urls import reverse
@@ -139,6 +140,7 @@ class PedidoPersonalizadoTests(RestauranteBase):
         self.assertContains(resposta, "Sem sal")
         self.assertFalse(self.c.itens.exists())
         resposta = self.client.post(url, {"quantidade": 1, "observacoes": "Sem sal",
+                                         "chave_pedido": str(uuid4()),
                                          f"grupo_{self.grupo.pk}": self.ponto.pk}, HTTP_HX_REQUEST="true")
         self.assertEqual(resposta["HX-Retarget"], "#comanda-itens")
         self.assertEqual(self.c.itens.get().observacoes, "Sem sal")

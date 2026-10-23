@@ -2,7 +2,7 @@
 <div class="pedido-form">
   <header class="pagina-cabecalho"><h2>{% if item %}Editar pedido{% else %}Adicionar pedido{% endif %}</h2><button type="button" class="botao-neutro" onclick="fecharModal()">Fechar</button></header>
   <p class="pedido-produto"><strong>{{ produto.nome }}</strong><span>{{ produto.preco_venda|intcomma_brl }} + adicionais por unidade</span></p>
-  <form method="post" action="{{ acao }}" hx-post="{{ acao }}" hx-target="#modal-conteudo" data-pedido-form>
+  <form method="post" action="{{ acao }}" hx-post="{{ acao }}" hx-target="#modal-conteudo" data-pedido-form data-edicao-pendente data-descarte-mensagem="Este pedido ainda não foi salvo. Deseja descartar as alterações? Para continuar editando, escolha Cancelar.">
     {% csrf_token %}
     {% if form.non_field_errors %}<div class="mensagem error" role="alert">{{ form.non_field_errors }}</div>{% endif %}
     {% for campo in form %}

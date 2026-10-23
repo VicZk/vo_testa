@@ -1,4 +1,6 @@
+import json
 from decimal import Decimal
+from uuid import uuid4
 
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -23,7 +25,8 @@ from apps.nucleo.validadores import decimal_valido, identificador_valido
 
 from . import services
 from .forms import GrupoOpcaoForm, OpcoesForm, PedidoItemForm
-from .models import Comanda, GrupoOpcaoCardapio, ItemComanda, Mesa
+from .idempotencia import validar_chave_pedido
+from .models import Comanda, GrupoOpcaoCardapio, InclusaoPedido, ItemComanda, Mesa
 
 
 def _registro(modelo, valor, nome):
@@ -59,6 +62,7 @@ def comandas(request):
         "mesas": Mesa.objects.filter(ativa=True),
         "clientes": pessoas_agrupadas(),
         "tem_local": _local(request) is not None,
+        "chave_abertura": uuid4(),
         "contas": contas_abertas() if request.user.pode_acessar(Modulo.RESERVAS) else [],
     })
 
@@ -74,12 +78,14 @@ def abrir(request):
         messages.error(request, "Cadastre um depósito do Restaurante em Estoque → Locais.")
         return redirect("restaurante:comandas")
     try:
+        chave = validar_chave_pedido(request.POST.get("chave_abertura"), obrigatoria=True)
         mesa = _registro(Mesa, request.POST.get("mesa"), "Ponto")
         cliente = _registro(Pessoa, request.POST.get("cliente"), "Cliente")
         comanda = services.abrir_comanda(
             request.user, local, mesa=mesa, cliente=cliente,
             rotulo=request.POST.get("rotulo", "").strip(),
             conta_id=request.POST.get("conta") or None,
+            chave_abertura=chave,
         )
     except ValidationError as erro:
         messages.error(request, " ".join(erro.messages))
@@ -93,9 +99,11 @@ def _contexto_comanda(request, comanda):
     saldos = disponibilidade_produtos(produtos, local)
     cardapio = [
         {"id": p.pk, "nome": p.nome, "preco": p.preco_venda, "saldo": saldos[p.pk],
-         "ilustracao": p.ilustracao_catalogo}
+         "ilustracao": p.ilustracao_catalogo, "categoria_id": p.categoria_id, "categoria": p.categoria.nome}
         for p in produtos
     ]
+    categorias = sorted({p.categoria_id: {"id": p.categoria_id, "nome": p.categoria.nome}
+                         for p in produtos}.values(), key=lambda categoria: categoria["nome"].casefold())
     contas = []
     if request.user.pode_acessar(Modulo.RESERVAS):
         from apps.reservas.services import contas_abertas
@@ -107,6 +115,7 @@ def _contexto_comanda(request, comanda):
     return {
         "comanda": comanda,
         "cardapio": cardapio,
+        "categorias": categorias,
         "formas": FormaPagamento.objects.filter(ativo=True),
         "contas": contas,
         "mesas": Mesa.objects.filter(ativa=True),
@@ -117,7 +126,8 @@ def _contexto_comanda(request, comanda):
 @requer_modulo(Modulo.RESTAURANTE)
 def comanda(request, pk):
     c = get_object_or_404(
-        Comanda.objects.select_related("mesa", "cliente", "local", "conta__reserva__uh"), pk=pk
+        Comanda.objects.select_related("mesa", "cliente", "local", "conta__reserva__uh", "movimento_caixa")
+        .prefetch_related("movimento_caixa__estornos"), pk=pk
     )
     return render(request, "restaurante/comanda.html", _contexto_comanda(request, c))
 
@@ -143,7 +153,8 @@ def cupom(request, pk):
     from apps.nucleo.formatos import qtd_br
 
     c = get_object_or_404(
-        Comanda.objects.select_related("mesa", "cliente", "forma_pagamento", "criado_por"),
+        Comanda.objects.select_related("mesa", "cliente", "forma_pagamento", "criado_por", "movimento_caixa")
+        .prefetch_related("movimento_caixa__estornos"),
         pk=pk,
     )
     itens = list(c.itens.all())
@@ -153,12 +164,17 @@ def cupom(request, pk):
         meta.append(("Fechada", f"{localtime(c.fechada_em):%d/%m/%Y %H:%M}"))
     meta.append(("Atendente", c.criado_por.get_username()))
     pagamento, aviso = "", "Não é documento fiscal"
+    financeiro = c.financeiro
     if c.status == Comanda.Status.ABERTA:
         aviso = "Conferência de conta — não é documento fiscal"
     elif c.status == Comanda.Status.CANCELADA:
         pagamento = "COMANDA CANCELADA"
+    elif financeiro["status"] == "sem_cobranca":
+        pagamento = financeiro["rotulo"]
     elif c.destino == Comanda.Destino.CONTA:
         pagamento = f"Lançado na conta: {c.conta_ref}"
+    elif financeiro["estornado"]:
+        pagamento = financeiro["rotulo"]
     elif c.forma_pagamento:
         pagamento = f"Pago com {c.forma_pagamento.nome}"
     cupom = {
@@ -167,6 +183,7 @@ def cupom(request, pk):
                    "unitario": i.preco_unitario, "subtotal": i.subtotal} for i in itens],
         "subtotal": subtotal, "desconto": c.desconto, "total": subtotal - c.desconto,
         "pagamento": pagamento, "aviso": aviso,
+        "recebido": financeiro["recebido"], "estornado": financeiro["estornado"], "liquido": financeiro["liquido"],
         "voltar": reverse("restaurante:comanda", args=[c.pk]),
     }
     return render(request, "componentes/cupom.html",
@@ -179,8 +196,8 @@ def historico(request):
     filtro = request.GET.get("status", "")
     qs = (
         Comanda.objects.exclude(status=Comanda.Status.ABERTA)
-        .select_related("mesa", "cliente", "forma_pagamento", "criado_por")
-        .prefetch_related("itens")
+        .select_related("mesa", "cliente", "forma_pagamento", "criado_por", "movimento_caixa")
+        .prefetch_related("itens", "movimento_caixa__estornos")
     )
     base = Comanda.objects.exclude(status=Comanda.Status.ABERTA)
     filtros = [
@@ -201,6 +218,24 @@ def historico(request):
     })
 
 
+def _atualizar_estoque_resposta(resposta, comanda, *, pedido_salvo=False):
+    produtos = list(Produto.objects.filter(ativo=True, preco_venda__gt=0))
+    saldos = disponibilidade_produtos(produtos, comanda.local)
+    eventos = {"restauranteEstoque": {"comanda": comanda.pk,
+                                     "saldos": {str(pk): str(qtd) for pk, qtd in saldos.items()}}}
+    if pedido_salvo:
+        eventos["pedidoSalvo"] = True
+    resposta["HX-Trigger-After-Swap"] = json.dumps(eventos)
+    return resposta
+
+
+def _resposta_itens(request, comanda, *, erro="", pedido_salvo=False):
+    resposta = render(request, "restaurante/partials/itens.html", {"comanda": comanda, "erro": erro})
+    if request.headers.get("HX-Request"):
+        _atualizar_estoque_resposta(resposta, comanda, pedido_salvo=pedido_salvo)
+    return resposta
+
+
 @requer_modulo(Modulo.RESTAURANTE)
 def add_item(request, pk):
     c = get_object_or_404(Comanda, pk=pk)
@@ -210,12 +245,12 @@ def add_item(request, pk):
             services.adicionar_item(
                 c, produto, request.POST.get("quantidade", 1), request.user,
                 observacoes=request.POST.get("observacoes", ""), opcoes=request.POST.getlist("opcoes"),
+                chave_pedido=validar_chave_pedido(request.POST.get("chave_pedido"), obrigatoria=True),
             )
         except (ValidationError, AttributeError) as erro:
             msg = " ".join(erro.messages) if isinstance(erro, ValidationError) else "Produto inválido."
-            return render(request, "restaurante/partials/itens.html",
-                          {"comanda": c, "erro": msg})
-    return render(request, "restaurante/partials/itens.html", {"comanda": c})
+            return _resposta_itens(request, c, erro=msg)
+    return _resposta_itens(request, c)
 
 
 @requer_modulo(Modulo.RESTAURANTE)
@@ -228,7 +263,7 @@ def remover_item(request, pk, item_pk):
             services.remover_item(item, request.user, request.POST.get("motivo", ""))
         except ValidationError as exc:
             erro = " ".join(exc.messages)
-    return render(request, "restaurante/partials/itens.html", {"comanda": c, "erro": erro})
+    return _resposta_itens(request, c, erro=erro)
 
 
 @requer_modulo(Modulo.RESTAURANTE)
@@ -265,6 +300,7 @@ def transferir(request, pk):
     return redirect("restaurante:comanda", pk=pk)
 
 
+@requer_modulo(Modulo.RESTAURANTE)
 @requer_gerencia
 def cancelar(request, pk):
     c = get_object_or_404(Comanda, pk=pk)
@@ -291,6 +327,20 @@ def mesas(request):
 
 def _pedido_item(request, c, produto, item=None):
     form = PedidoItemForm(request.POST if request.method == "POST" else None, produto=produto, item=item)
+    if request.method == "POST" and item is None:
+        # Uma resposta perdida continua sendo a mesma inclusão mesmo se o grupo
+        # de opções ou o produto foi desativado entre o envio e a retransmissão.
+        try:
+            chave = validar_chave_pedido(request.POST.get("chave_pedido"), obrigatoria=True)
+            if InclusaoPedido.objects.filter(chave=chave).exists():
+                opcoes = [pk for nome, valores in request.POST.lists() if nome.startswith("grupo_")
+                          for pk in valores if pk]
+                services.adicionar_item(c, produto, request.POST.get("quantidade"), request.user,
+                                        observacoes=request.POST.get("observacoes", ""), opcoes=opcoes,
+                                        chave_pedido=chave)
+                return _pedido_salvo(request, c)
+        except ValidationError as erro:
+            form.add_error(None, erro)
     if request.method == "POST" and form.is_valid():
         try:
             dados = form.cleaned_data
@@ -300,25 +350,35 @@ def _pedido_item(request, c, produto, item=None):
                                      opcoes=dados["opcoes"])
             else:
                 services.adicionar_item(c, produto, dados["quantidade"], request.user,
-                                        observacoes=dados["observacoes"], opcoes=dados["opcoes"])
-            if request.headers.get("HX-Request"):
-                resposta = render(request, "restaurante/partials/itens.html", {"comanda": c})
-                resposta["HX-Retarget"] = "#comanda-itens"
-                resposta["HX-Reswap"] = "outerHTML"
-                resposta["HX-Trigger-After-Swap"] = "pedidoSalvo"
-                return resposta
-            return redirect("restaurante:comanda", pk=c.pk)
+                                        observacoes=dados["observacoes"], opcoes=dados["opcoes"],
+                                        chave_pedido=dados["chave_pedido"])
+            return _pedido_salvo(request, c)
         except ValidationError as erro:
             form.add_error(None, erro)
     template = "restaurante/partials/pedido_item.html" if request.headers.get("HX-Request") else "restaurante/pedido_item.html"
-    return render(request, template, {"form": form, "comanda": c, "produto": produto,
-                                     "item": item, "acao": request.path})
+    resposta = render(request, template, {"form": form, "comanda": c, "produto": produto,
+                                         "item": item, "acao": request.path})
+    if request.method == "POST" and request.headers.get("HX-Request"):
+        _atualizar_estoque_resposta(resposta, c)
+    return resposta
+
+
+def _pedido_salvo(request, comanda):
+    if request.headers.get("HX-Request"):
+        resposta = _resposta_itens(request, comanda, pedido_salvo=True)
+        resposta["HX-Retarget"] = "#comanda-itens"
+        resposta["HX-Reswap"] = "outerHTML"
+        return resposta
+    return redirect("restaurante:comanda", pk=comanda.pk)
 
 
 @requer_modulo(Modulo.RESTAURANTE)
 def pedir_item(request, pk, produto_pk):
+    produtos = Produto.objects.all()
+    if request.method != "POST":
+        produtos = produtos.filter(ativo=True)
     return _pedido_item(request, get_object_or_404(Comanda, pk=pk),
-                        get_object_or_404(Produto, pk=produto_pk, ativo=True))
+                        get_object_or_404(produtos, pk=produto_pk))
 
 
 @requer_modulo(Modulo.RESTAURANTE)

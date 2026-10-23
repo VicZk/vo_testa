@@ -21,8 +21,8 @@ class FundacaoMarketingTests(TestCase):
         self.assertIn(Modulo.MARKETING, APRESENTACAO)
         info = APRESENTACAO[Modulo.MARKETING]
         self.assertEqual(info["grupo"], "Comercial")
-        # Passo 2 ligou a tela: o catálogo aponta para o quadro (aparece na sidebar).
-        self.assertEqual(info["url_name"], "marketing:quadro")
+        # A entrada mostra entregas; o quadro de campanhas mantém sua própria rota.
+        self.assertEqual(info["url_name"], "marketing:entregas")
 
     def test_area_marketing_existe(self):
         self.assertIn("marketing", Area.values)
@@ -381,7 +381,7 @@ class CalendarioTests(TestCase):
     def test_adicionar_peca(self):
         c = Campanha.objects.create(nome="Camp")
         r = self.client.post(f"/crm/marketing/campanha/{c.id}/peca/",
-                             {"nome": "Reel", "canal": "IG", "data": "2026-09-20"})
+                             {"nome": "Reel", "tipo": "post", "canal": "IG", "data": "2026-09-20"})
         self.assertEqual(r.status_code, 302)
         self.assertEqual(c.pecas.count(), 1)
         self.assertEqual(c.pecas.first().nome, "Reel")

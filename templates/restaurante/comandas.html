@@ -19,6 +19,7 @@
   <h2 class="titulo-topo">Abrir comanda</h2>
   <form data-preservar-erros method="post" action="{% url 'restaurante:abrir' %}" class="abrir-comanda">
     {% csrf_token %}
+    <input type="hidden" name="chave_abertura" value="{{ chave_abertura }}">
     {% if contas %}<label class="select-wrap"><select name="conta" aria-label="Estadia vinculada">
       <option value="">Estadia (opcional)…</option>
       {% for conta in contas %}<option value="{{ conta.pk }}">{{ conta.reserva.uh.numero }} · {{ conta.reserva.hospede.nome }}</option>{% endfor %}
@@ -26,7 +27,7 @@
     <label class="select-wrap"><select name="mesa"><option value="">Ponto…</option>
       {% for m in mesas %}<option value="{{ m.pk }}">{{ m.nome }}</option>{% endfor %}</select></label>
     {% include "componentes/combo_pessoa.html" with dados=clientes dados_id="clientes-data" campo="cliente" placeholder="Hóspede/cliente…" %}
-    <input type="text" name="rotulo" placeholder="Ou identifique (ex.: guarda-sol 4)">
+    <input type="text" name="rotulo" maxlength="60" placeholder="Ou identifique (ex.: guarda-sol 4)">
     <button type="submit" class="botao-primario">Abrir</button>
   </form>
   {% comment %}Sem ponto cadastrado o seletor abria com "Ponto…" e mais nada, sem

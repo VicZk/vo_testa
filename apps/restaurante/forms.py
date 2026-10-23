@@ -1,4 +1,5 @@
 from decimal import Decimal
+from uuid import uuid4
 
 from django import forms
 from django.core.exceptions import ValidationError
@@ -17,12 +18,15 @@ class PedidoItemForm(forms.Form):
                                   widget=forms.Textarea(attrs={"rows": 3,
                                       "placeholder": "Ex.: batata sem sal, molho à parte…"}))
     versao = forms.IntegerField(required=False, widget=forms.HiddenInput)
+    chave_pedido = forms.UUIDField(initial=uuid4, widget=forms.HiddenInput)
 
     def __init__(self, *args, produto, item=None, **kwargs):
         initial = kwargs.setdefault("initial", {})
         if item:
             initial.update(quantidade=item.quantidade, observacoes=item.observacoes, versao=item.versao)
         super().__init__(*args, **kwargs)
+        if item:
+            self.fields.pop("chave_pedido")
         self.grupos = list(produto.grupos_opcoes.filter(ativo=True).prefetch_related("opcoes"))
         selecionadas = {str(opcao["id"]) for opcao in item.opcoes} if item else set()
         for grupo in self.grupos:
@@ -41,7 +45,8 @@ class PedidoItemForm(forms.Form):
                 self.fields[nome] = forms.MultipleChoiceField(choices=escolhas,
                                                             widget=forms.CheckboxSelectMultiple, **comuns)
                 self.initial[nome] = [pk for pk, _ in escolhas if pk in selecionadas]
-        self.order_fields(["quantidade", *[f"grupo_{grupo.pk}" for grupo in self.grupos], "observacoes", "versao"])
+        self.order_fields(["quantidade", *[f"grupo_{grupo.pk}" for grupo in self.grupos],
+                           "observacoes", "versao", "chave_pedido"])
 
     def clean(self):
         dados = super().clean()

@@ -3,10 +3,12 @@
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import IntegrityError, transaction
+from django.db.models import Sum
 from django.utils import timezone
 
 from apps.nucleo.models import (
+    MovimentoCaixa,
     MovimentoEstoque,
     Produto,
     composicao_estoque,
@@ -19,7 +21,8 @@ from apps.nucleo.models import (
 )
 from apps.nucleo.validadores import decimal_valido, identificador_valido
 
-from .models import Comanda, GrupoOpcaoCardapio, ItemComanda
+from .idempotencia import assinatura_pedido, identidade_item, validar_chave_pedido
+from .models import Comanda, GrupoOpcaoCardapio, InclusaoPedido, ItemComanda
 
 ZERO = Decimal("0.00")
 
@@ -98,18 +101,40 @@ def _snapshot_baixas(baixas):
 
 
 @transaction.atomic
-def abrir_comanda(operador, local, mesa=None, cliente=None, rotulo="", conta_id=None):
+def abrir_comanda(operador, local, mesa=None, cliente=None, rotulo="", conta_id=None, *, chave_abertura=None):
     from apps.reservas.services import conta_para_pedido
 
+    chave = validar_chave_pedido(chave_abertura)
+    if not isinstance(rotulo, str) or len(rotulo.strip()) > 60:
+        raise ValidationError("A identificação deve ter no máximo 60 caracteres.")
+    rotulo = rotulo.strip()
+    conta_id = identificador_valido(conta_id, nome="Estadia", opcional=True)
+    assinatura = assinatura_pedido("abertura", operador.pk, [{
+        "local": local.pk, "mesa": getattr(mesa, "pk", None),
+        "cliente": getattr(cliente, "pk", None), "rotulo": rotulo, "conta": conta_id,
+    }]) if chave else ""
+    if chave:
+        anterior = Comanda.objects.filter(chave_abertura=chave).first()
+        if anterior:
+            if anterior.assinatura_abertura != assinatura:
+                raise ValidationError("Esta identificação já foi usada em outra abertura. Abra uma nova comanda.")
+            return anterior
     conta = conta_para_pedido(cliente=cliente, conta_id=conta_id)
     if conta:
         cliente = cliente or conta.reserva.hospede
         rotulo = rotulo or f"Quarto {conta.reserva.uh.numero}"
     if not (mesa or cliente or rotulo):
         raise ValidationError("Informe o ponto, o hóspede ou uma identificação.")
-    return Comanda.objects.create(
-        local=local, mesa=mesa, cliente=cliente, rotulo=rotulo, criado_por=operador, conta=conta,
-    )
+    dados = {"local": local, "mesa": mesa, "cliente": cliente, "rotulo": rotulo,
+             "criado_por": operador, "conta": conta}
+    if not chave:
+        return Comanda.objects.create(**dados)
+    # A unicidade cobre inclusive aberturas avulsas, que não têm uma conta para travar.
+    comanda, _ = Comanda.objects.get_or_create(
+        chave_abertura=chave, defaults={**dados, "assinatura_abertura": assinatura})
+    if comanda.assinatura_abertura != assinatura:
+        raise ValidationError("Esta identificação já foi usada em outra abertura. Abra uma nova comanda.")
+    return comanda
 
 
 @transaction.atomic
@@ -123,14 +148,25 @@ def abrir_comanda_daypass(operador, local, visita):
 
 
 @transaction.atomic
-def adicionar_item(comanda, produto, quantidade, operador, *, observacoes="", opcoes=()):
+def adicionar_item(comanda, produto, quantidade, operador, *, observacoes="", opcoes=(), chave_pedido=None):
     """Lança um item na comanda e baixa o estoque na hora (o produto saiu).
 
     Trava a comanda (mesma âncora de `fechar_comanda`): dois garçons lançando ao
     mesmo tempo entram em fila, e nenhum item entra numa comanda que está fechando."""
     from apps.nucleo.sistema import travar
 
+    chave = validar_chave_pedido(chave_pedido)
+    assinatura = assinatura_pedido("item", comanda.pk, [identidade_item(
+        getattr(produto, "pk", None), quantidade, observacoes, opcoes)]) if chave else ""
     comanda = travar(comanda)
+    if chave:
+        anterior = InclusaoPedido.objects.select_related("item").filter(chave=chave).first()
+        if anterior:
+            if anterior.assinatura != assinatura or anterior.comanda_id != comanda.pk:
+                raise ValidationError("Esta identificação já foi usada em outro pedido. Abra um novo pedido.")
+            if anterior.item_id is None:
+                raise ValidationError("Este pedido já foi removido. Abra um novo pedido para incluir novamente.")
+            return anterior.item
     if not comanda.aberta:
         raise ValidationError("Esta comanda já foi fechada.")
     quantidade, observacoes, escolhas, unitario, baixas = _dados_item(produto, quantidade, observacoes, opcoes)
@@ -153,14 +189,68 @@ def adicionar_item(comanda, produto, quantidade, operador, *, observacoes="", op
         item.movimentos_estoque += movimentos
         item.versao += 1
         item.save(update_fields=["quantidade", "estoque_baixado", "movimentos_estoque", "versao"])
-        return item
-    return ItemComanda.objects.create(
-        comanda=comanda, produto=produto, descricao=produto.nome,
-        natureza=produto.natureza, quantidade=quantidade,
-        preco_unitario=unitario, observacoes=observacoes, opcoes=escolhas,
-        estoque_baixado=_snapshot_baixas(baixas),
-        movimentos_estoque=movimentos,
-    )
+    else:
+        item = ItemComanda.objects.create(
+            comanda=comanda, produto=produto, descricao=produto.nome,
+            natureza=produto.natureza, quantidade=quantidade,
+            preco_unitario=unitario, observacoes=observacoes, opcoes=escolhas,
+            estoque_baixado=_snapshot_baixas(baixas),
+            movimentos_estoque=movimentos,
+        )
+    if chave:
+        # Na mesma comanda a trava serializa retries. A unicidade também recusa
+        # uma chave disputada por comandas diferentes, revertendo item e estoque.
+        try:
+            with transaction.atomic():
+                InclusaoPedido.objects.create(chave=chave, assinatura=assinatura, comanda=comanda, item=item)
+        except IntegrityError:
+            if InclusaoPedido.objects.filter(chave=chave).exists():
+                raise ValidationError("Esta identificação já foi usada em outro pedido. Abra um novo pedido.")
+            raise
+    return item
+
+
+@transaction.atomic
+def pedir_pelo_portal(operador, local, *, reserva_id, rotulo, itens, chave_pedido=None):
+    """Interface do Portal: cria o pedido inteiro ou devolve o mesmo envio.
+
+    A conta é a âncora compartilhada com o checkout; a comanda, os itens e a
+    identidade do envio pertencem ao Restaurante. Retorna (comanda, criada).
+    """
+    from apps.reservas.services import travar_conta_aberta
+
+    if not isinstance(itens, (list, tuple)) or not 1 <= len(itens) <= 100 or any(
+            not isinstance(item, dict) for item in itens):
+        raise ValidationError("Pedido inválido: confira os itens.")
+    itens = [identidade_item(item.get("produto_id"), item.get("quantidade"),
+                              item.get("observacoes", ""), item.get("opcoes", [])) for item in itens]
+    chave = validar_chave_pedido(chave_pedido)
+    conta = travar_conta_aberta(reserva_id=reserva_id)
+    assinatura = assinatura_pedido("portal", conta.reserva_id, itens) if chave else ""
+    if chave:
+        anterior = Comanda.objects.filter(chave_pedido_portal=chave).first()
+        if anterior:
+            if anterior.assinatura_pedido_portal != assinatura or anterior.conta_id != conta.pk:
+                raise ValidationError("Esta identificação já foi usada em outro pedido. Abra um novo pedido.")
+            return anterior, False
+    produtos = {p.pk: p for p in Produto.objects.filter(
+        pk__in=[item["produto_id"] for item in itens], ativo=True, preco_venda__gt=0)}
+    if any(item["produto_id"] not in produtos for item in itens):
+        raise ValidationError("Um dos itens não está mais no cardápio.")
+    comanda = abrir_comanda(operador, local, rotulo=rotulo, conta_id=conta.pk)
+    if chave:
+        comanda.chave_pedido_portal, comanda.assinatura_pedido_portal = chave, assinatura
+        try:
+            with transaction.atomic():
+                comanda.save(update_fields=["chave_pedido_portal", "assinatura_pedido_portal"])
+        except IntegrityError:
+            if Comanda.objects.filter(chave_pedido_portal=chave).exists():
+                raise ValidationError("Esta identificação já foi usada em outro pedido. Abra um novo pedido.")
+            raise
+    for item in itens:
+        adicionar_item(comanda, produtos[item["produto_id"]], item["quantidade"], operador,
+                       observacoes=item["observacoes"], opcoes=item["opcoes"])
+    return comanda, True
 
 
 @transaction.atomic
@@ -273,15 +363,20 @@ def fechar_comanda(comanda, operador, destino, forma=None, conta_id=None, descon
     total = comanda.total()
 
     if destino == Comanda.Destino.CAIXA:
-        if not forma:
-            raise ValidationError("Escolha a forma de pagamento.")
-        from apps.nucleo.modulos import Modulo
+        if total > 0:
+            if not forma:
+                raise ValidationError("Escolha a forma de pagamento.")
+            from apps.nucleo.modulos import Modulo
 
-        mov = receber_no_caixa(
-            operador, forma, total, f"Comanda #{comanda.pk}", modulo=Modulo.RESTAURANTE,
-        )
-        comanda.forma_pagamento = forma
-        comanda.movimento_caixa = mov
+            mov = receber_no_caixa(
+                operador, forma, total, f"Comanda #{comanda.pk}", modulo=Modulo.RESTAURANTE,
+            )
+            comanda.forma_pagamento = forma
+            comanda.movimento_caixa = mov
+        else:
+            # Desconto integral encerra o consumo sem simular um recebimento de R$0.
+            comanda.forma_pagamento = None
+            comanda.movimento_caixa = None
     else:
         from apps.reservas import services as reservas
 
@@ -306,6 +401,9 @@ def fechar_comanda(comanda, operador, destino, forma=None, conta_id=None, descon
     comanda.status = Comanda.Status.FECHADA
     comanda.fechada_em = timezone.now()
     comanda.save()
+    if total == 0:
+        registrar_auditoria(operador, "comanda_sem_cobranca", comanda,
+                           {"desconto": str(desconto), "destino": destino})
     return comanda
 
 
@@ -391,15 +489,27 @@ def pendencias_auditoria():
 
 
 def faturamento_periodo(inicio, fim):
-    """Faturamento das comandas fechadas no período (caixa do setor × folio).
-    Interface pública p/ Relatórios (total é método, soma em Python)."""
-    caixa = quarto = ZERO
+    """Vendas pela data de fechamento; recebimentos/estornos pela data do evento.
+
+    `caixa` e `quarto` preservam o contrato de vendas após desconto, por competência.
+    Um estorno de hoje de venda antiga só reduz `recebido_liquido` de hoje.
+    """
+    caixa = quarto = venda_bruta = descontos = ZERO
     # Itens pré-carregados: o total de cada comanda soma em Python (arredondando item a
     # item, como na tela) sem uma consulta por comanda.
     for c in Comanda.objects.filter(fechada_em__date__range=(inicio, fim),
                                     status=Comanda.Status.FECHADA).prefetch_related("itens"):
+        venda_bruta += c.subtotal()
+        descontos += c.desconto
         if c.destino == Comanda.Destino.CAIXA:
             caixa += c.total()
         else:
             quarto += c.total()
-    return {"caixa": caixa, "quarto": quarto}
+    movimentos = MovimentoCaixa.objects.filter(criado_em__date__range=(inicio, fim))
+    recebimentos = movimentos.filter(tipo=MovimentoCaixa.Tipo.RECEBIMENTO, comanda__isnull=False).aggregate(
+        total=Sum("valor"))["total"] or ZERO
+    estornos = movimentos.filter(tipo=MovimentoCaixa.Tipo.ESTORNO,
+                                 movimento_origem__comanda__isnull=False).aggregate(total=Sum("valor"))["total"] or ZERO
+    return {"caixa": caixa, "quarto": quarto, "venda_bruta": venda_bruta, "descontos": descontos,
+            "venda_liquida": caixa + quarto, "recebimentos": recebimentos, "estornos": estornos,
+            "recebido_liquido": recebimentos - estornos}

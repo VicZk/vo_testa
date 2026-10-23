@@ -29,6 +29,7 @@
   {# Botão "Copiar" de qualquer `data-copiar` (componentes/copiar.html). #}
   <script src="{% static 'js/copiar.js' %}" defer></script>
   <script src="{% static 'js/governanca-avisos.js' %}" defer></script>
+  <script src="{% static 'js/pendencias.js' %}" defer></script>
   <script src="{% static 'js/sidebar.js' %}" defer></script>
   <script src="{% static 'js/navegacao.js' %}" defer></script>
   {% comment %}Movimento na navegação: a View Transition vale só para a troca de
@@ -230,6 +231,10 @@
           <svg viewBox="0 0 24 24" class="ico"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
           <span class="rotulo">Visão geral</span>
         </a>
+        <a href="{% url 'pendencias' %}" class="nav-item {% if atual == 'pendencias' %}ativo{% endif %}" title="Pendências das suas áreas">
+          <svg viewBox="0 0 24 24" class="ico"><path d="M9 5h11M9 12h11M9 19h11M3 5l1 1 2-2M3 12l1 1 2-2M3 19l1 1 2-2"/></svg>
+          <span class="rotulo">Pendências</span>
+        </a>
       </div>
 
       {% for grupo in menu_modulos %}
@@ -237,12 +242,21 @@
           <span class="nav-titulo letreiro">{{ grupo.titulo }}</span>
           {% for m in grupo.itens %}
             {% if m.url %}
+              {% if m.codigo == 'governanca' %}
+              <div class="nav-item nav-item-dividido {% if request.resolver_match.namespace == m.codigo %}ativo{% endif %}" title="{{ m.nome }}">
+                <a class="nav-item-principal" href="{{ m.url }}" aria-label="{{ m.nome }}">
+                  {% include "componentes/icone_modulo.html" with codigo=m.codigo %}
+                  <span class="rotulo">{{ m.nome }}</span>
+                </a>
+                <a class="nav-badge nav-badge-link" data-governanca-avisos="{% url 'governanca:atualizacoes' %}" href="{% url 'pendencias' %}?origem=governanca&amp;estado=pendente" title="{{ governanca_pendentes|default:0 }} serviço(s) de limpeza aguardando início. Abrir a lista." aria-label="{{ governanca_pendentes|default:0 }} serviço(s) de limpeza pendente(s)"{% if not governanca_pendentes %} hidden{% endif %}><span class="nav-badge-numero">{% if governanca_pendentes > 99 %}99+{% else %}{{ governanca_pendentes|default:0 }}{% endif %}</span></a>
+              </div>
+              {% else %}
               <a href="{{ m.url }}" class="nav-item {% if request.resolver_match.namespace == m.codigo %}ativo{% endif %}" title="{{ m.nome }}"{% if m.codigo == 'loja' %} data-pdv-entrada{% endif %}>
                 {% include "componentes/icone_modulo.html" with codigo=m.codigo %}
                 <span class="rotulo">{{ m.nome }}</span>
-                {% if m.codigo == 'governanca' %}<span class="nav-badge" role="img" data-governanca-avisos="{% url 'governanca:atualizacoes' %}" title="{{ governanca_pendentes|default:0 }} serviço(s) de limpeza pendente(s)" aria-label="{{ governanca_pendentes|default:0 }} serviço(s) de limpeza pendente(s)"{% if not governanca_pendentes %} hidden{% endif %}><span class="nav-badge-numero">{% if governanca_pendentes > 99 %}99+{% else %}{{ governanca_pendentes|default:0 }}{% endif %}</span></span>{% endif %}
                 {% if m.codigo == 'comercial' and wpp_nao_lidas_total %}<span class="nav-badge" role="img" title="{{ wpp_nao_lidas_total }} conversa(s) de WhatsApp aguardando resposta" aria-label="{{ wpp_nao_lidas_total }} conversa(s) de WhatsApp aguardando resposta"><span class="nav-badge-numero">{% if wpp_nao_lidas_total > 99 %}99+{% else %}{{ wpp_nao_lidas_total }}{% endif %}</span></span>{% endif %}
               </a>
+              {% endif %}
               {% if m.codigo == 'comercial' %}
               <a href="{% url 'comercial:paginas' %}" class="nav-item {% if request.resolver_match.namespace == 'comercial' and 'pagina' in request.resolver_match.url_name %}ativo{% endif %}" title="Páginas de Captação (Landing Pages)">
                 <svg viewBox="0 0 24 24" class="ico"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 14h8M8 17h5"/></svg>
@@ -551,10 +565,11 @@
   function marcarNavAtiva() {
     const path = location.pathname;
     let melhor = null, melhorLen = -1;
-    document.querySelectorAll('.sidebar .nav-item').forEach(a => {
-      a.classList.remove('ativo');
-      const href = a.getAttribute('href') || '';
-      if (path.startsWith(href) && href.length > melhorLen) { melhor = a; melhorLen = href.length; }
+    document.querySelectorAll('.sidebar .nav-item').forEach(item => {
+      item.classList.remove('ativo');
+      const link = item.matches('a') ? item : item.querySelector('.nav-item-principal');
+      const href = link?.getAttribute('href') || '';
+      if (href && path.startsWith(href) && href.length > melhorLen) { melhor = item; melhorLen = href.length; }
     });
     if (melhor) melhor.classList.add('ativo');
   }

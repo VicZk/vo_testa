@@ -9,7 +9,7 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from apps.nucleo.models import UH, LocalEstoque, Produto, modulo_ativo, saldo
+from apps.nucleo.models import UH, LocalEstoque, Produto, disponibilidade_produtos, modulo_ativo
 from apps.nucleo.modulos import Modulo
 
 from .models import AcessoPortal, SolicitacaoPortal
@@ -70,15 +70,17 @@ def cardapio():
     if not local or not modulo_ativo(Modulo.RESTAURANTE):
         return []
     itens = []
-    for p in Produto.objects.filter(ativo=True, preco_venda__gt=0).prefetch_related("grupos_opcoes__opcoes"):
-        if saldo(p, local) > 0:
+    produtos = list(Produto.objects.filter(ativo=True, preco_venda__gt=0).prefetch_related("grupos_opcoes__opcoes"))
+    saldos = disponibilidade_produtos(produtos, local)
+    for p in produtos:
+        if saldos[p.pk] > 0:
             itens.append({"id": p.pk, "nome": p.nome, "preco": p.preco_venda,
                           "grupos": [grupo for grupo in p.grupos_opcoes.all() if grupo.ativo]})
     return itens
 
 
 @transaction.atomic
-def pedir_restaurante(estadia, pedidos):
+def pedir_restaurante(estadia, pedidos, *, chave_pedido=None):
     """`pedidos`: lista de (produto_id, quantidade). Abre uma comanda no quarto e
     lança os itens (a cozinha vê na lista de comandas). Atômico: se um item falhar
     (saldo insuficiente), a comanda e as baixas de estoque já feitas são revertidas."""
@@ -91,7 +93,7 @@ def pedir_restaurante(estadia, pedidos):
     # Só o que está no cardápio (ativo, com preço) e em quantidade de pedido de quarto;
     # entrada inválida vira mensagem, não erro 500.
     itens = []
-    if not isinstance(pedidos, (list, tuple)) or len(pedidos) > 100:
+    if not isinstance(pedidos, (list, tuple)):
         raise ValidationError("Pedido inválido: confira os itens.")
     from apps.nucleo.validadores import identificador_valido
 
@@ -114,21 +116,19 @@ def pedir_restaurante(estadia, pedidos):
         if qtd > MAX_ITENS_POR_PEDIDO:
             raise ValidationError(
                 f"Até {MAX_ITENS_POR_PEDIDO} unidades por item. Para mais, fale com a recepção.")
-        produto = Produto.objects.filter(pk=produto_id, ativo=True, preco_venda__gt=0).first()
-        if produto is None:
-            raise ValidationError("Um dos itens não está mais no cardápio.")
-        itens.append((produto, qtd, observacoes, opcoes))
+        itens.append(restaurante.identidade_item(produto_id, qtd, observacoes, opcoes))
+        # O formulário envia também as quantidades zero de todo o cardápio.
+        # O limite é do pedido escolhido, não do tamanho do catálogo exibido.
+        if len(itens) > 100:
+            raise ValidationError("Até 100 itens por pedido. Divida o pedido para continuar.")
     if not itens:
         raise ValidationError("Escolha ao menos um item.")
     op = _usuario_sistema()
-    from apps.reservas.services import travar_conta_aberta
-
-    conta = travar_conta_aberta(reserva_id=estadia["reserva_id"])
-    comanda = restaurante.abrir_comanda(op, local, rotulo=f"{estadia['uh']} · app", conta_id=conta.pk)
-    total_itens = 0
-    for produto, qtd, observacoes, opcoes in itens:
-        restaurante.adicionar_item(comanda, produto, qtd, op, observacoes=observacoes, opcoes=opcoes)
-        total_itens += qtd
+    comanda, criada = restaurante.pedir_pelo_portal(op, local, reserva_id=estadia["reserva_id"],
+        rotulo=f"{estadia['uh']} · app", itens=itens, chave_pedido=chave_pedido)
+    if not criada:
+        return comanda
+    total_itens = sum(int(Decimal(item["quantidade"])) for item in itens)
     SolicitacaoPortal.objects.create(
         reserva_id=estadia["reserva_id"], uh_numero=estadia["uh"],
         tipo=SolicitacaoPortal.Tipo.RESTAURANTE,

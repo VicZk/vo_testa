@@ -969,8 +969,10 @@ verba mensal, portões por fase, peças datadas, calendário e relatório. **Emb
   em 3 campos, `anuncio` (OneToOne `comercial.Campanha`). Propriedades: `codigo`
   (`CP-NN`), `gasta` (Σ `comercial.GastoDiario` do anúncio), `sobra_travada`,
   `tem_objetivo_medivel`, `custo_por_resultado`, `progresso_objetivo`.
-- **`PecaCampanha`** — peça com data e status `a_fazer|em_producao|pronta` (o que o
-  calendário desenha).
+- **`PecaCampanha`** — entrega tipada (impresso, anúncio, post, LP, outro ou legado
+  não classificado), prazo e status `a_fazer|em_producao|pronta`. Guarda referência
+  a material, anexo da própria campanha ou LP existente, autor/data de conclusão
+  e versão para rejeitar edição desatualizada. Alimenta lista e calendário.
 - **`EtapaCampanha`** — tarefa com dono e prazo.
 - **`ItemChecklist`** — critério de fase: `feito`, `dispensado` + motivo, `arquivo`
   (allowlist de extensões + teto de 10 MB), `nota`; unique (`campanha`, `chave`).
@@ -1004,6 +1006,13 @@ parcial), `marcar_check`/`salvar_nota`/`dispensar_check`/`anexar_item`,
 `adicionar_etapa`/`alternar_etapa`/`remover_etapa`, `atribuir_papel`, `alternar_canal`,
 `comentar`, `calendario`, `adicionar_peca`/`marcar_peca`/`remover_peca`, `relatorio`,
 `lancar_gasto`, `ocupacao`, `duplicar`. Os POSTs usam `@require_POST` + `@never_cache`.
+
+A entrada do módulo é `marketing:entregas`: consulta paginada por tipo, situação,
+campanha e busca. As rotas `nova_entrega`/`editar_entrega` preservam erros e
+controlam versão; `abrir_material` exige Marketing e serve anexo privado.
+`abrir_lp` também exige acesso ao Comercial e usa sua interface pública.
+**Pronta** significa produção concluída, não publicação nem distribuição.
+Ver [Entregas de Marketing](MARKETING_ENTREGAS.md).
 
 ### Regras de negócio
 
@@ -1138,7 +1147,7 @@ Nenhum.
 `restaurante:comandas`, `abrir`, `comanda/<pk>`, `add_item` (HTMX), `remover_item`,
 `fechar`, `transferir`, `historico`, `mesas`, `cupom` (80 mm: conferência da conta com
 a comanda aberta, recibo depois de fechada) — `@requer_modulo`;
-`restaurante:cancelar` — **`@requer_gerencia`**.
+`restaurante:cancelar` — **`@requer_modulo` + `@requer_gerencia`**.
 
 ### Regras de negócio
 
@@ -1146,7 +1155,17 @@ a comanda aberta, recibo depois de fechada) — `@requer_modulo`;
   vezes**; recusa comanda vazia e desconto inválido.
 - Itens vão ao folio como `consumo` com descrição `"Restaurante: <item>"`.
 - O recebimento imediato entra no caixa **do Restaurante**.
-- Ficha técnica (item → insumos) não existe: **1 produto = 1 baixa**.
+- Fichas técnicas e adicionais usam o motor de estoque; o consumo e as conversões
+  ficam congelados no item. A disponibilidade no portal usa a mesma regra de receitas
+  e lotes válidos do atendimento.
+- A inclusão HTTP leva chave de pedido persistente; repetir a mesma intenção não
+  aumenta a quantidade. Uma chave já consumida não pode ser reutilizada depois de
+  remover o item nem com outro conteúdo.
+- A situação financeira é independente do preparo: estorno parcial/total aparece
+  na comanda, no histórico e no cupom, sem devolver estoque automaticamente. Desconto
+  integral fecha sem criar recebimento de valor zero.
+- O [guia operacional](RESTAURANTE.md) detalha o ciclo, as correções e as extensões
+  ainda ausentes, incluindo pagamento misto e divisão da conta.
 
 ---
 

@@ -1,9 +1,11 @@
 from django.urls import path
 
-from . import integracoes, views
+from . import integracoes, views, views_pendencias
 
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
+    path("pendencias/", views_pendencias.painel, name="pendencias"),
+    path("pendencias/atualizacoes/", views_pendencias.atualizacoes, name="pendencias_atualizacoes"),
     path("busca/", views.busca_global, name="busca_global"),
     path("configuracoes/modulos/", views.modulos_central, name="modulos_central"),
     path("configuracoes/integracoes/", integracoes.painel, name="integracoes"),

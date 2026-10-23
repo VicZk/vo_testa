@@ -17,11 +17,19 @@
 o filtro escolhido continua valendo — e volta igual na próxima vez (localStorage).
 `soMeus` é a fila da camareira (o celular dela abre do jeito que ela deixou).{% endcomment %}
 <div class="governanca-painel" x-data="{
+       t: '{{ filtro_servico }}',
        f: '{{ filtro_inicial }}' || (function () { try { return localStorage.getItem('gov-filtro') || 'todas'; } catch (e) { return 'todas'; } })(),
-       soMeus: (function () { try { return localStorage.getItem('gov-meus') === '1'; } catch (e) { return false; } })(),
+       soMeus: '{{ filtro_servico }}' ? false : (function () { try { return localStorage.getItem('gov-meus') === '1'; } catch (e) { return false; } })(),
+       init() { if (this.t) { this.f = 'todas'; this.soMeus = false; } },
        filtrar(v) { this.f = v; try { localStorage.setItem('gov-filtro', v); } catch (e) {} },
        alternarMeus() { this.soMeus = !this.soMeus; try { localStorage.setItem('gov-meus', this.soMeus ? '1' : '0'); } catch (e) {} }
      }">
+  {% if filtro_servico %}
+  <div class="aviso aviso-info">
+    <p>Exibindo quartos com serviços {% if filtro_servico == 'pendente' %}aguardando início{% else %}em andamento{% endif %}. Um quarto pode ter mais de um serviço.</p>
+    <a class="botao-neutro" href="{% url 'governanca:quartos' %}">Mostrar todos os quartos</a>
+  </div>
+  {% endif %}
   <div id="gov-quadro" hx-target="#gov-quadro" hx-swap="innerHTML settle:0">
     {% include "governanca/partials/quadro.html" %}
   </div>

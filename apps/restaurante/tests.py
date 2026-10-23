@@ -1,5 +1,6 @@
 from datetime import timedelta
 from decimal import Decimal
+from uuid import uuid4
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -147,7 +148,7 @@ class PermissaoTests(RestauranteBase):
         self.client.login(username="garcom", password="senha-forte-123")
         r = self.client.post(
             reverse("restaurante:abrir"),
-            {"mesa": "", "cliente": "", "rotulo": "guarda-sol 4"},
+            {"mesa": "", "cliente": "", "rotulo": "guarda-sol 4", "chave_abertura": str(uuid4())},
         )
         self.assertEqual(r.status_code, 302)
         self.assertTrue(Comanda.objects.filter(rotulo="guarda-sol 4").exists())
@@ -180,7 +181,7 @@ class PermissaoTests(RestauranteBase):
         c = self.comanda()
         r = self.client.post(
             reverse("restaurante:add_item", args=[c.pk]),
-            {"produto_id": self.cerveja.pk, "quantidade": 2},
+            {"produto_id": self.cerveja.pk, "quantidade": 2, "chave_pedido": str(uuid4())},
         )
         self.assertEqual(r.status_code, 200)
         self.assertEqual(saldo(self.cerveja, self.local), Decimal("18.000"))

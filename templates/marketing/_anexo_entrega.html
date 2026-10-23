@@ -1,0 +1,5 @@
+<div class="campo{% if field.errors %} campo-erro{% endif %}">
+  <label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+  <small class="ajuda">Reutiliza o arquivo já anexado à campanha.</small>
+  {% for erro in field.errors %}<small class="erro" role="alert">{{ erro }}</small>{% endfor %}
+</div>

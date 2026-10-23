@@ -51,6 +51,11 @@ Não é documento fiscal: a NFC-e sai pelo módulo Fiscal.
         <div><dt>Desconto</dt><dd class="num">−{{ cupom.desconto|intcomma_brl|cut:"R$ " }}</dd></div>
       {% endif %}
       <div class="cupom-total"><dt>Total</dt><dd class="num">{{ cupom.total|intcomma_brl }}</dd></div>
+      {% if cupom.estornado %}
+        <div><dt>Recebido originalmente</dt><dd class="num">{{ cupom.recebido|intcomma_brl }}</dd></div>
+        <div><dt>Estornado</dt><dd class="num">{{ cupom.estornado|intcomma_brl }}</dd></div>
+        <div><dt>Recebido líquido</dt><dd class="num">{{ cupom.liquido|intcomma_brl }}</dd></div>
+      {% endif %}
     </dl>
     {% if cupom.pagamento %}<p class="cupom-pagamento">{{ cupom.pagamento }}</p>{% endif %}
 

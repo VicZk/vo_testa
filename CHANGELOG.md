@@ -9,6 +9,26 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 23/10/2026: restaurante, entregas de Marketing e pendências operacionais
+
+- Comandas e pedidos têm identidade persistida: reenviar a mesma abertura ou
+  inclusão não duplica consumo. O portal usa a disponibilidade de receitas e
+  lotes válidos. Cancelar exige os acessos do Restaurante e da gerência.
+- A comanda atualiza saldos sem recarregar, filtra o cardápio por categoria e
+  disponibilidade, protege pedidos não salvos e mostra o total após desconto.
+  Desconto integral fecha sem recebimento fictício; estornos aparecem no histórico
+  e cupom. Relatórios distinguem a data da venda da data do movimento financeiro.
+- Marketing abre em **Entregas**, com impressos, anúncios, posts e landing pages
+  separados por tipo e situação. Cada entrega pode apontar para material e LP
+  existentes; conclusão registra autor/data e edição desatualizada é recusada.
+  Peças antigas ficam em **Não classificado**, preservando seus dados.
+- **Pendências** reúne ações das áreas autorizadas, com filtros e atualização
+  automática. O número da Governança abre os serviços aguardando início;
+  andamento e inspeção têm filtros próprios. Consultar a central não executa
+  rotinas nem altera os registros de origem.
+- Os [manuais operacionais](docs/README.md) explicam esses fluxos e os limites
+  ainda existentes, incluindo pagamento misto e divisão de conta no Restaurante.
+
 ## 23/10/2026: notas de entrada e ajustes de interface
 
 - A nota reúne fornecedor, número, série, emissão e itens previstos. Cadastrar

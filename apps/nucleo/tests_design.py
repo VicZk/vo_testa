@@ -714,8 +714,8 @@ class MenuLateralTests(TestCase):
         self.base = (Path(settings.BASE_DIR) / "templates" / "base.html").read_text(encoding="utf-8")
 
     def _itens_do_menu(self):
-        """Cada <a class="nav-item"> / <button class="acao-topo"> do base.html."""
-        return re.findall(r"<(?:a|button)\s[^>]*class=\"(?:nav-item|acao-topo)[^\"]*\"[^>]*>",
+        """Item inteiro, inclusive o contêiner com dois links da Governança."""
+        return re.findall(r"<(?:a|button|div)\s[^>]*class=\"(?:nav-item|acao-topo)(?:\s[^\"]*)?\"[^>]*>",
                           self.base)
 
     def test_item_do_menu_tem_dica_quando_recolhido(self):

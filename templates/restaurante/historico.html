@@ -18,7 +18,7 @@
   {% endfor %}
 </div>
 
-<table class="tabela">
+<div class="quadro"><table class="tabela tabela-cartoes restaurante-historico">
   <thead>
     <tr>
       <th>#</th><th>Ponto / cliente</th><th>Situação</th>
@@ -28,28 +28,28 @@
   <tbody>
     {% for c in comandas %}
       <tr class="linha-clique" onclick="location.href='{% url 'restaurante:comanda' c.pk %}'">
-        <td>{{ c.pk }}</td>
-        <td>{{ c.titulo }}</td>
-        <td>
+        <td data-rotulo="Comanda"><a href="{% url 'restaurante:comanda' c.pk %}">#{{ c.pk }}</a></td>
+        <td data-rotulo="Ponto / cliente">{{ c.titulo }}</td>
+        <td data-rotulo="Situação">
           <span class="selo {% if c.status == 'cancelada' %}selo-alerta{% else %}selo-limpa{% endif %}">
             {{ c.get_status_display }}
           </span>
         </td>
-        <td class="num">{{ c.total|intcomma_brl }}</td>
-        <td>
+        <td class="num" data-rotulo="Total">{{ c.total|intcomma_brl }}</td>
+        <td data-rotulo="Fecho">
           {% if c.status == 'cancelada' %}
             <span class="dica" data-dica="{{ c.motivo_cancelamento|default:'Sem motivo registrado' }}">Cancelada</span>
           {% elif c.conta_ref %}Conta: {{ c.conta_ref }}
-          {% elif c.forma_pagamento %}{{ c.forma_pagamento.nome }}
-          {% else %}—{% endif %}
+          {% elif c.forma_pagamento %}{% with financeiro=c.financeiro %}{{ financeiro.rotulo }} · {{ c.forma_pagamento.nome }}{% if financeiro.estornado %}<small class="pedido-detalhe">Estornado {{ financeiro.estornado|intcomma_brl }} · Líquido {{ financeiro.liquido|intcomma_brl }}</small>{% endif %}{% endwith %}
+          {% else %}{{ c.financeiro.rotulo }}{% endif %}
         </td>
-        <td>{{ c.fechada_em|default:c.aberta_em|date:"d/m H:i" }}</td>
-        <td>{{ c.criado_por.get_short_name|default:c.criado_por.username }}</td>
+        <td data-rotulo="Quando">{{ c.fechada_em|default:c.aberta_em|date:"d/m H:i" }}</td>
+        <td data-rotulo="Operador">{{ c.criado_por.get_short_name|default:c.criado_por.username }}</td>
       </tr>
     {% empty %}
       <tr><td colspan="7" class="vazio">Nenhuma comanda neste filtro.</td></tr>
     {% endfor %}
   </tbody>
-</table>
+</table></div>
 {% include "componentes/paginacao.html" with pagina=pagina %}
 {% endblock %}

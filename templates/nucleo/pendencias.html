@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block titulo %}Pendências | CRM Vô Testa{% endblock %}
+
+{% block conteudo %}
+<div class="eleg central-pendencias" data-central-pendencias data-pendencias-atualizacoes="{% url 'pendencias_atualizacoes' %}">
+  <p class="pagina-eyebrow letreiro">Operação</p>
+  <div class="pagina-cabecalho">
+    <h1>Pendências</h1>
+    <button class="botao-neutro" type="button" data-pendencias-recarregar>Atualizar agora</button>
+  </div>
+  <p class="subtitulo">Acompanhe o que precisa de ação nas suas áreas e abra a origem para resolver. Atualização automática a cada minuto.</p>
+
+  <form method="get" action="{% url 'pendencias' %}" class="filtros pendencias-filtros" aria-label="Filtros de pendências">
+    <label>Origem
+      <select name="origem" aria-label="Origem das pendências">
+        <option value="">Todas as minhas áreas</option>
+        {% for o in origens %}<option value="{{ o.codigo }}"{% if origem == o.codigo %} selected{% endif %}>{{ o.rotulo }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Situação
+      <select name="estado" aria-label="Situação das pendências">
+        <option value="">Todas as situações</option>
+        {% for e in estados %}<option value="{{ e.codigo }}"{% if estado == e.codigo %} selected{% endif %}>{{ e.rotulo }}</option>{% endfor %}
+      </select>
+    </label>
+    <button class="botao-primario" type="submit">Aplicar filtros</button>
+    {% if origem or estado %}<a href="{% url 'pendencias' %}" class="botao-neutro">Limpar filtros</a>{% endif %}
+  </form>
+
+  {% if origem == 'governanca' %}
+  <section class="aviso aviso-info pendencias-explicacao" aria-label="Como funciona a contagem da Governança">
+    <p><strong>O número da Governança mostra serviços de limpeza aguardando início.</strong> Ao iniciar, o serviço passa para Em andamento e sai desse número. Depois da conclusão, o quarto segue para a conferência da limpeza.</p>
+    <div class="acoes">
+      <a class="botao-neutro" href="{% url 'governanca:painel' %}">Visão geral da casa</a>
+      <a class="botao-neutro" href="{% url 'governanca:quartos' %}{% if estado == 'pendente' or estado == 'em_andamento' %}?servico={{ estado }}{% elif estado == 'inspecao' %}?estado=limpa{% endif %}">Abrir quartos{% if estado == 'pendente' %} com serviços pendentes{% elif estado == 'em_andamento' %} em limpeza{% endif %}</a>
+    </div>
+  </section>
+  {% endif %}
+
+  <p class="ajuda" data-pendencias-conexao role="status" hidden></p>
+  <div id="pendencias-resultados">
+    {% include "nucleo/partials/pendencias_resultados.html" %}
+  </div>
+</div>
+{% endblock %}

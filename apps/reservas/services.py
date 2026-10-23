@@ -1337,7 +1337,12 @@ def pendencias_auditoria():
     # Auditoria noturna: entrada que passou sem check-in (no-show provável). A decisão —
     # marcar no-show, cobrar a política ou reagendar — é da recepção; com o no-show
     # automático ligado, o achado diz em que madrugada o sistema marca sozinho.
-    noites_auto = configuracao_reservas().no_show_automatico_noites
+    # Consulta de pendências é somente leitura, inclusive antes da configuração
+    # inicial. carregar() criaria um registro ao abrir a central pela primeira vez.
+    from apps.nucleo.models.cadastros import ConfiguracaoReservas
+
+    config = ConfiguracaoReservas.objects.filter(pk=1).first() or ConfiguracaoReservas()
+    noites_auto = config.no_show_automatico_noites
     for r in (Reserva.objects.filter(checkin__lt=hoje)
               .filter(Q(status=Reserva.Status.CONFIRMADA)
                       | Q(status=Reserva.Status.PRE_RESERVA, expira_em__isnull=True))

@@ -905,7 +905,7 @@ def duplicar(campanha, usuario):
     )
     for p in campanha.pecas.all():
         PecaCampanha.objects.create(
-            campanha=nova, nome=p.nome, canal=p.canal, data=None,
+            campanha=nova, nome=p.nome, tipo=p.tipo, canal=p.canal, data=None,
             status=PecaCampanha.Status.A_FAZER)
     for e in campanha.etapas.all():
         EtapaCampanha.objects.create(

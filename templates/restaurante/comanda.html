@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load moeda %}
+{% load moeda static %}
 
 {% block titulo %}Comanda #{{ comanda.pk }} | Restaurante{% endblock %}
 
@@ -16,17 +16,24 @@
   <a href="{% url 'restaurante:cozinha' %}" class="botao-neutro">Cozinha</a>
 </div>
 
-<div class="pdv" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-  <section class="pdv-produtos">
+<div class="restaurante-shell">
+<nav class="restaurante-atalhos" aria-label="Nesta comanda"><a href="#restaurante-cardapio" class="botao-neutro">Cardápio</a><a href="#restaurante-conta" class="botao-neutro">Ver comanda e fechar</a></nav>
+<div class="pdv pdv-restaurante" data-restaurante-comanda="{{ comanda.pk }}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+  <section class="pdv-produtos" id="restaurante-cardapio">
     {% include "fiscal/partials/emitir_consumo.html" with origem="comanda" registro=comanda %}
     {% if comanda.aberta %}
-      <p class="subtitulo">Escolha o produto, a quantidade e os detalhes de preparo.</p>
-      <label class="campo">Buscar no cardápio<input type="search" placeholder="Nome do produto…" oninput="document.querySelectorAll('.pdv-produto').forEach(el => el.hidden = !el.textContent.toLocaleLowerCase('pt-BR').includes(this.value.toLocaleLowerCase('pt-BR')))"></label>
+      <p class="subtitulo">Adicione os pedidos à comanda. Eles entram na fila da cozinha; acompanhe o preparo antes de entregar.</p>
+      <div class="restaurante-filtros">
+        <label class="campo">Buscar no cardápio<input type="search" placeholder="Nome do produto…" data-restaurante-busca></label>
+        <div class="campo"><label for="restaurante-categoria">Categoria do cardápio</label><select id="restaurante-categoria" data-restaurante-categoria><option value="">Todas as categorias</option>{% for c in categorias %}<option value="{{ c.id }}">{{ c.nome }}</option>{% endfor %}</select></div>
+        <label class="restaurante-disponiveis"><input type="checkbox" data-restaurante-disponiveis> Somente disponíveis</label>
+      </div>
       <div class="pdv-lista">
         {% for p in cardapio %}
           <button type="button" class="pdv-produto {% if p.saldo <= 0 %}esgotado{% endif %}"
-                  {% if p.saldo > 0 %}hx-get="{% url 'restaurante:pedir_item' comanda.pk p.id %}"
-                  hx-target="#modal-conteudo"{% else %}disabled{% endif %}>
+                  data-restaurante-produto="{{ p.id }}" data-categoria="{{ p.categoria_id }}"
+                  hx-get="{% url 'restaurante:pedir_item' comanda.pk p.id %}"
+                  hx-target="#modal-conteudo"{% if p.saldo <= 0 %} disabled{% endif %}>
             {% include "componentes/icone_catalogo.html" with ilustracao=p.ilustracao %}
             <span class="pdv-produto-nome">{{ p.nome }}</span>
             <span class="pdv-produto-meta">
@@ -36,18 +43,26 @@
             <span class="pdv-add" aria-hidden="true">+</span>
           </button>
         {% endfor %}
+        <p class="pdv-lista-vazia" data-restaurante-vazio hidden>Nenhum produto corresponde aos filtros.</p>
       </div>
     {% else %}
       <p class="subtitulo">
         Comanda {{ comanda.get_status_display|lower }}
         {% if comanda.status == 'cancelada' %}{% if comanda.motivo_cancelamento %}. Motivo: <strong>{{ comanda.motivo_cancelamento }}</strong>{% endif %}
         {% elif comanda.conta_ref %}, lançada na conta: <strong>{{ comanda.conta_ref }}</strong>
-        {% elif comanda.forma_pagamento %}, paga com <strong>{{ comanda.forma_pagamento.nome }}</strong>{% endif %}.
+        {% endif %}.
       </p>
+      {% if comanda.status == 'fechada' %}{% with financeiro=comanda.financeiro %}
+      <div class="cartao restaurante-financeiro" data-restaurante-financeiro>
+        <h2>{{ financeiro.rotulo }}</h2>
+        {% if comanda.forma_pagamento %}<p>Forma de pagamento: {{ comanda.forma_pagamento.nome }}.</p>{% endif %}
+        {% if financeiro.estornado %}<dl><div><dt>Recebido originalmente</dt><dd class="num">{{ financeiro.recebido|intcomma_brl }}</dd></div><div><dt>Estornado</dt><dd class="num">{{ financeiro.estornado|intcomma_brl }}</dd></div><div><dt>Recebido líquido</dt><dd class="num">{{ financeiro.liquido|intcomma_brl }}</dd></div></dl><p class="ajuda">O estorno corrige o pagamento. O consumo e o preparo permanecem registrados.</p>{% endif %}
+      </div>
+      {% endwith %}{% endif %}
     {% endif %}
   </section>
 
-  <aside class="pdv-painel">
+  <aside class="pdv-painel" id="restaurante-conta">
     <div class="pdv-painel-topo">
       <h2>Comanda</h2>
       <span class="pdv-contador">{{ comanda.titulo }}</span>
@@ -62,22 +77,24 @@
         <input type="hidden" name="destino" :value="destino">
         <div class="pdv-resumo">
           <div class="pdv-linha-desc">
-            <span>Desconto</span>
-            <div class="input-reais"><span>R$</span><input type="number" name="desconto" min="0" step="0.01" value="0"></div>
+            <label for="comanda-desconto">Desconto</label>
+            <div class="input-reais"><span>R$</span><input id="comanda-desconto" type="number" name="desconto" min="0" step="0.01" value="0"></div>
           </div>
+          <div class="pdv-total"><span class="letreiro">Total a fechar</span><strong data-restaurante-total aria-live="polite">{{ comanda.total|intcomma_brl }}</strong></div>
+          <p class="ajuda" data-restaurante-sem-cobranca hidden>Sem valor a receber. O fechamento registra o consumo sem cobrança.</p>
         </div>
         <div class="pdv-seg pdv-seg-lateral">
           <button type="button" :class="{ativo: destino === 'caixa'}" @click="destino = 'caixa'">Pagar agora</button>
           {% if contas %}<button type="button" :class="{ativo: destino === 'conta'}" @click="destino = 'conta'">Conta do quarto</button>{% endif %}
         </div>
         <label class="select-wrap pdv-destino" x-show="destino === 'caixa'" x-cloak>
-          <select name="forma"><option value="">Forma de pagamento…</option>
+          <select name="forma" aria-label="Forma de pagamento"><option value="">Forma de pagamento…</option>
             {% for f in formas %}<option value="{{ f.pk }}">{{ f.nome }}</option>{% endfor %}
           </select>
         </label>
         {% if contas %}
         <label class="select-wrap pdv-destino" x-show="destino === 'conta'" x-cloak>
-          <select name="conta_id"><option value="">Quarto / hóspede…</option>
+          <select name="conta_id" aria-label="Quarto / hóspede"><option value="">Quarto / hóspede…</option>
             {% for c in contas %}<option value="{{ c.id }}"{% if c.id == comanda.conta_id %} selected{% endif %}>{{ c.rotulo }}</option>{% endfor %}
           </select>
         </label>
@@ -114,5 +131,6 @@
     {% endif %}
   </aside>
 </div>
-<script>document.body.addEventListener('pedidoSalvo', function () { fecharModal(); });</script>
+</div>
+<script src="{% static 'js/restaurante-comanda.js' %}" defer></script>
 {% endblock %}

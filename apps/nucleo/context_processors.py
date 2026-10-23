@@ -35,8 +35,8 @@ def menu_modulos(request):
             continue
         apres = APRESENTACAO.get(codigo, {})
         if codigo == Modulo.GOVERNANCA:
-            from apps.governanca.models import TarefaGovernanca
-            governanca_pendentes = TarefaGovernanca.objects.filter(status="pendente").count()
+            from apps.governanca.services import resumo_pendencias
+            governanca_pendentes = resumo_pendencias()["pendentes"]
         grupos.setdefault(apres.get("grupo", "Outros"), []).append(
             {
                 "codigo": codigo,

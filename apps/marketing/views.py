@@ -150,6 +150,12 @@ def _envolvidos(campanha):
 
 def _ficha_ctx(request, campanha, dados_invalidos=None):
     """Contexto único da ficha — vale para a página (detalhe) e a gaveta (HTMX)."""
+    from pathlib import PurePosixPath
+
+    from django.urls import reverse
+
+    from .views_entregas import preparar_referencias
+
     formularios = {}
     for secao, campos in SECOES.items():
         dados = None
@@ -164,6 +170,13 @@ def _ficha_ctx(request, campanha, dados_invalidos=None):
         "verba": services.posicao_verba(services._mes_de_campanha(campanha)),
         "aq": services.aquisicao(campanha),
         "etapas": list(campanha.etapas.select_related("dono").all()),
+        "entregas": preparar_referencias(list(campanha.pecas.select_related(
+            "campanha", "material_checklist").order_by("tipo", "data", "id")), request.user),
+        "voltar_entrega": reverse("marketing:detalhe", args=[campanha.pk]),
+        "materiais": [
+            {"id": item.pk, "nome": PurePosixPath(item.arquivo.name).name}
+            for item in campanha.checks.exclude(arquivo="").exclude(arquivo__isnull=True)
+        ],
         "conversa": list(campanha.conversa.select_related("autor").all()),
         "envolvidos": _envolvidos(campanha),
         "usuarios": services.usuarios_equipe(),
@@ -400,14 +413,17 @@ def calendario(request):
 @requer_modulo(Modulo.MARKETING)
 @require_POST
 def adicionar_peca(request, pk):
+    from .forms_entregas import EntregaForm
+    from .services_entregas import salvar_entrega
+
     c = get_object_or_404(Campanha, pk=pk)
-    nome = (request.POST.get("nome") or "").strip()
-    if not nome:
-        messages.error(request, "Dê um nome à peça.")
-        return _pos_ficha(request, c)
-    PecaCampanha.objects.create(
-        campanha=c, nome=nome, canal=(request.POST.get("canal") or "").strip(),
-        data=request.POST.get("data") or None)
+    dados = request.POST.copy()
+    dados.update({"campanha": c.pk, "status": "a_fazer", "versao": 1})
+    form = EntregaForm(dados, usuario=request.user)
+    if form.is_valid():
+        salvar_entrega(dados=form.cleaned_data, usuario=request.user)
+    else:
+        messages.error(request, "Confira o nome, o tipo e os dados da entrega.")
     return _pos_ficha(request, c)
 
 
@@ -415,11 +431,14 @@ def adicionar_peca(request, pk):
 @requer_modulo(Modulo.MARKETING)
 @require_POST
 def marcar_peca(request, pk):
+    from .services_entregas import alterar_estado
+
     p = get_object_or_404(PecaCampanha, pk=pk)
     novo = request.POST.get("status")
-    if novo in PecaCampanha.Status.values:
-        p.status = novo
-        p.save(update_fields=["status"])
+    try:
+        alterar_estado(p, novo, request.user, versao=request.POST.get("versao", ""))
+    except ValidationError as erro:
+        messages.error(request, "; ".join(erro.messages))
     return _pos_ficha(request, p.campanha)
 
 

@@ -4,6 +4,7 @@
   <a href="{% url 'governanca:quartos' %}" class="est-aba"{% if atual == 'quartos' or atual == 'quarto' %} aria-current="page"{% endif %}>Quartos</a>
   <a href="{% url 'governanca:minha_fila' %}" class="est-aba"{% if atual == 'minha_fila' %} aria-current="page"{% endif %}>Minha fila</a>
   <a href="{% url 'governanca:discrepancias' %}" class="est-aba"{% if atual == 'discrepancias' %} aria-current="page"{% endif %}>Discrepâncias</a>
+  <a href="{% url 'pendencias' %}?origem=governanca" class="est-aba">Pendências</a>
   {% if eh_gerente %}<a href="{% url 'governanca:configuracao' %}" class="est-aba"{% if atual == 'configuracao' %} aria-current="page"{% endif %}>Rotina diária</a>{% endif %}
 </nav>
 {% endwith %}

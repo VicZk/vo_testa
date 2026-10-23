@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.http import Http404, HttpResponse
@@ -51,6 +53,7 @@ def _home(request, token, estadia, *, dados=None):
     return render(request, "portal/home.html", {
         "token": token, "e": estadia,
         "cardapio": cardapio,
+        "chave_pedido": dados.get("chave_pedido", "") if dados is not None else uuid4(),
     })
 
 
@@ -83,7 +86,10 @@ def pedir(request, token):
                 pedidos.append({"produto_id": produto_id, "quantidade": valor,
                                 "observacoes": request.POST.get(f"obs_{produto_id}", ""), "opcoes": opcoes})
         try:
-            comanda = services.pedir_restaurante(estadia, pedidos)
+            from apps.restaurante.services import validar_chave_pedido
+
+            chave = validar_chave_pedido(request.POST.get("chave_pedido"), obrigatoria=True)
+            comanda = services.pedir_restaurante(estadia, pedidos, chave_pedido=chave)
             messages.success(request, f"Pedido enviado! Comanda #{comanda.pk}.")
         except ValidationError as erro:
             messages.error(request, " ".join(erro.messages))

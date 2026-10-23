@@ -23,6 +23,11 @@ Usuario = get_user_model()
 def _contexto_quadro(request, usuario=None):
     """Chips + lista de quartos — o trecho que o HTMX troca a cada ação."""
     dados = services.painel_limpeza()
+    servicos_por_quarto = {}
+    for tarefa in services.tarefas_operacionais():
+        servicos_por_quarto.setdefault(tarefa.uh_id, set()).add(tarefa.status)
+    for linha in dados["linhas"]:
+        linha["servicos_estados"] = sorted(servicos_por_quarto.get(linha["uh"].pk, ()))
     contagem = dados["contagem"]
     # "Só os meus": a camareira no corredor quer a fila DELA, não o andar inteiro.
     meus = 0
@@ -175,13 +180,7 @@ def restricao(request, pk):
 @never_cache
 @requer_modulo(Modulo.GOVERNANCA)
 def atualizacoes(request):
-    from django.db.models import Count, Max, Q
-    dados = TarefaGovernanca.objects.aggregate(
-        ultima=Max("atualizada_em"), total=Count("pk"),
-        pendentes=Count("pk", filter=Q(status=TarefaGovernanca.Status.PENDENTE)),
-        em_andamento=Count("pk", filter=Q(status=TarefaGovernanca.Status.EM_ANDAMENTO)))
-    dados["quartos_atualizados_em"] = StatusLimpeza.objects.aggregate(ultima=Max("atualizado_em"))["ultima"]
-    return JsonResponse(dados)
+    return JsonResponse(services.resumo_pendencias())
 
 
 @requer_modulo(Modulo.GOVERNANCA)
@@ -201,9 +200,12 @@ def quartos(request):
     # A visão geral manda para cá já filtrado ("3 quartos esperando inspeção" abre a
     # lista nesses três); sem `?estado=`, vale a última escolha de quem está usando.
     estado = request.GET.get("estado")
+    servico = request.GET.get("servico")
     contexto.update({
         "tipos": TarefaGovernanca.Tipo.choices, "montagem": montagem,
         "filtro_inicial": estado if estado in StatusLimpeza.Situacao.values else "",
+        "filtro_servico": servico if servico in (
+            TarefaGovernanca.Status.PENDENTE, TarefaGovernanca.Status.EM_ANDAMENTO) else "",
     })
     return render(request, "governanca/quartos.html", contexto)
 

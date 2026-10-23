@@ -82,6 +82,10 @@ class Comanda(models.Model):
     aberta_em = models.DateTimeField("aberta em", auto_now_add=True)
     fechada_em = models.DateTimeField("fechada em", null=True, blank=True)
     motivo_cancelamento = models.TextField("motivo do cancelamento", blank=True)
+    chave_abertura = models.UUIDField(null=True, blank=True, unique=True, editable=False)
+    assinatura_abertura = models.CharField(max_length=64, blank=True, editable=False)
+    chave_pedido_portal = models.UUIDField(null=True, blank=True, unique=True, editable=False)
+    assinatura_pedido_portal = models.CharField(max_length=64, blank=True, editable=False)
 
     class Meta:
         verbose_name = "comanda"
@@ -110,6 +114,28 @@ class Comanda(models.Model):
 
     def total(self) -> Decimal:
         return self.subtotal() - self.desconto
+
+    @property
+    def financeiro(self):
+        """Situação do pagamento, independente do preparo e do consumo da comanda."""
+        recebido = self.movimento_caixa.valor if self.movimento_caixa_id else Decimal("0.00")
+        estornado = sum((mov.valor for mov in self.movimento_caixa.estornos.all()), Decimal("0.00")) \
+            if self.movimento_caixa_id else Decimal("0.00")
+        status, rotulo = "aberta", "Aguardando pagamento"
+        if self.status == self.Status.CANCELADA:
+            status, rotulo = "cancelada", "Comanda cancelada"
+        elif self.status == self.Status.FECHADA and not self.movimento_caixa_id and self.total() == 0:
+            status, rotulo = "sem_cobranca", "Sem valor a receber"
+        elif self.destino == self.Destino.CONTA:
+            status, rotulo = "conta", "Lançado na conta do quarto"
+        elif recebido and estornado == recebido:
+            status, rotulo = "estornado_total", "Pagamento estornado"
+        elif estornado:
+            status, rotulo = "estornado_parcial", "Pagamento parcialmente estornado"
+        elif recebido:
+            status, rotulo = "pago", "Pago"
+        return {"recebido": recebido, "estornado": estornado, "liquido": recebido - estornado,
+                "status": status, "rotulo": rotulo}
 
 
 class ItemComanda(models.Model):
@@ -159,6 +185,20 @@ class ItemComanda(models.Model):
     @property
     def detalhe_preparo(self):
         return ". ".join(parte for parte in (self.resumo_opcoes, self.observacoes) if parte)
+
+
+class InclusaoPedido(models.Model):
+    """Uma intenção de inclusão; a chave permanece consumida se o item for removido."""
+
+    chave = models.UUIDField(unique=True, editable=False)
+    assinatura = models.CharField(max_length=64, editable=False)
+    comanda = models.ForeignKey(Comanda, on_delete=models.PROTECT, related_name="inclusoes_pedido")
+    item = models.ForeignKey(ItemComanda, on_delete=models.SET_NULL, null=True, related_name="inclusoes_pedido")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "inclusão de pedido"
+        verbose_name_plural = "inclusões de pedido"
 
 
 class GrupoOpcaoCardapio(models.Model):

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block titulo %}{% if peca %}Editar entrega{% else %}Nova entrega{% endif %} | Marketing{% endblock %}
+{% block conteudo %}
+<div class="eleg mkt-ficha-pagina">
+  <p class="pagina-eyebrow letreiro">Marketing</p>
+  <div class="pagina-cabecalho"><h1>{% if peca %}Editar entrega{% else %}Nova entrega{% endif %}</h1><a href="{{ voltar }}" class="botao-neutro">Voltar</a></div>
+  {% include "marketing/_tabs.html" %}
+  <form method="post" class="painel-bloco mkt-entrega-form" data-mkt-edit>
+    {% csrf_token %}<input type="hidden" name="voltar" value="{{ voltar }}">
+    {{ form.non_field_errors }}
+    <div class="mkt-form-grid">
+      {% for field in form %}
+      {% if field.is_hidden %}{{ field }}{% for erro in field.errors %}<p class="erro">{{ erro }}</p>{% endfor %}
+      {% elif field.name == 'material_checklist' %}<div id="entrega-anexo">{% include "marketing/_anexo_entrega.html" %}</div>
+      {% else %}
+      <div class="campo{% if field.errors %} campo-erro{% endif %}">
+        <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span aria-hidden="true">*</span>{% endif %}</label>
+        {{ field }}{% if field.help_text %}<small class="ajuda">{{ field.help_text }}</small>{% endif %}
+        {% for erro in field.errors %}<small class="erro" role="alert">{{ erro }}</small>{% endfor %}
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+    <div class="acoes"><button type="submit" class="botao-primario">Salvar entrega</button><a href="{{ voltar }}" class="botao-neutro">Cancelar</a><span class="mkt-save-state" role="status" aria-live="polite"></span></div>
+  </form>
+</div>
+{% endblock %}

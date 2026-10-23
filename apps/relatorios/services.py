@@ -133,6 +133,7 @@ def rel_faturamento_modulos(inicio, fim):
 
     linhas = []
     tot_caixa = tot_quarto = Decimal("0")
+    restaurante_financeiro = None
 
     def add(setor, no_caixa, no_quarto):
         nonlocal tot_caixa, tot_quarto
@@ -156,6 +157,12 @@ def rel_faturamento_modulos(inicio, fim):
         from apps.restaurante.services import faturamento_periodo as rest_fat
         f = rest_fat(inicio, fim)
         add("Restaurante", f["caixa"], f["quarto"])
+        restaurante_financeiro = {
+            "vendas": [("Venda bruta", _rs(f["venda_bruta"])), ("Descontos", _rs(f["descontos"])),
+                       ("Venda após descontos", _rs(f["venda_liquida"]))],
+            "caixa": [("Recebimentos", _rs(f["recebimentos"])), ("Estornos", _rs(f["estornos"])),
+                      ("Recebido líquido", _rs(f["recebido_liquido"]))],
+        }
 
     if modulo_ativo(Modulo.LAVANDERIA):
         from apps.lavanderia.services import faturamento_periodo as lav_fat
@@ -165,11 +172,14 @@ def rel_faturamento_modulos(inicio, fim):
     return {
         "kpis": [
             ("Faturamento total", _rs(tot_caixa + tot_quarto)),
-            ("Recebido na gaveta do setor", _rs(tot_caixa)),
+            ("Vendas com pagamento no setor", _rs(tot_caixa)),
             ("Lançado nos quartos (recepção recebe)", _rs(tot_quarto)),
         ],
-        "colunas": ["Setor", "No caixa do setor", "Lançado no quarto", "Total vendido"],
+        "colunas": ["Setor", "Vendas com pagamento no setor", "Lançado no quarto", "Total vendido"],
         "linhas": linhas,
+        "nota": "A tabela registra vendas no período, incluindo valores lançados nos quartos. "
+                "Recebimentos e estornos do restaurante são apresentados separadamente pela data de cada movimento.",
+        "restaurante_financeiro": restaurante_financeiro,
     }
 
 

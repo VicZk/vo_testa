@@ -129,8 +129,8 @@ APRESENTACAO: dict[str, dict] = {
     Modulo.MARKETING: {
         "grupo": "Comercial",
         "ordem": 117,
-        "descricao": "Campanhas: da ideia à retrospectiva, com verba mensal e calendário.",
-        "url_name": "marketing:quadro",
+        "descricao": "Entregas por tipo e situação, campanhas, verba e calendário.",
+        "url_name": "marketing:entregas",
     },
     Modulo.APPSITE: {
         "grupo": "Online",

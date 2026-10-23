@@ -1,5 +1,5 @@
-{% load moeda %}
-<div id="comanda-itens" class="comanda-itens">
+{% load moeda l10n %}
+<div id="comanda-itens" class="comanda-itens" data-subtotal="{{ comanda.subtotal|unlocalize }}" data-tem-itens="{% if comanda.itens.all %}1{% else %}0{% endif %}">
   {% if erro %}<div class="mensagem error">{{ erro }}</div>{% endif %}
   {% if comanda.itens.all %}
     <div class="comanda-lista">
@@ -24,7 +24,7 @@
       {% endfor %}
     </div>
     <div class="comanda-total-linha">
-      <span class="letreiro">Total</span>
+      <span class="letreiro">{% if comanda.aberta %}Subtotal{% else %}Total{% endif %}</span>
       <strong>{{ comanda.total|intcomma_brl }}</strong>
     </div>
   {% else %}

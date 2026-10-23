@@ -22,7 +22,7 @@
   </thead>
   <tbody>
     {% for c in contas %}
-      <tr class="{% if c.vencida %}linha-alerta{% endif %}">
+      <tr id="conta-{{ c.pk }}" class="{% if c.vencida %}linha-alerta{% endif %}">
         <td data-rotulo="Vencimento">{{ c.vencimento|date:"d/m/Y" }}{% if c.vencida %} <span class="selo selo-alerta">vencida</span>{% endif %}</td>
         <td data-rotulo="Tipo">{{ c.get_tipo_display }}</td>
         <td class="registro-principal">{{ c.descricao }}</td>

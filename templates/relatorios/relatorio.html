@@ -92,4 +92,21 @@ busca na folha.{% endcomment %}
     {% endfor %}
   </tbody>
 </table>
+{% if dados.restaurante_financeiro %}
+  <section class="bloco-respiro-largo" aria-label="Vendas e caixa do restaurante">
+    <h2>Restaurante</h2>
+    <p class="subtitulo subtitulo-mini">Vendas pela data de fechamento da comanda. Inclui pagamentos no setor e lançamentos nos quartos.</p>
+    <div class="cartoes-indicadores colunas">
+      {% for rotulo_kpi, valor in dados.restaurante_financeiro.vendas %}
+        <div class="cartao"><span class="indicador-rotulo letreiro">{{ rotulo_kpi }}</span><span class="indicador-valor">{{ valor }}</span></div>
+      {% endfor %}
+    </div>
+    <p class="subtitulo subtitulo-mini">Caixa pela data de cada recebimento e estorno. Uma devolução de venda anterior entra no dia em que foi registrada.</p>
+    <div class="cartoes-indicadores colunas">
+      {% for rotulo_kpi, valor in dados.restaurante_financeiro.caixa %}
+        <div class="cartao"><span class="indicador-rotulo letreiro">{{ rotulo_kpi }}</span><span class="indicador-valor">{{ valor }}</span></div>
+      {% endfor %}
+    </div>
+  </section>
+{% endif %}
 {% endblock %}
