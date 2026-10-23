@@ -14,16 +14,18 @@ register = template.Library()
 
 
 @register.filter
-def intcomma_brl(valor):
-    """1600 → 'R$ 1.600,00' · -67.5 → '-R$ 67,50' · None/inválido → 'R$ 0,00'."""
+def intcomma_brl(valor, casas=2):
+    """Moeda com duas casas; custos unitários podem pedir quatro com `:4`."""
+    casas = 4 if casas in (4, "4") else 2
+    zero = "R$ 0," + "0" * casas
     if valor is None or valor == "":
-        return "R$ 0,00"
+        return zero
     try:
         v = Decimal(str(valor))
     except (InvalidOperation, TypeError):
-        return "R$ 0,00"
+        return zero
 
-    inteiro, _, centavos = f"{abs(v):.2f}".partition(".")
+    inteiro, _, centavos = f"{abs(v):.{casas}f}".partition(".")
     grupos = []
     while len(inteiro) > 3:
         grupos.insert(0, inteiro[-3:])

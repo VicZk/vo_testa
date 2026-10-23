@@ -585,9 +585,9 @@ class CentralModulosTests(TestCase):
 class MoedaFiltroTests(TestCase):
     """Filtro de moeda único do sistema (apps/nucleo/templatetags/moeda.py)."""
 
-    def _fmt(self, valor):
+    def _fmt(self, valor, **opcoes):
         from apps.nucleo.templatetags.moeda import intcomma_brl
-        return intcomma_brl(valor)
+        return intcomma_brl(valor, **opcoes)
 
     def test_zero(self):
         self.assertEqual(self._fmt(0), "R$ 0,00")
@@ -607,6 +607,23 @@ class MoedaFiltroTests(TestCase):
 
     def test_invalido(self):
         self.assertEqual(self._fmt("abc"), "R$ 0,00")
+
+    def test_custo_unitario_preserva_quatro_casas_e_separador_de_milhar(self):
+        self.assertEqual(self._fmt(Decimal("1234.5678"), casas=4), "R$ 1.234,5678")
+        self.assertEqual(self._fmt(Decimal("-1234.5678"), casas="4"), "-R$ 1.234,5678")
+        self.assertEqual(self._fmt(60, casas=4), "R$ 60,0000")
+
+    def test_precisao_padrao_e_argumento_nao_suportado_mantem_duas_casas(self):
+        valor = Decimal("1234.5678")
+        self.assertEqual(self._fmt(valor), "R$ 1.234,57")
+        for casas in (2, "2", 0, 3, 5, -4, "invalido", None):
+            with self.subTest(casas=casas):
+                self.assertEqual(self._fmt(valor, casas=casas), "R$ 1.234,57")
+
+    def test_quatro_casas_tambem_formatam_zero_e_valores_vazios(self):
+        for valor in (0, None, "", "abc"):
+            with self.subTest(valor=valor):
+                self.assertEqual(self._fmt(valor, casas=4), "R$ 0,0000")
 
 
 class EstruturaCamasTests(TestCase):

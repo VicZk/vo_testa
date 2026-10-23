@@ -175,6 +175,13 @@ class TelasNotasTests(NotasFixture, TestCase):
             self.assertEqual(resposta.status_code, 200)
             self.assertEqual([nota.pk for nota in resposta.context["pagina"]], [esperada.pk])
 
+    def test_detalhe_preserva_quatro_casas_no_custo_e_centavos_no_total(self):
+        nota = self.nota(itens=[self.item_previsto(quantidade="3", custo="1234.5678")])
+        resposta = self.client.get(reverse("estoque:nota", args=[nota.pk]))
+        self.assertContains(resposta, 'data-rotulo="Custo / unidade">R$ 1.234,5678</td>', html=False)
+        self.assertContains(resposta, 'data-rotulo="Total previsto">R$ 3.703,70</td>', html=False)
+        self.conferir_sem_movimento()
+
     def test_cadastro_e_anexo_reutilizam_o_mesmo_validador_sem_guardar_arquivo_invalido(self):
         dados = self.payload_cadastro(documentos=[SimpleUploadedFile("falso.pdf", b"falso")])
         resposta = self.client.post(reverse("estoque:nota_nova"), dados)

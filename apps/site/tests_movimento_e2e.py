@@ -201,7 +201,14 @@ class MovimentoNavegacaoE2ETests(_BaseE2E):
             self.assertTrue(all(a["h"] >= 44 for a in abas))
             self.assertLessEqual(p.evaluate("document.documentElement.scrollWidth"), largura + 1)
         p.set_viewport_size({"width": 390, "height": 600})
-        compras = p.locator('.abas-secao a').first
+        notas = p.locator('.abas-secao a').first
+        expect(notas).to_have_text("Notas fiscais")
+        notas.focus()
+        expect(notas).to_be_in_viewport(ratio=1)
+        notas.press("Enter")
+        expect(p).to_have_url(self.url(reverse("estoque:notas")))
+        expect(p.locator('.abas-secao [aria-current="page"]')).to_have_text("Notas fiscais")
+        compras = p.locator('.abas-secao').get_by_role("link", name="Compras", exact=True)
         compras.focus()
         expect(compras).to_be_in_viewport(ratio=1)
         compras.press("Enter")
