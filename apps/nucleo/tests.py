@@ -1843,8 +1843,9 @@ class ModulosPorRequisicaoTests(TestCase):
         self.assertTrue(modulo_ativo(Modulo.LOJA))
 
 
+@override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.dummy.DummyCache"}})
 class PessoasSemConsultaPorLinhaTests(TestCase):
-    """A lista de Pessoas não consulta os papéis de cada linha separadamente."""
+    """Compara consultas com cache sempre frio, sem depender do TTL do rodapé."""
 
     def _consultas(self):
         from django.db import connection
