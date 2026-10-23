@@ -210,16 +210,70 @@ class MovimentoNavegacaoE2ETests(_BaseE2E):
         p.locator('.abas-secao a').last.focus()
         p.keyboard.press("Enter")
         expect(p).to_have_url(self.url(reverse("estoque:cadastros")))
+        p.wait_for_load_state("load")
+        p.evaluate("document.fonts.ready")
+        expect(p.locator('.abas-secao [aria-current="page"]')).to_have_text("Cadastros")
+        rolagem = 180
         p.evaluate("window.scrollTo(0, 180)")
-        rolagem = p.evaluate("window.scrollY")
+        p.wait_for_function("esperado => Math.abs(window.scrollY-esperado)<2", arg=rolagem)
+        p.evaluate("""rotas => {
+          window.__trocaAbas={concluida:false,restaurada:false};
+          document.addEventListener('htmx:afterSettle',e=>{
+            if(e.detail.target?.id==='conteudo' && location.pathname===rotas.governanca)
+              window.__trocaAbas.concluida=true;
+          });
+          document.addEventListener('htmx:historyRestore',()=>{
+            if(location.pathname===rotas.cadastros)window.__trocaAbas.restaurada=true;
+          });
+        }""", {"governanca": reverse("governanca:painel"), "cadastros": reverse("estoque:cadastros")})
         p.get_by_role("button", name="Abrir menu", exact=True).click()
         p.locator(f'#menu-principal a[href="{reverse("governanca:painel")}"]').click()
         expect(p).to_have_url(self.url(reverse("governanca:painel")))
+        p.wait_for_function("window.__trocaAbas.concluida && window.scrollY===0")
         p.go_back()
         expect(p).to_have_url(self.url(reverse("estoque:cadastros")))
+        p.wait_for_function("window.__trocaAbas.restaurada")
+        expect(p.locator('.abas-secao [aria-current="page"]')).to_have_text("Cadastros")
         p.wait_for_function("""() => {
           const faixa=document.querySelector('.abas-secao').getBoundingClientRect();
           const ativo=document.querySelector('.abas-secao [aria-current=page]').getBoundingClientRect();
           return ativo.left>=faixa.left-1 && ativo.right<=faixa.right+1;
         }""")
         p.wait_for_function("esperado => Math.abs(window.scrollY-esperado)<2", arg=rolagem)
+
+    def test_voltar_antes_de_concluir_troca_preserva_rolagem_restaurada(self):
+        p = self.page
+        p.emulate_media(reduced_motion="reduce")
+        p.set_viewport_size({"width": 390, "height": 600})
+        p.goto(self.url(reverse("estoque:cadastros")))
+        p.evaluate("document.fonts.ready")
+        p.evaluate("window.scrollTo(0, 180)")
+        p.wait_for_function("Math.abs(window.scrollY-180)<2")
+        p.evaluate("""() => {
+          htmx.config.defaultSettleDelay=300;
+          window.__retornoAntesSettle={sequencia:[],concluido:false};
+          document.addEventListener('htmx:afterSwap',e=>{
+            if(e.detail.target?.id!=='conteudo')return;
+            // O nó sai do documento no Voltar; observar nele garante que o
+            // callback antigo terminou antes de medir a rolagem restaurada.
+            document.getElementById('conteudo').addEventListener('htmx:afterSettle',()=>{
+              window.__retornoAntesSettle.sequencia.push('settle');
+              requestAnimationFrame(()=>{
+                window.__retornoAntesSettle.rolagem=window.scrollY;
+                window.__retornoAntesSettle.concluido=true;
+              });
+            },{once:true});
+            history.back();
+          },{once:true});
+          document.addEventListener('htmx:historyRestore',()=>{
+            window.__retornoAntesSettle.sequencia.push('historico');
+          },{once:true});
+        }""")
+        p.get_by_role("button", name="Abrir menu", exact=True).click()
+        p.locator(f'#menu-principal a[href="{reverse("governanca:painel")}"]').click()
+        p.wait_for_function("window.__retornoAntesSettle.concluido")
+        expect(p).to_have_url(self.url(reverse("estoque:cadastros")))
+        expect(p.locator('.abas-secao [aria-current="page"]')).to_have_text("Cadastros")
+        resultado = p.evaluate("window.__retornoAntesSettle")
+        self.assertEqual(resultado["sequencia"], ["historico", "settle"])
+        self.assertAlmostEqual(resultado["rolagem"], 180, delta=1)

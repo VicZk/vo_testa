@@ -57,6 +57,7 @@ preferência por movimento reduzido e ausência de JavaScript nos formulários.
 
 | Área | Problema reproduzido e comportamento final | Evidência reproduzível |
 |---|---|---|
+| Navegação | Voltar antes do fim da troca restaurava a rolagem, mas o término da navegação anterior a zerava. O menu agora posiciona o topo junto da troca, preservando o histórico | `tests_movimento_e2e.py`, com término HTMX atrasado e retorno antecipado |
 | Manutenção | Faltava anexar a nota; conclusão e documento agora são atômicos. Arquivo inválido preserva campos/arquivo e não conclui a OS nem lança custo parcial | `tests_documentos.py`, `tests_usabilidade.py`, `tests_manutencao_documentos_e2e.py` |
 | Manutenção | Histórico e busca recuperam OS concluída/cancelada, inclusive por número de nota. Bloqueio futuro não aparece como bloqueio atual | `tests_documentos.py`, `tests_manutencao_documentos_e2e.py` |
 | Escala | IDs/datas/enums inválidos causavam erro interno ou gravação indevida. Entradas inválidas são recusadas antes de mutação | `tests_usabilidade.py`, `tests_escala_uso_e2e.py` |

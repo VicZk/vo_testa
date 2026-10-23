@@ -14,6 +14,8 @@ A entrada mais nova fica no topo. As datas são as do push.
 - Menus internos ficam estáveis durante a navegação, sem a duplicação da
   Governança. Transições, histórico, busca por Ctrl/Cmd+K e avisos de alterações
   pendentes funcionam juntos; gráficos reaparecem ao voltar pelo histórico.
+- Voltar durante uma troca de página conserva a rolagem restaurada; a
+  navegação anterior não desloca mais a página para o topo ao terminar.
 - Reservas, manutenção, financeiro, pagamentos, NPS e cadastros apresentam
   registros legíveis no celular. Ações da reserva têm grupos claros, foco por
   teclado e fechamento previsível. Filtros de caixa e períodos ocupam menos espaço.

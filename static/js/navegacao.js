@@ -66,6 +66,11 @@
 
   document.addEventListener('htmx:afterSwap', evento => {
     if (evento.detail.target?.id !== 'conteudo') return;
+    // O topo pertence à troca, não ao settle atrasado: se a pessoa já voltou,
+    // esse callback antigo não pode sobrescrever a rolagem do histórico.
+    if (evento.detail.requestConfig?.elt?.closest('#menu-principal')) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
     const pedido = evento.detail.xhr;
     if (pedido && trocasNativas.has(pedido)) return;
     animarConteudo();
