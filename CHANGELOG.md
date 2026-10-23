@@ -9,6 +9,18 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 22/10/2026: quartos e preços validados antes de salvar
+
+- O cadastro de quarto novo abre a configuração de camas. A edição confere
+  quarto, camas, vitrine, descritivo e tarifas antes de gravar qualquer parte.
+- A tabela de preços e as temporadas distinguem campo ausente, campo vazio e
+  valor inválido. Uma falha mantém os preços anteriores e os dados digitados.
+- Percentuais aceitam duas casas decimais sem perder precisão na fração salva.
+  Valores excessivos, negativos, não finitos e horários inválidos são recusados.
+- Em telas estreitas, preços aparecem por quarto e temporada, com os valores
+  identificados e visíveis; os avisos de erro cabem no formulário.
+- A central exige o monitor de Canais quando esse módulo está ativo.
+
 ## 22/10/2026: compras por embalagem, lotes e ingredientes dos pratos
 
 - O recebimento converte embalagens para a unidade base e conserva a conversão

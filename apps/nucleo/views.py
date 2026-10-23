@@ -1,4 +1,3 @@
-import datetime
 from decimal import Decimal
 
 from django.contrib import messages
@@ -50,6 +49,7 @@ from .models import (
 from .modulos import APRESENTACAO
 from .paginacao import paginar
 from .permissoes import eh_gerente, pode_ver_salario, requer_area, requer_gerencia
+from .precos_formulario import LeituraPrecos, valor_exibido
 
 # ---------- Dashboard ----------
 
@@ -683,40 +683,27 @@ def tipo_uh_form(request, pk=None):
 _CLASSIF_EM_USO = ("baixa", "alta", "feriado")
 
 
-def _dec_post(request, campo):
-    """Decimal do POST em formato BRL ('1.234,56') ou None se vazio/ inválido."""
-    bruto = (request.POST.get(campo) or "").strip().replace(".", "").replace(",", ".")
-    if not bruto:
-        return None
-    try:
-        return Decimal(bruto)
-    except (ValueError, ArithmeticError):
-        return None
+def _ler_tarifas_quarto(request):
+    leitura = LeituraPrecos(request.POST)
+    tarifas = [(cod, leitura.grupo({"valor": f"tarifa_{cod}",
+                                   "pessoa_adicional": f"adicional_{cod}"}, f"Tarifa {cod}"))
+               for cod in _CLASSIF_EM_USO]
+    leitura.conferir()
+    return tarifas
 
 
-def _salvar_tarifas_quarto(request, uh):
-    """Preço por quarto × temporada: cria/atualiza/remove TarifaUnidade a partir dos
-    inputs `tarifa_<classif>` (base 2 pax) + `adicional_<classif>` (pessoa adicional).
-    Base vazia = remove a linha (usa o tipo)."""
+def _salvar_tarifas_quarto(tarifas, uh):
     from apps.reservas.models import TarifaUnidade
-    from apps.reservas.models import Temporada as _Temp
-
-    rotulos = dict(_Temp.Classificacao.choices)
-    for cod in _CLASSIF_EM_USO:
-        if cod not in rotulos:
+    for cod, valores in tarifas:
+        if valores is None:
             continue
-        valor = _dec_post(request, f"tarifa_{cod}")
-        if valor is None:
+        if valores["valor"] is None:
             TarifaUnidade.objects.filter(uh=uh, classificacao=cod).delete()
-            continue
-        TarifaUnidade.objects.update_or_create(
-            uh=uh, classificacao=cod,
-            defaults={"valor": valor,
-                      "pessoa_adicional": _dec_post(request, f"adicional_{cod}")},
-        )
+        else:
+            TarifaUnidade.objects.update_or_create(uh=uh, classificacao=cod, defaults=valores)
 
 
-def _tarifas_quarto(uh):
+def _tarifas_quarto(uh, request):
     """Editor de preço por quarto: [{cod, rotulo, valor_fmt, adicional_fmt}]."""
     from apps.reservas.models import TarifaUnidade
     from apps.reservas.models import Temporada as _Temp
@@ -732,8 +719,9 @@ def _tarifas_quarto(uh):
         t = atuais.get(cod)
         linhas.append({
             "cod": cod, "rotulo": rotulos[cod],
-            "valor_fmt": _brl(t.valor) if t else "",
-            "adicional_fmt": _brl(t.pessoa_adicional) if t and t.pessoa_adicional is not None else "",
+            "valor_fmt": valor_exibido(request, f"tarifa_{cod}", _brl(t.valor) if t else ""),
+            "adicional_fmt": valor_exibido(request, f"adicional_{cod}",
+                _brl(t.pessoa_adicional) if t and t.pessoa_adicional is not None else ""),
         })
     return linhas
 
@@ -747,7 +735,7 @@ def _vitrine_do_quarto(request, uh):
     from apps.site.forms import VitrineQuartoForm
     from apps.site.models import VitrineQuarto
 
-    vitrine, _ = VitrineQuarto.objects.get_or_create(uh=uh)
+    vitrine = VitrineQuarto.objects.filter(uh=uh).first() or VitrineQuarto(uh=uh)
     dados = request.POST if request.method == "POST" else None
     arquivos = request.FILES if request.method == "POST" else None
     return vitrine, VitrineQuartoForm(dados, arquivos, instance=vitrine)
@@ -762,7 +750,7 @@ def _ficha_comercial_do_quarto(request, uh):
     from apps.comercial.forms import FichaComercialForm
     from apps.comercial.models import FichaComercial
 
-    ficha, _ = FichaComercial.objects.get_or_create(uh=uh)
+    ficha = FichaComercial.objects.filter(uh=uh).first() or FichaComercial(uh=uh)
     dados = request.POST if request.method == "POST" else None
     return ficha, FichaComercialForm(dados, instance=ficha)
 
@@ -773,10 +761,10 @@ def uh_form(request, pk=None):
     from .estrutura import capacidade, descricao_camas
     from .models import ConfiguracaoUH
 
-    uh = get_object_or_404(UH, pk=pk) if pk else None
+    uh = get_object_or_404(UH.objects.select_for_update(), pk=pk) if pk else None
     config = None
     if uh is not None:
-        config, _ = ConfiguracaoUH.objects.get_or_create(uh=uh)
+        config = ConfiguracaoUH.objects.filter(uh=uh).first() or ConfiguracaoUH(uh=uh)
 
     vitrine, vitrine_form = _vitrine_do_quarto(request, uh)
     ficha_com, ficha_com_form = _ficha_comercial_do_quarto(request, uh)
@@ -786,26 +774,40 @@ def uh_form(request, pk=None):
     formset = PosicaoCamaFormSet(request.POST or None, instance=uh)
 
     if request.method == "POST":
-        # Quarto novo: grava o UH primeiro para ter instância às posições/config.
-        if form.is_valid():
-            uh = form.save()
-            config, _ = ConfiguracaoUH.objects.get_or_create(uh=uh)
-            config_form = ConfiguracaoUHForm(request.POST, instance=config)
-            formset = PosicaoCamaFormSet(request.POST, instance=uh)
-            vitrine, vitrine_form = _vitrine_do_quarto(request, uh)
-            ficha_com, ficha_com_form = _ficha_comercial_do_quarto(request, uh)
-            if config_form.is_valid() and formset.is_valid() and (
-                vitrine_form is None or vitrine_form.is_valid()
-            ) and (ficha_com_form is None or ficha_com_form.is_valid()):
+        if uh is None:
+            if form.is_valid():
+                novo = form.save()
+                messages.success(request, f"Quarto {novo.numero} criado. Confira agora as camas, a capacidade e os preços.")
+                return redirect("uh_editar", pk=novo.pk)
+        else:
+            formularios = [form, config_form, formset, vitrine_form, ficha_com_form]
+            validos = [f.is_valid() for f in formularios if f is not None]
+            try:
+                tarifas = _ler_tarifas_quarto(request)
+            except ValidationError as erro:
+                form.add_error(None, erro)
+                validos.append(False)
+            if all(validos):
+                form.save()
                 config_form.save()
                 formset.save()
-                _salvar_tarifas_quarto(request, uh)
+                _salvar_tarifas_quarto(tarifas, uh)
                 if vitrine_form is not None:
                     vitrine_form.save()
                 if ficha_com_form is not None:
                     ficha_com_form.save()
                 messages.success(request, f"Quarto {uh.numero} salvo.")
                 return redirect("estrutura")
+
+        if request.headers.get("X-Form-Preserve") == "1":
+            from .formularios import erros_do_formulario
+            forms_com_erros = (form, config_form, vitrine_form, ficha_com_form) if uh else (form,)
+            erros = [erros_do_formulario(f) for f in forms_com_erros
+                     if f is not None and f.errors]
+            if uh:
+                erros.extend(erros_do_formulario(f) for f in formset if f.errors)
+                erros.extend(str(erro) for erro in formset.non_form_errors())
+            return JsonResponse({"errors": erros}, status=422, headers={"Cache-Control": "no-store"})
 
     contexto = {
         "form": form,
@@ -816,7 +818,7 @@ def uh_form(request, pk=None):
         "uh": uh,
         "titulo": "Quarto",
         "voltar": "estrutura",
-        "tarifas_quarto": _tarifas_quarto(uh),
+        "tarifas_quarto": _tarifas_quarto(uh, request),
     }
     if uh is not None:
         contexto["capacidade"] = capacidade(uh)
@@ -855,24 +857,26 @@ def _uhs_hospedagem():
             .select_related("tipo").order_by("numero"))
 
 
-def _salvar_tarifas_temporada(request, temporada):
-    """Preço especial por quarto numa temporada (Natal/Ano Novo). Base vazia =
-    remove (usa o preço da classificação)."""
+def _ler_tarifas_temporada(request):
+    leitura = LeituraPrecos(request.POST)
+    tarifas = [(uh, leitura.grupo({"valor": f"tbase_{uh.id}", "pessoa_adicional": f"tadd_{uh.id}"},
+                                  f"Quarto {uh.numero}")) for uh in _uhs_hospedagem()]
+    leitura.conferir()
+    return tarifas
+
+
+def _salvar_tarifas_temporada(tarifas, temporada):
     from apps.reservas.models import TarifaTemporada
-
-    for uh in _uhs_hospedagem():
-        base = _dec_post(request, f"tbase_{uh.id}")
-        if base is None:
-            TarifaTemporada.objects.filter(temporada=temporada, uh=uh).delete()
+    for uh, valores in tarifas:
+        if valores is None:
             continue
-        TarifaTemporada.objects.update_or_create(
-            temporada=temporada, uh=uh,
-            defaults={"valor": base,
-                      "pessoa_adicional": _dec_post(request, f"tadd_{uh.id}")},
-        )
+        if valores["valor"] is None:
+            TarifaTemporada.objects.filter(temporada=temporada, uh=uh).delete()
+        else:
+            TarifaTemporada.objects.update_or_create(temporada=temporada, uh=uh, defaults=valores)
 
 
-def _tarifas_temporada(temporada):
+def _tarifas_temporada(temporada, request):
     """[{uh_id, numero, tematico, base_fmt, adicional_fmt}] para o editor."""
     from apps.reservas.models import TarifaTemporada
 
@@ -886,8 +890,9 @@ def _tarifas_temporada(temporada):
         linhas.append({
             "uh_id": uh.id, "numero": uh.numero,
             "tematico": getattr(uh, "nome_tematico", "") or "",
-            "base_fmt": _brl(t.valor) if t else "",
-            "adicional_fmt": _brl(t.pessoa_adicional) if t and t.pessoa_adicional is not None else "",
+            "base_fmt": valor_exibido(request, f"tbase_{uh.id}", _brl(t.valor) if t else ""),
+            "adicional_fmt": valor_exibido(request, f"tadd_{uh.id}",
+                _brl(t.pessoa_adicional) if t and t.pessoa_adicional is not None else ""),
         })
     return linhas
 
@@ -895,18 +900,29 @@ def _tarifas_temporada(temporada):
 @requer_area(Area.TEMPORADAS)
 @transaction.atomic
 def temporada_form(request, pk=None):
-    temporada = get_object_or_404(Temporada, pk=pk) if pk else None
+    temporada = get_object_or_404(Temporada.objects.select_for_update(), pk=pk) if pk else None
     form = TemporadaForm(request.POST or None, instance=temporada)
-    if request.method == "POST" and form.is_valid():
-        temporada = form.save()
-        _salvar_tarifas_temporada(request, temporada)
-        messages.success(request, f"Temporada “{temporada.nome}” salva.")
-        return redirect("temporadas")
+    if request.method == "POST":
+        valido = form.is_valid()
+        try:
+            tarifas = _ler_tarifas_temporada(request)
+        except ValidationError as erro:
+            form.add_error(None, erro)
+            valido = False
+        if valido:
+            temporada = form.save()
+            _salvar_tarifas_temporada(tarifas, temporada)
+            messages.success(request, f"Temporada “{temporada.nome}” salva.")
+            return redirect("temporadas")
+        if request.headers.get("X-Form-Preserve") == "1":
+            from .formularios import erros_do_formulario
+            return JsonResponse({"errors": [erros_do_formulario(form)]}, status=422,
+                                headers={"Cache-Control": "no-store"})
     return render(
         request,
         "nucleo/temporada_form.html",
         {"form": form, "titulo": "Temporada", "voltar": "temporadas",
-         "temporada": temporada, "tarifas_temporada": _tarifas_temporada(temporada)},
+         "temporada": temporada, "tarifas_temporada": _tarifas_temporada(temporada, request)},
     )
 
 
@@ -943,63 +959,71 @@ def tabela_precos(request):
     cfg = ConfiguracaoReservas.carregar()
 
     if request.method == "POST":
-        # 1) preço por quarto
+        from .sistema import travar
+        travar(cfg)
+        leitura = LeituraPrecos(request.POST)
+        alteracoes = []
         for uh in uhs:
             for col in colunas:
-                base = _dec_post(request, f"base_{uh.id}_{col['key']}")
-                defaults = {"valor": base,
-                            "pessoa_adicional": _dec_post(request, f"add_{uh.id}_{col['key']}"),
-                            "meia": _dec_post(request, f"meia_{uh.id}_{col['key']}")}
+                valores = leitura.grupo({"valor": f"base_{uh.id}_{col['key']}",
+                    "pessoa_adicional": f"add_{uh.id}_{col['key']}", "meia": f"meia_{uh.id}_{col['key']}"},
+                    f"Quarto {uh.numero} · {col['label']}")
                 if "temporada" in col:
-                    if base is None:
-                        TarifaTemporada.objects.filter(temporada=col["temporada"], uh=uh).delete()
-                    else:
-                        TarifaTemporada.objects.update_or_create(
-                            temporada=col["temporada"], uh=uh, defaults=defaults)
-                elif base is None:
-                    TarifaUnidade.objects.filter(uh=uh, classificacao=col["key"]).delete()
+                    modelo, filtros = TarifaTemporada, {"temporada": col["temporada"], "uh": uh}
                 else:
-                    TarifaUnidade.objects.update_or_create(
-                        uh=uh, classificacao=col["key"], defaults=defaults)
-        # 2) day use (por pessoa) × classificação
-        for k, _r in _CLASSIF_PRECO:
-            ad = _dec_post(request, f"du_ad_{k}")
-            if ad is None:
-                TarifaDayUse.objects.filter(classificacao=k).delete()
+                    modelo, filtros = TarifaUnidade, {"uh": uh, "classificacao": col["key"]}
+                alteracoes.append((modelo, filtros, valores, "valor"))
+        for k, rotulo in _CLASSIF_PRECO:
+            valores = leitura.grupo({"valor_adulto": f"du_ad_{k}", "valor_meia": f"du_meia_{k}"},
+                                     f"Day use · {rotulo}")
+            alteracoes.append((TarifaDayUse, {"classificacao": k}, valores, "valor_adulto"))
+        parametros_post = [
+            ("single_pct", "single_fator", "Hóspede sozinho", Decimal("100"), True),
+            ("nao_reemb_pct", "nao_reembolsavel_desconto", "Desconto comercial", Decimal("100"), True),
+            ("iss", "iss_aliquota", "ISS", Decimal("100"), False),
+            ("taxa_turismo", "taxa_turismo_diaria", "Taxa de turismo", Decimal("999999.99"), False),
+            *[(f"custo_canal_{canal}", f"custo_canal_{canal}", rotulo, Decimal("100"), False)
+              for canal, rotulo in _CANAIS_CUSTO],
+        ]
+        campos_cfg = []
+        for campo, atributo, rotulo, maximo, fracao in parametros_post:
+            if campo not in request.POST:
+                continue
+            valor = leitura.decimal(campo, rotulo, maximo=maximo)
+            if valor is None:
+                if not request.POST[campo].strip():
+                    leitura.erros.append(f"{rotulo}: informe um valor; use zero quando não houver cobrança.")
             else:
-                TarifaDayUse.objects.update_or_create(
-                    classificacao=k,
-                    defaults={"valor_adulto": ad, "valor_meia": _dec_post(request, f"du_meia_{k}")})
-        # 3) parâmetros globais (single/não-reembolsável em %; ISS %; taxa R$)
-        single = _dec_post(request, "single_pct")
-        naoreemb = _dec_post(request, "nao_reemb_pct")
-        iss = _dec_post(request, "iss")
-        taxa = _dec_post(request, "taxa_turismo")
-        if single is not None:
-            cfg.single_fator = single / 100
-        if naoreemb is not None:
-            cfg.nao_reembolsavel_desconto = naoreemb / 100
-        if iss is not None:
-            cfg.iss_aliquota = iss
-        if taxa is not None:
-            cfg.taxa_turismo_diaria = taxa
-        # 4) custo de vender por canal (%) — base do relatório de distribuição
-        for canal, _rot in _CANAIS_CUSTO:
-            pct = _dec_post(request, f"custo_canal_{canal}")
-            if pct is not None:
-                setattr(cfg, f"custo_canal_{canal}", pct)
+                setattr(cfg, atributo, valor / 100 if fracao else valor)
+                campos_cfg.append(atributo)
         for campo in ("hora_checkin", "hora_checkout"):
-            try:
-                valor = datetime.time.fromisoformat((request.POST.get(campo) or "").strip())
-            except ValueError:
-                continue  # vazio ou inválido: mantém o horário atual
-            setattr(cfg, campo, valor)
-        no_show = request.POST.get("no_show_noites", "")
-        if no_show.isdigit() and int(no_show) in cfg.NoShowAutomatico.values:
-            cfg.no_show_automatico_noites = int(no_show)
-        cfg.save()
-        messages.success(request, "Tabela de preços salva.")
-        return redirect("tabela_precos")
+            if campo in request.POST:
+                valor = leitura.horario(campo, "Horário de check-in" if campo == "hora_checkin" else "Horário de check-out")
+                if valor is not None:
+                    setattr(cfg, campo, valor)
+                    campos_cfg.append(campo)
+        if "no_show_noites" in request.POST:
+            valor = leitura.escolha("no_show_noites", "No-show automático", cfg.NoShowAutomatico.values)
+            if valor is not None:
+                cfg.no_show_automatico_noites = valor
+                campos_cfg.append("no_show_automatico_noites")
+        try:
+            leitura.conferir()
+            cfg.full_clean()
+        except ValidationError as erro:
+            messages.error(request, " ".join(erro.messages))
+        else:
+            for modelo, filtros, valores, base in alteracoes:
+                if valores is None:
+                    continue
+                if valores[base] is None:
+                    modelo.objects.filter(**filtros).delete()
+                else:
+                    modelo.objects.update_or_create(**filtros, defaults=valores)
+            if campos_cfg:
+                cfg.save(update_fields=campos_cfg)
+            messages.success(request, "Tabela de preços salva.")
+            return redirect("tabela_precos")
 
     tus = {(t.uh_id, t.classificacao): t for t in TarifaUnidade.objects.all()}
     tts = {(t.uh_id, t.temporada_id): t for t in TarifaTemporada.objects.all()}
@@ -1012,9 +1036,10 @@ def tabela_precos(request):
              else tus.get((uh.id, col["key"])))
         return {
             "key": col["key"],
-            "base_fmt": _fmt(t.valor if t else None),
-            "add_fmt": _fmt(t.pessoa_adicional if t else None),
-            "meia_fmt": _fmt(t.meia if t else None),
+            "rotulo": col["label"],
+            "base_fmt": valor_exibido(request, f"base_{uh.id}_{col['key']}", _fmt(t.valor if t else None)),
+            "add_fmt": valor_exibido(request, f"add_{uh.id}_{col['key']}", _fmt(t.pessoa_adicional if t else None)),
+            "meia_fmt": valor_exibido(request, f"meia_{uh.id}_{col['key']}", _fmt(t.meia if t else None)),
         }
 
     por_ala: dict[str, list] = {}
@@ -1030,8 +1055,8 @@ def tabela_precos(request):
 
     dus = {d.classificacao: d for d in TarifaDayUse.objects.all()}
     day_use = [{"key": k, "label": r,
-                "ad_fmt": _fmt(dus[k].valor_adulto if k in dus else None),
-                "meia_fmt": _fmt(dus[k].valor_meia if k in dus and dus[k].valor_meia is not None else None)}
+                "ad_fmt": valor_exibido(request, f"du_ad_{k}", _fmt(dus[k].valor_adulto if k in dus else None)),
+                "meia_fmt": valor_exibido(request, f"du_meia_{k}", _fmt(dus[k].valor_meia if k in dus else None))}
                for k, r in _CLASSIF_PRECO]
 
     parametros = {
@@ -1044,8 +1069,11 @@ def tabela_precos(request):
         "no_show_noites": cfg.no_show_automatico_noites,
         "no_show_opcoes": cfg.NoShowAutomatico.choices,
     }
+    for campo in parametros.keys() - {"no_show_opcoes"}:
+        parametros[campo] = valor_exibido(request, campo, parametros[campo])
+    parametros["no_show_noites"] = str(parametros["no_show_noites"])
     custos_canal = [{"campo": f"custo_canal_{k}", "label": rotulo,
-                     "valor_fmt": _brl(getattr(cfg, f"custo_canal_{k}"))}
+                     "valor_fmt": valor_exibido(request, f"custo_canal_{k}", _brl(getattr(cfg, f"custo_canal_{k}")))}
                     for k, rotulo in _CANAIS_CUSTO]
 
     return render(request, "nucleo/tabela_precos.html",

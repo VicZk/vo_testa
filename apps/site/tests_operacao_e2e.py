@@ -28,6 +28,130 @@ if _PLAYWRIGHT_OK:
 
 
 @unittest.skipUnless(_PLAYWRIGHT_OK, "playwright não instalado (ver tests_e2e)")
+class CadastrosPrecosOperacaoE2ETests(_BaseE2E):
+    LOCALE = "pt-BR"
+    _login = _FunilComercialMixin._login
+
+    def setUp(self):
+        super().setUp()
+        from apps.nucleo.models import UH, ConfiguracaoReservas, Temporada, TipoUH, Usuario
+        from apps.reservas.models import TarifaUnidade
+        cache.clear()
+        Usuario.objects.create_superuser(username="cadastros-ui", password="forte-123-abc")
+        self.tipo = TipoUH.objects.create(nome="Suíte QA", capacidade=2, tarifa_base="300")
+        self.uh = UH.objects.create(numero="QA-101", tipo=self.tipo)
+        self.tarifa = TarifaUnidade.objects.create(uh=self.uh, classificacao="baixa", valor="350")
+        self.cfg = ConfiguracaoReservas.carregar()
+        self.temporada = Temporada.objects.create(nome="Feriado de teste QA", classificacao="feriado",
+            inicio=timezone.localdate()+timedelta(days=10), fim=timezone.localdate()+timedelta(days=13))
+        self.page.add_init_script("localStorage.setItem('sidebar', 'aberta')")
+        self._login("cadastros-ui", "forte-123-abc")
+
+    def conferir_erro_responsivo(self, nome):
+        p = self.page
+        for largura in (320, 390, 414, 768, 821, 1440):
+            p.set_viewport_size({"width": largura, "height": 900})
+            p.evaluate("document.fonts.ready")
+            self.assertLessEqual(p.evaluate("document.documentElement.scrollWidth"), largura+1)
+            if nome == "tabela-erro" and largura <= 821:
+                self.assertFalse(p.evaluate("""() => {
+                    const form=document.querySelector('.precos-form').getBoundingClientRect();
+                    return [...document.querySelectorAll('.precos-tabela input')].some(campo => {
+                        const r=campo.getBoundingClientRect();return r.left<form.left-1||r.right>form.right+1;
+                    });
+                }"""))
+            self.assertFalse(p.evaluate("""() => {
+                const box=document.querySelector('[data-erros-envio]');
+                const limite=box.getBoundingClientRect();
+                const falhas=[];const walker=document.createTreeWalker(box,NodeFilter.SHOW_TEXT);let node;
+                while(node=walker.nextNode()){
+                    const range=document.createRange();range.selectNodeContents(node);
+                    for(const r of range.getClientRects())if(r.width&&(r.left<limite.left-2||r.right>limite.right+2))falhas.push(node.textContent);
+                }
+                return falhas;
+            }"""))
+            if largura in (320, 821, 1440):
+                OperacaoUsabilidadeE2ETests._foto(self, f"fase9-{nome}-{largura}.png", full_page=True)
+        p.set_viewport_size({"width": 390, "height": 844})
+
+    def test_quarto_novo_e_edicao_com_erro_preservam_o_formulario_no_celular(self):
+        from apps.nucleo.models import UH, ConfiguracaoUH
+        p = self.page
+        p.set_viewport_size({"width": 390, "height": 844})
+        p.goto(self.url(reverse("uh_nova")))
+        p.locator('#id_numero').fill("QA-102")
+        p.locator('#id_tipo').select_option(str(self.tipo.pk))
+        p.get_by_role("button", name="Salvar", exact=True).click()
+        expect(p.get_by_role("heading", name="Quarto QA-102", exact=True)).to_be_visible()
+        quarto = UH.objects.get(numero="QA-102")
+        p.locator('#id_nome_tematico').fill("Nome mantido durante a correção")
+        p.locator('#id_sofa_adultos').fill("-1")
+        p.get_by_role("button", name="Salvar", exact=True).click()
+        expect(p.get_by_text("O menor valor aceito é 0.", exact=True)).to_be_visible()
+        # Exercita a resposta do servidor, inclusive para requisições sem validação HTML.
+        p.get_by_role("button", name="Salvar", exact=True).evaluate("botao => botao.setAttribute('formnovalidate', '')")
+        p.get_by_role("button", name="Salvar", exact=True).click()
+        expect(p.locator('[data-erros-envio]')).to_contain_text("adultos")
+        expect(p.locator('#id_nome_tematico')).to_have_value("Nome mantido durante a correção")
+        quarto.refresh_from_db()
+        self.assertEqual(quarto.nome_tematico, "")
+        self.assertFalse(ConfiguracaoUH.objects.filter(uh=quarto).exists())
+        self.conferir_erro_responsivo("quarto-erro")
+        p.locator('#id_sofa_adultos').fill("1")
+        p.get_by_role("button", name="Salvar", exact=True).click()
+        expect(p).to_have_url(self.url(reverse("estrutura")))
+        quarto.refresh_from_db()
+        self.assertEqual(quarto.nome_tematico, "Nome mantido durante a correção")
+        self.assertTrue(ConfiguracaoUH.objects.filter(uh=quarto).exists())
+
+    def test_tabela_invalida_nao_apaga_tarifas_e_permite_corrigir_sem_redigitar(self):
+        p = self.page
+        p.set_viewport_size({"width": 390, "height": 844})
+        p.goto(self.url(reverse("tabela_precos")))
+        base = p.locator(f'input[name="base_{self.uh.pk}_baixa"]')
+        base.fill("71235")
+        p.locator('input[name="single_pct"]').fill("7025")
+        p.locator('input[name="du_ad_alta"]').evaluate("campo => campo.value = 'NaN'")
+        p.get_by_role("button", name="Salvar tabela").click()
+        expect(p.locator('[data-erros-envio]')).to_contain_text("Day use")
+        expect(base).to_have_value("712,35")
+        expect(p.locator('input[name="single_pct"]')).to_have_value("70,25")
+        self.tarifa.refresh_from_db()
+        self.assertEqual(self.tarifa.valor, Decimal("350"))
+        self.conferir_erro_responsivo("tabela-erro")
+        p.locator('input[name="du_ad_alta"]').fill("9500")
+        with p.expect_navigation():
+            p.get_by_role("button", name="Salvar tabela").click()
+        self.tarifa.refresh_from_db()
+        self.cfg.refresh_from_db()
+        self.assertEqual(self.tarifa.valor, Decimal("712.35"))
+        self.assertEqual(self.cfg.single_fator, Decimal("0.7025"))
+
+    def test_temporada_invalida_mantem_nome_datas_e_precos_para_correcao(self):
+        from apps.reservas.models import TarifaTemporada
+        p = self.page
+        p.set_viewport_size({"width": 390, "height": 844})
+        p.goto(self.url(reverse("temporada_editar", args=[self.temporada.pk])))
+        p.locator('#id_nome').fill("Temporada alterada na conferência QA")
+        p.locator('#id_fim').fill((self.temporada.inicio-timedelta(days=1)).isoformat())
+        p.locator(f'input[name="tbase_{self.uh.pk}"]').fill("123456")
+        p.get_by_role("button", name="Salvar", exact=True).click()
+        expect(p.locator('[data-erros-envio]')).to_contain_text("data de fim")
+        expect(p.locator('#id_nome')).to_have_value("Temporada alterada na conferência QA")
+        expect(p.locator(f'input[name="tbase_{self.uh.pk}"]')).to_have_value("1.234,56")
+        self.temporada.refresh_from_db()
+        self.assertEqual(self.temporada.nome, "Feriado de teste QA")
+        self.assertFalse(TarifaTemporada.objects.filter(temporada=self.temporada).exists())
+        self.conferir_erro_responsivo("temporada-erro")
+        p.locator('#id_fim').fill(self.temporada.fim.isoformat())
+        p.get_by_role("button", name="Salvar", exact=True).click()
+        expect(p).to_have_url(self.url(reverse("temporadas")))
+        self.temporada.refresh_from_db()
+        self.assertEqual(self.temporada.nome, "Temporada alterada na conferência QA")
+        self.assertEqual(TarifaTemporada.objects.get(temporada=self.temporada, uh=self.uh).valor, Decimal("1234.56"))
+
+
+@unittest.skipUnless(_PLAYWRIGHT_OK, "playwright não instalado (ver tests_e2e)")
 class SuprimentosOperacaoE2ETests(_BaseE2E):
     LOCALE = "pt-BR"
     _login = _FunilComercialMixin._login

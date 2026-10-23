@@ -103,8 +103,13 @@ def painel(request):
     backup=EstadoBackup.objects.filter(pk=1).first()
     recente=bool(backup and backup.ultimo_sucesso and backup.ultimo_sucesso > timezone.now()-timedelta(hours=30))
     from .management.commands.backup_banco import _r2_configurado
+    from .models import modulo_ativo
+    from .modulos import Modulo
+    grupos_monitorados = ["frequentes", "diarias"]
+    if modulo_ativo(Modulo.CANAIS):
+        grupos_monitorados.append("canais")
     return render(request,"nucleo/integracoes.html",{"integracoes":itens,"backup":backup,
         "backup_recente":recente,"backup_local":bool(os.environ.get("BACKUP_DIR")),"backup_externo":_r2_configurado(),
-        "monitores":all(settings.ROTINAS_MONITOR.values()),"kit_configurado":bool(settings.KIT_CONTINGENCIA_EMAILS),
+        "monitores":all(settings.ROTINAS_MONITOR.get(grupo) for grupo in grupos_monitorados),"kit_configurado":bool(settings.KIT_CONTINGENCIA_EMAILS),
         "pix_manual":settings.PIX_DIRETO,"pix_configurado":bool(settings.PIX_CHAVE),
         "smtp_configurado":bool(settings.EMAIL_HOST),"instalacao":request.build_absolute_uri("/")})

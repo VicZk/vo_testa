@@ -12,6 +12,7 @@ import uuid
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 
@@ -518,13 +519,15 @@ class ConfiguracaoReservas(models.Model):
     )
     # Parâmetros de preço (antes fixos no código; agora editáveis na Tabela de Preços).
     single_fator = models.DecimalField(
-        "hóspede sozinho (fração da base)", max_digits=4, decimal_places=2,
+        "hóspede sozinho (fração da base)", max_digits=6, decimal_places=4,
         default=Decimal("0.70"),
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("1"))],
         help_text="1 adulto paga esta fração do valor de 2 (0.70 = 70%).",
     )
     nao_reembolsavel_desconto = models.DecimalField(
-        "desconto comercial (fração)", max_digits=4, decimal_places=2,
+        "desconto comercial (fração)", max_digits=6, decimal_places=4,
         default=Decimal("0.12"),
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("1"))],
         help_text="Desconto comercial sobre a hospedagem; não altera a política de cancelamento (0.12 = 12%).",
     )
     iss_aliquota = models.DecimalField(
