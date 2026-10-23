@@ -60,11 +60,18 @@ class RetornoPendenciasE2ETests(_BaseE2E):
         self.assertEqual(self.erros, [])
         return link
 
+    def navegar(self, link):
+        destino = link.evaluate("a => a.href")
+        link.click()
+        # O retorno existe nas duas telas. Aguarde a URL da resposta antes de
+        # medir o novo elemento, em vez de aceitar o link ainda da tela anterior.
+        expect(self.page).to_have_url(destino)
+
     def abrir_item(self, central, largura):
         self.page.set_viewport_size({"width": largura, "height": 900})
         self.page.goto(self.url(central), wait_until="load")
         expect(self.page.locator("[data-pendencia-id]")).to_have_count(1)
-        self.page.locator("[data-pendencia-id] .registro-acoes a").click()
+        self.navegar(self.page.locator("[data-pendencia-id] .registro-acoes a"))
         voltar = self.conferir_retorno(central)
         expect(voltar).to_be_in_viewport(ratio=1)
         return voltar
@@ -101,13 +108,13 @@ class RetornoPendenciasE2ETests(_BaseE2E):
                 voltar.click()
                 expect(self.page).to_have_url(self.url(central))
         self.page.locator("[data-pendencia-id] .registro-acoes a").click()
-        self.page.locator("#conteudo a.voltar").click()
+        self.navegar(self.page.locator("#conteudo a.voltar"))
         self.conferir_retorno(central)
         self.page.get_by_label("Buscar OS", exact=True).fill("Janela retorno QA")
         self.page.get_by_role("button", name="Filtrar", exact=True).click()
         self.conferir_retorno(central)
         self.assertEqual(parse_qs(urlsplit(self.page.url).query)[PARAMETRO], [central])
-        self.page.get_by_role("link", name="Janela retorno QA", exact=True).click()
+        self.navegar(self.page.get_by_role("link", name="Janela retorno QA", exact=True))
         self.page.get_by_label("Resolução", exact=True).fill("Vedação conferida no fluxo de pendências")
         with self.page.expect_response(lambda r: r.request.method == "POST" and "concluir" in r.url) as enviado:
             self.page.get_by_role("button", name="Concluir", exact=True).click()
@@ -127,9 +134,9 @@ class RetornoPendenciasE2ETests(_BaseE2E):
         central = url_pendencias("governanca", "pendente")
         self.abrir_item(central, 390)
         # O link Voltar da ficha leva ao módulo; a origem da Central continua.
-        self.page.get_by_role("link", name="Voltar", exact=True).click()
+        self.navegar(self.page.get_by_role("link", name="Voltar", exact=True))
         self.conferir_retorno(central)
-        self.page.locator("#conteudo a").filter(has_text="Visão geral").first.click()
+        self.navegar(self.page.locator("#conteudo a").filter(has_text="Visão geral").first)
         self.conferir_retorno(central)
         porta = self.page.locator(f'a.porta[href*="/quarto/{self.c.uh.pk}/"]')
         with self.page.expect_response(lambda r: r.request.method == "GET" and f"/quarto/{self.c.uh.pk}/" in r.url) as aberta:
@@ -164,4 +171,41 @@ class RetornoPendenciasE2ETests(_BaseE2E):
         self.page.go_forward()
         expect(self.page).to_have_url(destino)
         self.conferir_retorno(central)
+
+    def test_linha_substituida_durante_get_ainda_abre_destino_no_topo(self):
+        central = url_pendencias("manutencao", "atencao") + "&pagina=1"
+        self.page.set_viewport_size({"width": 390, "height": 600})
+        self.page.goto(self.url(central), wait_until="load")
+        link = self.page.locator("[data-pendencia-id] .registro-acoes a")
+        atualizar = self.page.locator('[data-pendencias-recarregar]')
+        atualizacoes = reverse("pendencias_atualizacoes")
+
+        def atualizar_lista():
+            expect(atualizar).to_be_enabled()
+            with self.page.expect_response(lambda resposta: atualizacoes in resposta.url):
+                atualizar.click()
+            expect(atualizar).to_be_enabled()
+            expect(link).to_have_attribute("hx-boost", "true")
+
+        # O polling troca o HTML original. Os links novos precisam continuar
+        # usando o shell, inclusive quando outra atualização chega durante o GET.
+        atualizar_lista()
+        link.scroll_into_view_if_needed()
+        self.assertGreater(self.page.evaluate("scrollY"), 0)
+        link.evaluate("origem => {window.__origemPendencia = origem;}")
+        destino = link.evaluate("a => a.href")
+
+        def responder_apos_atualizacao(rota):
+            resposta = rota.fetch()
+            atualizar_lista()
+            self.assertTrue(self.page.evaluate("!window.__origemPendencia.isConnected"))
+            link.scroll_into_view_if_needed()
+            self.assertGreater(self.page.evaluate("scrollY"), 0)
+            rota.fulfill(response=resposta)
+
+        self.page.route(destino, responder_apos_atualizacao)
+        self.navegar(link)
+        self.assertTrue(self.page.evaluate("!!window.__origemPendencia && !window.__origemPendencia.isConnected"))
+        expect(self.conferir_retorno(central)).to_be_in_viewport(ratio=1)
+        self.assertEqual(self.page.evaluate("scrollY"), 0)
 

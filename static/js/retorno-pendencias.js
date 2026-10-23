@@ -5,6 +5,7 @@
   window.retornoPendenciasAtivo = true;
   const PARAMETRO = 'retorno_pendencias';
   const ESCOPO = '#conteudo, #modal-conteudo, #modal-reserva';
+  const abertosPelaCentral = new WeakSet();
 
   function contexto() {
     const conteudo = document.getElementById('conteudo');
@@ -56,12 +57,20 @@
     d.path = url;
   });
   document.addEventListener('submit', preparar, true);
+  document.addEventListener('htmx:beforeRequest', evento => {
+    const d = evento.detail;
+    // A lista pode atualizar/remover a linha enquanto a resposta está em voo.
+    // Registre a origem antes disso, vinculada à requisição que a abriu.
+    if (d.target?.id === 'conteudo' && d.xhr && d.elt?.closest('[data-central-pendencias]')) {
+      abertosPelaCentral.add(d.xhr);
+    }
+  });
   document.addEventListener('htmx:afterSwap', evento => {
     preparar();
     // Uma linha da lista pode estar abaixo da dobra. Ao abrir seu destino,
     // apresente o título e o retorno, em vez da posição de rolagem da lista.
     if (evento.detail.target?.id === 'conteudo' && contexto() &&
-        evento.detail.requestConfig?.elt?.closest('[data-central-pendencias]')) {
+        evento.detail.xhr && abertosPelaCentral.has(evento.detail.xhr)) {
       window.scrollTo({top: 0, left: 0, behavior: 'instant'});
     }
   });

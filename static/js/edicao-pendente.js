@@ -32,7 +32,10 @@
   });
   document.addEventListener('htmx:confirm', ev => {
     const el = ev.detail.elt;
-    if (!podeDescartar(document, el && el.closest('form'))) ev.preventDefault();
+    // Um link como Cancelar pode estar dentro do formulário, mas navega para
+    // outra página: só o envio/controle do próprio formulário fica dispensado.
+    const formEnviado = el?.closest('a[href]') ? null : el?.closest('form');
+    if (!podeDescartar(document, formEnviado)) ev.preventDefault();
   });
   document.addEventListener('modal:antesFechar', ev => {
     if (!podeDescartar(ev.detail.caixa)) ev.preventDefault();

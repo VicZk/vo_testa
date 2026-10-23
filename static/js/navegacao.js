@@ -4,6 +4,7 @@
   if (window.votestaNavegacao) return;
   window.votestaNavegacao = true;
   const movimentoReduzido = matchMedia('(prefers-reduced-motion: reduce)');
+  const pedidosDoMenu = new WeakSet();
   let entradas = [];
   function cancelarEntradas() {
     entradas.forEach(animacao => animacao.cancel());
@@ -118,6 +119,9 @@
   });
   document.addEventListener('htmx:beforeRequest', evento => {
     if (evento.detail.target?.id !== 'conteudo') return;
+    if (evento.detail.xhr && evento.detail.elt?.closest('#menu-principal')) {
+      pedidosDoMenu.add(evento.detail.xhr);
+    }
     cancelarEntradas();
     // Restaura scrollY antes de o HTMX salvar a página no histórico. A gaveta
     // usa body fixo e, enquanto aberta, a janela informa scrollY igual a zero.
@@ -165,7 +169,7 @@
     atualizar();
     if (evento.detail.target?.id !== 'conteudo') return;
     window.fecharSidebarMobile?.();
-    if (evento.detail.requestConfig?.elt?.closest('#menu-principal')) {
+    if (evento.detail.xhr && pedidosDoMenu.has(evento.detail.xhr)) {
       window.scrollTo({top: 0, left: 0, behavior: 'instant'});
     }
     animarParteNova();
@@ -182,6 +186,7 @@
   document.addEventListener('htmx:historyRestore', atualizar);
   document.addEventListener('htmx:historyRestore', animarParteNova);
   document.addEventListener('htmx:afterSettle', atualizar);
+  document.addEventListener('conteudo:atualizado', atualizar);
   document.addEventListener('focusin', evento => {
     if (evento.target.matches('.abas-secao a')) mostrarAba(evento.target);
   });

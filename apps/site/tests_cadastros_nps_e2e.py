@@ -92,8 +92,15 @@ class CadastrosRelacionamentoE2ETests(_BaseE2E):
         p = self.page
         self.abrir("funcionario_novo")
         p.locator('[name="nome"]').fill("Cadastro fictício cancelado")
-        p.once("dialog", lambda dialog: dialog.dismiss())
+        dialogos = []
+        requisicoes = []
+        p.on("request", lambda request: requisicoes.append(request.url)
+             if request.url == self.url(reverse("funcionarios")) else None)
+        p.once("dialog", lambda dialog: (dialogos.append(dialog.message), dialog.dismiss()))
         p.get_by_role("link", name="Cancelar", exact=True).click()
+        self.assertEqual(len(dialogos), 1, "Cancelar dentro do formulário precisa confirmar o descarte")
+        self.assertEqual(requisicoes, [], "Recusar o descarte não pode iniciar a navegação HTMX")
+        expect(p).to_have_url(self.url(reverse("funcionario_novo")))
         expect(p.locator('[name="nome"]')).to_have_value("Cadastro fictício cancelado")
         p.once("dialog", lambda dialog: dialog.accept())
         p.get_by_role("link", name="Cancelar", exact=True).click()

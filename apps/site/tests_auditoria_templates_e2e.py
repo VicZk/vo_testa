@@ -56,8 +56,19 @@ class AuditoriaTemplatesE2ETests(_BaseE2E):
             recolhida = self.page.locator(".app").evaluate("el => el.classList.contains('recolhida')")
             if recolhida != trilho:
                 self.page.locator(".sidebar-toggle").click()
+        self._esperar_layout()
         self.assertLessEqual(self.page.evaluate("document.documentElement.scrollWidth"), largura + 1)
         self.assertEqual(self.erros_js, [], (rota, largura, self.erros_js))
+
+    def _esperar_layout(self):
+        self.page.evaluate("""async () => {
+            await document.fonts.ready;
+            const app = document.querySelector('.app'), sidebar = document.querySelector('.sidebar');
+            const animacoes = [...app.getAnimations(), ...sidebar.getAnimations({subtree: true})]
+                .filter(a => Number.isFinite(a.effect?.getComputedTiming().endTime));
+            await Promise.all(animacoes.map(a => a.finished.catch(() => {})));
+            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        }""")
 
     def _foto(self, nome, largura, trilho=False, pagina_inteira=True):
         destino = os.environ.get("EVIDENCIAS_DIR")
@@ -75,11 +86,22 @@ class AuditoriaTemplatesE2ETests(_BaseE2E):
         })
 
     def _dentro(self, elemento, pai):
-        a, b = elemento.bounding_box(), pai.bounding_box()
+        # As duas caixas precisam pertencer ao mesmo instante: uma transição da
+        # sidebar entre chamadas ao navegador misturava aberto e recolhido no CI.
+        medidas = elemento.evaluate("""(el, pai) => {
+            const medir = no => {
+                if (!no || !no.getClientRects().length) return null;
+                const {x, y, width, height} = no.getBoundingClientRect();
+                return {x, y, width, height};
+            };
+            return {elemento: medir(el), pai: medir(pai)};
+        }""", pai.element_handle())
+        a, b = medidas["elemento"], medidas["pai"]
         self.assertIsNotNone(a)
         self.assertIsNotNone(b)
         self.assertGreaterEqual(a["x"], b["x"] - 1, a)
         self.assertLessEqual(a["x"] + a["width"], b["x"] + b["width"] + 1, a)
+        return a
 
     def _tabelas_preenchidas(self):
         tabelas = self.page.locator("#conteudo .tabela-cartoes")
@@ -180,8 +202,8 @@ class AuditoriaTemplatesE2ETests(_BaseE2E):
                     elif rota == "governanca:quartos":
                         self._tabelas_preenchidas()
                         for botao in self.page.locator(".acoes-quarto button:visible").all():
-                            self._dentro(botao, botao.locator("xpath=ancestor::td"))
-                            self.assertGreaterEqual(botao.bounding_box()["height"], 44)
+                            medida = self._dentro(botao, botao.locator("xpath=ancestor::td"))
+                            self.assertGreaterEqual(medida["height"], 44)
                     elif rota == "loja:pdv":
                         expect(self.page.locator('label[for="pdv-busca"]')).to_be_visible()
                         self.page.get_by_label("Buscar produto", exact=True).fill("Água mineral")

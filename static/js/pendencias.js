@@ -30,6 +30,7 @@
         const hrefFocado = foco?.getAttribute('href');
         resultados.innerHTML = dados.html;
         if (window.htmx) window.htmx.process(resultados);
+        resultados.dispatchEvent(new CustomEvent('conteudo:atualizado', {bubbles: true}));
         // A contagem pode chegar a zero com um link focado. Restaurar o link
         // equivalente, ou o título quando a pendência acabou, mantém o teclado
         // no contexto sem deixar resultados desatualizados por tempo indefinido.

@@ -1,4 +1,5 @@
 """Contratos visuais públicos: conteúdo, controles e valores cabem nas quatro larguras."""
+import json
 import os
 import unittest
 from datetime import timedelta
@@ -15,7 +16,7 @@ from apps.nucleo.modulos import Modulo
 from apps.portal.services import get_acesso
 from apps.reservas.models import Reserva
 from apps.reservas.services import receber_pagamento
-from apps.site.models import VitrineQuarto
+from apps.site.models import ConfiguracaoSite, VitrineQuarto
 
 from .tests_e2e import _PLAYWRIGHT_OK, _BaseE2E, _UnidadeVendavelMixin
 
@@ -160,6 +161,58 @@ class AuditoriaPublicoE2ETests(_UnidadeVendavelMixin, _BaseE2E):
                 expect(botoes).to_be_enabled()
                 botoes.click()
                 expect(self.page.get_by_role("heading", name="Quartos Disponíveis", exact=True)).to_be_visible()
+
+    def test_rodape_textos_links_e_creditos_tem_contraste_legivel(self):
+        config = ConfiguracaoSite.load()
+        for rede in ("instagram", "facebook", "tiktok"):
+            setattr(config, f"{rede}_url", f"https://example.com/{rede}")
+        config.save()
+        medir = r"""els => {
+          const rgba = s => s.match(/[\d.]+/g).map(Number);
+          const mix = (c,b) => c.slice(0,3).map((v,i) => v*(c[3]??1)+b[i]*(1-(c[3]??1)));
+          const lum = c => c.map(v => v/255).map(v => v<=.04045?v/12.92:((v+.055)/1.055)**2.4)
+            .reduce((a,v,i) => a+v*[.2126,.7152,.0722][i],0);
+          return els.map(e => {
+            const pais=[];
+            for(let p=e; p; p=p.parentElement) pais.unshift(p);
+            const bg=pais.reduce((b,p) => mix(rgba(getComputedStyle(p).backgroundColor),b),[255,255,255]);
+            const color=getComputedStyle(e).color, fg=mix(rgba(color),bg);
+            return {texto:e.textContent.trim()||e.getAttribute('aria-label'), color, fundo:bg, tinta:fg,
+              contraste:(Math.max(lum(bg),lum(fg))+.05)/(Math.min(lum(bg),lum(fg))+.05)};
+          });
+        }"""
+        medidas = []
+        for largura in self.LARGURAS:
+            with self.subTest(largura=largura):
+                self.abrir("core:home", largura)
+                rodape = self.page.locator("footer")
+                rodape.scroll_into_view_if_needed()
+                elementos = rodape.locator("p, h4, a")
+                self.assertEqual(elementos.count(), 17)
+                for estado in ("normal", "foco", "hover"):
+                    if estado == "normal":
+                        amostras = elementos.evaluate_all(medir)
+                    else:
+                        amostras = []
+                        for link in rodape.locator("a").all():
+                            if estado == "foco":
+                                link.focus()
+                            else:
+                                link.hover()
+                                expect(link).to_have_css("color", "rgb(215, 160, 72)")
+                            amostras.extend(link.evaluate_all(medir))
+                    for amostra in amostras:
+                        self.assertGreaterEqual(amostra["contraste"], 4.5, (largura, estado, amostra))
+                    medidas.append({"largura": largura, "estado": estado, "elementos": amostras})
+                self.page.mouse.move(0, 0)
+                rodape.scroll_into_view_if_needed()
+                if pasta := os.environ.get("EVIDENCIAS_DIR"):
+                    destino = Path(pasta)
+                    destino.mkdir(parents=True, exist_ok=True)
+                    rodape.screenshot(path=str(destino / f"publico-rodape-{largura}.png"), animations="disabled")
+        if pasta := os.environ.get("EVIDENCIAS_DIR"):
+            (Path(pasta) / "publico-rodape-contraste.json").write_text(
+                json.dumps(medidas, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     def test_titulos_publicos_filtros_precos_e_fotos(self):
         for largura in self.LARGURAS:
