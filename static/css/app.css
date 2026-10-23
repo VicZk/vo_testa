@@ -1051,6 +1051,8 @@ a.cartao-link:hover, .cartao-link:hover {
   flex-wrap: wrap;
 }
 .pagina-cabecalho h1, .pagina-cabecalho h2 { margin-right: auto; }
+.pagina-cabecalho > * { min-width: 0; max-width: 100%; }
+.conteudo :is(h1, h2, h3) { overflow-wrap: anywhere; }
 /* Formulários e o PDV podem vir logo após o título, sem um subtítulo no meio. */
 .pagina-cabecalho + :is(.cartao-el, .pdv-shell) { margin-top: var(--espaco-secao); }
 
@@ -1068,6 +1070,7 @@ a.cartao-link:hover, .cartao-link:hover {
 }
 /* Formulário de coluna única continua na medida antiga. */
 .form-cartao:not(:has(.form-grade)) { max-width: 620px; }
+.form-cartao select { text-overflow: ellipsis; }
 /* Modificador p/ formulários largos (tabelas que precisam da tela toda, ex.: Tabela
    de preços) — tira o teto de 620px e usa a largura inteira da área de conteúdo;
    rola na horizontal só se faltar espaço. Fica DEPOIS da regra dos 620px: as duas

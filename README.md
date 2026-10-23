@@ -336,6 +336,7 @@ Princípios que guiam o código:
 | `cadastros.py` | `Pessoa` + papéis (`Hospede`, `Prospecto`, `Funcionario`, `Fornecedor`, `Agencia`), `TipoUH`, `UH`, `PosicaoCama`, `ConfiguracaoUH`, `Temporada` |
 | `financeiro.py` | `FormaPagamento`, `SessaoCaixa`, `MovimentoCaixa`, `LancamentoFinanceiro`, `ContaPagarReceber`, `TrilhaAuditoria`, `receber_no_caixa()`, `estornar_movimento()` |
 | `estoque.py` | `Produto` (custo médio ponderado), `LocalEstoque`, `MovimentoEstoque` (kardex), `Inventario` e os serviços `saldo`, `registrar_entrada`, `registrar_saida`, `transferir`, `ajustar` |
+| `suprimentos.py` | Embalagens de compra, lotes e registros imutáveis, conversão de recebimento, contagem por lote e composição dos pratos |
 | `logbook.py` | Recados do turno com conversa |
 
 Peças que todo módulo usa:
@@ -356,6 +357,9 @@ Peças que todo módulo usa:
   saída e transferência aceitam uma `chave` de envio (como a `Venda.chave`): o reenvio
   do mesmo formulário devolve o movimento já gravado. A entrada guarda o fornecedor, e o
   inventário aplica só o que foi contado (`ItemInventario.contado`).
+  Perecíveis usam lotes válidos; pratos baixam ingredientes e preservam a origem
+  das devoluções. Veja o [manual de compras, perecíveis e pratos](docs/ESTOQUE_COMPRAS.md)
+  para configuração e responsabilidades da operação.
 
 ### 4.3 Modularidade e controle de acesso
 

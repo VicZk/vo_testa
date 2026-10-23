@@ -8,12 +8,14 @@ from django.utils import timezone
 
 from apps.nucleo.models import (
     Produto,
+    composicao_estoque,
+    conferir_versao_ficha,
     devolver_ao_estoque,
+    devolver_movimentos,
     estornar_movimento,
     receber_no_caixa,
     registrar_auditoria,
     registrar_saida,
-    saldo,
 )
 from apps.nucleo.validadores import decimal_valido, identificador_valido
 
@@ -70,11 +72,6 @@ def _finalizar_venda(operador, local, itens, destino, forma, cliente, conta_id,
         if not produto:
             raise ValidationError("Produto inválido na venda.")
         qtd = decimal_valido(item.get("quantidade"), nome="Quantidade", minimo=Decimal("0.001"), maximo=Decimal("999999999.999"), casas=3)
-        if saldo(produto, local) < qtd:
-            raise ValidationError(
-                f"Saldo insuficiente de {produto.nome} em {local.nome} "
-                f"(disponível: {saldo(produto, local)})."
-            )
         valor = decimal_valido((produto.preco_venda * qtd).quantize(Decimal("0.01")), nome="Total do item")
         subtotal += valor
         decimal_valido(subtotal, nome="Total da venda")
@@ -86,6 +83,13 @@ def _finalizar_venda(operador, local, itens, destino, forma, cliente, conta_id,
     # Travas sempre na mesma ordem (por produto, depois o caixa): duas vendas com os
     # mesmos itens em ordens diferentes não se bloqueiam uma à outra.
     linhas.sort(key=lambda linha: linha[0].pk)
+    composicoes = [(produto, composicao_estoque(produto, qtd)) for produto, qtd, _ in linhas]
+    ids = {produto.pk for produto, _, _ in linhas}
+    for _, baixas in composicoes:
+        ids.update(baixas)
+    travados = {p.pk: p for p in Produto.objects.select_for_update().filter(pk__in=ids).order_by("pk")}
+    for produto, _ in composicoes:
+        conferir_versao_ficha(produto, travados)
 
     if destino == Venda.Destino.CAIXA and not forma:
         raise ValidationError("Escolha a forma de pagamento.")
@@ -99,15 +103,16 @@ def _finalizar_venda(operador, local, itens, destino, forma, cliente, conta_id,
         local=local, destino=destino, cliente=cliente, forma_pagamento=forma,
         desconto=desconto, total=total, criado_por=operador, chave=chave,
     )
-    for produto, qtd, valor in linhas:
+    for (produto, qtd, valor), (_, baixas) in zip(linhas, composicoes, strict=True):
+        movimentos = [registrar_saida(travados[pk], local, quantidade, operador,
+                                     documento=f"Venda Loja #{venda.pk}").pk
+                      for pk, quantidade in sorted(baixas.items())]
         ItemVenda.objects.create(
             venda=venda, produto=produto, descricao=produto.nome,
             natureza=produto.natureza, quantidade=qtd,
             preco_unitario=produto.preco_venda, subtotal=valor,
-        )
-        registrar_saida(
-            produto, local, qtd, operador,
-            documento=f"Venda Loja #{venda.pk}",
+            estoque_baixado=[{"produto_id": pk, "quantidade": str(quantidade)} for pk, quantidade in sorted(baixas.items())],
+            movimentos_estoque=movimentos,
         )
 
     if destino == Venda.Destino.CAIXA:
@@ -156,9 +161,17 @@ def cancelar_venda(venda, usuario, motivo):
             "Esta venda foi lançada na conta do quarto. Faça o ajuste pela conta da hospedagem."
         )
     # Devolve o estoque (sem mexer no custo médio), travando na mesma ordem da venda.
-    for item in venda.itens.select_related("produto").order_by("produto_id"):
-        devolver_ao_estoque(item.produto, venda.local, item.quantidade, usuario,
-                            motivo=f"Cancelamento venda Loja #{venda.pk}")
+    itens = list(venda.itens.select_related("produto").order_by("produto_id"))
+    ids = {item.produto_id for item in itens}
+    for item in itens:
+        ids.update(linha["produto_id"] for linha in item.estoque_baixado)
+    list(Produto.objects.select_for_update().filter(pk__in=ids).order_by("pk"))
+    for item in itens:
+        if item.movimentos_estoque:
+            devolver_movimentos(item.movimentos_estoque, usuario, f"Cancelamento venda Loja #{venda.pk}")
+        else:
+            devolver_ao_estoque(item.produto, venda.local, item.quantidade, usuario,
+                                motivo=f"Cancelamento venda Loja #{venda.pk}")
     # Estorna o recebimento no caixa (exige o caixa aberto).
     if venda.movimento_caixa:
         estornar_movimento(

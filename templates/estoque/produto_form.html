@@ -42,6 +42,8 @@
       <div class="campo campo-marcador">
         <label class="check-inline">{{ form.ativo }} <span>{{ form.ativo.label }}</span></label>
       </div>
+      {% if form.controla_validade %}<div class="campo campo-marcador"><label class="check-inline">{{ form.controla_validade }} <span>{{ form.controla_validade.label }}</span></label><small class="ajuda">Perecíveis exigem lote e validade. Identifique o saldo antigo antes de vender.</small>{{ form.controla_validade.errors }}</div>{% endif %}
+      {% if form.usa_ficha_tecnica %}<div class="campo campo-marcador"><label class="check-inline">{{ form.usa_ficha_tecnica }} <span>{{ form.usa_ficha_tecnica.label }}</span></label><small class="ajuda">Pratos baixam ingredientes na venda. Após salvar, cadastre a ficha técnica.</small>{{ form.usa_ficha_tecnica.errors }}</div>{% endif %}
     </div>
 
     <div class="acoes">
@@ -67,6 +69,7 @@
         {% endfor %}
       </dl>
       <a href="{% url 'estoque:kardex' produto.pk %}" class="botao-neutro est-previa-botao">Ver kardex</a>
+      <a href="{% url 'estoque:produto_suprimentos' produto.pk %}" class="botao-neutro est-previa-botao">Embalagens e ficha técnica</a>
       <p class="ajuda est-previa-nota">O custo médio é do motor: muda sozinho a cada
         entrada, pela média ponderada. Não se digita aqui.</p>
     {% else %}

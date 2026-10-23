@@ -28,6 +28,7 @@ original. Uma checklist marcada ou um teste antigo não comprova o ambiente atua
 
 | Documento | Classificação e leitura |
 |---|---|
+| [Compras, perecíveis e pratos](ESTOQUE_COMPRAS.md) | Embalagens, lotes, validade, perdas, fichas técnicas e controle auxiliar de aprovação |
 | [FNRH Digital](Implementar_FNRH_API.md) | Guia de integração; adapter escrito, ativação/homologação a validar |
 | [Canais e OTAs](CANAIS.md) | Channex, preparação, conferência e limites; credenciais e homologação real pendentes |
 | [Safrapay](Implementar_Safrapay.md) | Guia e evidências HML datadas; não atesta produção |

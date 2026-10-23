@@ -28,6 +28,194 @@ if _PLAYWRIGHT_OK:
 
 
 @unittest.skipUnless(_PLAYWRIGHT_OK, "playwright não instalado (ver tests_e2e)")
+class SuprimentosOperacaoE2ETests(_BaseE2E):
+    LOCALE = "pt-BR"
+    _login = _FunilComercialMixin._login
+
+    def setUp(self):
+        super().setUp()
+        from apps.nucleo.models import (
+            CategoriaProduto,
+            EmbalagemProduto,
+            FormaPagamento,
+            Fornecedor,
+            LocalEstoque,
+            LoteEstoque,
+            ModuloContratado,
+            Pessoa,
+            Produto,
+            SessaoCaixa,
+            Usuario,
+        )
+        cache.clear()
+        self.op = Usuario.objects.create_superuser(username="suprimentos-ui", password="forte-123-abc")
+        for codigo in ("estoque", "loja", "restaurante"):
+            ModuloContratado.objects.update_or_create(codigo=codigo, defaults={"ativo": True})
+        self.local = LocalEstoque.objects.create(nome="Cozinha e balcão de conferência QA", modulo="loja")
+        self.forma = FormaPagamento.objects.create(nome="Dinheiro QA", tipo="dinheiro")
+        SessaoCaixa.objects.create(operador=self.op, modulo="loja", fundo_troco=0)
+        self.fornecedor = Pessoa.objects.create(nome="Fornecedor fictício de alimentos para conferência QA")
+        Fornecedor.objects.create(pessoa=self.fornecedor)
+        cat = CategoriaProduto.objects.create(nome="Cozinha QA")
+        self.leite = Produto.objects.create(nome="Leite integral para o preparo de bebidas e receitas da cozinha QA",
+                                            categoria=cat, unidade="l", controla_validade=True)
+        self.prato = Produto.objects.create(nome="Café com leite QA", categoria=cat, usa_ficha_tecnica=True,
+                                            preco_venda=Decimal("12.00"))
+        self.embalagem = EmbalagemProduto.objects.create(produto=self.leite, nome="Caixa com 12 litros", fator=12)
+        self.lote = LoteEstoque.objects.create(produto=self.leite, codigo="LOTE"*20,
+                      validade=timezone.localdate()+timedelta(days=30), criado_por=self.op)
+        outro = Produto.objects.create(nome="Ingrediente de outro lote QA", categoria=cat, controla_validade=True)
+        self.errado = LoteEstoque.objects.create(produto=outro, codigo="OUTRO-QA",
+                      validade=timezone.localdate()+timedelta(days=30), criado_por=self.op)
+        self.page.add_init_script("localStorage.setItem('sidebar', 'aberta')")
+        self._login("suprimentos-ui", "forte-123-abc")
+
+    def _foto(self, nome):
+        OperacaoUsabilidadeE2ETests._foto(self, nome, full_page=True)
+
+    def test_receber_compra_corrigir_erro_configurar_prato_vender_e_cancelar_no_celular(self):
+        from apps.loja.models import Venda
+        from apps.nucleo.models import MovimentoEstoque, saldo_vendavel
+        p = self.page
+        p.set_viewport_size({"width": 390, "height": 844})
+        p.goto(self.url(reverse("estoque:compra_receber")))
+        p.get_by_label("Produto e embalagem", exact=True).select_option(str(self.embalagem.pk))
+        p.get_by_label("Local de recebimento", exact=True).select_option(str(self.local.pk))
+        p.get_by_label("Quantidade de embalagens", exact=True).fill("2")
+        p.get_by_label("Custo por embalagem (R$)", exact=True).fill("60")
+        p.get_by_label("Lote recebido", exact=True).select_option(str(self.errado.pk))
+        p.get_by_label("Fornecedor", exact=True).select_option(str(self.fornecedor.pk))
+        p.get_by_label("Nota fiscal ou documento da compra", exact=True).fill("NF QA preservada")
+        p.get_by_label("Observação", exact=True).fill("Recebimento fictício conferido")
+        expect(p.locator("#compra-quantidade")).to_contain_text("24 l")
+        p.get_by_role("button", name="Registrar recebimento", exact=True).click()
+        expect(p.locator("[data-erros-envio]")).to_contain_text("lote deste produto")
+        expect(p.get_by_label("Nota fiscal ou documento da compra", exact=True)).to_have_value("NF QA preservada")
+        expect(p.get_by_label("Quantidade de embalagens", exact=True)).to_have_value("2")
+        self.assertEqual(MovimentoEstoque.objects.count(), 0)
+        self._foto("fase8-compra-erro-390.png")
+        p.get_by_label("Lote recebido", exact=True).select_option(str(self.lote.pk))
+        p.get_by_role("button", name="Registrar recebimento", exact=True).click()
+        expect(p.get_by_role("heading", name="Compras recebidas", exact=True)).to_be_visible()
+        self.assertEqual(saldo(self.leite), 24)
+        p.goto(self.url(reverse("estoque:ficha_editar", args=[self.prato.pk])))
+        p.locator('[name="ingredientes-0-ingrediente"]').select_option(str(self.leite.pk))
+        p.locator('[name="ingredientes-0-quantidade"]').fill("0.200")
+        p.get_by_role("button", name="Adicionar ingrediente", exact=True).click()
+        p.locator('[name="ingredientes-3-ingrediente"]').select_option(str(self.leite.pk))
+        p.locator('[name="ingredientes-3-quantidade"]').fill("0.100")
+        p.get_by_role("button", name="Salvar ficha técnica", exact=True).click()
+        expect(p.locator("[data-erros-envio]")).to_contain_text("ingredientes diferentes")
+        expect(p.locator('[name="ingredientes-0-quantidade"]')).to_have_value("0.200")
+        p.locator('[name="ingredientes-3-DELETE"]').check()
+        p.get_by_role("button", name="Salvar ficha técnica", exact=True).click()
+        expect(p.get_by_role("heading", name="Ficha técnica", exact=True)).to_be_visible()
+        p.goto(self.url(reverse("loja:pdv")))
+        produto = p.get_by_role("button", name="Adicionar Café com leite QA ao carrinho", exact=True)
+        produto.click()
+        produto.click()
+        p.locator(".pdv-etapas button").filter(has_text="Carrinho").click()
+        p.get_by_label("Forma de pagamento", exact=True).select_option(str(self.forma.pk))
+        with p.expect_navigation():
+            p.locator(".pdv-finalizar").click()
+        venda = Venda.objects.get()
+        self.assertEqual(venda.total, Decimal("24"))
+        self.assertEqual(saldo(self.leite), Decimal("23.6"))
+        p.get_by_text("Cancelar venda (gerência)", exact=True).click()
+        p.locator('[name="motivo"]').fill("Cancelamento fictício antes do preparo")
+        p.on("dialog", lambda dialog: dialog.accept())
+        p.get_by_role("button", name="Cancelar venda", exact=True).click()
+        expect(p.get_by_text("Cancelamento fictício antes do preparo", exact=False).first).to_be_visible()
+        venda.refresh_from_db()
+        self.assertEqual(venda.status, "cancelada")
+        self.assertEqual(saldo(self.leite), 24)
+        self.assertEqual(saldo_vendavel(self.leite, self.local), 24)
+        self._foto("fase8-prato-cancelado-390.png")
+
+    def test_contagem_no_celular_recusa_movimento_posterior_e_permite_nova_conferencia(self):
+        from apps.nucleo.models import LoteEstoque, registrar_entrada, registrar_saida
+        registrar_entrada(self.leite, self.local, 4, 5, self.op, lote=self.lote)
+        p = self.page
+        p.set_viewport_size({"width": 390, "height": 844})
+        p.goto(self.url(reverse("estoque:lote_contar", args=[self.lote.pk, self.local.pk])))
+        p.get_by_label("Quantidade contada deste lote", exact=True).fill("4")
+        p.get_by_label("Motivo da contagem ou correção", exact=True).fill("Conferência fictícia preservada")
+        registrar_saida(self.leite, self.local, 1, self.op)
+        p.get_by_role("button", name="Aplicar contagem", exact=True).click()
+        expect(p.locator("[data-erros-envio]")).to_contain_text("movimentado depois")
+        expect(p.get_by_label("Motivo da contagem ou correção", exact=True)).to_have_value("Conferência fictícia preservada")
+        self.assertEqual(saldo(self.leite), 3)
+        p.reload()
+        p.get_by_label("Quantidade contada deste lote", exact=True).fill("2")
+        p.get_by_label("Motivo da contagem ou correção", exact=True).fill("Nova contagem conferida")
+        p.get_by_role("button", name="Aplicar contagem", exact=True).click()
+        expect(p.get_by_role("heading", name="Saldo por local", exact=True)).to_be_visible()
+        self.assertEqual(saldo(self.leite), 2)
+        self._foto("fase8-contagem-lote-390.png")
+        destino = LoteEstoque.objects.create(produto=self.leite, codigo="ETIQUETA-CORRIGIDA-QA",
+                    validade=self.lote.validade, criado_por=self.op)
+        p.get_by_role("link", name="Corrigir identificação", exact=True).click()
+        p.get_by_label("Lote com a identificação correta", exact=True).select_option(str(destino.pk))
+        p.get_by_label("Local", exact=True).select_option(str(self.local.pk))
+        p.get_by_label("Quantidade a reidentificar", exact=True).fill("3")
+        p.get_by_label("Motivo e evidência da conferência", exact=True).fill("Etiqueta fictícia conferida")
+        p.get_by_role("button", name="Confirmar correção", exact=True).click()
+        expect(p.locator("[data-erros-envio]")).to_contain_text("insuficiente")
+        expect(p.get_by_label("Motivo e evidência da conferência", exact=True)).to_have_value("Etiqueta fictícia conferida")
+        p.get_by_label("Quantidade a reidentificar", exact=True).fill("1")
+        p.get_by_role("button", name="Confirmar correção", exact=True).click()
+        expect(p.get_by_text("ETIQUETA-CORRIGIDA-QA", exact=True)).to_be_visible()
+        self.assertEqual(saldo(self.leite), 2)
+        self._foto("fase8-correcao-lote-390.png")
+
+    def test_telas_de_suprimentos_cabem_em_seis_larguras_com_textos_longos(self):
+        from apps.nucleo.models import registrar_compra, salvar_ficha
+        registrar_compra(self.embalagem, self.local, 2, 60, self.op, lote=self.lote,
+                          fornecedor=self.fornecedor, documento="NOTAFISCAL"*8)
+        salvar_ficha(self.prato, [(self.leite, Decimal("0.200"))], self.op)
+        telas = [("compras", []), ("compra_receber", []), ("produto_suprimentos", [self.leite.pk]),
+                  ("produto_suprimentos", [self.prato.pk]), ("embalagem_nova", [self.leite.pk]),
+                  ("embalagem_editar", [self.leite.pk, self.embalagem.pk]), ("ficha_editar", [self.prato.pk]),
+                  ("lotes", []), ("lote_novo", []), ("lote", [self.lote.pk]), ("lote_identificar", []),
+                  ("lote_corrigir", [self.lote.pk]),
+                  ("lote_contar", [self.lote.pk, self.local.pk]), ("produto_editar", [self.leite.pk]), ("entrada", [])]
+        p, erros = self.page, []
+        p.on("pageerror", lambda erro: erros.append(str(erro)))
+        for largura in (320, 390, 414, 768, 821, 1440):
+            p.set_viewport_size({"width": largura, "height": 900})
+            for nome, args in telas:
+                with self.subTest(largura=largura, tela=nome, args=args):
+                    resposta = p.goto(self.url(reverse(f"estoque:{nome}", args=args)), wait_until="networkidle")
+                    self.assertEqual(resposta.status, 200)
+                    p.evaluate("document.fonts.ready")
+                    if largura in (320, 821, 1440):
+                        self._foto(f"fase8-{nome}-{'-'.join(map(str,args))}-{largura}.png")
+                    self.assertLessEqual(p.evaluate("document.documentElement.scrollWidth"), largura+1)
+                    falhas = p.evaluate("""() => {
+                        const falhas=[];
+                        for(const caixa of document.querySelectorAll('.conteudo .cartao,.conteudo .form-cartao,.conteudo .tabela-cartoes tbody tr')){
+                            const limite=caixa.getBoundingClientRect();
+                            const walker=document.createTreeWalker(caixa,NodeFilter.SHOW_TEXT);let node;
+                            while(node=walker.nextNode()){
+                                const pai=node.parentElement;
+                                if(!node.textContent.trim()||!pai.getClientRects().length||pai.closest('option,script,style,template'))continue;
+                                // Cabeçalho acessível da tabela em cartões é intencionalmente oculto.
+                                const cabecalho=pai.closest('thead');
+                                if(cabecalho&&getComputedStyle(cabecalho).clipPath!=='none')continue;
+                                if(pai.closest('details:not([open])')&&!pai.closest('summary'))continue;
+                                const range=document.createRange();range.selectNodeContents(node);
+                                for(const r of range.getClientRects())if(r.width&&(r.left<limite.left-2||r.right>limite.right+2||r.bottom>limite.bottom+2)){
+                                    falhas.push(node.textContent.trim());break;
+                                }
+                            }
+                        }
+                        return falhas;
+                    }""")
+                    self.assertFalse(falhas, falhas)
+        self.assertFalse(erros, erros)
+
+
+@unittest.skipUnless(_PLAYWRIGHT_OK, "playwright não instalado (ver tests_e2e)")
 @override_settings(**CONFIGURACAO_CANAIS)
 class CanaisOperacaoE2ETests(DadosCanais, _BaseE2E):
     LOCALE = "pt-BR"

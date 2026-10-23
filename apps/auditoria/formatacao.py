@@ -9,6 +9,8 @@ razoável, nunca quebra.
 
 # Nomes de model → português amigável.
 ALVOS = {
+    "EmbalagemProduto": "embalagem de compra", "IngredienteFicha": "ingrediente da ficha técnica",
+    "LoteEstoque": "lote de estoque", "RegistroLote": "registro de lote",
     "ConfiguracaoCanais": "conexão de canais",
     "MapeamentoCanal": "categoria de canal",
     "ReservaCanal": "reserva externa",
@@ -37,6 +39,9 @@ ALVOS = {
 # no banco e no CSV (forense); a tela mostra palavra de gente — eram "no_show",
 # "lead_fechado_movido", "bloqueio_uh" em minúsculo, com sublinhado.
 ACOES = {
+    "identificacao_lote": "Identificação de saldo por lote", "contagem_lote": "Contagem de lote",
+    "correcao_lote": "Correção da identificação do lote", "ficha_tecnica_salva": "Ficha técnica atualizada",
+    "devolucao_estoque": "Devolução ao estoque",
     "configuracao_canais": "Configuração dos canais", "mapeamento_canal": "Mapeamento de categoria",
     "validacao_canal": "Validação da conexão", "envio_canal_conferido": "Conferência do envio aos canais",
     "sincronizacao_canal_solicitada": "Atualização dos canais solicitada", "aviso_canal_recebido": "Notificação de canal recebida",

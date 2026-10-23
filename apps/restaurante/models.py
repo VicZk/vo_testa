@@ -136,6 +136,7 @@ class ItemComanda(models.Model):
     observacoes = models.CharField("observações para preparo", max_length=500, blank=True)
     opcoes = models.JSONField("escolhas do cliente", default=list, blank=True)
     estoque_baixado = models.JSONField("itens retirados do estoque", default=list, blank=True, editable=False)
+    movimentos_estoque = models.JSONField("origens das baixas", default=list, blank=True, editable=False)
     preparo = models.CharField("preparo", max_length=12, choices=Preparo.choices, default=Preparo.AGUARDANDO)
     versao = models.PositiveIntegerField("versão", default=1, editable=False)
 

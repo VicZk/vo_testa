@@ -636,7 +636,7 @@ class ChaveDeEnvioTests(TelasBase):
 
         chave = str(uuid.uuid4())
         self._entrada(chave)
-        resposta = self._entrada(chave, quantidade="999")   # até com outro valor
+        resposta = self._entrada(chave)
         seguida = self.client.get(reverse("estoque:posicao"))
         self.assertRedirects(resposta, reverse("estoque:posicao"))
         self.assertTrue(any(
@@ -645,6 +645,16 @@ class ChaveDeEnvioTests(TelasBase):
         ))
         self.assertEqual(MovimentoEstoque.objects.filter(chave=chave).count(), 1)
         self.assertEqual(saldo(self.produto, self.almox), Decimal("50"))  # 40 + 10
+
+    def test_chave_reutilizada_com_outro_valor_mostra_erro_sem_movimentar(self):
+        import uuid
+
+        chave = str(uuid.uuid4())
+        self._entrada(chave)
+        resposta = self._entrada(chave, quantidade="999")
+        self.assertContains(resposta, "já foi usada com outros dados")
+        self.assertEqual(MovimentoEstoque.objects.filter(chave=chave).count(), 1)
+        self.assertEqual(saldo(self.produto, self.almox), Decimal("50"))
 
     def test_saida_reenviada_baixa_uma_vez_so(self):
         import uuid

@@ -81,6 +81,8 @@ class Venda(models.Model):
 
 
 class ItemVenda(models.Model):
+    estoque_baixado = models.JSONField("itens retirados do estoque", default=list, blank=True, editable=False)
+    movimentos_estoque = models.JSONField("origens das baixas", default=list, blank=True, editable=False)
     venda = models.ForeignKey(
         Venda, on_delete=models.CASCADE, related_name="itens", verbose_name="venda"
     )

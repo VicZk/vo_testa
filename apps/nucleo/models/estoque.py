@@ -18,10 +18,17 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, models, transaction
 from django.db.models import Sum
 
+from apps.nucleo.validadores import decimal_valido
+
 from .financeiro import NaturezaFiscal, centro_choices, registrar_auditoria
 
 ZERO = Decimal("0")
 Q_QTD = Decimal("0.001")
+
+
+def quantidade_valida(valor, *, zero=False):
+    return decimal_valido(valor, nome="Quantidade", minimo=ZERO if zero else Q_QTD,
+                          maximo=Decimal("999999999.999"), casas=3).quantize(Q_QTD)
 
 
 class CategoriaProduto(models.Model):
@@ -77,6 +84,9 @@ class Produto(models.Model):
     )
     ativo = models.BooleanField("ativo", default=True)
     criado_em = models.DateTimeField("criado em", auto_now_add=True)
+    controla_validade = models.BooleanField("controlar lotes e validade", default=False)
+    usa_ficha_tecnica = models.BooleanField("baixar ingredientes da ficha técnica", default=False)
+    versao_ficha = models.PositiveIntegerField(default=1, editable=False)
 
     class Meta:
         verbose_name = "produto"
@@ -88,6 +98,26 @@ class Produto(models.Model):
 
     def saldo(self, local=None) -> Decimal:
         return saldo(self, local)
+
+    def clean(self):
+        super().clean()
+        decimal_valido(self.preco_venda, nome="Preço de venda")
+        quantidade_valida(self.estoque_minimo, zero=True)
+        if self.controla_validade and self.usa_ficha_tecnica:
+            raise ValidationError("O prato baixa os lotes dos ingredientes. Não controle lote do prato pronto.")
+        if self.pk:
+            anterior = Produto.objects.get(pk=self.pk)
+            if anterior.unidade != self.unidade and self.movimentos.exists():
+                raise ValidationError({"unidade": "Produto com movimentos mantém a unidade base. Cadastre uma embalagem de compra para converter."})
+            if anterior.controla_validade and not self.controla_validade:
+                raise ValidationError("O controle de validade não pode ser desativado depois de configurado.")
+            if self.controla_validade and not anterior.controla_validade and self.itens_inventario.filter(inventario__status="aberto").exists():
+                raise ValidationError("Conclua o inventário aberto deste produto antes de ativar o controle de validade.")
+            if anterior.usa_ficha_tecnica != self.usa_ficha_tecnica:
+                if self.usa_ficha_tecnica and (self.movimentos.exists() or self.usado_em_fichas.exists()):
+                    raise ValidationError("Produto com histórico físico ou usado como ingrediente mantém seu tipo. Cadastre outro produto para o prato.")
+                if anterior.usa_ficha_tecnica:
+                    raise ValidationError("Produto configurado como prato mantém sua ficha técnica.")
 
     @property
     def margem(self) -> Decimal | None:
@@ -166,6 +196,11 @@ class MovimentoEstoque(models.Model):
         "chave do envio", null=True, blank=True, unique=True, editable=False,
         help_text="Idempotência: o reenvio do mesmo formulário não grava de novo.",
     )
+    devolucao_de = models.OneToOneField(
+        "self", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="devolucao", editable=False,
+    )
+    compra = models.JSONField("conversão da compra", default=dict, blank=True, editable=False)
     criado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
         related_name="movimentos_estoque", verbose_name="registrado por",
@@ -235,7 +270,7 @@ def posicao_estoque(local: LocalEstoque | None = None):
         for linha in qs.values("produto").annotate(s=Sum("quantidade"))
     }
     linhas = []
-    for produto in Produto.objects.filter(ativo=True).select_related("categoria"):
+    for produto in Produto.objects.filter(ativo=True, usa_ficha_tecnica=False).select_related("categoria"):
         atual = saldos.get(produto.pk, ZERO)
         minimo = produto.estoque_minimo
         zerado = atual <= ZERO
@@ -298,7 +333,7 @@ def resumo_locais():
     mínimo. Alimenta a seleção de local da posição. DUAS consultas, sempre."""
     saldos = saldos_por_local()
     produtos = {
-        p.pk: p for p in Produto.objects.filter(ativo=True).only(
+        p.pk: p for p in Produto.objects.filter(ativo=True, usa_ficha_tecnica=False).only(
             "id", "custo_medio", "estoque_minimo"
         )
     }
@@ -355,6 +390,12 @@ def _repetido(chave, erro):
     return existente
 
 
+def _conferir_reenvio(movimento, **dados):
+    if any(getattr(movimento, campo) != valor for campo, valor in dados.items()):
+        raise ValidationError("A chave de envio já foi usada com outros dados. Reabra o formulário.")
+    return movimento
+
+
 def _novo_movimento(produto, local, tipo, quantidade, usuario, **extra):
     mov = MovimentoEstoque(
         produto=produto, local=local, tipo=tipo,
@@ -366,90 +407,135 @@ def _novo_movimento(produto, local, tipo, quantidade, usuario, **extra):
 
 def registrar_entrada(
     produto, local, quantidade, custo_unitario, usuario, documento="", observacao="",
-    fornecedor=None, chave=None,
+    fornecedor=None, chave=None, *, lote=None, compra=None,
 ):
     """Entrada por compra: soma ao saldo e recalcula o custo médio ponderado.
 
     Com `chave`, o reenvio do mesmo formulário devolve a entrada já gravada em
     vez de somar de novo (e deslocar o custo médio)."""
+    quantidade = quantidade_valida(quantidade)
+    custo_unitario = decimal_valido(custo_unitario, nome="Custo unitário",
+                                    maximo=Decimal("99999999.9999"), casas=4)
+    valor_aquisicao = quantidade * custo_unitario
+    if compra:
+        if not isinstance(compra, dict):
+            raise ValidationError("Conversão de compra inválida.")
+        pacotes = quantidade_valida(compra.get("quantidade"))
+        fator = quantidade_valida(compra.get("fator"))
+        custo_pacote = decimal_valido(compra.get("custo_embalagem"), nome="Custo da embalagem",
+                                     maximo=Decimal("99999999.9999"), casas=4)
+        if pacotes * fator != quantidade or (custo_pacote / fator).quantize(Decimal("0.0001")) != custo_unitario:
+            raise ValidationError("A conversão não corresponde à quantidade e ao custo informados.")
+        valor_aquisicao = pacotes * custo_pacote
+    dados = dict(produto_id=produto.pk, local_id=local.pk, quantidade=quantidade,
+                 tipo=MovimentoEstoque.Tipo.ENTRADA_COMPRA, custo_unitario=custo_unitario,
+                 documento=documento, fornecedor_id=getattr(fornecedor, "pk", None),
+                 compra=compra or {})
     existente = movimento_da_chave(chave)
     if existente:
+        _conferir_reenvio(existente, **dados)
+        if set(existente.lotes.values_list("lote_id", flat=True)) != ({lote.pk} if lote else set()):
+            raise ValidationError("A chave de envio já foi usada com outro lote.")
         return existente
     try:
         return _registrar_entrada(
             produto, local, quantidade, custo_unitario, usuario,
-            documento, observacao, fornecedor, chave,
+            documento, observacao, fornecedor, chave, lote, compra or {}, valor_aquisicao,
         )
     except (IntegrityError, ValidationError) as erro:
-        return _repetido(chave, erro)
+        existente = _conferir_reenvio(_repetido(chave, erro), **dados)
+        if set(existente.lotes.values_list("lote_id", flat=True)) != ({lote.pk} if lote else set()):
+            raise ValidationError("A chave de envio já foi usada com outro lote.")
+        return existente
 
 
 @transaction.atomic
 def _registrar_entrada(
     produto, local, quantidade, custo_unitario, usuario, documento, observacao,
-    fornecedor, chave,
+    fornecedor, chave, lote, compra, valor_aquisicao,
 ):
-    quantidade = Decimal(quantidade)
-    custo_unitario = Decimal(custo_unitario)
+    quantidade = quantidade_valida(quantidade)
+    custo_unitario = decimal_valido(custo_unitario, nome="Custo unitário",
+                                    maximo=Decimal("99999999.9999"), casas=4)
     if quantidade <= ZERO:
         raise ValidationError("A quantidade de entrada deve ser positiva.")
     # Custo médio é read-modify-write: trava o produto p/ serializar entradas
     # concorrentes (senão uma corrida grava um custo médio corrompido).
     from apps.nucleo.sistema import travar
     produto = travar(produto)
+    from .suprimentos import conferir_lote, registrar_lotes
+    if produto.usa_ficha_tecnica:
+        raise ValidationError("Registre a compra dos ingredientes. O prato é baixado pela ficha técnica.")
+    conferir_lote(produto, lote, compra=True)
     saldo_atual = saldo(produto)
     valor_atual = saldo_atual * produto.custo_medio
     novo_saldo = saldo_atual + quantidade
     produto.custo_medio = (
-        (valor_atual + quantidade * custo_unitario) / novo_saldo
+        (valor_atual + valor_aquisicao) / novo_saldo
     ).quantize(Decimal("0.0001"))
     produto.save(update_fields=["custo_medio"])
-    return _novo_movimento(
+    mov = _novo_movimento(
         produto, local, MovimentoEstoque.Tipo.ENTRADA_COMPRA, quantidade, usuario,
         custo_unitario=custo_unitario, documento=documento, observacao=observacao,
-        fornecedor=fornecedor, chave=chave,
+        fornecedor=fornecedor, chave=chave, compra=compra,
     )
+    if lote:
+        registrar_lotes(mov, [(lote.pk, quantidade)])
+    return mov
 
 
 def registrar_saida(
     produto, local, quantidade, usuario,
-    tipo=MovimentoEstoque.Tipo.SAIDA_VENDA, documento="", observacao="", chave=None,
+    tipo=MovimentoEstoque.Tipo.SAIDA_VENDA, documento="", observacao="", chave=None, *, lote=None,
 ):
     """Saída (venda/consumo/perda): valida saldo e baixa pelo custo médio.
 
     Com `chave`, o reenvio devolve a saída já gravada em vez de baixar duas vezes."""
+    quantidade = quantidade_valida(quantidade)
+    if tipo not in {MovimentoEstoque.Tipo.SAIDA_VENDA, MovimentoEstoque.Tipo.CONSUMO_INTERNO,
+                    MovimentoEstoque.Tipo.PERDA}:
+        raise ValidationError("Escolha venda, consumo interno ou perda para a saída.")
+    dados = dict(produto_id=produto.pk, local_id=local.pk, quantidade=-quantidade, tipo=tipo,
+                 documento=documento)
     existente = movimento_da_chave(chave)
     if existente:
-        return existente
+        return _conferir_reenvio(existente, **dados)
     try:
         return _registrar_saida(
-            produto, local, quantidade, usuario, tipo, documento, observacao, chave
+            produto, local, quantidade, usuario, tipo, documento, observacao, chave, lote
         )
     except (IntegrityError, ValidationError) as erro:
-        return _repetido(chave, erro)
+        return _conferir_reenvio(_repetido(chave, erro), **dados)
 
 
 @transaction.atomic
 def _registrar_saida(produto, local, quantidade, usuario, tipo, documento,
-                     observacao, chave):
-    quantidade = Decimal(quantidade)
+                     observacao, chave, lote):
+    quantidade = quantidade_valida(quantidade)
     if quantidade <= ZERO:
         raise ValidationError("A quantidade de saída deve ser positiva.")
     # Serializa baixas concorrentes (e contra entradas) travando a LINHA DO PRODUTO —
     # mesmo âncora de registrar_entrada. O(1) e cobre a 1ª saída (kardex vazio), ao
     # contrário de travar as linhas do kardex (que cresce e não trava nada no início).
     from apps.nucleo.sistema import travar
-    travar(produto)
+    produto = travar(produto)
+    from .suprimentos import planejar_lotes, registrar_lotes
+    if produto.usa_ficha_tecnica:
+        raise ValidationError("O prato deve baixar os ingredientes pela venda, não seu saldo próprio.")
     if saldo(produto, local) < quantidade:
         raise ValidationError(
             f"Saldo insuficiente de {produto} em {local} "
             f"(disponível: {saldo(produto, local)})."
         )
-    return _novo_movimento(
+    plano = planejar_lotes(produto, local, quantidade, lote=lote,
+                           permite_vencido=tipo == MovimentoEstoque.Tipo.PERDA)
+    mov = _novo_movimento(
         produto, local, tipo, -quantidade, usuario,
         custo_unitario=produto.custo_medio, documento=documento, observacao=observacao,
         chave=chave,
     )
+    registrar_lotes(mov, plano, sinal=-1)
+    return mov
 
 
 def transferir(produto, origem, destino, quantidade, usuario, observacao="",
@@ -458,20 +544,28 @@ def transferir(produto, origem, destino, quantidade, usuario, observacao="",
 
     A `chave` fica na perna de SAÍDA (uma transferência, um envio): o reenvio
     devolve o par já gravado."""
+    quantidade = quantidade_valida(quantidade)
+    dados = dict(produto_id=produto.pk, local_id=origem.pk, quantidade=-quantidade,
+                 tipo=MovimentoEstoque.Tipo.TRANSFERENCIA_SAIDA)
     existente = movimento_da_chave(chave)
     if existente:
+        _conferir_reenvio(existente, **dados)
+        if not existente.transferencia_par or existente.transferencia_par.local_id != destino.pk:
+            raise ValidationError("A chave de envio já foi usada com outro destino.")
         return existente, existente.transferencia_par
     try:
         return _transferir(produto, origem, destino, quantidade, usuario,
                            observacao, chave)
     except (IntegrityError, ValidationError) as erro:
-        saida = _repetido(chave, erro)
+        saida = _conferir_reenvio(_repetido(chave, erro), **dados)
+        if not saida.transferencia_par or saida.transferencia_par.local_id != destino.pk:
+            raise ValidationError("A chave de envio já foi usada com outro destino.")
         return saida, saida.transferencia_par
 
 
 @transaction.atomic
 def _transferir(produto, origem, destino, quantidade, usuario, observacao, chave):
-    quantidade = Decimal(quantidade)
+    quantidade = quantidade_valida(quantidade)
     if origem == destino:
         raise ValidationError("Origem e destino não podem ser o mesmo local.")
     if quantidade <= ZERO:
@@ -480,11 +574,15 @@ def _transferir(produto, origem, destino, quantidade, usuario, observacao, chave
     # passa pela mesma conferência de saldo e o local fica negativo.
     from apps.nucleo.sistema import travar
     produto = travar(produto)
+    from .suprimentos import planejar_lotes, registrar_lotes
+    if produto.usa_ficha_tecnica:
+        raise ValidationError("Transfira os ingredientes do prato.")
     if saldo(produto, origem) < quantidade:
         raise ValidationError(
             f"Saldo insuficiente em {origem} (disponível: {saldo(produto, origem)})."
         )
     custo = produto.custo_medio
+    plano = planejar_lotes(produto, origem, quantidade, permite_vencido=True)
     saida = _novo_movimento(
         produto, origem, MovimentoEstoque.Tipo.TRANSFERENCIA_SAIDA, -quantidade,
         usuario, custo_unitario=custo, chave=chave,
@@ -497,6 +595,8 @@ def _transferir(produto, origem, destino, quantidade, usuario, observacao, chave
     )
     saida.transferencia_par = entrada
     MovimentoEstoque.objects.filter(pk=saida.pk).update(transferencia_par=entrada)
+    registrar_lotes(saida, plano, sinal=-1)
+    registrar_lotes(entrada, plano)
     registrar_auditoria(
         usuario, "transferencia_estoque", saida,
         {"produto": produto.pk, "de": origem.pk, "para": destino.pk,
@@ -508,13 +608,17 @@ def _transferir(produto, origem, destino, quantidade, usuario, observacao, chave
 @transaction.atomic
 def ajustar(produto, local, nova_quantidade, usuario, motivo=""):
     """Ajusta o saldo de um local para `nova_quantidade` (movimento de diferença)."""
-    nova_quantidade = Decimal(nova_quantidade)
+    nova_quantidade = quantidade_valida(nova_quantidade, zero=True)
     if nova_quantidade < ZERO:
         raise ValidationError("O saldo ajustado não pode ser negativo.")
     # A diferença é calculada sobre o saldo lido COM o produto travado: uma venda
     # entre a leitura e a gravação faria o ajuste apagar a baixa dela.
     from apps.nucleo.sistema import travar
     produto = travar(produto)
+    if produto.usa_ficha_tecnica:
+        raise ValidationError("Conte os ingredientes. O prato não tem saldo próprio.")
+    if produto.controla_validade:
+        raise ValidationError("Use a contagem em Lotes e validade para ajustar este produto por lote.")
     diferenca = nova_quantidade - saldo(produto, local)
     if diferenca == ZERO:
         return None
@@ -535,7 +639,7 @@ def devolver_ao_estoque(produto, local, quantidade, usuario, motivo=""):
     """Devolve `quantidade` ao local (cancelamento de venda, item tirado da comanda):
     soma ao saldo de agora, sem mexer no custo médio. Ao contrário de
     `ajustar(saldo_lido + quantidade)`, não depende de um saldo lido antes da trava."""
-    quantidade = Decimal(quantidade)
+    quantidade = quantidade_valida(quantidade)
     if quantidade <= ZERO:
         raise ValidationError("A quantidade devolvida deve ser positiva.")
     from apps.nucleo.sistema import travar

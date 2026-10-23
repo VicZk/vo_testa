@@ -57,9 +57,33 @@ from .financeiro import (
     registrar_auditoria,
 )
 from .logbook import ComentarioLogbook, EntradaLogbook
+from .suprimentos import (
+    EmbalagemProduto,
+    IngredienteFicha,
+    LoteEstoque,
+    RegistroLote,
+    composicao_estoque,
+    conferir_versao_ficha,
+    contar_lote,
+    corrigir_identificacao,
+    devolver_movimentos,
+    disponibilidade_produtos,
+    identificar_saldo,
+    marca_lote,
+    registrar_compra,
+    saldo_vendavel,
+    saldos_lotes,
+    salvar_ficha,
+)
 from .usuarios import ModuloContratado, Usuario, modulo_ativo, modulos_ativos
 
 __all__ = [
+    "EmbalagemProduto", "IngredienteFicha", "LoteEstoque", "RegistroLote",
+    "composicao_estoque", "conferir_versao_ficha", "devolver_movimentos",
+    "disponibilidade_produtos", "identificar_saldo", "registrar_compra",
+    "saldo_vendavel", "saldos_lotes", "salvar_ficha",
+    "contar_lote", "marca_lote",
+    "corrigir_identificacao",
     "EnsaioIntegracao",
     "EstadoBackup",
     "UH",

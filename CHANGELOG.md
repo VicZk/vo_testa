@@ -9,6 +9,20 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 22/10/2026: compras por embalagem, lotes e ingredientes dos pratos
+
+- O recebimento converte embalagens para a unidade base e conserva a conversão
+  usada na compra. A prévia mostra produto, embalagem, quantidade e custo total.
+- Perecíveis têm lote, validade, contagem e correção de identificação com autoria.
+  Lotes vencidos e saldo antigo ainda não identificado ficam fora da venda.
+- Loja e Restaurante baixam ingredientes pela ficha técnica; o cancelamento
+  usa a baixa original, mesmo após editar a ficha. Descarte após preparo é perda.
+- Reenvios, alterações concorrentes, valores fora do limite e permissões têm
+  verificações próprias. Formulários conservam os dados após erro; títulos e
+  códigos longos cabem no celular.
+- O [manual de compras](docs/ESTOQUE_COMPRAS.md) define o controle auxiliar de
+  solicitações e aprovações no Livro de ocorrências e a conferência no Financeiro.
+
 ## 22/10/2026: canais de venda preparados para configuração e homologação
 
 - Canais tem conexão por ambiente, responsável, categorias e unidades físicas,

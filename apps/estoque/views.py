@@ -39,7 +39,7 @@ from apps.nucleo.models import (
 )
 from apps.nucleo.modulos import Modulo
 from apps.nucleo.paginacao import paginar
-from apps.nucleo.permissoes import requer_modulo
+from apps.nucleo.permissoes import eh_gerente, requer_modulo
 from apps.nucleo.seletores import pessoas_agrupadas
 from apps.nucleo.validadores import filtro_identificador
 
@@ -80,7 +80,7 @@ def _produtos_json(saldos=None):
     for (produto_id, local_id), valor in saldos.items():
         agrupado.setdefault(produto_id, {})[str(local_id)] = float(valor)
     itens = []
-    for produto in Produto.objects.filter(ativo=True).select_related("categoria"):
+    for produto in Produto.objects.filter(ativo=True, usa_ficha_tecnica=False).select_related("categoria"):
         por_local = agrupado.get(produto.pk, {})
         itens.append({
             "id": produto.pk,
@@ -224,9 +224,13 @@ def produtos(request):
 
 
 @requer_modulo(Modulo.ESTOQUE)
+@transaction.atomic
 def produto_form(request, pk=None):
-    produto = get_object_or_404(Produto, pk=pk) if pk else None
+    produto = get_object_or_404(Produto.objects.select_for_update(), pk=pk) if pk else None
     form = ProdutoForm(request.POST or None, instance=produto)
+    if not eh_gerente(request.user):
+        form.fields.pop("controla_validade")
+        form.fields.pop("usa_ficha_tecnica")
     if request.method == "POST" and form.is_valid():
         produto = form.save()
         messages.success(request, f"Produto “{produto.nome}” salvo.")
@@ -396,12 +400,14 @@ def _executar(operacao, dados, usuario):
             dados["custo_unitario"], usuario, documento=dados["documento"],
             observacao=dados["observacao"], fornecedor=dados["fornecedor"],
             chave=chave,
+            lote=dados.get("lote"),
         )
         return "Entrada registrada. Saldo e custo médio atualizados."
     if operacao == "saida":
         registrar_saida(
             dados["produto"], dados["local"], dados["quantidade"], usuario,
             tipo=dados["tipo"], observacao=dados["observacao"], chave=chave,
+            lote=dados.get("lote"),
         )
         return "Saída registrada."
     if operacao == "transferencia":
@@ -428,17 +434,19 @@ def _movimentar(request, operacao):
     if request.GET.get("local"):
         campo = "origem" if operacao == "transferencia" else "local"
         inicial[campo] = request.GET["local"]
+    if request.GET.get("lote"):
+        inicial["lote"] = filtro_identificador(request.GET["lote"])
+    if operacao == "saida" and request.GET.get("tipo") in dict(SaidaForm.TIPOS):
+        inicial["tipo"] = request.GET["tipo"]
     # Chave nova a cada vez que a tela ABRE; no reenvio do mesmo formulário ela
     # vem junto e o motor reconhece a repetição.
     inicial["chave"] = uuid.uuid4()
     form = config["form"](request.POST or None, initial=inicial)
     if request.method == "POST" and form.is_valid():
-        if movimento_da_chave(form.cleaned_data.get("chave")):
-            messages.info(request, "Essa movimentação já tinha sido registrada.")
-            return redirect("estoque:posicao")
         try:
+            repetido = movimento_da_chave(form.cleaned_data.get("chave"))
             sucesso = _executar(operacao, form.cleaned_data, request.user)
-            messages.success(request, sucesso)
+            messages.success(request, "Essa movimentação já tinha sido registrada." if repetido else sucesso)
             return redirect("estoque:posicao")
         except ValidationError as erro:
             form.add_error(None, erro)
@@ -521,7 +529,7 @@ def inventarios(request):
                 saldo_sistema=saldos.get((produto.pk, local.pk), ZERO),
                 quantidade_contada=saldos.get((produto.pk, local.pk), ZERO),
             )
-            for produto in Produto.objects.filter(ativo=True)
+            for produto in Produto.objects.filter(ativo=True, usa_ficha_tecnica=False, controla_validade=False)
         ])
         messages.success(request, "Inventário aberto. Faça a contagem dos produtos.")
         return redirect("estoque:inventario", pk=inv.pk)

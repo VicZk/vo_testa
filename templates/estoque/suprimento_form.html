@@ -1,0 +1,15 @@
+{% extends "base.html" %}{% load nucleo_extras static %}
+{% block titulo %}{{ titulo }} | Estoque{% endblock %}
+{% block conteudo_classe %}conteudo-formulario{% endblock %}
+{% block conteudo %}<div class="eleg">
+<p class="pagina-eyebrow letreiro">Compras &amp; Estoque</p>
+<h1>{{ titulo }}</h1><p class="subtitulo">{{ descricao }}</p>
+<p class="bloco-fim">{% if produto %}<a href="{% url 'estoque:produto_suprimentos' produto.pk %}" class="botao-neutro">Voltar ao produto</a>{% else %}<a href="{% url voltar %}" class="botao-neutro">Voltar</a>{% endif %}</p>
+{% if compra %}<div class="nota-cartao bloco-fim">Precisa configurar antes? <a href="{% url 'estoque:produtos' %}">Abra o produto para cadastrar a embalagem</a> ou <a href="{% url 'estoque:lote_novo' %}">cadastre o lote</a>. O recebimento registra a mercadoria; a obrigação e o pagamento são conferidos no Financeiro.</div>{% endif %}
+{% if lote %}<section class="cartao respiro bloco-fim"><dl class="ficha"><div><dt>Produto</dt><dd>{{ lote.produto.nome }}</dd></div><div><dt>Lote</dt><dd>{{ lote.codigo }}</dd></div><div><dt>Validade</dt><dd>{{ lote.validade|date:"d/m/Y" }}</dd></div></dl></section>{% endif %}
+<form method="post" class="form-cartao" data-preservar-erros>{% csrf_token %}{{ form.non_field_errors }}
+{% for campo in form.hidden_fields %}{{ campo }}{{ campo.errors }}{% endfor %}
+{% for campo in form.visible_fields %}<div class="campo">{{ campo|rotulo }}{{ campo }}{% if campo.help_text %}<p class="ajuda">{{ campo.help_text }}</p>{% endif %}{{ campo.errors }}</div>{% endfor %}
+{% if compra %}<section class="cartao respiro bloco-fim" id="compra-previa" aria-live="polite" hidden><h2 class="letreiro bloco-fim">Conferência da embalagem</h2><dl class="ficha"><div><dt>Produto</dt><dd id="compra-produto"></dd></div><div><dt>Embalagem</dt><dd id="compra-embalagem"></dd></div><div><dt>Quantidade base</dt><dd id="compra-quantidade"></dd></div><div><dt>Custo total</dt><dd id="compra-total"></dd></div></dl></section>{% endif %}
+<div class="acoes"><button class="botao-primario">{{ botao }}</button></div>
+</form>{% if compra %}{{ embalagens_data|json_script:"compra-embalagens" }}<script src="{% static 'js/estoque-compra.js' %}"></script>{% endif %}</div>{% endblock %}

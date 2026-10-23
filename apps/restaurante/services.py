@@ -9,7 +9,10 @@ from django.utils import timezone
 from apps.nucleo.models import (
     MovimentoEstoque,
     Produto,
+    composicao_estoque,
+    conferir_versao_ficha,
     devolver_ao_estoque,
+    devolver_movimentos,
     receber_no_caixa,
     registrar_auditoria,
     registrar_saida,
@@ -63,7 +66,7 @@ def _dados_item(produto, quantidade, observacoes, opcoes, anteriores=(), preco_b
     unitario = decimal_valido(unitario, nome="Preço do item")
     decimal_valido(unitario * qtd, nome="Total do item", casas=5)
     # A composição fica congelada no item para devolução/cancelamento consistente.
-    baixas = {produto.pk: qtd}
+    baixas = composicao_estoque(produto, qtd)
     for produto_id, consumo in extras.items():
         baixas[produto_id] = baixas.get(produto_id, ZERO) + consumo * qtd
     return qtd, observacoes.strip(), escolhas, unitario, baixas
@@ -83,8 +86,11 @@ def _travar_produtos(ids):
 
 
 def _registrar_baixas(comanda, baixas, produtos, operador):
+    movimentos = []
     for pk, qtd in sorted(baixas.items()):
-        registrar_saida(produtos[pk], comanda.local, qtd, operador, documento=f"Comanda #{comanda.pk}")
+        mov = registrar_saida(produtos[pk], comanda.local, qtd, operador, documento=f"Comanda #{comanda.pk}")
+        movimentos.append(mov.pk)
+    return movimentos
 
 
 def _snapshot_baixas(baixas):
@@ -128,12 +134,13 @@ def adicionar_item(comanda, produto, quantidade, operador, *, observacoes="", op
     if not comanda.aberta:
         raise ValidationError("Esta comanda já foi fechada.")
     quantidade, observacoes, escolhas, unitario, baixas = _dados_item(produto, quantidade, observacoes, opcoes)
-    produtos = _travar_produtos(baixas)
-    _registrar_baixas(comanda, baixas, produtos, operador)
+    produtos = _travar_produtos(set(baixas) | {produto.pk})
+    conferir_versao_ficha(produto, produtos)
+    movimentos = _registrar_baixas(comanda, baixas, produtos, operador)
     # Lido depois da trava: a quantidade é a atual, nunca a de antes do lançamento
     # concorrente (que somaria em cima de um valor velho e perderia itens).
     item = comanda.itens.filter(produto=produto, observacoes=observacoes, opcoes=escolhas,
-                               preco_unitario=unitario, preparo=ItemComanda.Preparo.AGUARDANDO).first()
+                               preco_unitario=unitario, preparo=ItemComanda.Preparo.AGUARDANDO).exclude(movimentos_estoque=[]).first()
     if item:
         anteriores = _estoque_do_item(item)
         for pk, qtd in baixas.items():
@@ -143,14 +150,16 @@ def adicionar_item(comanda, produto, quantidade, operador, *, observacoes="", op
                        maximo=Decimal("999999999.999"), casas=3)
         decimal_valido(item.preco_unitario * item.quantidade, nome="Total do item", casas=5)
         item.estoque_baixado = _snapshot_baixas(anteriores)
+        item.movimentos_estoque += movimentos
         item.versao += 1
-        item.save(update_fields=["quantidade", "estoque_baixado", "versao"])
+        item.save(update_fields=["quantidade", "estoque_baixado", "movimentos_estoque", "versao"])
         return item
     return ItemComanda.objects.create(
         comanda=comanda, produto=produto, descricao=produto.nome,
         natureza=produto.natureza, quantidade=quantidade,
         preco_unitario=unitario, observacoes=observacoes, opcoes=escolhas,
         estoque_baixado=_snapshot_baixas(baixas),
+        movimentos_estoque=movimentos,
     )
 
 
@@ -176,6 +185,10 @@ def remover_item(item, operador, motivo=""):
 
 
 def _devolver_item(item, operador, motivo, *, perda=False, produtos=None):
+    if item.movimentos_estoque:
+        devolver_movimentos(item.movimentos_estoque, operador,
+                            f"Comanda #{item.comanda_id}: {motivo}", perda=perda)
+        return
     baixas = _estoque_do_item(item)
     produtos = produtos or _travar_produtos(baixas)
     for pk, qtd in sorted(baixas.items()):
@@ -204,9 +217,10 @@ def editar_item(item, operador, *, versao, quantidade, observacoes="", opcoes=()
         item.produto, quantidade, observacoes, opcoes, item.opcoes, preco_base=base
     )
     anteriores = _estoque_do_item(item)
-    produtos = _travar_produtos(set(anteriores) | set(baixas))
+    produtos = _travar_produtos(set(anteriores) | set(baixas) | {item.produto_id})
+    conferir_versao_ficha(item.produto, produtos)
     _devolver_item(item, operador, "Ajuste do pedido antes do preparo", produtos=produtos)
-    _registrar_baixas(comanda, baixas, produtos, operador)
+    item.movimentos_estoque = _registrar_baixas(comanda, baixas, produtos, operador)
     item.quantidade, item.observacoes, item.opcoes = qtd, nota, escolhas
     item.preco_unitario, item.estoque_baixado = unitario, _snapshot_baixas(baixas)
     item.versao += 1

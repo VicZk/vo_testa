@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load estoque_extras %}
+{% block titulo %}Lote {{ lote.codigo }} | Estoque{% endblock %}
+{% block conteudo %}
+<div class="eleg">
+  <p class="pagina-eyebrow letreiro">Compras &amp; Estoque</p>
+  <div class="pagina-cabecalho">
+    <h1>Lote de estoque</h1>
+    <a class="botao-neutro" href="{% url 'estoque:lotes' %}">Voltar aos lotes</a>
+  </div>
+  <section class="cartao respiro bloco-fim">
+    <dl class="ficha">
+      <div><dt>Produto</dt><dd>{{ lote.produto.nome }}</dd></div>
+      <div><dt>Lote</dt><dd>{{ lote.codigo }}</dd></div>
+      <div><dt>Validade</dt><dd>{{ lote.validade|date:"d/m/Y" }}{% if lote.validade < hoje %} · Vencido, venda bloqueada{% endif %}</dd></div>
+    </dl>
+    {% if user.is_staff or user.is_superuser %}
+      <div class="acoes"><a class="botao-neutro" href="{% url 'estoque:lote_corrigir' lote.pk %}">Corrigir identificação</a></div>
+    {% endif %}
+  </section>
+  <section class="cartao respiro bloco-fim">
+    <h2 class="bloco-fim">Saldo por local</h2>
+    <table class="tabela tabela-cartoes">
+      <thead><tr><th>Local</th><th class="num">Deste lote</th><th class="num">Produto sem lote</th><th>Ações</th></tr></thead>
+      <tbody>
+        {% for linha in locais %}
+        <tr>
+          <td data-rotulo="Local">{{ linha.local.nome }}</td>
+          <td class="num" data-rotulo="Deste lote">{{ linha.saldo|qtd:lote.produto.unidade }}</td>
+          <td class="num" data-rotulo="Produto sem lote">{{ linha.pendente|qtd:lote.produto.unidade }}</td>
+          <td data-rotulo="Ações"><div class="acoes">
+            {% if user.is_staff or user.is_superuser %}
+              <a class="botao-mini" href="{% url 'estoque:lote_contar' lote.pk linha.local.pk %}">Contar</a>
+              {% if linha.pendente %}<a class="botao-mini" href="{% url 'estoque:lote_identificar' %}?lote={{ lote.pk }}&amp;local={{ linha.local.pk }}">Identificar</a>{% endif %}
+            {% endif %}
+            {% if linha.saldo %}<a class="botao-mini" href="{% url 'estoque:saida' %}?produto={{ lote.produto_id }}&amp;local={{ linha.local.pk }}&amp;lote={{ lote.pk }}&amp;tipo=perda">Registrar perda</a>{% endif %}
+          </div></td>
+        </tr>
+        {% empty %}<tr><td colspan="4">Cadastre um local de estoque.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </section>
+  <section class="cartao respiro">
+    <h2 class="bloco-fim">Histórico do lote</h2>
+    <table class="tabela tabela-cartoes">
+      <thead><tr><th>Quando e quem</th><th>Local</th><th>Operação</th><th class="num">Quantidade</th></tr></thead>
+      <tbody>
+        {% for registro in pagina %}
+        <tr>
+          <td data-rotulo="Quando e quem"><div>{{ registro.criado_em|date:"d/m/Y H:i" }}<small class="camp-sub">{{ registro.criado_por.get_short_name|default:registro.criado_por.username }}</small></div></td>
+          <td data-rotulo="Local">{{ registro.local.nome }}</td>
+          <td data-rotulo="Operação"><div>
+            {% if registro.movimento %}
+              {{ registro.movimento.get_tipo_display }}<small class="camp-sub">{{ registro.movimento.observacao }}</small>
+            {% else %}
+              {% if registro.origem_correcao_id or registro.quantidade < 0 %}Correção de identificação{% else %}Identificação de saldo{% endif %}
+              <small class="camp-sub">{{ registro.motivo }}</small>
+            {% endif %}
+          </div></td>
+          <td class="num" data-rotulo="Quantidade">{{ registro.quantidade|qtd:lote.produto.unidade }}</td>
+        </tr>
+        {% empty %}<tr><td colspan="4">Lote cadastrado. Registre o recebimento ou identifique o saldo existente.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+    {% include "componentes/paginacao.html" with pagina=pagina %}
+  </section>
+</div>
+{% endblock %}

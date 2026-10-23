@@ -1,11 +1,23 @@
 from django.urls import path
 from django.views.generic import RedirectView
 
-from . import views
+from . import views, views_suprimentos
 
 app_name = "estoque"
 
 urlpatterns = [
+    path("compras/", views_suprimentos.compras, name="compras"),
+    path("compras/receber/", views_suprimentos.compra_form, name="compra_receber"),
+    path("produtos/<int:pk>/suprimentos/", views_suprimentos.produto_suprimentos, name="produto_suprimentos"),
+    path("produtos/<int:produto_pk>/embalagens/nova/", views_suprimentos.embalagem_form, name="embalagem_nova"),
+    path("produtos/<int:produto_pk>/embalagens/<int:pk>/", views_suprimentos.embalagem_form, name="embalagem_editar"),
+    path("produtos/<int:pk>/ficha/", views_suprimentos.ficha_form, name="ficha_editar"),
+    path("lotes/", views_suprimentos.lotes, name="lotes"),
+    path("lotes/novo/", views_suprimentos.lote_form, name="lote_novo"),
+    path("lotes/identificar/", views_suprimentos.identificar, name="lote_identificar"),
+    path("lotes/<int:pk>/", views_suprimentos.lote_detalhe, name="lote"),
+    path("lotes/<int:pk>/corrigir/", views_suprimentos.correcao_lote, name="lote_corrigir"),
+    path("lotes/<int:pk>/contar/<int:local_pk>/", views_suprimentos.contagem_lote, name="lote_contar"),
     path("", views.posicao, name="posicao"),
     path("produtos/", views.produtos, name="produtos"),
     path("produtos/novo/", views.produto_form, name="produto_novo"),

@@ -1,0 +1,22 @@
+{% extends "base.html" %}{% load nucleo_extras %}
+{% block titulo %}Ficha técnica · {{ produto.nome }}{% endblock %}
+{% block conteudo %}<div class="eleg"><p class="pagina-eyebrow letreiro">Compras &amp; Estoque</p><h1>Ficha técnica · {{ produto.nome }}</h1><p class="subtitulo">Informe o consumo de cada ingrediente para uma unidade vendida, na unidade base exibida junto ao ingrediente.</p><p class="bloco-fim"><a class="botao-neutro" href="{% url 'estoque:produto_suprimentos' produto.pk %}">Voltar ao produto</a></p>
+<form method="post" class="form-cartao" data-preservar-erros id="ficha-form">{% csrf_token %}{{ formset.management_form }}{{ formset.non_form_errors }}
+<div id="ficha-ingredientes">{% for form in formset %}<div class="cartao respiro bloco-fim" data-ingrediente>{{ form.non_field_errors }}{% for campo in form %}<div class="campo">{{ campo|rotulo }}{{ campo }}{{ campo.errors }}</div>{% endfor %}</div>{% endfor %}</div>
+<div class="acoes"><button type="button" class="botao-neutro" id="ficha-adicionar">Adicionar ingrediente</button><button class="botao-primario">Salvar ficha técnica</button></div></form>
+<template id="ficha-vazia"><div class="cartao respiro bloco-fim" data-ingrediente>{% for campo in formset.empty_form %}<div class="campo">{{ campo|rotulo }}{{ campo }}</div>{% endfor %}</div></template>
+</div><script>
+(() => {
+  const botao = document.getElementById('ficha-adicionar');
+  const total = document.getElementById('id_ingredientes-TOTAL_FORMS');
+  botao.addEventListener('click', () => {
+    const indice = Number(total.value);
+    if (indice >= 100) return;
+    const modelo = document.getElementById('ficha-vazia').innerHTML.replaceAll('__prefix__', String(indice));
+    document.getElementById('ficha-ingredientes').insertAdjacentHTML('beforeend', modelo);
+    total.value = String(indice + 1);
+    botao.disabled = indice + 1 >= 100;
+    document.querySelector('#ficha-ingredientes [data-ingrediente]:last-child select').focus();
+  });
+})();
+</script>{% endblock %}

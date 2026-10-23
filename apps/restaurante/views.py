@@ -13,7 +13,7 @@ from apps.nucleo.models import (
     LocalEstoque,
     Pessoa,
     Produto,
-    saldo,
+    disponibilidade_produtos,
 )
 from apps.nucleo.modulos import Modulo
 from apps.nucleo.paginacao import paginar
@@ -89,9 +89,11 @@ def abrir(request):
 
 def _contexto_comanda(request, comanda):
     local = comanda.local
+    produtos = Produto.objects.filter(ativo=True, preco_venda__gt=0)
+    saldos = disponibilidade_produtos(produtos, local)
     cardapio = [
-        {"id": p.pk, "nome": p.nome, "preco": p.preco_venda, "saldo": saldo(p, local)}
-        for p in Produto.objects.filter(ativo=True, preco_venda__gt=0)
+        {"id": p.pk, "nome": p.nome, "preco": p.preco_venda, "saldo": saldos[p.pk]}
+        for p in produtos
     ]
     contas = []
     if request.user.pode_acessar(Modulo.RESERVAS):

@@ -33,6 +33,10 @@ datadas. Não foram reexecutadas como parte desta revisão de texto.
 | Público | Site, motor de reservas, portal por token, pré-check-in, extrato e solicitações |
 
 Detalhes: [Especificação](ESPECIFICACAO.md) e [Módulos e fluxos](MODULOS_E_FLUXOS.md).
+Complemento operacional de 22/10: recebimento com conversão de embalagens, lotes,
+validade, perdas e fichas técnicas foram incorporados ao estoque. O
+[manual de compras](ESTOQUE_COMPRAS.md) separa as funções do sistema do controle
+auxiliar de solicitação/aprovação e da conferência financeira.
 A estrutura inicial é de 24 quartos, quatro tipos técnicos de pernoite e quatro
 unidades de day use ativas. Os cadastros efetivos da instalação determinam a operação.
 

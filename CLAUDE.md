@@ -229,9 +229,10 @@ ativação/homologação externa; o que entrou depois está no [CHANGELOG](CHANG
   ficha do quarto (`governanca:quarto`, gaveta com HTMX); é para lá que o aviso de
   check-in barrado pela limpeza aponta. Quem só tem a Governança
   entra direto na Minha fila (`APRESENTACAO["url_pessoal"]`, lido pelo dashboard).
-- **Estoque:** telas em cinco abas sobre o motor do núcleo; entrada, saída e
-  transferência com `chave` de envio (idempotência, como a `Venda.chave`), fornecedor
-  na entrada e inventário que aplica só o contado.
+- **Estoque:** recebimento por embalagem, lotes e validade, ficha técnica de pratos
+  e movimentos pelo motor do núcleo. Conversões e baixas ficam congeladas no
+  histórico; devolução usa a origem. Perecíveis têm contagem por lote; o inventário
+  geral cobre produtos comuns. Veja [Compras e perecíveis](docs/ESTOQUE_COMPRAS.md).
 - **Gestão:** relatórios de carteira, pickup, ritmo e distribuição; três relatórios
   de governança; auditoria de pendências, trilha e fechamento; conciliação OFX/cartão.
 - **Comercial/marketing:** funil, cotações, atividades, WhatsApp, e-mail, LPs, campanhas,

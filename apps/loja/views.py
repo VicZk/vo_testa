@@ -12,7 +12,7 @@ from apps.nucleo.models import (
     LocalEstoque,
     Pessoa,
     Produto,
-    saldo,
+    disponibilidade_produtos,
 )
 from apps.nucleo.modulos import Modulo
 from apps.nucleo.paginacao import paginar
@@ -42,12 +42,13 @@ def pdv(request):
         vendaveis = Produto.objects.filter(
             ativo=True, preco_venda__gt=0
         ).select_related("categoria")
+        saldos = disponibilidade_produtos(vendaveis, local)
         for p in vendaveis:
             produtos.append({
                 "id": p.pk, "nome": p.nome,
                 "categoria": p.categoria.nome,
                 "preco": float(p.preco_venda),
-                "saldo": float(saldo(p, local)),
+                "saldo": float(saldos[p.pk]),
                 "unidade": p.get_unidade_display(),
             })
 

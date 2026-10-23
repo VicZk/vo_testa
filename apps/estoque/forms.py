@@ -6,6 +6,7 @@ from django.db.models import Q
 from apps.nucleo.models import (
     CategoriaProduto,
     LocalEstoque,
+    LoteEstoque,
     Pessoa,
     Produto,
 )
@@ -26,6 +27,7 @@ class ProdutoForm(forms.ModelForm):
         fields = [
             "nome", "codigo_barras", "categoria", "unidade", "natureza",
             "preco_venda", "estoque_minimo", "ativo",
+            "controla_validade", "usa_ficha_tecnica",
         ]
         # custo_medio é calculado pelo motor — nunca editado à mão.
 
@@ -86,6 +88,10 @@ class _ProdutoLocalBase(forms.Form):
         super().__init__(*args, **kwargs)
         self.fields["produto"].queryset = Produto.objects.filter(ativo=True)
         self.fields["local"].queryset = LocalEstoque.objects.filter(ativo=True)
+        self.fields["lote"].queryset = LoteEstoque.objects.select_related("produto")
+        produto_id = self.data.get("produto") or self.initial.get("produto")
+        if produto_id and str(produto_id).isascii() and str(produto_id).isdigit() and len(str(produto_id)) <= 18:
+            self.fields["lote"].queryset = self.fields["lote"].queryset.filter(produto_id=produto_id)
 
     produto = forms.ModelChoiceField(
         label="Produto", queryset=Produto.objects.none(), widget=CAMPO_COMBO
@@ -95,8 +101,17 @@ class _ProdutoLocalBase(forms.Form):
         widget=forms.RadioSelect, empty_label=None,
     )
     quantidade = forms.DecimalField(
-        label="Quantidade", min_value=Decimal("0.001"), decimal_places=3
+        label="Quantidade", min_value=Decimal("0.001"), max_digits=12, decimal_places=3
     )
+    lote = forms.ModelChoiceField(label="Lote", queryset=LoteEstoque.objects.none(), required=False,
+                                  help_text="Obrigatório para entrada de perecível. Na saída, deixe vazio para usar primeiro o lote que vence antes.")
+
+    def clean_lote(self):
+        lote = self.cleaned_data.get("lote")
+        produto = self.cleaned_data.get("produto")
+        if lote and produto and lote.produto_id != produto.pk:
+            raise forms.ValidationError("Escolha um lote deste produto.")
+        return lote
 
 
 class EntradaForm(_ComChave, _ProdutoLocalBase):
@@ -105,15 +120,15 @@ class EntradaForm(_ComChave, _ProdutoLocalBase):
         widget=forms.RadioSelect, empty_label=None,
     )
     custo_unitario = forms.DecimalField(
-        label="Custo unitário (R$)", min_value=Decimal("0"), decimal_places=4,
+        label="Custo unitário (R$)", min_value=Decimal("0"), max_digits=12, decimal_places=4,
         help_text="Valor pago por unidade, usado para calcular o custo médio.",
     )
     fornecedor = forms.ModelChoiceField(
         label="Fornecedor", queryset=Pessoa.objects.none(), required=False,
         widget=CAMPO_COMBO, help_text="Fornecedor da mercadoria (opcional).",
     )
-    documento = forms.CharField(label="Documento (NF)", required=False)
-    observacao = forms.CharField(label="Observação", required=False)
+    documento = forms.CharField(label="Documento (NF)", max_length=80, required=False)
+    observacao = forms.CharField(label="Observação", max_length=200, required=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -134,7 +149,7 @@ class SaidaForm(_ComChave, _ProdutoLocalBase):
         label="Motivo da saída", choices=TIPOS, widget=forms.RadioSelect,
         initial="consumo_interno",
     )
-    observacao = forms.CharField(label="Observação", required=False)
+    observacao = forms.CharField(label="Observação", max_length=200, required=False)
 
 
 class TransferenciaForm(_ComChave):
@@ -150,9 +165,9 @@ class TransferenciaForm(_ComChave):
         widget=forms.RadioSelect, empty_label=None,
     )
     quantidade = forms.DecimalField(
-        label="Quantidade", min_value=Decimal("0.001"), decimal_places=3
+        label="Quantidade", min_value=Decimal("0.001"), max_digits=12, decimal_places=3
     )
-    observacao = forms.CharField(label="Observação", required=False)
+    observacao = forms.CharField(label="Observação", max_length=200, required=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -171,16 +186,21 @@ class TransferenciaForm(_ComChave):
 
 
 class AjusteForm(_ProdutoLocalBase):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields.pop("lote")
+
     local = forms.ModelChoiceField(
         label="Local conferido", queryset=LocalEstoque.objects.none(),
         widget=forms.RadioSelect, empty_label=None,
     )
     quantidade = forms.DecimalField(
         label="Saldo correto (contado na prateleira)",
-        min_value=Decimal("0"), decimal_places=3,
+        min_value=Decimal("0"), max_digits=12, decimal_places=3,
     )
     motivo = forms.CharField(
         label="Motivo do ajuste",
+        max_length=200,
         help_text="Explique o motivo da diferença. A justificativa fica no histórico de auditoria.",
     )
 
