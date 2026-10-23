@@ -56,6 +56,18 @@ class AuditoriaComponentesE2ETests(_BaseE2E):
         recolhida = self.page.locator(".app").evaluate("el => el.classList.contains('recolhida')")
         if largura > 820 and recolhida != trilho:
             self.page.locator(".sidebar-toggle").click()
+        if largura > 820:
+            # Reduced motion ainda usa uma transição de 1 ms. A classe muda
+            # antes da grade; compare telas apenas no modo efetivamente pedido.
+            self.page.wait_for_function("""trilho => {
+                const app = document.querySelector('.app');
+                const estilo = getComputedStyle(app);
+                const alvo = parseFloat(estilo.getPropertyValue(
+                    trilho ? '--trilho-w' : '--sidebar-w-aberta'));
+                return app.classList.contains('recolhida') === trilho &&
+                    Math.abs(parseFloat(estilo.gridTemplateColumns) - alvo) < .1 &&
+                    Math.abs(document.querySelector('.sidebar').getBoundingClientRect().width - alvo) < .1;
+            }""", arg=trilho)
         self.assertLessEqual(self.page.evaluate("document.documentElement.scrollWidth"), largura + 1)
 
     def _foto(self, nome, *, pagina_inteira=True):
@@ -165,16 +177,25 @@ class AuditoriaComponentesE2ETests(_BaseE2E):
                         self._foto(f"abas-estoque-{largura}-{'trilho' if trilho else 'aberta'}")
 
     def test_titulos_dos_formularios_mantem_eixo_da_listagem(self):
+        def medir_eixos():
+            return self.page.locator("#conteudo").evaluate("""conteudo => ({
+                titulo: conteudo.querySelector('h1').getBoundingClientRect().x,
+                formulario: conteudo.querySelector('.form-cartao')?.getBoundingClientRect().x,
+                trilho: document.querySelector('.app').classList.contains('recolhida'),
+            })""")
+
         for largura, trilho in ((821, False), (1440, False), (1440, True), (2560, False)):
             with self.subTest(largura=largura, trilho=trilho):
                 self._abrir("pessoas", largura=largura, trilho=trilho)
-                eixo = self.page.locator("#conteudo h1").bounding_box()["x"]
+                eixo = medir_eixos()["titulo"]
                 for rota in ("pessoa_nova", "caixa", "governanca:configuracao"):
-                    self._abrir(rota, largura=largura, trilho=trilho)
-                    self.assertAlmostEqual(self.page.locator("#conteudo h1").bounding_box()["x"], eixo, delta=1)
-                    formulario = self.page.locator("#conteudo .form-cartao").first
-                    if formulario.count():
-                        self.assertAlmostEqual(formulario.bounding_box()["x"], eixo, delta=1)
+                    with self.subTest(rota=rota):
+                        self._abrir(rota, largura=largura, trilho=trilho)
+                        medidas = medir_eixos()
+                        self.assertEqual(medidas["trilho"], trilho)
+                        self.assertAlmostEqual(medidas["titulo"], eixo, delta=1)
+                        if medidas.get("formulario") is not None:
+                            self.assertAlmostEqual(medidas["formulario"], eixo, delta=1)
 
     def test_quadro_de_compras_e_lotes_nao_oculta_os_valores_em_cartoes(self):
         for rota in ("estoque:compras", "estoque:lotes"):

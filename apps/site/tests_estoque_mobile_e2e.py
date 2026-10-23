@@ -1,6 +1,7 @@
 """Posição de estoque no navegador: leitura, filtros e ações em telas estreitas."""
 
 import os
+import time
 import unittest
 from decimal import Decimal
 from pathlib import Path
@@ -84,9 +85,14 @@ class EstoqueMobileE2ETests(_BaseE2E):
 
     def esperar_layout(self):
         self.page.wait_for_load_state("load")
-        # RAF fica suspenso no contexto sem JavaScript. A fonte e o layout real
-        # bastam para estas medidas; a espera precisa ter um limite de falha.
-        self.page.wait_for_function("document.fonts.status === 'loaded'", polling=100, timeout=10000)
+        # Sem JavaScript, o Chromium suspende tanto RAF quanto os timers usados
+        # por wait_for_function. Consultar pelo processo de teste mantém a
+        # exigência da fonte carregada, mesmo se ela chegar depois da 1ª leitura.
+        limite = time.monotonic() + 10
+        while self.page.evaluate("document.fonts.status") != "loaded":
+            if time.monotonic() >= limite:
+                self.fail("As fontes não carregaram em 10 segundos.")
+            time.sleep(0.05)
 
     def foto(self, nome):
         destino = os.environ.get("EVIDENCIAS_DIR") or os.environ.get("E2E_EVIDENCIAS")
