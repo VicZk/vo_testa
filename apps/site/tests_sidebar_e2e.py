@@ -56,6 +56,7 @@ class SidebarOperacaoE2ETests(_BaseE2E):
         })
 
     def _esperar_layout(self):
+        self.page.wait_for_load_state("load")
         self.page.evaluate("""async () => {
           await document.fonts.ready;
           const app = document.querySelector('.app'), sidebar = document.querySelector('.sidebar');
