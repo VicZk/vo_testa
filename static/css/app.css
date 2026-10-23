@@ -686,6 +686,7 @@ a:hover { color: var(--lampiao-tinta); }
 .nav-item-dividido:has(a:hover) { color: var(--pergaminho); background: color-mix(in srgb, var(--pergaminho) 5%, transparent); }
 .nav-item-principal:focus-visible { outline: 2px solid var(--lampiao); outline-offset: -2px; border-radius: var(--raio-p); }
 .nav-badge-link { text-decoration: none; }
+.nav-badge-link:hover { color: #fff; }
 .nav-badge-link:focus-visible { outline: 2px solid var(--lampiao-claro); outline-offset: 2px; }
 .central-pendencias .quadro table.pendencias-lista { min-width: 0; }
 .pendencias-cabecalho { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; margin-block: 1rem; }

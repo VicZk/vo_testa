@@ -58,12 +58,54 @@ class PendenciasOperacionaisE2ETests(_BaseE2E):
         expect(self.page.get_by_role("heading", name="Pendências", exact=True)).to_be_visible()
         expect(self.page.locator("[data-pendencia-id]")).to_have_count(3)
 
-    def _foto(self, nome):
+    def _foto(self, nome, pagina=None):
         destino = os.environ.get("EVIDENCIAS_DIR") or os.environ.get("E2E_EVIDENCIAS")
         if destino:
             pasta = Path(destino)
             pasta.mkdir(parents=True, exist_ok=True)
-            self.page.screenshot(path=str(pasta / f"pendencias-{nome}.png"), full_page=True)
+            (pagina or self.page).screenshot(path=str(pasta / f"pendencias-{nome}.png"), full_page=True)
+
+    def _conferir_contraste_badge(self, pagina, contexto):
+        badge = pagina.locator("[data-governanca-avisos]")
+        pagina.mouse.move(0, 0)
+        badge.evaluate("el => el.blur()")
+        for estado in ("normal", "hover", "foco"):
+            with self.subTest(contexto=contexto, estado=estado):
+                if estado == "hover":
+                    badge.hover()
+                    self.assertTrue(badge.evaluate("el => el.matches(':hover')"))
+                elif estado == "foco":
+                    pagina.mouse.move(0, 0)
+                    pagina.locator(".nav-item-principal").focus()
+                    pagina.keyboard.press("Tab")
+                    expect(badge).to_be_focused()
+                    self.assertTrue(badge.evaluate("el => el.matches(':focus-visible')"))
+                # No toque o fundo verde está no número, dentro do alvo de 44px;
+                # no desktop ele está no link. Medir o fundo pintado em ambos.
+                cores = badge.locator(".nav-badge-numero").evaluate("""numero => {
+                  const rgba = cor => cor.match(/[\\d.]+/g).map(Number);
+                  let fundo = numero, canais;
+                  do {
+                    canais = rgba(getComputedStyle(fundo).backgroundColor);
+                    if (canais.length === 3 || canais[3] > 0) break;
+                    fundo = fundo.parentElement;
+                  } while (fundo);
+                  return {texto: rgba(getComputedStyle(numero).color), fundo: canais};
+                }""")
+                for canais in cores.values():
+                    self.assertEqual(canais[3] if len(canais) == 4 else 1, 1, cores)
+
+                def luminancia(canais):
+                    srgb = [canal / 255 for canal in canais[:3]]
+                    linear = [canal / 12.92 if canal <= .04045 else ((canal + .055) / 1.055) ** 2.4
+                              for canal in srgb]
+                    return sum(canal * peso for canal, peso in zip(linear, (.2126, .7152, .0722)))
+
+                luminancias = [luminancia(canais) for canais in cores.values()]
+                contraste = (max(luminancias) + .05) / (min(luminancias) + .05)
+                self.assertGreaterEqual(contraste, 4.5, f"{contexto}/{estado}: {contraste:.2f}:1, {cores}")
+                if estado == "hover":
+                    self._foto(f"badge-{contexto}-hover", pagina)
 
     def _conferir_atualizacoes(self, badge, central, pendentes):
         # Cada endpoint tem seu próprio fetch. Esperar o corpo completo também
@@ -148,6 +190,7 @@ class PendenciasOperacionaisE2ETests(_BaseE2E):
     def test_layout_da_central_e_acesso_por_toque_em_quatro_larguras(self):
         self._abrir_central()
         p = self.page
+        self._conferir_contraste_badge(p, "desktop")
         for largura in (320, 390, 821, 1440):
             with self.subTest(largura=largura):
                 p.set_viewport_size({"width": largura, "height": 900})
@@ -181,6 +224,7 @@ class PendenciasOperacionaisE2ETests(_BaseE2E):
             self.assertGreaterEqual(medidas["width"], 44)
             self.assertGreaterEqual(medidas["height"], 44)
             self.assertTrue(medidas["acertou"])
+            self._conferir_contraste_badge(toque, "toque")
             badge.click()
             expect(toque.get_by_role("heading", name="Pendências", exact=True)).to_be_visible()
             expect(toque.locator("[data-pendencia-id]")).to_have_count(3)
