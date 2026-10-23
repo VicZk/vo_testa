@@ -11,4 +11,6 @@ urlpatterns = [
     path("<int:pk>/iniciar/", views.iniciar, name="iniciar"),
     path("<int:pk>/concluir/", views.concluir, name="concluir"),
     path("<int:pk>/cancelar/", views.cancelar, name="cancelar"),
+    path("<int:pk>/documentos/adicionar/", views.anexar_documento, name="anexar_documento"),
+    path("<int:pk>/documentos/<int:documento_id>/", views.documento, name="documento"),
 ]

@@ -33,8 +33,18 @@ def _hora(txt):
 
 
 def _funcionarios(setor=None):
-    qs = Funcionario.objects.select_related("pessoa").order_by("pessoa__nome")
+    qs = Funcionario.objects.filter(pessoa__ativo=True).select_related("pessoa").order_by("pessoa__nome")
     return qs
+
+
+def _selecionado(modelo, valor, rotulo):
+    try:
+        chave = int(valor)
+        if not 0 < chave <= 9223372036854775807:
+            raise ValueError()
+        return modelo.objects.get(pk=chave)
+    except (TypeError, ValueError, modelo.DoesNotExist) as erro:
+        raise ValidationError(f"Selecione {rotulo} da lista. Atualize a página se o cadastro mudou.") from erro
 
 
 def _contexto_grade(inicio, setor):
@@ -100,12 +110,12 @@ def escala_editar(request):
     data = _data(request.POST.get("data"))
     try:
         if acao in ("add", "mover"):
-            turno = get_object_or_404(Turno, pk=request.POST.get("turno"))
+            turno = _selecionado(Turno, request.POST.get("turno"), "um turno")
             if acao == "add":
-                func = get_object_or_404(Funcionario, pk=request.POST.get("funcionario"))
+                func = _selecionado(Funcionario, request.POST.get("funcionario"), "um funcionário")
                 atrib = None
             else:
-                atrib = get_object_or_404(Atribuicao, pk=request.POST.get("atribuicao"))
+                atrib = _selecionado(Atribuicao, request.POST.get("atribuicao"), "uma atribuição")
                 func = atrib.funcionario
             # Interjornada <11h é risco legal: barra o drop e pede confirmação.
             if not forcar and services.conflito_interjornada(
@@ -124,20 +134,22 @@ def escala_editar(request):
                 registrar_auditoria(request.user, "escala_forcar_interjornada",
                                     func, {"turno": str(turno), "data": str(data)})
         elif acao == "remover":
-            atrib = get_object_or_404(Atribuicao, pk=request.POST.get("atribuicao"))
+            atrib = _selecionado(Atribuicao, request.POST.get("atribuicao"), "uma atribuição")
             services.desatribuir(atrib)
         elif acao == "he_add":
-            func = get_object_or_404(Funcionario, pk=request.POST.get("funcionario"))
+            func = _selecionado(Funcionario, request.POST.get("funcionario"), "um funcionário")
             services.adicionar_hora_extra(
                 func, data, _hora(request.POST.get("he_inicio")), _hora(request.POST.get("he_fim")),
                 request.POST.get("tipo"), request.user,
             )
         elif acao == "he_remover":
-            he = get_object_or_404(HoraExtra, pk=request.POST.get("hora_extra"))
+            he = _selecionado(HoraExtra, request.POST.get("hora_extra"), "uma hora extra")
             services.remover_hora_extra(he)
         elif acao == "feriado_comp":
-            atrib = get_object_or_404(Atribuicao, pk=request.POST.get("atribuicao"))
+            atrib = _selecionado(Atribuicao, request.POST.get("atribuicao"), "uma atribuição")
             services.definir_compensacao_feriado(atrib, request.POST.get("valor"))
+        else:
+            raise ValidationError("Ação de edição desconhecida. Atualize a escala e tente novamente.")
     except ValidationError as erro:
         return JsonResponse({"erro": " ".join(erro.messages)}, status=400)
     return render(request, "escala/partials/grade_conteudo.html", _contexto_grade(inicio, setor))
@@ -156,7 +168,11 @@ def relatorio_colaborador(request):
     inicio, fim, rotulo = periodos.periodo(request)
     funcs = Funcionario.objects.select_related("pessoa").order_by("pessoa__nome")
     fid = request.GET.get("funcionario")
-    func = (funcs.filter(pk=fid).first() if fid else funcs.first())
+    try:
+        func = _selecionado(Funcionario, fid, "um funcionário") if fid else funcs.first()
+    except ValidationError as erro:
+        func = None
+        messages.error(request, " ".join(erro.messages))
     dados = services.relatorio_colaborador(func, inicio, fim) if func else None
 
     if request.GET.get("export") == "csv" and dados:
@@ -196,14 +212,20 @@ def relatorio_colaborador(request):
 @requer_gerencia
 @require_POST
 def publicar(request):
-    inicio = services.inicio_da_semana(_data(request.POST.get("inicio")))
+    inicio = None
     setor = request.POST.get("setor") or None
     try:
+        data = _data(request.POST.get("inicio"))
+        if data is None:
+            raise ValidationError("Informe uma semana válida antes de publicar.")
+        inicio = services.inicio_da_semana(data)
         services.publicar_semana(inicio, setor, request.user,
                                  request.POST.get("justificativa", ""))
         messages.success(request, "Escala da semana publicada.")
     except ValidationError as erro:
         messages.error(request, " ".join(erro.messages))
+    if inicio is None:
+        return redirect("escala:grade")
     destino = f"{reverse('escala:grade')}?inicio={inicio:%Y-%m-%d}"
     if setor:
         destino += f"&setor={setor}"
@@ -214,11 +236,20 @@ def publicar(request):
 @requer_gerencia
 def gerar_semana(request):
     """Gera a escala da semana automaticamente (gestão) e mostra o resultado."""
-    inicio = services.inicio_da_semana(_data(request.POST.get("semana")))
+    inicio = None
     setor = request.POST.get("setor") or None
     if request.method == "POST":
-        n = services.gerar_semana(inicio, request.user, setor)
-        messages.success(request, f"Escala gerada: {n} atribuições. Ajuste o que precisar.")
+        try:
+            data = _data(request.POST.get("semana"))
+            if data is None:
+                raise ValidationError("Informe uma semana válida antes de gerar a escala.")
+            inicio = services.inicio_da_semana(data)
+            n = services.gerar_semana(inicio, request.user, setor)
+            messages.success(request, f"Escala gerada: {n} atribuições. Ajuste o que precisar.")
+        except ValidationError as erro:
+            messages.error(request, " ".join(erro.messages))
+    if inicio is None:
+        return redirect("escala:grade")
     destino = f"{reverse('escala:grade')}?inicio={inicio:%Y-%m-%d}"
     if setor:
         destino += f"&setor={setor}"
@@ -228,10 +259,10 @@ def gerar_semana(request):
 @requer_modulo(Modulo.ESCALA)
 def atribuir(request):
     if request.method == "POST":
-        turno = get_object_or_404(Turno, pk=request.POST.get("turno"))
-        func = get_object_or_404(Funcionario, pk=request.POST.get("funcionario"))
-        data = _data(request.POST.get("data"))
         try:
+            turno = _selecionado(Turno, request.POST.get("turno"), "um turno")
+            func = _selecionado(Funcionario, request.POST.get("funcionario"), "um funcionário")
+            data = _data(request.POST.get("data"))
             services.atribuir(turno, func, data, request.user)
             messages.success(request, f"{func.pessoa.nome} escalado(a).")
         except ValidationError as erro:
@@ -308,8 +339,8 @@ def turnos(request):
 @requer_modulo(Modulo.ESCALA)
 def ausencias(request):
     if request.method == "POST":
-        func = get_object_or_404(Funcionario, pk=request.POST.get("funcionario"))
         try:
+            func = _selecionado(Funcionario, request.POST.get("funcionario"), "um funcionário")
             services.registrar_ausencia(
                 func, request.POST.get("tipo") or "folga",
                 _data(request.POST.get("inicio")), _data(request.POST.get("fim")),
@@ -331,9 +362,9 @@ def ausencias(request):
 @requer_modulo(Modulo.ESCALA)
 def trocas(request):
     if request.method == "POST":
-        atrib = get_object_or_404(Atribuicao, pk=request.POST.get("atribuicao"))
-        substituto = get_object_or_404(Funcionario, pk=request.POST.get("substituto"))
         try:
+            atrib = _selecionado(Atribuicao, request.POST.get("atribuicao"), "uma atribuição")
+            substituto = _selecionado(Funcionario, request.POST.get("substituto"), "um substituto")
             services.solicitar_troca(atrib, substituto, request.POST.get("motivo", ""))
             messages.success(request, "Troca solicitada. Aguarde a aprovação.")
         except ValidationError as erro:
@@ -358,7 +389,10 @@ def decidir_troca(request, pk):
     troca = get_object_or_404(TrocaTurno, pk=pk)
     if request.method == "POST":
         try:
-            services.decidir_troca(troca, request.user, request.POST.get("acao") == "aprovar")
+            acao = request.POST.get("acao")
+            if acao not in ("aprovar", "recusar"):
+                raise ValidationError("Escolha aprovar ou recusar esta troca.")
+            services.decidir_troca(troca, request.user, acao == "aprovar")
             messages.success(request, "Troca decidida.")
         except ValidationError as erro:
             messages.error(request, " ".join(erro.messages))

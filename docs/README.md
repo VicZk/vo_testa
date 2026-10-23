@@ -1,6 +1,6 @@
 # Documentação do projeto
 
-**Revisada em 21/10/2026.** Este índice cobre os arquivos Markdown do repositório e
+**Revisada em 23/10/2026.** Este índice cobre os arquivos Markdown do repositório e
 identifica o papel dos materiais complementares. Para entender o sistema, comece
 pelo [README principal](../README.md) e pelo [Estado atual](ESTADO_ATUAL.md).
 
@@ -19,6 +19,7 @@ original. Uma checklist marcada ou um teste antigo não comprova o ambiente atua
 | [Convenções de desenvolvimento](../CLAUDE.md) | Regras de código, UI e publicação |
 | [Changelog](../CHANGELOG.md) | Histórico de entregas; evidências pertencem à versão registrada |
 | [Revisão de usabilidade de 22/10](REVISAO_USABILIDADE_2026-10-22.md) | Revisão em andamento, cobertura por fluxo e evidências das entregas |
+| [Revisão de interface e uso de 23/10](REVISAO_USABILIDADE_2026-10-23.md) | Matriz de 37 telas, navegação, fluxos com falhas induzidas e documentos de manutenção |
 | [Checklist de ativação](Checklist_CRM_100.md) | Verificações da instalação, integrações e operação |
 | [Ideias](IMPLEMENTAR_Ideias.md) | Backlog; não representa funcionalidade concluída |
 | [Comparação com OCA/vertical-hotel](REFERENCIA_OCA_HOTEL.md) | Leitura de código em 22/10: cobertura existente, lacunas e propostas |

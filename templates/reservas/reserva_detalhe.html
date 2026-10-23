@@ -2,7 +2,7 @@
 {% load moeda nucleo_extras %}
 
 {% block titulo %}Reserva #{{ reserva.pk }} | CRM Vô Testa{% endblock %}
-{% block conteudo_classe %}tela-reservas{% endblock %}
+{% block conteudo_classe %}tela-reservas reserva-detalhe{% endblock %}
 
 {% block conteudo %}
 <a href="#" class="voltar" onclick="history.back(); return false;">
@@ -17,9 +17,9 @@
 pontos-médios, que quebrava no meio do valor ("diária R$ / 360,00"). Agora é
 uma ficha: cada dado com o seu rótulo, lido de relance.{% endcomment %}
 <dl class="ficha-reserva">
-  <div><dt>Quarto</dt><dd>{{ reserva.uh }}</dd></div>
-  <div><dt>Período</dt><dd>{{ reserva.checkin|date:"d/m/Y" }} → {{ reserva.checkout|date:"d/m/Y" }}
+  <div class="ficha-reserva-periodo"><dt>Período</dt><dd>{{ reserva.checkin|date:"d/m/Y" }} → {{ reserva.checkout|date:"d/m/Y" }}
     <small>{{ reserva.noites }} noite{{ reserva.noites|pluralize }}</small></dd></div>
+  <div><dt>Quarto</dt><dd>{{ reserva.uh }}</dd></div>
   <div><dt>Hóspedes</dt><dd>{{ reserva.adultos }} adulto{{ reserva.adultos|pluralize }}{% if reserva.criancas %} + {{ reserva.criancas }} criança{{ reserva.criancas|pluralize }}{% endif %}</dd></div>
   <div><dt>Diária</dt><dd class="num-ficha">{{ reserva.valor_diaria|intcomma_brl }}</dd></div>
   <div><dt>Canal</dt><dd>{{ reserva.get_canal_display }}</dd></div>
@@ -32,17 +32,8 @@ uma ficha: cada dado com o seu rótulo, lido de relance.{% endcomment %}
   <div class="mensagem error"><strong>Cancelada:</strong> {{ reserva.motivo_cancelamento }}</div>
 {% endif %}
 
-{% comment %}AÇÕES DA RESERVA — uma barra só, logo abaixo da ficha.
-Antes: "Trocar de quarto" e "Estender a estadia" eram `<details>` de 13px perdidos
-no meio da página (pedido do dono: "meio perdido, meio invisível no meio"), e os
-formulários de sinal/transferir/cancelar ficavam permanentemente abertos, estreitos
-e soltos numa grade de três colunas. Agora: o que fazer AGORA em botão sólido, as
-alterações em botões neutros, o destrutivo separado à direita — e o formulário de
-cada um abre num painel largo embaixo da barra, um por vez.
-Nada de view nova: são os mesmos POSTs, só reorganizados. Sem JS (Alpine fora do
-ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
-<section class="acoes-reserva-bloco" x-data="{ acao: '' }"
-         @keydown.escape.window="acao = ''">
+{# Ações operacionais, alterações e exceções têm grupos estáveis em todas as larguras. #}
+<section id="acoes-estadia" class="acoes-reserva-bloco" data-reserva-acoes aria-label="Ações da reserva">
   {% if aviso_checkin %}
     {% comment %}O impedimento vem com o caminho para resolvê-lo (ver a view): a
     ficha da FNRH ficava no fim da página, e o erro só aparecia depois do clique.{% endcomment %}
@@ -60,83 +51,82 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
   {% endif %}
 
   <div class="acoes-reserva-barra">
-    {% if conta %}
-      <a href="{% url 'reservas:extrato' reserva.pk %}" class="botao-neutro" target="_blank" rel="noopener">Conferir e imprimir conta</a>
-    {% endif %}
-    {# ── O que fazer agora (um por estado) ───────────────────────────────── #}
-    {% if reserva.status == "orcamento" or reserva.status == "pre_reserva" %}
-      <form method="post" action="{% url 'reservas:confirmar' reserva.pk %}">
-        {% csrf_token %}<button type="submit" class="botao-primario">Confirmar reserva</button>
-      </form>
-    {% endif %}
-    {% if reserva.status == "confirmada" or reserva.status == "pre_reserva" %}
-      <form method="post" action="{% url 'reservas:checkin' reserva.pk %}">
-        {% csrf_token %}<button type="submit" class="botao-primario"{% if aviso_checkin %} disabled title="{{ aviso_checkin.texto }}"{% endif %}>Fazer entrada (check-in)</button>
-      </form>
-    {% endif %}
-    {% if reserva.status == "hospedada" %}
-      <form method="post" action="{% url 'reservas:checkout' reserva.pk %}"
-            onsubmit="return confirm('Concluir a saída (check-out)? A conta precisa estar zerada.')">
-        {% csrf_token %}<button type="submit" class="botao-primario"{% if pendencias_consumo %} disabled title="Resolva os consumos pendentes antes da saída"{% endif %}>Fazer saída (check-out)</button>
-      </form>
-    {% endif %}
-
-    {# ── Alterar a reserva (abre o painel embaixo) ───────────────────────── #}
-    {% if reserva.status == "orcamento" or reserva.status == "pre_reserva" or reserva.status == "confirmada" %}
-      <button type="button" class="botao-neutro" aria-controls="acao-sinal"
-              :aria-expanded="acao === 'sinal'" :class="acao === 'sinal' && 'acao-ligada'"
-              @click="acao = acao === 'sinal' ? '' : 'sinal'">Receber sinal</button>
-      <button type="button" class="botao-neutro" aria-controls="acao-lotacao"
-              :aria-expanded="acao === 'lotacao'" :class="acao === 'lotacao' && 'acao-ligada'"
-              @click="acao = acao === 'lotacao' ? '' : 'lotacao'">Alterar lotação</button>
-      <button type="button" class="botao-neutro" aria-controls="acao-datas"
-              :aria-expanded="acao === 'datas'" :class="acao === 'datas' && 'acao-ligada'"
-              @click="acao = acao === 'datas' ? '' : 'datas'">Transferir datas</button>
-    {% endif %}
-    {% if reserva.status == "hospedada" %}
-      <button type="button" class="botao-neutro" aria-controls="acao-estender"
-              :aria-expanded="acao === 'estender'" :class="acao === 'estender' && 'acao-ligada'"
-              @click="acao = acao === 'estender' ? '' : 'estender'">Estender estadia</button>
-    {% endif %}
-    {% if reserva.ativa %}
-      <button type="button" class="botao-neutro" aria-controls="acao-trocar"
-              :aria-expanded="acao === 'trocar'" :class="acao === 'trocar' && 'acao-ligada'"
-              @click="acao = acao === 'trocar' ? '' : 'trocar'">Trocar de quarto</button>
-    {% endif %}
-    {% if reserva.status == "hospedada" and 'appsite'|modulo_ativo %}
-      <a href="{% url 'portal:qr' reserva.pk %}" class="botao-neutro">QR do hóspede</a>
-    {% endif %}
-    {% if 'fiscal'|modulo_ativo and reserva.conta %}
-      <a href="{% url 'fiscal:preparar_conta' reserva.conta.pk %}" class="botao-neutro">Preparar NFS-e</a>
+    {% if reserva.status == "orcamento" or reserva.status == "pre_reserva" or reserva.status == "confirmada" or reserva.status == "hospedada" or conta %}
+    <div class="acoes-reserva-principais" role="group" aria-label="Próximo passo da estadia">
+      {% if reserva.status == "orcamento" or reserva.status == "pre_reserva" %}
+        <form method="post" action="{% url 'reservas:confirmar' reserva.pk %}">
+          {% csrf_token %}<button type="submit" class="{% if reserva.status == 'orcamento' %}botao-primario{% else %}botao-neutro{% endif %}">Confirmar reserva</button>
+        </form>
+      {% endif %}
+      {% if reserva.status == "confirmada" or reserva.status == "pre_reserva" %}
+        <form method="post" action="{% url 'reservas:checkin' reserva.pk %}">
+          {% csrf_token %}<button type="submit" class="botao-primario"{% if aviso_checkin %} disabled title="{{ aviso_checkin.texto }}"{% endif %}>Fazer entrada (check-in)</button>
+        </form>
+      {% endif %}
+      {% if reserva.status == "hospedada" %}
+        <form method="post" action="{% url 'reservas:checkout' reserva.pk %}"
+              onsubmit="return confirm('Concluir a saída (check-out)? A conta precisa estar zerada.')">
+          {% csrf_token %}<button type="submit" class="botao-primario"{% if pendencias_consumo %} disabled title="Resolva os consumos pendentes antes da saída"{% endif %}>Fazer saída (check-out)</button>
+        </form>
+      {% endif %}
+      {% if conta %}
+        <a href="{% url 'reservas:extrato' reserva.pk %}" class="botao-neutro" target="_blank" rel="noopener">Conferir e imprimir conta</a>
+      {% endif %}
+    </div>
     {% endif %}
 
-    {# ── Risco: separado do resto, no fim da barra ───────────────────────── #}
-    {% if reserva.status == "confirmada" or reserva.status == "orcamento" or reserva.status == "pre_reserva" or reserva.status == "no_show" %}
-      <span class="acoes-reserva-risco">
-        {% if reserva.status == "confirmada" %}
-          <form method="post" action="{% url 'reservas:no_show' reserva.pk %}"
-                onsubmit="return confirm('Registrar não comparecimento (no-show)?')">
-            {% csrf_token %}<button type="submit" class="botao-neutro">Não compareceu</button>
-          </form>
-        {% endif %}
-        {% if reserva.status == "no_show" and pode_desfazer_no_show %}
-          <button type="button" class="botao-neutro" aria-controls="acao-desfazer"
-                  :aria-expanded="acao === 'desfazer'" :class="acao === 'desfazer' && 'acao-ligada'"
-                  @click="acao = acao === 'desfazer' ? '' : 'desfazer'">Desfazer não comparecimento</button>
-        {% endif %}
+    {% if reserva.ativa or reserva.status == "orcamento" %}
+    <div class="acoes-reserva-secundarias" role="group" aria-labelledby="reserva-alteracoes-titulo">
+      <h2 id="reserva-alteracoes-titulo" class="acoes-reserva-rotulo">Ações da reserva</h2>
+      <div class="acoes-reserva-grade">
         {% if reserva.status == "orcamento" or reserva.status == "pre_reserva" or reserva.status == "confirmada" %}
-          <button type="button" class="botao-perigo" aria-controls="acao-cancelar"
-                  :aria-expanded="acao === 'cancelar'" :class="acao === 'cancelar' && 'acao-ligada'"
-                  @click="acao = acao === 'cancelar' ? '' : 'cancelar'">Cancelar reserva</button>
+          <button type="button" class="botao-neutro" aria-controls="acao-sinal" data-acao="sinal" hidden>Receber sinal</button>
+          <button type="button" class="botao-neutro" aria-controls="acao-lotacao" data-acao="lotacao" hidden>Alterar lotação</button>
+          <button type="button" class="botao-neutro" aria-controls="acao-datas" data-acao="datas" hidden>Transferir datas</button>
         {% endif %}
-      </span>
+        {% if reserva.status == "hospedada" %}
+          <button type="button" class="botao-neutro" aria-controls="acao-estender" data-acao="estender" hidden>Estender estadia</button>
+        {% endif %}
+        {% if reserva.ativa %}
+          <button type="button" class="botao-neutro" aria-controls="acao-trocar" data-acao="trocar" hidden>Trocar de quarto</button>
+        {% endif %}
+        {% if reserva.status == "hospedada" and 'appsite'|modulo_ativo %}
+          <a href="{% url 'portal:qr' reserva.pk %}" class="botao-neutro">QR do hóspede</a>
+        {% endif %}
+        {% if 'fiscal'|modulo_ativo and reserva.conta %}
+          <a href="{% url 'fiscal:preparar_conta' reserva.conta.pk %}" class="botao-neutro">Preparar NFS-e</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+    {% if not reserva.ativa and reserva.status != "orcamento" and 'fiscal'|modulo_ativo and reserva.conta %}
+      <a href="{% url 'fiscal:preparar_conta' reserva.conta.pk %}" class="botao-neutro reserva-acao-fiscal">Preparar NFS-e</a>
+    {% endif %}
+
+    {% if reserva.status == "confirmada" or reserva.status == "orcamento" or reserva.status == "pre_reserva" %}
+      <details class="acoes-reserva-risco">
+        <summary>Cancelamento{% if reserva.status == "confirmada" %} e não comparecimento{% endif %}</summary>
+        <div class="acoes-reserva-grade">
+          {% if reserva.status == "confirmada" %}
+            <form method="post" action="{% url 'reservas:no_show' reserva.pk %}"
+                  onsubmit="return confirm('Registrar não comparecimento (no-show)?')">
+              {% csrf_token %}<button type="submit" class="botao-neutro">Não compareceu</button>
+            </form>
+          {% endif %}
+          <button type="button" class="botao-perigo" aria-controls="acao-cancelar" data-acao="cancelar" hidden>Cancelar reserva</button>
+        </div>
+      </details>
+    {% endif %}
+    {% if reserva.status == "no_show" and pode_desfazer_no_show %}
+      <button type="button" class="botao-neutro" aria-controls="acao-desfazer" data-acao="desfazer" hidden>Desfazer não comparecimento</button>
     {% endif %}
   </div>
 
   {# ── Painéis: o formulário da ação escolhida, largo, um por vez ───────── #}
   {% if reserva.status == "orcamento" or reserva.status == "pre_reserva" or reserva.status == "confirmada" %}
-    <div class="acao-painel" id="acao-sinal" x-show="acao === 'sinal'" x-cloak>
-      <h2 class="acao-painel-titulo">Adiantamento / sinal
+    <div class="acao-painel" id="acao-sinal">
+      <button type="button" class="botao-neutro acao-painel-fechar" data-fechar-acao hidden>Fechar</button>
+      <h2 class="acao-painel-titulo" tabindex="-1">Adiantamento / sinal
         <span class="info-dica dica" data-dica="Valor pago antes da entrada; vira crédito na conta do quarto.">ⓘ</span>
       </h2>
       <form data-preservar-erros method="post" action="{% url 'reservas:adiantamento_novo' reserva.pk %}" class="form-cartao">
@@ -146,8 +136,9 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
       </form>
     </div>
 
-    <div class="acao-painel" id="acao-lotacao" x-show="acao === 'lotacao'" x-cloak>
-      <h2 class="acao-painel-titulo">Alterar a lotação</h2>
+    <div class="acao-painel" id="acao-lotacao">
+      <button type="button" class="botao-neutro acao-painel-fechar" data-fechar-acao hidden>Fechar</button>
+      <h2 class="acao-painel-titulo" tabindex="-1">Alterar a lotação</h2>
       <p class="ajuda">Confere as camas no quarto e refaz a diária pela tarifa da nova lotação.</p>
       <form data-preservar-erros method="post" action="{% url 'reservas:lotacao' reserva.pk %}" class="form-cartao">
         {% csrf_token %}
@@ -172,8 +163,9 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
       </form>
     </div>
 
-    <div class="acao-painel" id="acao-datas" x-show="acao === 'datas'" x-cloak>
-      <h2 class="acao-painel-titulo">Transferir as datas</h2>
+    <div class="acao-painel" id="acao-datas">
+      <button type="button" class="botao-neutro acao-painel-fechar" data-fechar-acao hidden>Fechar</button>
+      <h2 class="acao-painel-titulo" tabindex="-1">Transferir as datas</h2>
       <p class="ajuda">1ª opção antes de cancelar: reagenda a reserva para outras datas
         (revalida disponibilidade e recalcula a diária). Não gera multa.</p>
       <form data-preservar-erros method="post" action="{% url 'reservas:transferir' reserva.pk %}" class="form-cartao">
@@ -183,8 +175,9 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
       </form>
     </div>
 
-    <div class="acao-painel acao-painel-risco" id="acao-cancelar" x-show="acao === 'cancelar'" x-cloak>
-      <h2 class="acao-painel-titulo">Cancelar a reserva</h2>
+    <div class="acao-painel acao-painel-risco" id="acao-cancelar">
+      <button type="button" class="botao-neutro acao-painel-fechar" data-fechar-acao hidden>Fechar</button>
+      <h2 class="acao-painel-titulo" tabindex="-1">Cancelar a reserva</h2>
       {% if politica_cancel %}
         <div class="aviso-politica">
           {% if politica_cancel.cenario == 'em_hospedagem' %}
@@ -215,8 +208,9 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
   {% endif %}
 
   {% if reserva.status == "hospedada" %}
-    <div class="acao-painel" id="acao-estender" x-show="acao === 'estender'" x-cloak>
-      <h2 class="acao-painel-titulo">Estender a estadia</h2>
+    <div class="acao-painel" id="acao-estender">
+      <button type="button" class="botao-neutro acao-painel-fechar" data-fechar-acao hidden>Fechar</button>
+      <h2 class="acao-painel-titulo" tabindex="-1">Estender a estadia</h2>
       <p class="ajuda">As noites a mais entram na conta pela tarifa de hoje, com ISS e taxa de
         turismo como no check-in. O quarto precisa estar livre até a nova saída; se não
         estiver, troque de quarto.</p>
@@ -233,8 +227,9 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
   {% endif %}
 
   {% if reserva.status == "no_show" and pode_desfazer_no_show %}
-    <div class="acao-painel" id="acao-desfazer" x-show="acao === 'desfazer'" x-cloak>
-      <h2 class="acao-painel-titulo">Desfazer o não comparecimento</h2>
+    <div class="acao-painel" id="acao-desfazer">
+      <button type="button" class="botao-neutro acao-painel-fechar" data-fechar-acao hidden>Fechar</button>
+      <h2 class="acao-painel-titulo" tabindex="-1">Desfazer o não comparecimento</h2>
       <p class="ajuda">O hóspede chegou depois, ou o check-in ficou esquecido no sistema. A reserva volta a confirmada se o {{ reserva.uh.numero }} ainda estiver livre nas noites dela.</p>
       <form method="post" action="{% url 'reservas:desfazer_no_show' reserva.pk %}" class="form-cartao">
         {% csrf_token %}
@@ -248,8 +243,9 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
   {% endif %}
 
   {% if reserva.ativa %}
-    <div class="acao-painel" id="acao-trocar" x-show="acao === 'trocar'" x-cloak>
-      <h2 class="acao-painel-titulo">Trocar de quarto</h2>
+    <div class="acao-painel" id="acao-trocar">
+      <button type="button" class="botao-neutro acao-painel-fechar" data-fechar-acao hidden>Fechar</button>
+      <h2 class="acao-painel-titulo" tabindex="-1">Trocar de quarto</h2>
       <p class="ajuda">A conta acompanha a reserva na troca de quarto, incluindo diárias, consumo e pagamentos.</p>
       {% if quartos_livres %}
         <form data-preservar-erros method="post" action="{% url 'reservas:trocar_quarto' reserva.pk %}" class="form-cartao">
@@ -286,8 +282,8 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
 
 {# ---------- Painel financeiro ---------- #}
 {% if reserva.status != "cancelada" %}
-<div class="cartao painel-financeiro">
-  <p class="rot-secao">Financeiro</p>
+<section class="cartao painel-financeiro" aria-labelledby="reserva-financeiro-titulo">
+  <h2 id="reserva-financeiro-titulo" class="rot-secao">Financeiro</h2>
   <div class="kpi-grade">
     <div class="kpi"><span class="kpi-rotulo letreiro">{% if conta %}Total da conta{% else %}Total previsto{% endif %}</span><strong class="kpi-valor num">{{ fin_total|intcomma_brl }}</strong></div>
     <div class="kpi"><span class="kpi-rotulo letreiro">Recebido</span><strong class="kpi-valor num">{{ fin_recebido|intcomma_brl }}</strong></div>
@@ -355,12 +351,13 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
       </tbody>
     </table>
   {% endif %}
-</div>
+</section>
 {% endif %}
 
 
 {# ---------- FNRH (Ficha Nacional de Registro de Hóspedes) ---------- #}
-<h2>Ficha de hóspedes (FNRH)
+<section class="reserva-secao" aria-labelledby="reserva-fnrh-titulo">
+<h2 id="reserva-fnrh-titulo">Ficha de hóspedes (FNRH)
   {% if fnrh_pronta %}
     <span class="selo selo-ok">Completa</span>
   {% else %}
@@ -388,7 +385,7 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
   {% comment %}O QR só serve a quem está no balcão. O link do pré check-in copiado
   e mandado pelo WhatsApp é o caminho de quem reservou por telefone ou ainda está
   em casa — antes existia só dentro da tela do QR.{% endcomment %}
-  <div class="copiar-celula">
+  <div class="copiar-celula reserva-fnrh-acoes">
     <a href="{% url 'reservas:fnrh' reserva.pk %}" class="botao-primario">Preencher / editar FNRH</a>
     <a href="{% url 'portal:qr_fnrh' reserva.pk %}" class="botao-neutro">QR para o hóspede preencher</a>
     {% if link_pre_checkin %}
@@ -416,26 +413,28 @@ ar), os painéis ficam todos visíveis, como era antes.{% endcomment %}
   </p>
 {% endif %}
 
+</section>
+
 {# ---------- Conta do quarto ---------- #}
 {% if conta %}
   <h2>Conta do quarto {% if not conta.aberta %}<span class="selo selo-neutro">fechada</span>{% endif %}</h2>
 
-  <div class="cartoes cartoes-indicadores">
+  <dl class="reserva-conta-resumo">
     {% for natureza, total in conta.total_por_natureza.items %}
-      <div class="cartao">
-        <span class="indicador-rotulo letreiro">{{ natureza }}</span>
-        <span class="indicador-valor">{{ total|intcomma_brl }}</span>
+      <div>
+        <dt>{{ natureza }}</dt>
+        <dd>{{ total|intcomma_brl }}</dd>
       </div>
     {% endfor %}
-    <div class="cartao">
-      <span class="indicador-rotulo letreiro">Pago + adiantado</span>
-      <span class="indicador-valor">{{ conta.total_pago|add:conta.total_adiantamentos|intcomma_brl }}</span>
+    <div>
+      <dt>Pago + adiantado</dt>
+      <dd>{{ conta.total_pago|add:conta.total_adiantamentos|intcomma_brl }}</dd>
     </div>
-    <div class="cartao">
-      <span class="indicador-rotulo letreiro">Saldo a receber</span>
-      <span class="indicador-valor {% if conta.saldo != 0 %}texto-alerta{% endif %}">{{ conta.saldo|intcomma_brl }}</span>
+    <div>
+      <dt>Saldo a receber</dt>
+      <dd class="{% if conta.saldo != 0 %}texto-alerta{% endif %}">{{ conta.saldo|intcomma_brl }}</dd>
     </div>
-  </div>
+  </dl>
 
   <table class="tabela">
     <thead>

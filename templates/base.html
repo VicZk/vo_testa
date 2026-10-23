@@ -14,11 +14,15 @@
   `Fluid` já na execução, durante o parse — com defer ele ainda não existiria.{% endcomment %}
   <script src="{% static 'js/fluid.js' %}"></script>
   {# Embrulha as tabelas de dados num contêiner rolante (ver o próprio arquivo). #}
+  <script src="{% static 'vendor/chartjs/chart.umd.min.js' %}" defer></script>
+  <script src="{% static 'js/graficos.js' %}" defer></script>
   <script src="{% static 'js/tabela-rol.js' %}" defer></script>
   {# Validação em pt-BR no lugar do balão em inglês do navegador. #}
   <script src="{% static 'js/form-pt.js' %}" defer></script>
   <script src="{% static 'js/edicao-pendente.js' %}" defer></script>
   <script src="{% static 'js/formularios.js' %}" defer></script>
+  <script src="{% static 'js/tabela-precos.js' %}" defer></script>
+  <script src="{% static 'js/reserva-acoes.js' %}" defer></script>
   <script src="{% static 'js/marketing.js' %}" defer></script>
   {# Dicas (balão de hover) de todo [data-dica]: um motor só, fixo e dentro da tela. #}
   <script src="{% static 'js/dicas.js' %}" defer></script>
@@ -26,6 +30,7 @@
   <script src="{% static 'js/copiar.js' %}" defer></script>
   <script src="{% static 'js/governanca-avisos.js' %}" defer></script>
   <script src="{% static 'js/sidebar.js' %}" defer></script>
+  <script src="{% static 'js/navegacao.js' %}" defer></script>
   {% comment %}Movimento na navegação: a View Transition vale só para a troca de
   página (o hx-boost do menu leva `transition:true`; a navegação comum, o
   `@view-transition` do app.css). As trocas parciais do HTMX (item na comanda,
@@ -218,7 +223,8 @@
     {% endif %}
 
     <nav id="menu-principal" aria-label="Menu principal" data-rolagem-chave="votesta:menu:{% url 'dashboard' %}:{{ user.pk }}"
-         hx-boost="true" hx-target="#conteudo" hx-select="#conteudo" hx-swap="outerHTML show:window:top transition:true">
+         hx-boost="true" hx-target="#conteudo" hx-select="#conteudo" hx-sync="#menu-principal:replace"
+         hx-swap="outerHTML show:window:top transition:true">
       <div class="nav-grupo">
         <a href="{% url 'dashboard' %}" class="nav-item {% if atual == 'dashboard' %}ativo{% endif %}" title="Visão geral">
           <svg viewBox="0 0 24 24" class="ico"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
@@ -231,7 +237,7 @@
           <span class="nav-titulo letreiro">{{ grupo.titulo }}</span>
           {% for m in grupo.itens %}
             {% if m.url %}
-              <a href="{{ m.url }}" class="nav-item {% if request.resolver_match.namespace == m.codigo %}ativo{% endif %}" title="{{ m.nome }}">
+              <a href="{{ m.url }}" class="nav-item {% if request.resolver_match.namespace == m.codigo %}ativo{% endif %}" title="{{ m.nome }}"{% if m.codigo == 'loja' %} data-pdv-entrada{% endif %}>
                 {% include "componentes/icone_modulo.html" with codigo=m.codigo %}
                 <span class="rotulo">{{ m.nome }}</span>
                 {% if m.codigo == 'governanca' %}<span class="nav-badge" role="img" data-governanca-avisos="{% url 'governanca:atualizacoes' %}" title="{{ governanca_pendentes|default:0 }} serviço(s) de limpeza pendente(s)" aria-label="{{ governanca_pendentes|default:0 }} serviço(s) de limpeza pendente(s)"{% if not governanca_pendentes %} hidden{% endif %}><span class="nav-badge-numero">{% if governanca_pendentes > 99 %}99+{% else %}{{ governanca_pendentes|default:0 }}{% endif %}</span></span>{% endif %}
@@ -397,7 +403,7 @@
               aria-controls="menu-principal" aria-expanded="false" aria-label="Abrir menu">
         <svg viewBox="0 0 24 24" class="ico"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
       </button>
-      <button class="busca-global" onclick="abrirPaleta()">
+      <button class="busca-global" onclick="abrirPaleta()" aria-label="Buscar na pousada" aria-haspopup="dialog" aria-controls="paleta">
         <svg viewBox="0 0 24 24" class="ico"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
         <span>Buscar hóspede, reserva, produto…</span>
         <kbd>⌘K</kbd>
@@ -425,17 +431,26 @@
 
 {# Paleta de comandos (⌘K) #}
 <div id="paleta" class="paleta-overlay" style="display:none" onclick="if(event.target===this) fecharPaleta()">
-  <div class="paleta" role="dialog" aria-modal="true" aria-label="Buscar e comandos"
+  <div class="paleta" role="dialog" aria-modal="true" aria-labelledby="paleta-titulo"
        data-url-busca="{% url 'busca_global' %}">
-    <div class="paleta-busca">
-      <svg viewBox="0 0 24 24" class="ico"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
-      <input type="text" id="paleta-input" placeholder="Buscar ou digitar um comando…" autocomplete="off">
-      <kbd>esc</kbd>
+    <div class="paleta-cabecalho">
+      <div>
+        <h2 id="paleta-titulo">Buscar na pousada</h2>
+        <p>Cadastros, reservas e atalhos em um só lugar.</p>
+      </div>
+      <button type="button" class="paleta-fechar" onclick="fecharPaleta()" aria-label="Fechar busca">
+        <svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+      </button>
     </div>
-    <div class="paleta-lista" id="paleta-lista"></div>
+    <div class="paleta-busca">
+      <svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+      <input type="text" id="paleta-input" placeholder="Nome, quarto ou comando…" autocomplete="off"
+             aria-label="Termo da busca" role="combobox" aria-autocomplete="list" aria-controls="paleta-lista" aria-expanded="false">
+    </div>
+    <div class="paleta-lista" id="paleta-lista" role="listbox" aria-label="Resultados da busca"></div>
     <div class="paleta-rodape">
-      <span><kbd>↑</kbd><kbd>↓</kbd> navegar</span>
-      <span><kbd>↵</kbd> abrir</span>
+      <span id="paleta-status" role="status" aria-live="polite">Pronto para buscar</span>
+      <span class="paleta-teclas"><span><kbd>↑</kbd><kbd>↓</kbd> navegar</span><span><kbd>↵</kbd> abrir</span><span><kbd>esc</kbd> fechar</span></span>
     </div>
   </div>
 </div>
@@ -821,47 +836,94 @@
     { rotulo: 'Recados do turno', tipo: 'Ir para', url: '{% url "logbook" %}' },
     {% endif %}
   ];
-  let paletaItens = [], paletaSel = 0, paletaTimer = null;
+  let paletaItens = [], paletaSel = -1, paletaTimer = null, paletaVersao = 0, paletaPedido = null;
+
+  function cancelarBuscaPaleta() {
+    clearTimeout(paletaTimer);
+    if (paletaPedido) paletaPedido.abort();
+    paletaPedido = null;
+    return ++paletaVersao;
+  }
 
   function abrirPaleta() {
     const pal = document.getElementById('paleta');
     if (pal.style.display !== 'flex') guardarFoco();
+    cancelarBuscaPaleta();
     pal.style.display = 'flex';
+    document.body.classList.add('sem-rolagem');
     const inp = document.getElementById('paleta-input');
-    inp.value = ''; inp.focus();
+    inp.value = ''; inp.setAttribute('aria-expanded', 'true'); inp.focus();
     paletaDica();   // abre vazia — só o campo de busca; comandos/resultados ao digitar
   }
+  function mensagemPaleta(titulo, texto) {
+    return '<div class="paleta-vazio" role="presentation">'
+      + '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>'
+      + '<strong>' + escapeHtml(titulo) + '</strong><p>' + escapeHtml(texto) + '</p></div>';
+  }
   function paletaDica() {
-    paletaItens = []; paletaSel = 0;
+    paletaItens = []; paletaSel = -1;
+    document.getElementById('paleta-input').removeAttribute('aria-activedescendant');
+    document.getElementById('paleta-lista').setAttribute('aria-busy', 'false');
     document.getElementById('paleta-lista').innerHTML =
-      '<div class="paleta-vazio">Digite para buscar hóspedes, reservas, produtos e leads…</div>';
+      mensagemPaleta('Encontre o que precisa', 'Digite um nome, número de quarto ou produto. Você também pode buscar uma tela do sistema.');
+    document.getElementById('paleta-status').textContent = 'Pronto para buscar';
   }
   function fecharPaleta() {
     const pal = document.getElementById('paleta');
     const estavaAberta = pal.style.display === 'flex';
+    cancelarBuscaPaleta();
     pal.style.display = 'none';
+    document.getElementById('paleta-input').setAttribute('aria-expanded', 'false');
+    document.getElementById('paleta-input').removeAttribute('aria-activedescendant');
+    if (!caixaAberta()) document.body.classList.remove('sem-rolagem');
     // Só devolve o foco se ELA estava aberta: o Escape chama os dois fechamentos
     // e o modal perderia a sua origem de foco.
     if (estavaAberta) devolverFoco();
   }
 
-  function renderPaleta(itens) {
-    paletaItens = itens; paletaSel = 0;
+  function renderPaleta(itens, estado = '') {
+    paletaItens = itens; paletaSel = itens.length ? 0 : -1;
     const lista = document.getElementById('paleta-lista');
-    if (!itens.length) { lista.innerHTML = '<div class="paleta-vazio">Nada encontrado.</div>'; return; }
-    lista.innerHTML = itens.map((it, i) =>
-      '<button class="paleta-item' + (i === 0 ? ' sel' : '') + '" data-i="' + i + '">'
-      + '<span class="paleta-rot">' + escapeHtml(it.rotulo) + '</span>'
-      + '<span class="paleta-tipo">' + escapeHtml(it.tipo) + '</span></button>'
-    ).join('');
+    lista.setAttribute('aria-busy', estado === 'carregando' ? 'true' : 'false');
+    const status = document.getElementById('paleta-status');
+    status.textContent = estado === 'carregando' ? 'Buscando cadastros…'
+      : estado === 'erro' ? 'Não foi possível consultar os cadastros'
+      : itens.length ? itens.length + (itens.length === 1 ? ' resultado' : ' resultados') : 'Nenhum resultado';
+    if (!itens.length) {
+      document.getElementById('paleta-input').removeAttribute('aria-activedescendant');
+      lista.innerHTML = estado === 'carregando'
+        ? mensagemPaleta('Buscando…', 'Consultando os cadastros da pousada.')
+        : estado === 'erro'
+          ? mensagemPaleta('Busca indisponível', 'Tente novamente em instantes.')
+          : mensagemPaleta('Nenhum resultado', 'Tente outro nome, número de quarto ou produto.');
+      return;
+    }
+    let grupo = '';
+    lista.innerHTML = itens.map((it, i) => {
+      const proximo = it.comando ? 'Telas e ações' : 'Cadastros encontrados';
+      const cabecalho = grupo !== proximo ? '<div class="paleta-grupo" role="presentation">' + proximo + '</div>' : '';
+      grupo = proximo;
+      return cabecalho + '<div class="paleta-item' + (i === 0 ? ' sel' : '')
+        + '" role="option" id="paleta-item-' + i + '" aria-selected="' + (i === 0) + '" data-i="' + i + '">'
+        + '<span class="paleta-item-texto"><span class="paleta-rot">' + escapeHtml(it.rotulo) + '</span>'
+        + '<span class="paleta-tipo">' + escapeHtml(it.tipo) + '</span></span>'
+        + '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></div>';
+    }).join('');
+    document.getElementById('paleta-input').setAttribute('aria-activedescendant', 'paleta-item-0');
+    lista.scrollTop = 0;
     lista.querySelectorAll('.paleta-item').forEach(b => {
       b.onmouseenter = () => marcar(+b.dataset.i);
       b.onclick = () => ativar(+b.dataset.i);
     });
   }
   function marcar(i) {
+    if (i < 0 || i >= paletaItens.length) return;
     paletaSel = i;
-    document.querySelectorAll('.paleta-item').forEach((b, j) => b.classList.toggle('sel', j === i));
+    document.querySelectorAll('.paleta-item').forEach((b, j) => {
+      b.classList.toggle('sel', j === i);
+      b.setAttribute('aria-selected', j === i ? 'true' : 'false');
+    });
+    document.getElementById('paleta-input').setAttribute('aria-activedescendant', 'paleta-item-' + i);
   }
   function ativar(i) {
     const it = paletaItens[i]; if (!it) return;
@@ -871,22 +933,35 @@
   }
   function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
-  async function buscarPaleta(q) {
+  async function buscarPaleta(q, versao) {
     if (!q) { paletaDica(); return; }   // campo vazio → só a dica, sem comandos
-    const estaticos = COMANDOS.filter(c => c.rotulo.toLowerCase().includes(q.toLowerCase()));
+    const estaticos = COMANDOS.filter(c => c.rotulo.toLowerCase().includes(q.toLowerCase()))
+      .map(c => ({ ...c, comando: true }));
     if (q.length < 2) { renderPaleta(estaticos); return; }
+    const atual = () => versao === paletaVersao && document.getElementById('paleta').style.display === 'flex';
+    if (!atual()) return;
+    renderPaleta(estaticos, 'carregando');
+    paletaPedido = new AbortController();
     try {
       const url = document.querySelector('.paleta').dataset.urlBusca + '?q=' + encodeURIComponent(q);
-      const d = await (await fetch(url)).json();
+      const resposta = await fetch(url, { signal: paletaPedido.signal, headers: { Accept: 'application/json' } });
+      if (!resposta.ok) throw new Error('Busca indisponível');
+      const d = await resposta.json();
+      if (!atual()) return;
       const remotos = (d.resultados || []).map(r => ({ rotulo: r.rotulo, tipo: r.tipo, url: r.url }));
       renderPaleta(estaticos.concat(remotos));
-    } catch (e) { renderPaleta(estaticos); }
+    } catch (e) {
+      if (e.name !== 'AbortError' && atual()) renderPaleta(estaticos, 'erro');
+    }
   }
   document.addEventListener('input', e => {
     if (e.target.id !== 'paleta-input') return;
-    clearTimeout(paletaTimer);
+    const versao = cancelarBuscaPaleta();
     const q = e.target.value.trim();
-    paletaTimer = setTimeout(() => buscarPaleta(q), 160);
+    if (!q) { paletaDica(); return; }
+    if (q.length < 2) { buscarPaleta(q, versao); return; }
+    renderPaleta([], 'carregando');
+    paletaTimer = setTimeout(() => buscarPaleta(q, versao), 160);
   });
 
   // ---------- Atalhos de teclado ----------
@@ -894,9 +969,15 @@
     const digitando = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); abrirPaleta(); return; }
     if ((e.metaKey || e.ctrlKey) && e.key === '\\') { e.preventDefault(); alternarSidebar(); return; }
-    if (e.key === 'Escape') { fecharPaleta(); fecharModal(); fecharSidebarMobile(); return; }
     const paletaAberta = document.getElementById('paleta').style.display === 'flex';
+    if (e.key === 'Escape') {
+      if (paletaAberta) fecharPaleta();
+      else if (document.getElementById('modal-reserva').style.display === 'flex') fecharModal();
+      else fecharSidebarMobile();
+      return;
+    }
     if (paletaAberta) {
+      if (e.target.id !== 'paleta-input' || e.isComposing) return;
       if (e.key === 'ArrowDown') { e.preventDefault(); marcar(Math.min(paletaSel + 1, paletaItens.length - 1)); scrollSel(); }
       if (e.key === 'ArrowUp') { e.preventDefault(); marcar(Math.max(paletaSel - 1, 0)); scrollSel(); }
       if (e.key === 'Enter') { e.preventDefault(); ativar(paletaSel); }

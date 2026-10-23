@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load moeda %}
+{% load moeda static %}
 
 {% block titulo %}Fechamento de conciliação | CRM Vô Testa{% endblock %}
 
@@ -87,43 +87,5 @@
   </div>
 </div>
 
-{% if dados.extrato.total or dados.cartao.total %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script>
-(function () {
-  if (!window.Chart) return;
-  Chart.defaults.font.family = "'Hanken Grotesk', -apple-system, sans-serif";
-  Chart.defaults.color = '#64717B';
-  const MUSGO = '#2E483E', LAMPIAO = '#D7A048', MADEIRA = '#4F2C1D';
-  const ctx = id => { const el = document.getElementById(id); return el ? el.getContext('2d') : null; };
-  const opc = {
-    responsive: true, maintainAspectRatio: false, cutout: '68%',
-    plugins: { legend: { position: 'right', labels: {
-      usePointStyle: true, pointStyle: 'circle', boxWidth: 8, padding: 10,
-      generateLabels: chart => {
-        const ds = chart.data.datasets[0], t = ds.data.reduce((a, b) => a + b, 0) || 1;
-        return chart.data.labels.map((l, i) => ({
-          text: l + ' · ' + ds.data[i] + ' (' + Math.round(ds.data[i] * 100 / t) + '%)',
-          fillStyle: ds.backgroundColor[i], strokeStyle: ds.backgroundColor[i],
-          pointStyle: 'circle', index: i,
-        }));
-      } } } },
-  };
-  const ext = ctx('g-ext');
-  if (ext) new Chart(ext, {
-    type: 'doughnut',
-    data: { labels: ['Conciliado', 'Pendente', 'Ignorado'], datasets: [{
-      data: [{{ dados.extrato.conciliado }}, {{ dados.extrato.pendente }}, {{ dados.extrato.ignorado }}],
-      backgroundColor: [MUSGO, LAMPIAO, MADEIRA], borderColor: '#fff', borderWidth: 3, hoverOffset: 4 }] },
-    options: opc });
-  const car = ctx('g-car');
-  if (car) new Chart(car, {
-    type: 'doughnut',
-    data: { labels: ['Conciliado', 'Pendente', 'Sem venda'], datasets: [{
-      data: [{{ dados.cartao.conciliado }}, {{ dados.cartao.pendente }}, {{ dados.cartao.sem_venda }}],
-      backgroundColor: [MUSGO, LAMPIAO, MADEIRA], borderColor: '#fff', borderWidth: 3, hoverOffset: 4 }] },
-    options: opc });
-})();
-</script>
-{% endif %}
+{{ dados|json_script:"dados-conciliacao" }}
 {% endblock %}

@@ -9,6 +9,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 
 class OrdemServico(models.Model):
@@ -119,3 +120,36 @@ class OrdemServico(models.Model):
     @property
     def custo_total(self) -> Decimal:
         return self.custo_maodeobra + self.custo_pecas
+
+    @property
+    def bloqueio_ativo_hoje(self) -> bool:
+        hoje = timezone.localdate()
+        return bool(self.aberta_ou_andamento and self.bloqueia_uh and self.uh_id
+                    and self.bloqueio_inicio and self.bloqueio_inicio <= hoje
+                    and (self.bloqueio_fim is None or self.bloqueio_fim >= hoje))
+
+
+class DocumentoOrdemServico(models.Model):
+    """Documento privado, incluído no mesmo backup e transação da OS.
+
+    A mídia padrão é pública. Os documentos pequenos ficam numa tabela separada
+    e só são lidos pelo endpoint autenticado, nunca por uma URL de mídia.
+    """
+
+    ordem = models.ForeignKey(OrdemServico, on_delete=models.CASCADE, related_name="documentos")
+    nome = models.CharField(max_length=180)
+    tipo = models.CharField(max_length=40)
+    tamanho = models.PositiveIntegerField()
+    sha256 = models.CharField(max_length=64)
+    conteudo = models.BinaryField()
+    enviado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    enviado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-enviado_em", "-pk"]
+        constraints = [
+            models.UniqueConstraint(fields=["ordem", "sha256"], name="manutencao_documento_unico_os"),
+        ]
+
+    def __str__(self):
+        return f"OS #{self.ordem_id} — {self.nome}"

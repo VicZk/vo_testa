@@ -2577,7 +2577,7 @@ def receber_adiantamento(
 
 def resumo_do_dia() -> dict:
     """Indicadores de hoje para o dashboard do núcleo."""
-    from django.utils import timezone
+    from .painel import preparar_fluxo_painel
 
     hoje = timezone.localdate()
     uhs_ativas = UH.objects.filter(
@@ -2594,26 +2594,31 @@ def resumo_do_dia() -> dict:
         .count()
     )
     chegadas = (
-        Reserva.objects.select_related("hospede", "uh")
+        Reserva.objects.select_related("hospede", "uh__tipo", "conta", "grupo")
         .filter(
             checkin=hoje,
             status__in=[Reserva.Status.PRE_RESERVA, Reserva.Status.CONFIRMADA],
         )
-        .order_by("uh__numero")
+        .exclude(uh__tipo__modalidade=TipoUH.Modalidade.DAY_USE)
+        .order_by("uh__numero", "pk")
     )
     saidas = (
-        Reserva.objects.select_related("hospede", "uh")
+        Reserva.objects.select_related("hospede", "uh__tipo", "conta", "grupo")
         .filter(checkout=hoje, status=Reserva.Status.HOSPEDADA)
-        .order_by("uh__numero")
+        .exclude(uh__tipo__modalidade=TipoUH.Modalidade.DAY_USE)
+        .order_by("uh__numero", "pk")
     )
+    lista_chegadas = list(chegadas[:8])
+    lista_saidas = list(saidas[:8])
+    preparar_fluxo_painel(lista_chegadas, lista_saidas)
     return {
         "chegadas_hoje": chegadas.count(),
         "saidas_hoje": saidas.count(),
         "hospedadas": hospedadas,
         "uhs_ativas": uhs_ativas,
         "ocupacao": round(hospedadas * 100 / uhs_ativas) if uhs_ativas else 0,
-        "chegadas": list(chegadas[:8]),
-        "saidas": list(saidas[:8]),
+        "chegadas": lista_chegadas,
+        "saidas": lista_saidas,
     }
 
 

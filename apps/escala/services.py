@@ -70,6 +70,8 @@ def resumo_funcionario(funcionario, inicio, fim):
 def atribuir(turno, funcionario, data, operador):
     from apps.nucleo.sistema import travar
     travar(funcionario)
+    if not turno.ativo or not funcionario.pessoa.ativo:
+        raise ValidationError("Escolha um turno e um funcionário ativos.")
     if data is None:
         raise ValidationError("Informe uma data válida para a escala.")
     if ausencia_no_dia(funcionario, data):
@@ -95,6 +97,8 @@ def mover(atribuicao, novo_turno, nova_data, operador=None):
     from apps.nucleo.sistema import travar
     travar(atribuicao.funcionario)
     travar(atribuicao)
+    if not novo_turno.ativo or not atribuicao.funcionario.pessoa.ativo:
+        raise ValidationError("Escolha um turno e um funcionário ativos.")
     if nova_data is None:
         raise ValidationError("Informe uma data válida para a escala.")
     if ausencia_no_dia(atribuicao.funcionario, nova_data):
@@ -114,11 +118,16 @@ def mover(atribuicao, novo_turno, nova_data, operador=None):
     return atribuicao
 
 
+@transaction.atomic
 def adicionar_hora_extra(funcionario, data, inicio, fim, tipo, operador=None):
     """Lança uma hora extra planejada (banco/extra) num dia do colaborador."""
+    from apps.nucleo.sistema import travar
+
     from .models import HoraExtra
+    travar(funcionario)
     he = HoraExtra(funcionario=funcionario, data=data, inicio=inicio, fim=fim,
                    tipo=tipo or HoraExtra.Tipo.BANCO, criado_por=operador)
+    he.full_clean()
     if he.total_minutos <= 0:
         raise ValidationError("Fim deve ser depois do início.")
     he.save()
@@ -652,13 +661,19 @@ def publicar_semana(inicio, setor, operador, justificativa=""):
     return pub
 
 
+@transaction.atomic
 def registrar_ausencia(funcionario, tipo, inicio, fim, operador, observacao=""):
-    if fim < inicio:
-        raise ValidationError("A data final não pode ser antes da inicial.")
-    return Ausencia.objects.create(
+    from apps.nucleo.sistema import travar
+    travar(funcionario)
+    ausencia = Ausencia(
         funcionario=funcionario, tipo=tipo, inicio=inicio, fim=fim,
         observacao=observacao, criado_por=operador,
     )
+    ausencia.full_clean()
+    if fim < inicio:
+        raise ValidationError("A data final não pode ser antes da inicial.")
+    ausencia.save()
+    return ausencia
 
 
 def minha_escala(usuario, inicio, fim):
@@ -671,25 +686,60 @@ def minha_escala(usuario, inicio, fim):
     )
 
 
+@transaction.atomic
 def solicitar_troca(atribuicao, substituto, motivo=""):
+    from apps.nucleo.models import Funcionario
+    from apps.nucleo.sistema import travar
+
+    solicitante_id = atribuicao.funcionario_id
+    # A aprovação também começa pelos funcionários. A inserção da troca confere
+    # essas FKs no commit; travar só a atribuição antes delas criava um deadlock.
+    list(Funcionario.objects.select_for_update().filter(
+        pk__in=[solicitante_id, substituto.pk]).order_by("pk"))
+    travar(atribuicao)
+    if atribuicao.funcionario_id != solicitante_id:
+        raise ValidationError("Este turno já mudou de funcionário. Atualize a escala e solicite uma nova troca.")
     if substituto == atribuicao.funcionario:
         raise ValidationError("Escolha um substituto diferente.")
     if ausencia_no_dia(substituto, atribuicao.data):
         raise ValidationError("O substituto está ausente nesse dia.")
-    return TrocaTurno.objects.create(
+    if not substituto.pessoa.ativo:
+        raise ValidationError("Escolha um substituto ativo.")
+    existente = TrocaTurno.objects.filter(atribuicao=atribuicao,
+        solicitante=atribuicao.funcionario, substituto=substituto, status=TrocaTurno.Status.PENDENTE).first()
+    if existente:
+        return existente
+    troca = TrocaTurno(
         atribuicao=atribuicao, solicitante=atribuicao.funcionario,
         substituto=substituto, motivo=motivo,
     )
+    troca.full_clean()
+    troca.save()
+    return troca
 
 
+@transaction.atomic
 def decidir_troca(troca, operador, aprovar):
+    from apps.nucleo.models import Funcionario
+    from apps.nucleo.sistema import travar
+
+    # As mesmas âncoras de atribuir/mover/ausência, em ordem fixa, impedem duas
+    # aprovações de aplicar decisões incompatíveis sobre a mesma atribuição.
+    list(Funcionario.objects.select_for_update().filter(
+        pk__in=[troca.solicitante_id, troca.substituto_id]).order_by("pk"))
+    atrib = troca.atribuicao
+    travar(atrib)
+    travar(troca)
     if troca.status != TrocaTurno.Status.PENDENTE:
         raise ValidationError("Esta troca já foi decidida.")
     troca.decidido_por = operador
     troca.decidido_em = timezone.now()
     if aprovar:
         troca.status = TrocaTurno.Status.APROVADA
-        atrib = troca.atribuicao
+        if atrib.funcionario_id != troca.solicitante_id:
+            raise ValidationError("Este turno já mudou de funcionário. Atualize a escala e solicite uma nova troca.")
+        if not troca.substituto.pessoa.ativo:
+            raise ValidationError("O substituto está inativo. Escolha outro funcionário.")
         # Revalida na aprovação: a solicitação pode ter envelhecido (o substituto ficou
         # ausente ou já foi escalado nesse turno/dia) — evita IntegrityError/estado ruim.
         if ausencia_no_dia(troca.substituto, atrib.data):

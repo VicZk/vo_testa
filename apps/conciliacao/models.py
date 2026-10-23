@@ -139,6 +139,10 @@ class TransacaoCartao(models.Model):
     data_venda = models.DateField("data da venda")
     data_liquidacao = models.DateField("data da liquidação", null=True, blank=True)
     nsu = models.CharField("NSU", max_length=40)
+    chave_importacao = models.CharField(
+        "chave de importação", max_length=64, null=True, blank=True,
+        unique=True, editable=False,
+    )
     autorizacao = models.CharField("autorização", max_length=40, blank=True)
     bandeira = models.CharField("bandeira", max_length=30, blank=True)
     bruto = models.DecimalField("valor bruto (R$)", max_digits=12, decimal_places=2)

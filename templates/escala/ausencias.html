@@ -10,12 +10,12 @@
 
 <div class="colunas">
   <section>
-    <table class="tabela">
-      <thead><tr><th>Funcionário</th><th>Tipo</th><th>Período</th><th>Obs.</th></tr></thead>
+    <table class="tabela tabela-cartoes tabela-registros">
+      <thead><tr><th>Funcionário</th><th>Tipo</th><th>Período</th><th>Observação</th></tr></thead>
       <tbody>
         {% for a in ausencias %}
-          <tr><td>{{ a.funcionario.pessoa.nome }}</td><td>{{ a.get_tipo_display }}</td>
-              <td>{{ a.inicio|date:"d/m" }} – {{ a.fim|date:"d/m/Y" }}</td><td>{{ a.observacao }}</td></tr>
+          <tr><td class="registro-principal" data-rotulo="Funcionário">{{ a.funcionario.pessoa.nome }}</td><td data-rotulo="Tipo">{{ a.get_tipo_display }}</td>
+              <td data-rotulo="Período">{{ a.inicio|date:"d/m/Y" }} – {{ a.fim|date:"d/m/Y" }}</td><td class="registro-texto" data-rotulo="Observação">{{ a.observacao|default:"Não informada" }}</td></tr>
         {% empty %}
           <tr><td colspan="4" class="vazio">Nenhuma ausência registrada.</td></tr>
         {% endfor %}
@@ -27,18 +27,18 @@
     <h2 class="titulo-topo">Nova ausência</h2>
     <form data-preservar-erros method="post" class="form-cartao">
       {% csrf_token %}
-      <div class="campo"><label>Funcionário</label>
-        <select name="funcionario" required>{% for f in funcionarios %}<option value="{{ f.pk }}">{{ f.pessoa.nome }}</option>{% endfor %}</select>
+      <div class="campo"><label for="ausencia-funcionario">Funcionário</label>
+        <select id="ausencia-funcionario" name="funcionario" required><option value="">Escolha…</option>{% for f in funcionarios %}<option value="{{ f.pk }}">{{ f.pessoa.nome }}</option>{% endfor %}</select>
       </div>
-      <div class="campo"><label>Tipo</label>
-        <select name="tipo">{% for v, r in tipos %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select>
+      <div class="campo"><label for="ausencia-tipo">Tipo</label>
+        <select id="ausencia-tipo" name="tipo">{% for v, r in tipos %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select>
       </div>
       <div class="form-grade">
-        <div class="campo"><label>Início</label><input type="date" name="inicio" required></div>
-        <div class="campo"><label>Fim</label><input type="date" name="fim" required></div>
+        <div class="campo"><label for="ausencia-inicio">Início</label><input id="ausencia-inicio" type="date" name="inicio" required></div>
+        <div class="campo"><label for="ausencia-fim">Fim</label><input id="ausencia-fim" type="date" name="fim" required></div>
       </div>
-      <div class="campo"><label>Observação</label><input type="text" name="observacao"></div>
-      <div class="acoes"><button type="submit" class="botao-primario">Registrar</button></div>
+      <div class="campo"><label for="ausencia-observacao">Observação <small class="opcional">(opcional)</small></label><input id="ausencia-observacao" type="text" name="observacao" maxlength="120"></div>
+      <div class="acoes"><button type="submit" class="botao-primario">Registrar ausência</button></div>
     </form>
   </section>
 </div>

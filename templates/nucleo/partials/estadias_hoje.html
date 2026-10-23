@@ -1,0 +1,55 @@
+{% load moeda %}
+<section id="{{ secao_id }}" class="painel-bloco painel-estadias-secao" aria-labelledby="{{ secao_id }}-titulo">
+  <header class="painel-estadias-cabecalho">
+    <div class="painel-estadias-titulo">
+      <svg viewBox="0 0 24 24" class="ico" aria-hidden="true">
+        {% if tipo == 'chegada' %}<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M3 12h12m-4-4 4 4-4 4"/>
+        {% else %}<path d="M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4M9 12h12m-4-4 4 4-4 4"/>{% endif %}
+      </svg>
+      <h2 id="{{ secao_id }}-titulo">{{ titulo }}</h2>
+      <span class="painel-estadias-total">{{ total }}</span>
+    </div>
+    <a href="{% url 'reservas:lista' %}" class="painel-estadias-ver">Ver reservas <span aria-hidden="true">→</span></a>
+    {% if tipo == 'saida' and reservas %}<p class="painel-estadias-nota">O check-out confere a conta e os consumos pendentes.</p>{% endif %}
+  </header>
+
+  {% if reservas %}
+  <ul class="painel-estadias-lista">
+    {% for r in reservas %}
+    <li class="painel-estadia" data-reserva-id="{{ r.pk }}">
+      <a href="{% url 'reservas:detalhe' r.pk %}" class="painel-estadia-identidade">
+        <span class="painel-estadia-quarto"><small>Quarto</small><strong>{{ r.uh.numero|cut:"Quarto " }}</strong></span>
+        <span class="painel-estadia-dados">
+          <strong id="painel-hospede-{{ r.pk }}" class="painel-estadia-nome">{{ r.hospede.nome }}</strong>
+          <span class="painel-estadia-detalhe">{{ r.uh.tipo.nome }} · {{ r.noites }} noite{{ r.noites|pluralize }}</span>
+          <span class="selo mapa-cor-{{ r.status }}">{{ r.get_status_display }}</span>
+        </span>
+      </a>
+
+      {% with financeiro=r.painel_financeiro %}
+      <div class="painel-estadia-financeiro" data-financeiro-estado="{{ financeiro.estado }}">
+        <span class="painel-estadia-financeiro-rotulo">{{ financeiro.rotulo }}</span>
+        {% if financeiro.valor is not None %}<strong class="painel-estadia-valor num">{{ financeiro.valor|intcomma_brl }}</strong>{% endif %}
+        <span class="painel-estadia-referencia">{{ financeiro.referencia }}</span>
+        {% if financeiro.grupo_url %}
+          {% if tipo == 'saida' %}<span class="painel-estadia-referencia">Diárias na conta do grupo</span>{% endif %}
+          <a href="{{ financeiro.grupo_url }}" class="painel-estadia-grupo">Conta do grupo</a>
+        {% endif %}
+      </div>
+      {% endwith %}
+
+      <a href="{{ r.painel_acao_url }}" class="botao-neutro painel-estadia-acao" aria-describedby="painel-hospede-{{ r.pk }}">
+        {{ acao }}
+        <svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% if total > reservas|length %}<p class="painel-estadias-rodape">Mostrando {{ reservas|length }} de {{ total }} reservas previstas para hoje.</p>{% endif %}
+  {% else %}
+  <div class="estado-vazio">
+    <svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><path d="M5 12l4 4L19 6"/></svg>
+    <p>{% if tipo == 'chegada' %}Sem chegadas previstas para hoje.{% else %}Sem saídas previstas para hoje.{% endif %}</p>
+  </div>
+  {% endif %}
+</section>

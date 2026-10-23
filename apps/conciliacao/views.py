@@ -94,7 +94,8 @@ def importar_cartao(request):
     try:
         r = services.importar_cartao_csv(conteudo=arquivo.read(),
                                          arquivo_nome=arquivo.name, usuario=request.user)
-        messages.success(request, f"Vendas importadas: {r['novos']} transações.")
+        messages.success(request, f"Vendas importadas: {r['novos']} transações"
+                         + (f" ({r['ignorados']} já existiam)." if r["ignorados"] else "."))
     except ValidationError as e:
         messages.error(request, f"Falha ao importar CSV: {' '.join(e.messages)}")
     except Exception:  # noqa: BLE001 — o detalhe vai ao log, não à tela

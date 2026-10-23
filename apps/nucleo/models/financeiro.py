@@ -557,11 +557,16 @@ class ContaPagarReceber(models.Model):
                                   "a receber, de receita."}
                 )
 
+    @transaction.atomic
     def baixar(self, usuario, data=None):
         """Baixa o título e gera o lançamento financeiro correspondente."""
+        from ..sistema import travar
+
+        travar(self)
         if self.status != self.Status.ABERTA:
             raise ValidationError("Só contas abertas podem ser baixadas.")
         data = data or timezone.localdate()
+        limite_descricao = LancamentoFinanceiro._meta.get_field("descricao").max_length
         lancamento = LancamentoFinanceiro(
             tipo=(
                 CategoriaFinanceira.Tipo.DESPESA
@@ -570,7 +575,7 @@ class ContaPagarReceber(models.Model):
             ),
             categoria=self.categoria,
             centro=self.centro,
-            descricao=f"Baixa: {self.descricao}",
+            descricao=f"Baixa: {self.descricao}"[:limite_descricao],
             valor=self.valor,
             data=data,
             criado_por=usuario,

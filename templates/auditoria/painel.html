@@ -7,8 +7,10 @@
 <p class="pagina-eyebrow letreiro">Gestão</p>
 <div class="pagina-cabecalho">
   <h1>Auditoria</h1>
-  <a href="{% url 'auditoria:fechamentos' %}" class="botao-neutro">Fechamentos do dia</a>
-  <a href="{% url 'auditoria:trilha' %}" class="botao-neutro">Trilha de auditoria</a>
+  <div class="pagina-acoes">
+    <a href="{% url 'auditoria:fechamentos' %}" class="botao-neutro">Fechamentos do dia</a>
+    <a href="{% url 'auditoria:trilha' %}" class="botao-neutro">Trilha de auditoria</a>
+  </div>
 </div>
 <p class="subtitulo">Confira as pendências do CRM e abra o módulo responsável para corrigi-las.</p>
 

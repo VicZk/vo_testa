@@ -1,8 +1,10 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block titulo %}Visão geral | CRM Vô Testa{% endblock %}
 
 {% block conteudo %}
+<div class="painel-visao">
 <p class="pagina-eyebrow letreiro">{% if tem_reservas %}Recepção · hoje{% else %}Hoje{% endif %}</p>
 <div class="pagina-cabecalho">
   <h1>Visão geral</h1>
@@ -32,42 +34,6 @@ nem chega aqui: entra direto nele (views.dashboard).{% endcomment %}
 </nav>
 {% endif %}
 
-{% if corredor %}
-<section class="corredor-hero">
-  {% include "reservas/partials/corredor.html" with quartos=corredor.quartos hoje=corredor.hoje amanha=corredor.amanha %}
-  <div class="corredor-legenda">
-    {% for s in corredor.situacoes_filtro %}
-      <span class="chip-legenda sit-{{ s.cod }}"><i></i>{{ s.label }} <b>{{ s.n }}</b></span>
-    {% endfor %}
-  </div>
-</section>
-{% endif %}
-
-{% if tem_logbook %}
-<section class="mural">
-  <div class="mural-cabecalho">
-    <span class="mural-titulo">
-      <svg viewBox="0 0 24 24" class="ico"><path d="M9 4h6l-1 6 3 2v2H7v-2l3-2z"/><path d="M12 14v6"/></svg>
-      Recados do turno
-    </span>
-    <a href="{% url 'logbook' %}" class="mural-link">Escrever · ver todos</a>
-  </div>
-  {% if recados_turno %}
-    <div class="mural-notas">
-      {% for r in recados_turno %}
-        <a href="{% url 'logbook' %}" class="mural-nota {% if r.importante %}mural-importante{% endif %}">
-          {% if r.importante %}<span class="mural-flag">importante</span>{% endif %}
-          <span class="mural-nota-txt">{{ r.texto }}</span>
-          <small class="mural-nota-autor">{{ r.autor }} · {{ r.criado_em|date:"d/m H:i" }}</small>
-        </a>
-      {% endfor %}
-    </div>
-  {% else %}
-    <a href="{% url 'logbook' %}" class="mural-vazio">Nenhum recado ainda. Deixe um aviso para o próximo turno →</a>
-  {% endif %}
-</section>
-{% endif %}
-
 {% if atencao %}
 <section class="atencao-secao">
   <div class="secao-cabecalho">
@@ -77,7 +43,6 @@ nem chega aqui: entra direto nele (views.dashboard).{% endcomment %}
   <div class="atencao-grid">
     {% for a in atencao %}
       <a href="{{ a.url }}" class="atencao-item atencao-{{ a.nivel }}">
-        <span class="atencao-ponto"></span>
         <span class="atencao-txt">
           <strong>{{ a.rotulo }}</strong>
           <small>{{ a.detalhe }}</small>
@@ -100,7 +65,7 @@ nem chega aqui: entra direto nele (views.dashboard).{% endcomment %}
       <div class="kpi-valor">{{ resumo_reservas.ocupacao }}%</div>
       <div class="kpi-nota">{{ resumo_reservas.hospedadas }} de {{ resumo_reservas.uhs_ativas }} quartos ocupados</div>
     </a>
-    {% if resumo_reservas.chegadas_hoje %}<a href="{% url 'reservas:mapa' %}" class="cartao kpi cartao-link">{% else %}<div class="cartao kpi">{% endif %}
+    {% if resumo_reservas.chegadas_hoje %}<a href="#chegadas-hoje" class="cartao kpi cartao-link">{% else %}<div class="cartao kpi">{% endif %}
       <div class="kpi-topo">
         <span class="kpi-rotulo letreiro">Chegadas hoje</span>
         <svg viewBox="0 0 24 24" class="ico kpi-ico"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
@@ -108,7 +73,7 @@ nem chega aqui: entra direto nele (views.dashboard).{% endcomment %}
       <div class="kpi-valor">{{ resumo_reservas.chegadas_hoje }}</div>
       <div class="kpi-nota">check-ins previstos</div>
     {% if resumo_reservas.chegadas_hoje %}</a>{% else %}</div>{% endif %}
-    {% if resumo_reservas.saidas_hoje %}<a href="{% url 'reservas:mapa' %}" class="cartao kpi cartao-link">{% else %}<div class="cartao kpi">{% endif %}
+    {% if resumo_reservas.saidas_hoje %}<a href="#saidas-hoje" class="cartao kpi cartao-link">{% else %}<div class="cartao kpi">{% endif %}
       <div class="kpi-topo">
         <span class="kpi-rotulo letreiro">Saídas hoje</span>
         <svg viewBox="0 0 24 24" class="ico kpi-ico"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
@@ -146,6 +111,49 @@ nem chega aqui: entra direto nele (views.dashboard).{% endcomment %}
     </a>
   {% endif %}
 </div>
+{% endif %}
+
+{% if tem_reservas %}
+<div class="painel-estadias">
+  {% include "nucleo/partials/estadias_hoje.html" with reservas=resumo_reservas.chegadas total=resumo_reservas.chegadas_hoje secao_id="chegadas-hoje" titulo="Chegadas de hoje" tipo="chegada" acao="Check-in" %}
+  {% include "nucleo/partials/estadias_hoje.html" with reservas=resumo_reservas.saidas total=resumo_reservas.saidas_hoje secao_id="saidas-hoje" titulo="Saídas de hoje" tipo="saida" acao="Check-out" %}
+</div>
+{% endif %}
+
+{% if tem_logbook %}
+<section class="mural">
+  <div class="mural-cabecalho">
+    <span class="mural-titulo">
+      <svg viewBox="0 0 24 24" class="ico"><path d="M9 4h6l-1 6 3 2v2H7v-2l3-2z"/><path d="M12 14v6"/></svg>
+      Recados do turno
+    </span>
+    <a href="{% url 'logbook' %}" class="mural-link">Escrever · ver todos</a>
+  </div>
+  {% if recados_turno %}
+    <div class="mural-notas">
+      {% for r in recados_turno %}
+        <a href="{% url 'logbook' %}" class="mural-nota {% if r.importante %}mural-importante{% endif %}">
+          {% if r.importante %}<span class="mural-flag">importante</span>{% endif %}
+          <span class="mural-nota-txt">{{ r.texto }}</span>
+          <small class="mural-nota-autor">{{ r.autor }} · {{ r.criado_em|date:"d/m H:i" }}</small>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <a href="{% url 'logbook' %}" class="mural-vazio">Nenhum recado ainda. Deixe um aviso para o próximo turno →</a>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if corredor %}
+<section class="corredor-hero">
+  {% include "reservas/partials/corredor.html" with quartos=corredor.quartos hoje=corredor.hoje amanha=corredor.amanha %}
+  <div class="corredor-legenda">
+    {% for s in corredor.situacoes_filtro %}
+      <span class="chip-legenda sit-{{ s.cod }}"><i></i>{{ s.label }} <b>{{ s.n }}</b></span>
+    {% endfor %}
+  </div>
+</section>
 {% endif %}
 
 {% if graficos %}
@@ -204,159 +212,6 @@ nem chega aqui: entra direto nele (views.dashboard).{% endcomment %}
 {{ graficos|json_script:"dados-graficos" }}
 {% endif %}
 
-{% if tem_reservas %}
-<div class="painel-2col igual">
-  <section class="painel-bloco">
-    <h2>Chegadas de hoje</h2>
-    {% if resumo_reservas.chegadas %}
-      <div class="lista-fluxo">
-        {% for r in resumo_reservas.chegadas %}
-          <a href="{% url 'reservas:detalhe' r.pk %}" class="fluxo-item">
-            <span class="fluxo-uh">{{ r.uh.numero|cut:"Quarto " }}</span>
-            <span class="fluxo-info">
-              <strong>{{ r.hospede.nome }}</strong>
-              <small>{{ r.uh.tipo.nome }} · {{ r.noites }} noite{{ r.noites|pluralize }}</small>
-            </span>
-            <span class="selo mapa-cor-{{ r.status }}">{{ r.get_status_display }}</span>
-          </a>
-        {% endfor %}
-      </div>
-    {% else %}
-      <div class="estado-vazio">
-        <svg viewBox="0 0 24 24" class="ico"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/></svg>
-        <p>Sem chegadas previstas para hoje.</p>
-      </div>
-    {% endif %}
-  </section>
 
-  <section class="painel-bloco">
-    <h2>Saídas de hoje</h2>
-    {% if resumo_reservas.saidas %}
-      <div class="lista-fluxo">
-        {% for r in resumo_reservas.saidas %}
-          <a href="{% url 'reservas:detalhe' r.pk %}" class="fluxo-item">
-            <span class="fluxo-uh">{{ r.uh.numero|cut:"Quarto " }}</span>
-            <span class="fluxo-info">
-              <strong>{{ r.hospede.nome }}</strong>
-              <small>{{ r.uh.tipo.nome }}</small>
-            </span>
-            <span class="selo mapa-cor-{{ r.status }}">Check-out</span>
-          </a>
-        {% endfor %}
-      </div>
-    {% else %}
-      <div class="estado-vazio">
-        <svg viewBox="0 0 24 24" class="ico"><path d="M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/><path d="M3 12h11M11 8l4 4-4 4"/></svg>
-        <p>Sem saídas previstas para hoje.</p>
-      </div>
-    {% endif %}
-  </section>
 </div>
-{% endif %}
-
-{% if graficos %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script>
-(function () {
-  const dados = JSON.parse(document.getElementById('dados-graficos').textContent);
-  if (!window.Chart) return;
-  Chart.defaults.font.family = "'Hanken Grotesk', -apple-system, sans-serif";
-  Chart.defaults.font.size = 12;
-  // Paleta vem dos tokens da marca (app.css :root) — sem hex paralelo.
-  const css = getComputedStyle(document.documentElement);
-  const tk = (n, fb) => (css.getPropertyValue(n).trim() || fb);
-  Chart.defaults.color = tk('--tinta-suave', '#64717B');
-  const NOTURNO = tk('--noturno', '#051C2C'), LAMPIAO = tk('--lampiao', '#D7A048'),
-        MUSGO = tk('--musgo', '#2E483E'), MADEIRA = tk('--madeira', '#4F2C1D'),
-        INFO = tk('--info', '#2C6E7A'), ALERTA = tk('--alerta', '#B0741C'),
-        SUPERF = tk('--superficie', '#fff'), FIO = tk('--fio-forte', '#E7DFCF');
-  const PALETA = [NOTURNO, LAMPIAO, MUSGO, MADEIRA, INFO, ALERTA];
-  const semGrade = { grid: { display: false }, border: { display: false } };
-  const gradeY = { grid: { color: FIO }, border: { display: false } };
-  const ctx = id => { const el = document.getElementById(id); return el ? el.getContext('2d') : null; };
-  const reais = v => 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-
-  if (dados.ocupacao) {
-    const cores = dados.ocupacao.fds.map(f => f ? ALERTA : LAMPIAO);
-    new Chart(ctx('g-ocupacao'), {
-      type: 'line',
-      data: { labels: dados.ocupacao.labels, datasets: [{
-        data: dados.ocupacao.valores, borderColor: LAMPIAO,
-        backgroundColor: 'rgba(215,160,72,.14)', fill: true, tension: .35,
-        borderWidth: 2, pointRadius: 3, pointBackgroundColor: cores, pointBorderColor: cores }] },
-      options: { responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.parsed.y + '% ocupado' } } },
-        scales: { x: semGrade, y: { ...gradeY, min: 0, max: 100, ticks: { callback: v => v + '%' } } } }
-    });
-  }
-  if (dados.receita) {
-    new Chart(ctx('g-receita'), {
-      type: 'bar',
-      data: { labels: dados.receita.labels, datasets: [
-        { label: 'Serviço', data: dados.receita.servico, backgroundColor: MUSGO, stack: 's', borderRadius: 3 },
-        { label: 'Consumo', data: dados.receita.consumo, backgroundColor: LAMPIAO, stack: 's', borderRadius: 3 } ] },
-      options: { responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: c => c.dataset.label + ': ' + reais(c.parsed.y) } } },
-        scales: { x: { ...semGrade, stacked: true }, y: { ...gradeY, stacked: true, ticks: { callback: v => 'R$ ' + v } } } }
-    });
-  }
-  if (dados.tipos) {
-    new Chart(ctx('g-tipos'), {
-      type: 'bar',
-      data: { labels: dados.tipos.labels, datasets: [{ data: dados.tipos.valores, backgroundColor: MUSGO, borderRadius: 4 }] },
-      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.parsed.x + '% ocupado' } } },
-        scales: { x: { ...gradeY, min: 0, max: 100, ticks: { callback: v => v + '%' } }, y: semGrade } }
-    });
-  }
-  const opcoesPizza = (fmt, extra) => ({
-    responsive: true, maintainAspectRatio: false, cutout: '72%', radius: '92%',
-    plugins: {
-      legend: {
-        position: 'right',
-        labels: {
-          usePointStyle: true, pointStyle: 'circle', boxWidth: 8, boxHeight: 8,
-          padding: 10, font: { size: 11.5 },
-          generateLabels: chart => {
-            const ds = chart.data.datasets[0];
-            const total = ds.data.reduce((a, b) => a + b, 0) || 1;
-            return chart.data.labels.map((lab, i) => ({
-              text: lab + ' · ' + fmt(ds.data[i]) + ' (' + Math.round(ds.data[i] * 100 / total) + '%)',
-              fillStyle: ds.backgroundColor[i], strokeStyle: ds.backgroundColor[i],
-              pointStyle: 'circle', index: i,
-            }));
-          },
-        },
-      },
-      ...extra,
-    },
-  });
-  const inteiro = v => v.toLocaleString('pt-BR');
-  const reaisCurto = v => 'R$ ' + Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
-  if (dados.canais) {
-    new Chart(ctx('g-canais'), {
-      type: 'doughnut',
-      data: { labels: dados.canais.labels, datasets: [{ data: dados.canais.valores, backgroundColor: PALETA, borderColor: SUPERF, borderWidth: 3, hoverOffset: 4 }] },
-      options: opcoesPizza(inteiro, { tooltip: { callbacks: { label: c => c.label + ': ' + inteiro(c.parsed) + ' reserva' + (c.parsed > 1 ? 's' : '') } } })
-    });
-  }
-  if (dados.funil) {
-    new Chart(ctx('g-funil'), {
-      type: 'bar',
-      data: { labels: dados.funil.labels, datasets: [{ data: dados.funil.valores, backgroundColor: MADEIRA, borderRadius: 4 }] },
-      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: { x: { ...gradeY, ticks: { precision: 0 } }, y: semGrade } }
-    });
-  }
-  if (dados.pagamento) {
-    new Chart(ctx('g-pagamento'), {
-      type: 'doughnut',
-      data: { labels: dados.pagamento.labels, datasets: [{ data: dados.pagamento.valores, backgroundColor: PALETA, borderColor: SUPERF, borderWidth: 3, hoverOffset: 4 }] },
-      options: opcoesPizza(reaisCurto, { tooltip: { callbacks: { label: c => c.label + ': ' + reais(c.parsed) } } })
-    });
-  }
-})();
-</script>
-{% endif %}
 {% endblock %}

@@ -123,12 +123,12 @@ def liquidar(request, pk):
     data_raw = (request.POST.get("data_liquidacao") or "").strip() or None
     from datetime import date
     data_liq = None
-    if data_raw:
-        try:
-            data_liq = date.fromisoformat(data_raw)
-        except ValueError:
-            data_liq = None
     try:
+        if data_raw:
+            try:
+                data_liq = date.fromisoformat(data_raw)
+            except ValueError:
+                raise ValidationError("Informe uma data de liquidação válida.")
         services.registrar_liquidacao(
             cobranca, valor_liquido=valor_liquido,
             data_liquidacao=data_liq or timezone.localdate(),

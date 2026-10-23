@@ -10,13 +10,14 @@
       .filter(form => form !== exceto && form.dataset.dirty === '1');
   }
   function podeDescartar(raiz, exceto) {
-    return !pendentes(raiz, exceto).length || window.confirm(
+    const alterados = pendentes(raiz, exceto);
+    return !alterados.length || window.confirm(alterados[0].dataset.descarteMensagem ||
       'Há dados que ainda não foram salvos. Deseja descartá-los? Para salvar, escolha Cancelar e use o botão Salvar.');
   }
   function limpar(raiz) { pendentes(raiz).forEach(form => { delete form.dataset.dirty; }); }
   function alterou(ev) {
     const form = ev.target.closest && ev.target.closest(seletor);
-    if (!form) return;
+    if (!form || form.dataset.edicaoPendente === 'manual') return;
     form.dataset.dirty = '1';
     const aviso = form.querySelector('[data-estado-edicao], .mkt-save-state');
     if (aviso) aviso.textContent = 'Alterações ainda não salvas';
@@ -61,6 +62,30 @@
     if (!pendentes(document).length) return;
     ev.preventDefault(); ev.returnValue = '';
   });
+  // O histórico do HTMX troca HTML sem disparar beforeunload. Navegadores com
+  // Navigation API permitem cancelar Voltar/Avançar antes de mudar URL ou DOM.
+  if (window.navigation) {
+    window.navigation.addEventListener('navigate', ev => {
+      if (ev.navigationType !== 'traverse' || !ev.destination.sameDocument || !ev.cancelable) return;
+      if (!podeDescartar(document)) ev.preventDefault();
+    });
+  } else {
+    // Sem cancelamento antecipado do histórico, o PDV precisa de um documento
+    // próprio. Assim Voltar passa por beforeunload e conserva o carrinho se a
+    // pessoa cancelar. O GET nativo também atende links externos ao menu.
+    document.addEventListener('htmx:configRequest', ev => {
+      if (ev.detail.verb !== 'get' || ev.detail.target?.id !== 'conteudo') return;
+      const entrada = document.querySelector('[data-pdv-entrada]');
+      if (!entrada) return;
+      const destino = new URL(ev.detail.path, location.href);
+      const pdv = new URL(entrada.href, location.href);
+      if (destino.origin !== pdv.origin || destino.pathname !== pdv.pathname) return;
+      ev.preventDefault();
+      // htmx:confirm já autorizou descartar o formulário anterior, se existia.
+      limpar(document);
+      location.assign(destino.href);
+    });
+  }
   window.EdicaoPendente = { podeDescartar, limpar };
   window.fecharEdicao = function (el) {
     if (el.closest('#modal-conteudo')) { window.fecharModal(); return; }

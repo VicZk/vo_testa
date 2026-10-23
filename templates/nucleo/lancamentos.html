@@ -28,19 +28,19 @@
   <a href="?tipo=despesa" class="filtro-chip"{% if tipo == 'despesa' %} aria-current="page"{% endif %}>Despesas</a>
 </div>
 
-<table class="tabela">
+<table class="tabela tabela-cartoes tabela-registros">
   <thead>
     <tr><th>Data</th><th>Tipo</th><th>Categoria</th><th>Centro</th><th>Descrição</th><th class="num">Valor</th></tr>
   </thead>
   <tbody>
     {% for l in lancamentos %}
       <tr>
-        <td>{{ l.data|date:"d/m/Y" }}</td>
-        <td>{{ l.get_tipo_display }}</td>
-        <td>{{ l.categoria.nome }}</td>
-        <td>{{ l.get_centro_display }}</td>
-        <td>{{ l.descricao }}</td>
-        <td class="num">{{ l.valor|intcomma_brl }}</td>
+        <td data-rotulo="Data">{{ l.data|date:"d/m/Y" }}</td>
+        <td class="registro-status" data-rotulo="Tipo">{{ l.get_tipo_display }}</td>
+        <td data-rotulo="Categoria">{{ l.categoria.nome }}</td>
+        <td data-rotulo="Centro">{{ l.get_centro_display }}</td>
+        <td class="registro-principal">{{ l.descricao }}</td>
+        <td class="num registro-valor" data-rotulo="Valor">{{ l.valor|intcomma_brl }}</td>
       </tr>
     {% empty %}
       <tr><td colspan="6" class="vazio">Nenhum lançamento. Cadastre categorias no admin e registre o primeiro.</td></tr>

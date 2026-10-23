@@ -278,13 +278,24 @@ def registrar_liquidacao(cobranca, *, valor_liquido=None, taxa=None,
     travar(cobranca)
     if cobranca.status != Cobranca.Status.PAGO:
         raise ValidationError("Só uma cobrança paga pode ser liquidada.")
-    valor_liquido = Decimal(str(valor_liquido)) if valor_liquido is not None else None
-    taxa = Decimal(str(taxa)) if taxa is not None else None
+    valor_liquido = decimal_valido(
+        valor_liquido, nome="Valor líquido", maximo=cobranca.valor) if valor_liquido is not None else None
+    taxa = decimal_valido(taxa, nome="Taxa", maximo=cobranca.valor) if taxa is not None else None
+    if valor_liquido is not None and taxa is not None and valor_liquido + taxa != cobranca.valor:
+        raise ValidationError("O valor líquido mais a taxa deve corresponder ao valor da cobrança.")
+    id_liquidacao = str(id_liquidacao or "").strip()
+    if len(id_liquidacao) > Cobranca._meta.get_field("id_liquidacao").max_length:
+        raise ValidationError("ID do depósito: informe até 80 caracteres.")
     if valor_liquido is not None and taxa is None:
         taxa = (cobranca.valor - valor_liquido)
     if taxa is not None and valor_liquido is None:
         valor_liquido = (cobranca.valor - taxa)
     ja_liquidada = cobranca.liquidado
+    # Uma notificação resumida não desfaz os valores já conferidos no extrato.
+    if ja_liquidada and valor_liquido is None and taxa is None:
+        valor_liquido, taxa = cobranca.valor_liquido, cobranca.taxa
+    if ja_liquidada and data_liquidacao is None:
+        data_liquidacao = cobranca.data_liquidacao
     cobranca.liquidado = True
     cobranca.valor_liquido = valor_liquido
     cobranca.taxa = taxa

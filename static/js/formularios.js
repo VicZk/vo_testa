@@ -57,7 +57,15 @@
       const json = (resposta.headers.get('Content-Type') || '').includes('application/json') ? await resposta.json() : null;
       if (resposta.ok && json && json.redirect) {
         if (window.EdicaoPendente) EdicaoPendente.limpar(document);
-        location.assign(json.redirect);
+        const destino = new URL(json.redirect, location.href);
+        if (destino.hash && destino.origin === location.origin &&
+            destino.pathname === location.pathname && destino.search === location.search) {
+          // Uma mudança só de âncora não buscaria os dados que acabaram de ser salvos.
+          history.replaceState(history.state, '', destino.href);
+          location.reload();
+        } else {
+          location.assign(destino.href);
+        }
         return;
       }
       if (json && Array.isArray(json.errors)) {

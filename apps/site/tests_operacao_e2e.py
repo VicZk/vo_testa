@@ -652,16 +652,17 @@ class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
         p = self.page
         p.goto(self.url(reverse("escala:turnos")))
         nome = "Nome de turno que excede o limite de quarenta caracteres QA"
+        p.locator('[name="nome"]').evaluate("campo => campo.removeAttribute('maxlength')")
         p.locator('[name="nome"]').fill(nome)
         p.locator('[name="inicio"]').fill("09:00")
         p.locator('[name="fim"]').fill("17:00")
-        p.get_by_role("button", name="Salvar", exact=True).click()
+        p.get_by_role("button", name="Salvar turno", exact=True).click()
         expect(p.locator('[data-erros-envio]')).to_be_visible()
         expect(p.locator('[name="nome"]')).to_have_value(nome)
         expect(p.locator('[name="inicio"]')).to_have_value("09:00")
         self.assertFalse(Turno.objects.filter(nome=nome).exists())
         p.locator('[name="nome"]').fill("Turno preservado QA")
-        p.get_by_role("button", name="Salvar", exact=True).click()
+        p.get_by_role("button", name="Salvar turno", exact=True).click()
         expect(p.get_by_text("Turno cadastrado.", exact=True)).to_be_visible()
         self.assertEqual(Turno.objects.filter(nome="Turno preservado QA").count(), 1)
         p.goto(self.url(reverse("conciliacao:painel")))
@@ -959,7 +960,7 @@ class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
     def test_caixa_alinha_paineis_e_dashboard_contem_identificacao_do_quarto(self):
         from apps.reservas.models import Reserva
 
-        Reserva.objects.create(
+        chegada = Reserva.objects.create(
             uh=self.room, hospede=self.guest, criado_por=self.op,
             checkin=self.today, checkout=self.today + timedelta(days=2),
             status=Reserva.Status.CONFIRMADA, valor_diaria=300,
@@ -990,7 +991,14 @@ class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
                 self._foto(f"caixa-alinhado-{largura}.png")
                 p.goto(self.url(reverse("dashboard")))
                 expect(p.get_by_role("heading", name="Visão geral", exact=True)).to_be_visible()
-                badge = p.locator('.fluxo-uh').filter(has_text="QA-01").first
+                linha = p.locator(f'#chegadas-hoje li[data-reserva-id="{chegada.pk}"]')
+                expect(linha).to_contain_text(self.guest.nome)
+                detalhe = reverse("reservas:detalhe", args=[chegada.pk])
+                expect(linha.locator(".painel-estadia-identidade")).to_have_attribute("href", detalhe)
+                expect(linha.get_by_role("link", name="Check-in", exact=True)).to_have_attribute(
+                    "href", detalhe + "#acoes-estadia")
+                badge = linha.locator(".painel-estadia-quarto")
+                expect(badge).to_contain_text("QA-01")
                 texto = badge.evaluate("""el => {
                     const r=el.getBoundingClientRect(), range=document.createRange();
                     range.selectNodeContents(el);const t=range.getBoundingClientRect();
@@ -1034,9 +1042,9 @@ class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
                         self.assertAlmostEqual(medidas["titulo"], medidas["borda"], delta=1)
                         self.assertLessEqual(medidas["documento"], largura + 1)
         p.locator('.busca-global').click()
-        expect(p.get_by_role("dialog", name="Buscar e comandos", exact=True)).to_be_visible()
+        expect(p.get_by_role("dialog", name="Buscar na pousada", exact=True)).to_be_visible()
         p.locator('#paleta-input').press("Escape")
-        expect(p.get_by_role("dialog", name="Buscar e comandos", exact=True)).to_be_hidden()
+        expect(p.get_by_role("dialog", name="Buscar na pousada", exact=True)).to_be_hidden()
 
     def test_conciliacao_alinha_controles_mesmo_com_nome_de_arquivo_longo(self):
         p = self.page
@@ -1095,21 +1103,24 @@ class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
                     for anterior, seguinte in pares:
                         a = p.locator(anterior).first.bounding_box()
                         b = p.locator(seguinte).first.bounding_box()
-                        self.assertGreaterEqual(b["y"] - a["y"] - a["height"], 20, (anterior, seguinte))
+                        self.assertGreaterEqual(b["y"] - a["y"] - a["height"],
+                                                16 if largura <= 820 else 20, (anterior, seguinte))
                     self.assertLessEqual(p.evaluate("document.documentElement.scrollWidth"), largura + 1)
                     if nome == "comercial:pagina_detalhe":
                         hierarquia = p.locator(".kpi").first.evaluate("""el => {
                             const valor=getComputedStyle(el.querySelector('.kpi-valor'));
                             const rotulo=getComputedStyle(el.querySelector('.kpi-rotulo'));
-                            return parseFloat(valor.fontSize) / parseFloat(rotulo.fontSize);
+                            return {valor:parseFloat(valor.fontSize),
+                                    proporcao:parseFloat(valor.fontSize) / parseFloat(rotulo.fontSize)};
                         }""")
-                        self.assertGreaterEqual(hierarquia, 2)
+                        self.assertGreaterEqual(hierarquia["valor"], 18)
+                        self.assertGreaterEqual(hierarquia["proporcao"], 1.5 if largura <= 820 else 2)
                     if nome == "comercial:email_campanha_detalhe":
                         larguras = p.locator(".kpis-el .kpi").evaluate_all(
                             "els => els.map(el => el.getBoundingClientRect().width)")
                         self.assertLessEqual(max(larguras) - min(larguras), 1)
 
-    def test_navegacao_dos_modulos_mostra_todas_as_opcoes_sem_cortar(self):
+    def test_navegacao_dos_modulos_mantem_opcoes_acessiveis_sem_cortar_rotulos(self):
         p = self.page
         for rota in ("escala:grade", "comercial:funil", "marketing:quadro", "estoque:posicao"):
             for largura in (320, 390, 821, 1440):
@@ -1120,6 +1131,10 @@ class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
                     grupos = p.locator(".seg-filtro, .segmentado, .est-abas").evaluate_all("""els => els.map(el => {
                         const r = el.getBoundingClientRect();
                         return {largura:el.clientWidth, conteudo:el.scrollWidth,
+                            faixa:el.classList.contains('abas-secao'), overflow:getComputedStyle(el).overflowX,
+                            itens:[...el.querySelectorAll('a,button')].map(a=>({
+                                y:a.getBoundingClientRect().top,h:a.getBoundingClientRect().height,
+                                cortado:a.scrollWidth>a.clientWidth+1})),
                             fora:[...el.querySelectorAll('a,button')].filter(a => {
                                 const b=a.getBoundingClientRect();
                                 return b.left<r.left-1 || b.right>r.right+1 || b.top<r.top-1 || b.bottom>r.bottom+1;
@@ -1127,8 +1142,20 @@ class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
                     })""")
                     self.assertTrue(grupos)
                     for grupo in grupos:
-                        self.assertLessEqual(grupo["conteudo"], grupo["largura"] + 1)
-                        self.assertFalse(grupo["fora"], grupo)
+                        if grupo["faixa"]:
+                            self.assertIn(grupo["overflow"], ("auto", "scroll"))
+                            self.assertLess(max(a["y"] for a in grupo["itens"]) - min(a["y"] for a in grupo["itens"]), 1)
+                            self.assertTrue(all(a["h"] >= 44 and not a["cortado"] for a in grupo["itens"]))
+                        else:
+                            self.assertLessEqual(grupo["conteudo"], grupo["largura"] + 1)
+                            self.assertFalse(grupo["fora"], grupo)
+                    for faixa in p.locator(".abas-secao").all():
+                        for link in (faixa.locator("a").first, faixa.locator("a").last):
+                            link.focus()
+                            limites, item = faixa.bounding_box(), link.bounding_box()
+                            self.assertGreaterEqual(item["x"], limites["x"] - 1)
+                            self.assertLessEqual(item["x"] + item["width"], limites["x"] + limites["width"] + 1)
+                    self.assertLessEqual(p.evaluate("document.documentElement.scrollWidth"), largura + 1)
 
     def test_telas_acesso_mostram_formulario_com_e_sem_sessao(self):
         p = self.page

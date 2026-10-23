@@ -9,6 +9,7 @@ django-storages==1.14.6
 boto3==1.43.116
 qrcode==8.2
 Pillow==13.0.0
+pypdf==6.21.2     # valida estrutura dos documentos privados de manutenção
 pyotp>=2.9.0        # MFA (TOTP) — autenticação de dois fatores
 redis==8.1.0        # cache compartilhado quando REDIS_URL existe
 sentry-sdk==2.72.0  # monitoramento de erros quando SENTRY_DSN existe

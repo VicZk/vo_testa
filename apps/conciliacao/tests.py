@@ -372,9 +372,12 @@ class FechamentoGraficoTests(TestCase):
         self.assertIn('id="g-ext"', body)
         self.assertIn("chart.umd.min.js", body)
 
-    def test_sem_dados_nao_injeta_chart(self):
+    def test_sem_dados_exibe_estado_vazio_sem_canvas(self):
         r = self.client.get("/crm/conciliacao/fechamento/?mes=1&ano=2020")
-        self.assertNotIn("chart.umd.min.js", r.content.decode("utf-8"))
+        self.assertNotContains(r, '<canvas id="g-ext">')
+        self.assertNotContains(r, '<canvas id="g-car">')
+        self.assertContains(r, "Sem linhas no período.")
+        self.assertContains(r, "Sem transações no período.")
 
 
 class EstornoNaConciliacaoTests(TestCase):

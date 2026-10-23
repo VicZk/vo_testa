@@ -27,12 +27,15 @@
     com fundo de {{ sessao.fundo_troco|intcomma_brl }}.
   </p>
   {% if sessoes_abertas.count > 1 %}
-  <nav class="caixa-sessoes" aria-label="Seus caixas abertos">
-    <span class="letreiro">Seus caixas abertos:</span>
-    {% for s in sessoes_abertas %}
-      <a href="?modulo={{ s.modulo }}" class="botao-neutro{% if s.pk == sessao.pk %} ativo{% endif %}"{% if s.pk == sessao.pk %} aria-current="page"{% endif %}>{{ s.get_modulo_display }}</a>
-    {% endfor %}
-  </nav>
+  <form method="get" class="caixa-sessoes" aria-label="Seus caixas abertos">
+    <div class="campo">
+      <label for="caixa-sessao-ativa">Caixa em atendimento</label>
+      <select id="caixa-sessao-ativa" name="modulo">
+        {% for s in sessoes_abertas %}<option value="{{ s.modulo }}"{% if s.pk == sessao.pk %} selected{% endif %}>{{ s.get_modulo_display }}</option>{% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="botao-neutro">Trocar caixa</button>
+  </form>
   {% endif %}
 
   <div class="caixa-indicadores">

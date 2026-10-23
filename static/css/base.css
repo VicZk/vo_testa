@@ -580,6 +580,12 @@ input[type="radio"] { accent-color: var(--lampiao); }
   animation: none;
 }
 
+::view-transition-old(root) { display: none; }
+
+::view-transition-new(root) {
+  opacity: 1; mix-blend-mode: normal;
+}
+
 @supports selector(::details-content) {
   :root { interpolate-size: allow-keywords; }
 }

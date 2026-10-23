@@ -1,4 +1,5 @@
 from decimal import Decimal
+from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -7,12 +8,14 @@ from django.db import IntegrityError, transaction
 from django.db.models import Q, Sum
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from .areas import Area, areas_catalogo
 from .forms import (
     AbrirCaixaForm,
+    AcessoFuncionarioForm,
     AgenciaForm,
     ConfiguracaoUHForm,
     ContaPagarReceberForm,
@@ -1121,6 +1124,11 @@ def caixa(request):
     )
 
 
+def _voltar_ao_caixa(modulo):
+    """Mantém a gaveta escolhida após salvar ou corrigir uma operação."""
+    return redirect(f"{reverse('caixa')}?{urlencode({'modulo': modulo})}")
+
+
 @requer_area(Area.CAIXA, Area.FINANCEIRO)
 def caixa_abrir(request):
     if request.method != "POST":
@@ -1136,6 +1144,7 @@ def caixa_abrir(request):
             messages.success(request, "Caixa aberto. Bom trabalho!")
         except IntegrityError:
             messages.error(request, "Você já tem um caixa aberto neste módulo.")
+        return _voltar_ao_caixa(form.cleaned_data["modulo"])
     else:
         messages.error(request, "Não foi possível abrir o caixa. Confira os dados.")
     return redirect("caixa")
@@ -1167,7 +1176,7 @@ def caixa_movimento(request):
             f"{campo}: {' '.join(msgs)}" for campo, msgs in form.errors.items()
         )
         messages.error(request, f"Movimento não registrado: {erros}")
-    return redirect("caixa")
+    return _voltar_ao_caixa(sessao.modulo)
 
 
 @requer_area(Area.CAIXA, Area.FINANCEIRO)
@@ -1185,7 +1194,7 @@ def caixa_fechar(request):
                           observacoes=form.cleaned_data["observacoes"])
         except ValidationError as erro:  # ex.: fechada ao mesmo tempo em outra aba
             messages.error(request, " ".join(erro.messages))
-            return redirect("caixa")
+            return _voltar_ao_caixa(sessao.modulo)
         if sessao.diferenca == Decimal("0.00"):
             messages.success(request, "Caixa fechado sem diferença. 🎉")
         else:
@@ -1196,7 +1205,7 @@ def caixa_fechar(request):
             )
         return redirect("caixa_sessao", pk=sessao.pk)
     messages.error(request, "Informe o valor contado para fechar o caixa.")
-    return redirect("caixa")
+    return _voltar_ao_caixa(sessao.modulo)
 
 
 @requer_area(Area.CAIXA, Area.FINANCEIRO)
@@ -1462,14 +1471,63 @@ def funcionarios(request):
 def _contexto_novo(request, gerente, form=None):
     """Ficha em branco para o cadastro em uma etapa (mesmo layout da edição)."""
     modulos_qs = ModuloContratado.objects.filter(ativo=True).order_by("codigo")
-    return {
+    contexto = {
         "modo": "novo", "f": None, "usuario": None, "gerente": gerente,
         "proprio": False, "historico": None,
         "form": form or FuncionarioForm(ver_salario=pode_ver_salario(request.user)),
-        "modulos": [{"codigo": m.codigo, "nome": m.get_codigo_display(), "tem": False}
+        "modulos": [{"codigo": m.codigo, "nome": m.get_codigo_display(),
+                     "tem": m.codigo in request.POST.getlist("modulos")}
                     for m in modulos_qs],
-        "areas": [{"codigo": c, "nome": rot, "tem": False} for c, rot in areas_catalogo()],
+        "areas": [{"codigo": c, "nome": rot, "tem": c in request.POST.getlist("areas")}
+                  for c, rot in areas_catalogo()],
     }
+    contexto.update(_dados_ficha(request, pendente=request.method == "POST"))
+    return contexto
+
+
+def _dados_ficha(request, f=None, *, pendente=False):
+    u = f.usuario if f else None
+    return {
+        "nome_preenchido": request.POST.get("nome", "") if pendente else (f.pessoa.nome if f else ""),
+        "documento_preenchido": request.POST.get("documento", "") if pendente else (f.pessoa.documento if f else ""),
+        "login_preenchido": request.POST.get("username", "") if pendente else "",
+        "gerente_marcado": request.POST.get("gerente") == "on" if pendente else bool(u and (u.is_staff or u.is_superuser)),
+        "ativo_marcado": request.POST.get("ativo") == "on" if pendente else (u.is_active if u else True),
+    }
+
+
+def _validar_ficha_funcionario(request, form, gerente, usuario=None):
+    form.is_valid()
+    nome = (request.POST.get("nome") or "").strip()
+    if not nome:
+        form.add_error(None, "Informe o nome do funcionário.")
+    elif len(nome) > Pessoa._meta.get_field("nome").max_length:
+        form.add_error(None, "O nome do funcionário é longo demais.")
+    documento = (request.POST.get("documento") or "").strip()
+    if len(documento) > Pessoa._meta.get_field("documento").max_length:
+        form.add_error(None, "CPF/CNPJ deve ter até 18 caracteres.")
+    acesso = AcessoFuncionarioForm(request.POST, usuario=usuario) if gerente else None
+    if acesso and not acesso.is_valid():
+        for campo, erros in acesso.errors.items():
+            for erro in erros:
+                form.add_error(None, f"{acesso.fields[campo].label}: {erro}" if campo in acesso.fields else erro)
+    return acesso
+
+
+def _erro_ficha_funcionario(request, form):
+    from .formularios import erros_do_formulario
+
+    erro = erros_do_formulario(form)
+    if request.headers.get("X-Form-Preserve") == "1":
+        return JsonResponse({"errors": [erro]}, status=422, headers={"Cache-Control": "no-store"})
+    if request.headers.get("HX-Request"):
+        import json
+
+        from django.http import HttpResponse
+
+        return HttpResponse("", headers={"HX-Reswap": "none", "HX-Trigger": json.dumps(
+            {"aviso": {"texto": erro, "tipo": "error"}})})
+    return None
 
 
 @requer_area(Area.FUNCIONARIOS, Area.EQUIPE)
@@ -1479,42 +1537,41 @@ def funcionario_novo(request):
     if request.method == "POST":
         nome = (request.POST.get("nome") or "").strip()
         form = FuncionarioForm(request.POST, ver_salario=pode_ver_salario(request.user))
-        if not nome:
-            messages.error(request, "Informe o nome do funcionário.")
-        elif not form.is_valid():
-            messages.error(request, "Revise os campos da ficha.")
-        else:
-            pessoa = Pessoa.objects.create(
-                nome=nome, documento=(request.POST.get("documento") or "").strip()
-            )
-            f = form.save(commit=False)
-            f.pessoa = pessoa
-            f.save()
-            if gerente:  # login/módulos/áreas só gerência define
-                _aplicar_acesso_funcionario(
-                    request, f, ModuloContratado.objects.filter(ativo=True).order_by("codigo")
-                )
-            messages.success(request, f"Funcionário “{nome}” cadastrado.")
-            return redirect("funcionarios")
+        acesso = _validar_ficha_funcionario(request, form, gerente)
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    pessoa = Pessoa.objects.create(
+                        nome=nome, documento=(request.POST.get("documento") or "").strip())
+                    f = form.save(commit=False)
+                    f.pessoa = pessoa
+                    f.save()
+                    if gerente:
+                        _aplicar_acesso_funcionario(request, f,
+                            ModuloContratado.objects.filter(ativo=True).order_by("codigo"), acesso)
+            except IntegrityError:
+                if not acesso or not Usuario.objects.filter(username=acesso.cleaned_data.get("username")).exists():
+                    raise
+                form.add_error(None, "Já existe um usuário com esse login.")
+            else:
+                messages.success(request, f"Funcionário “{nome}” cadastrado.")
+                return redirect("funcionarios")
+        erro = _erro_ficha_funcionario(request, form)
+        if erro is not None:
+            return erro
         return render(request, "nucleo/funcionario_form.html",
                       _contexto_novo(request, gerente, form))
     return render(request, "nucleo/funcionario_form.html", _contexto_novo(request, gerente))
 
 
-def _aplicar_acesso_funcionario(request, f, modulos_ativos_qs):
+def _aplicar_acesso_funcionario(request, f, modulos_ativos_qs, acesso):
     """Cria/atualiza o login do funcionário + módulos/áreas. Só gerência chama."""
-    username = (request.POST.get("username") or "").strip()
-    senha = request.POST.get("password") or ""
+    username = acesso.cleaned_data.get("username", "")
+    senha = acesso.cleaned_data.get("password", "")
     u = f.usuario
     if not u:
         if not username:
             return  # sem login e não pediram — ok
-        if Usuario.objects.filter(username=username).exists():
-            messages.error(request, "Já existe um usuário com esse login.")
-            return
-        if len(senha) < 8:
-            messages.error(request, "Defina uma senha (mín. 8) para criar o login.")
-            return
         u = Usuario.objects.create_user(
             username=username, first_name=f.pessoa.nome, password=senha
         )
@@ -1549,38 +1606,50 @@ def _ficha_contexto(request, f, gerente, form=None):
     modulos_qs = ModuloContratado.objects.filter(ativo=True).order_by("codigo")
     u = f.usuario
     ver_salario = pode_ver_salario(request.user)
-    return {
+    pendente = bool(form is not None and form.is_bound and form.errors)
+    contexto = {
         "f": f, "gerente": gerente, "usuario": u,
         "form": form or FuncionarioForm(instance=f, ver_salario=ver_salario),
         "modulos": [
             {"codigo": m.codigo, "nome": m.get_codigo_display(),
-             "tem": bool(u and u.modulos.filter(pk=m.pk).exists())}
+             "tem": m.codigo in request.POST.getlist("modulos") if pendente else bool(u and u.modulos.filter(pk=m.pk).exists())}
             for m in modulos_qs
         ],
         "areas": [
-            {"codigo": c, "nome": rot, "tem": bool(u and c in (u.areas or []))}
+            {"codigo": c, "nome": rot,
+             "tem": c in request.POST.getlist("areas") if pendente else bool(u and c in (u.areas or []))}
             for c, rot in areas_catalogo()
         ],
         "proprio": bool(u and u.pk == request.user.pk),
         "historico": historico_funcionario(f) if gerente else None,
     }
+    contexto.update(_dados_ficha(request, f, pendente=pendente))
+    return contexto
 
 
 def _salvar_ficha(request, f, gerente):
     """Aplica a ficha (dados pessoais + RH + acesso). Retorna (ok, form)."""
+    usuario_existente = f.usuario_id
     form = FuncionarioForm(request.POST, instance=f, ver_salario=pode_ver_salario(request.user))
+    acesso = _validar_ficha_funcionario(request, form, gerente, f.usuario)
     if not form.is_valid():
         return False, form
-    f.pessoa.nome = (request.POST.get("nome") or f.pessoa.nome).strip()
-    doc = request.POST.get("documento")
-    if doc is not None:
-        f.pessoa.documento = doc.strip()
-    f.pessoa.save()
-    form.save()
-    if gerente:  # login/módulos/áreas só gerência mexe
-        _aplicar_acesso_funcionario(
-            request, f, ModuloContratado.objects.filter(ativo=True).order_by("codigo")
-        )
+    try:
+        with transaction.atomic():
+            f.pessoa.nome = request.POST.get("nome", "").strip()
+            doc = request.POST.get("documento")
+            if doc is not None:
+                f.pessoa.documento = doc.strip()
+            f.pessoa.save()
+            form.save()
+            if gerente:
+                _aplicar_acesso_funcionario(request, f,
+                    ModuloContratado.objects.filter(ativo=True).order_by("codigo"), acesso)
+    except IntegrityError:
+        if usuario_existente or not acesso or not Usuario.objects.filter(username=acesso.cleaned_data.get("username")).exists():
+            raise
+        form.add_error(None, "Já existe um usuário com esse login.")
+        return False, form
     return True, form
 
 
@@ -1600,7 +1669,9 @@ def funcionario_editar(request, pk):
                 return render(request, "nucleo/partials/funcionario_painel.html", ctx)
             messages.success(request, f"Ficha de {f.pessoa.nome} salva.")
             return redirect("funcionarios")
-        messages.error(request, "Revise os campos da ficha.")
+        erro = _erro_ficha_funcionario(request, form)
+        if erro is not None:
+            return erro
     ctx = _ficha_contexto(request, f, gerente, form=form)
     ctx["modo"] = "editar"
     return render(request, "nucleo/funcionario_form.html", ctx)

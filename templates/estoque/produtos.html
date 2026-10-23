@@ -7,9 +7,9 @@
 <p class="pagina-eyebrow letreiro">Vendas &amp; Estoque</p>
 <div class="pagina-cabecalho">
   <h1>Produtos</h1>
-  <div class="linha-botoes">
-    <a href="{% url 'estoque:cadastros' %}" class="botao-neutro">Categorias e locais</a>
+  <div class="pagina-acoes">
     <a href="{% url 'estoque:produto_novo' %}" class="botao-primario">Novo produto</a>
+    <a href="{% url 'estoque:cadastros' %}" class="botao-neutro">Categorias e locais</a>
   </div>
 </div>
 {% include "estoque/partials/nav.html" %}

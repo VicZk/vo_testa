@@ -9,6 +9,40 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 23/10/2026: interface consistente e fluxos conferidos em uso real
+
+- Menus internos ficam estáveis durante a navegação, sem a duplicação da
+  Governança. Transições, histórico, busca por Ctrl/Cmd+K e avisos de alterações
+  pendentes funcionam juntos; gráficos reaparecem ao voltar pelo histórico.
+- Reservas, manutenção, financeiro, pagamentos, NPS e cadastros apresentam
+  registros legíveis no celular. Ações da reserva têm grupos claros, foco por
+  teclado e fechamento previsível. Filtros de caixa e períodos ocupam menos espaço.
+- A tabela de preços permite filtrar ala/quarto sem perder os demais valores;
+  erros em campos ocultos revelam o quarto afetado. Gráficos usam biblioteca local.
+- Manutenção aceita documentos privados PDF, PNG, JPG e XML, inclusive depois
+  de concluir a OS. Histórico, busca por nota fiscal e indicação do bloqueio atual
+  ajudam a localizar o serviço; anexos inválidos não concluem a OS parcialmente.
+- Contas resistem a baixas simultâneas sem duplicar o lançamento. Importações de
+  cartão repetidas não duplicam transações; liquidação valida valor líquido,
+  taxa e data. Movimentar o caixa mantém o módulo que estava selecionado.
+- Cadastros de funcionário e acesso são gravados juntos; login duplicado não
+  deixa ficha parcial. Escala recusa valores inválidos, decisões desatualizadas
+  e conflitos de ausência; corrige o travamento mútuo entre solicitações e
+  aprovações simultâneas.
+- A [revisão de 23/10](docs/REVISAO_USABILIDADE_2026-10-23.md) registra a matriz
+  de 37 telas em quatro larguras, os fluxos exercitados e os limites dos testes.
+
+### Chegadas, saídas e saldos no Painel da recepção
+
+- As listas do dia aparecem antes dos gráficos, com quarto, hóspede, situação,
+  saldo e atalhos de check-in/check-out para a etapa existente da reserva.
+- Chegadas sem conta mostram a previsão de diárias e taxas descontando o sinal;
+  contas abertas mostram o saldo atual. Créditos, contas ausentes e cobranças de
+  grupo são identificados sem confundir diárias do grupo com consumos do quarto.
+- As listas e os totais usam os mesmos critérios de hospedagem e deixam Day Use
+  no seu fluxo próprio. As ações mantêm as verificações de documentos, limpeza,
+  conta e consumos pendentes. O layout se adapta ao celular e aos nomes longos.
+
 ## 23/10/2026: navegação estável, categorias ilustradas e Marketing consistente
 
 - O menu lateral conserva a posição ao trocar de página, recarregar e voltar.

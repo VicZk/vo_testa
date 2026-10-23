@@ -2,9 +2,9 @@
 {% block titulo %}Canais de venda{% endblock %}
 {% block conteudo %}<div class="eleg">
 <p class="pagina-eyebrow letreiro">Distribuição · Reservas</p>
-<div class="pagina-cabecalho"><h1>Canais de venda</h1><span class="selo">{{ conexao.get_ambiente_display }}</span></div>
+<div class="pagina-cabecalho"><h1>Canais de venda</h1><span class="contexto-secao">{{ conexao.get_ambiente_display }}</span></div>
 <p class="subtitulo">Confira as reservas recebidas e acompanhe a disponibilidade enviada pela Channex aos canais conectados.</p>
-<form method="get" class="barra-filtros"><label for="conexao">Conexão</label><select name="conexao" id="conexao">{% for item in conexoes %}<option value="{{ item.pk }}" {% if item.pk == conexao.pk %}selected{% endif %}>{{ item }} · {{ item.pk }}</option>{% endfor %}</select><button class="botao-neutro">Consultar</button></form>
+<form method="get" class="barra-filtros canais-seletor"><div class="campo"><label for="conexao">Conexão</label><select name="conexao" id="conexao">{% for item in conexoes %}<option value="{{ item.pk }}" {% if item.pk == conexao.pk %}selected{% endif %}>{{ item }} · {{ item.pk }}</option>{% endfor %}</select></div><button class="botao-neutro">Consultar</button></form>
 <div class="kpis">
 <div class="kpi"><span class="kpi-rotulo">Conexão</span><strong>{% if conexao.ativo %}Habilitada{% else %}Desabilitada{% endif %}</strong><span class="kpi-nota">{% if conexao.ultima_execucao %}Última rotina: {{ conexao.ultima_execucao|date:"d/m H:i" }}{% else %}Nenhuma rotina executada{% endif %}</span></div>
 <div class="kpi"><span class="kpi-rotulo">Conferência</span><strong>{{ pendentes }}</strong><span class="kpi-nota">Revisões aguardando a equipe</span></div>

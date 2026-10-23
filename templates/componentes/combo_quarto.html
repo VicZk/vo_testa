@@ -12,7 +12,7 @@ Parâmetros do include:
 {% endcomment %}
 {% firstof campo_id "id_"|add:campo as id_combo %}
 {{ dados|json_script:dados_id }}
-<div class="combo" x-data="comboQuarto" data-dados="{{ dados_id }}" data-sel="{{ valor_id|default:'' }}"
+<div class="combo" x-data="comboQuarto" hx-history="false" data-dados="{{ dados_id }}" data-sel="{{ valor_id|default:'' }}"
      data-url="{% url 'comercial:quartos_disponiveis' %}" @click.outside="fechar()">
   <input type="hidden" name="{{ campo }}" :value="sel">
   <input type="text" id="{{ id_combo }}" class="combo-input" autocomplete="off"
@@ -22,7 +22,7 @@ Parâmetros do include:
          x-model="q" @focus="open = true" @input="digitou()"
          @keydown.arrow-down.prevent="mover(1)" @keydown.arrow-up.prevent="mover(-1)"
          @keydown.enter="if (confirmar()) $event.preventDefault()"
-         @keydown.escape.stop="fechar()" @keydown.tab="fechar()">
+         @keydown.escape="if (open) { $event.stopPropagation(); fechar(); }" @keydown.tab="fechar()">
   <div class="combo-lista" x-show="open" x-cloak role="listbox" :id="cid + '-lista'"
        aria-label="Quartos livres">
     <template x-for="[grupo, lista] in grupos" :key="grupo">

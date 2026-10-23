@@ -3,11 +3,19 @@
 {% block titulo %}Manutenção | CRM Vô Testa{% endblock %}
 
 {% block conteudo %}
+<div class="manutencao-painel">
 <p class="pagina-eyebrow letreiro">Hospedagem</p>
 <div class="pagina-cabecalho">
   <h1>Manutenção</h1>
+  <a href="#nova-ordem" class="botao-primario">Nova ordem de serviço</a>
 </div>
-<p class="subtitulo">Ordens de serviço de quartos e áreas comuns. Bloquear um quarto o tira da disponibilidade até a conclusão.</p>
+<p class="subtitulo">Ordens de serviço de quartos e áreas comuns, com histórico de atendimentos e documentos.</p>
+
+<form method="get" class="filtros manutencao-filtros" aria-label="Filtrar ordens de serviço">
+  <div class="campo"><label for="os-filtro-situacao">Situação</label><select name="situacao" id="os-filtro-situacao"><option value="abertas"{% if situacao == 'abertas' %} selected{% endif %}>Em aberto</option><option value="concluidas"{% if situacao == 'concluidas' %} selected{% endif %}>Concluídas</option><option value="canceladas"{% if situacao == 'canceladas' %} selected{% endif %}>Canceladas</option><option value="todas"{% if situacao == 'todas' %} selected{% endif %}>Todas</option></select></div>
+  <div class="campo"><label for="os-filtro-busca">Buscar OS</label><input id="os-filtro-busca" type="search" name="q" value="{{ busca }}" maxlength="120" placeholder="Título, quarto, área, número ou nota fiscal"></div>
+  <button type="submit" class="botao-neutro">Filtrar</button>
+</form>
 
 {% if bloqueados %}
   <p class="aviso-inline">
@@ -18,75 +26,76 @@
 
 <div class="colunas colunas-2-1">
   <section>
-    <h2>Ordens abertas</h2>
-    <table class="tabela">
-      <thead>
-        <tr><th>#</th><th>Alvo</th><th>Título</th><th>Prioridade</th><th>Situação</th><th>Bloqueio</th></tr>
-      </thead>
-      <tbody>
-        {% for os in abertas %}
-          <tr class="linha-clique" onclick="location.href='{% url 'manutencao:detalhe' os.pk %}'">
-            <td>{{ os.pk }}</td>
-            <td>{{ os.alvo }}</td>
-            <td>{{ os.titulo }}</td>
-            <td><span class="selo prioridade-{{ os.prioridade }}">{{ os.get_prioridade_display }}</span></td>
-            <td>
-              <span class="selo {% if os.status == 'em_andamento' %}selo-em_andamento{% else %}selo-limpa{% endif %}">
-                {{ os.get_status_display }}
-              </span>
-            </td>
-            <td>{% if os.bloqueia_uh %}Quarto{% else %}—{% endif %}</td>
-          </tr>
+    <div class="secao-cabecalho"><h2>{{ titulo_lista }}</h2><span class="secao-contagem">{{ pagina.paginator.count }}</span></div>
+    <ul class="manutencao-lista">
+        {% for os in ordens %}
+          <li class="manutencao-ordem">
+            <div class="manutencao-ordem-identidade">
+              <span class="manutencao-ordem-local">OS #{{ os.pk }} · {{ os.alvo }}</span>
+              <h3><a href="{% url 'manutencao:detalhe' os.pk %}">{{ os.titulo }}</a></h3>
+              <div class="manutencao-ordem-estados">
+                <span class="manutencao-prioridade prioridade-{{ os.prioridade }}">Prioridade {{ os.get_prioridade_display|lower }}</span>
+                <span class="manutencao-status">{{ os.get_status_display }}</span>
+                {% if os.bloqueio_ativo_hoje %}<strong class="manutencao-bloqueio">Quarto bloqueado hoje</strong>{% elif os.bloqueia_uh and os.aberta_ou_andamento %}<span class="ajuda">Bloqueio: {{ os.bloqueio_inicio|date:'d/m/Y' }}{% if os.bloqueio_fim %} a {{ os.bloqueio_fim|date:'d/m/Y' }}{% else %} até a conclusão{% endif %}</span>{% endif %}
+              </div>
+            </div>
+            <div class="manutencao-ordem-responsavel">
+              <span class="manutencao-ordem-rotulo">Responsável</span>
+              <span>{% if os.responsavel %}{{ os.responsavel.get_full_name|default:os.responsavel.username }}{% else %}A definir{% endif %}</span>
+              <small>{% if os.concluida_em %}Encerrada em {{ os.concluida_em|date:"d/m/Y" }}{% elif os.previsto_para %}Previsto para {{ os.previsto_para|date:"d/m/Y" }}{% elif os.agendada_para %}Agendada para {{ os.agendada_para|date:"d/m/Y" }}{% else %}Prazo não definido{% endif %}</small>
+            </div>
+            <a class="manutencao-ordem-acao" href="{% url 'manutencao:detalhe' os.pk %}{% if os.aberta_ou_andamento %}#acoes-os{% else %}#documentos-os{% endif %}">{% if os.status == 'aberta' %}Ver e iniciar{% elif os.aberta_ou_andamento %}Ver atendimento{% else %}Ver detalhes{% endif %}<span aria-hidden="true">→</span></a>
+          </li>
         {% empty %}
-          <tr><td colspan="6" class="vazio">Nenhuma OS aberta. Tudo em ordem.</td></tr>
+          <li class="vazio">{% if situacao == 'abertas' and not busca %}Nenhuma OS aberta. Tudo em ordem.{% else %}Nenhuma OS encontrada com estes filtros.{% endif %}</li>
         {% endfor %}
-      </tbody>
-    </table>
+    </ul>
+    {% include "componentes/paginacao.html" %}
   </section>
 
-  <section class="painel-bloco" x-data="{ alvo: 'quarto', tipo: 'corretiva' }">
+  <section class="painel-bloco manutencao-nova" id="nova-ordem" x-data="{ alvo: 'quarto', tipo: 'corretiva' }">
     <h2 class="titulo-topo">Nova ordem de serviço</h2>
     <form data-preservar-erros method="post" action="{% url 'manutencao:nova' %}" class="form-cartao">
       {% csrf_token %}
 
       <div class="pdv-seg">
-        <button type="button" :class="{ativo: alvo === 'quarto'}" @click="alvo = 'quarto'">Quarto</button>
-        <button type="button" :class="{ativo: alvo === 'area'}" @click="alvo = 'area'">Área comum</button>
+        <button type="button" :class="{ativo: alvo === 'quarto'}" :aria-pressed="alvo === 'quarto'" @click="alvo = 'quarto'">Quarto</button>
+        <button type="button" :class="{ativo: alvo === 'area'}" :aria-pressed="alvo === 'area'" @click="alvo = 'area'">Área comum</button>
       </div>
 
       <div class="campo" x-show="alvo === 'quarto'">
-        <label>Quarto</label>
-        <select name="uh">
+        <label for="os-quarto">Quarto</label>
+        <select name="uh" id="os-quarto" :disabled="alvo !== 'quarto'">
           <option value="">Escolha…</option>
           {% for q in quartos %}<option value="{{ q.pk }}">{{ q.numero }}{% if q.status == 'bloqueada' %} (bloqueado){% endif %}</option>{% endfor %}
         </select>
       </div>
       <div class="campo" x-show="alvo === 'area'" x-cloak>
-        <label>Área comum</label>
-        <input type="text" name="area" placeholder="Ex.: piscina, recepção, corredor">
+        <label for="os-area">Área comum</label>
+        <input type="text" name="area" id="os-area" maxlength="80" placeholder="Ex.: piscina, recepção, corredor" :disabled="alvo !== 'area'">
       </div>
 
-      <div class="campo"><label>Título*</label><input type="text" name="titulo" placeholder="Ex.: ar-condicionado sem gelar" required></div>
-      <div class="campo"><label>Descrição</label><textarea name="descricao" rows="2"></textarea></div>
+      <div class="campo"><label for="os-titulo">Título*</label><input type="text" name="titulo" id="os-titulo" maxlength="120" placeholder="Ex.: ar-condicionado sem gelar" required></div>
+      <div class="campo"><label for="os-descricao">Descrição</label><textarea name="descricao" id="os-descricao" rows="2"></textarea></div>
 
       <div class="form-grade">
         <div class="campo">
-          <label>Tipo</label>
-          <select name="tipo" x-model="tipo">
+          <label for="os-tipo">Tipo</label>
+          <select name="tipo" id="os-tipo" x-model="tipo">
             {% for v, r in tipos %}<option value="{{ v }}">{{ r }}</option>{% endfor %}
           </select>
         </div>
         <div class="campo">
-          <label>Prioridade</label>
-          <select name="prioridade">
+          <label for="os-prioridade">Prioridade</label>
+          <select name="prioridade" id="os-prioridade">
             {% for v, r in prioridades %}<option value="{{ v }}" {% if v == 'media' %}selected{% endif %}>{{ r }}</option>{% endfor %}
           </select>
         </div>
       </div>
 
       <div class="campo">
-        <label>Responsável (interno)</label>
-        <select name="responsavel">
+        <label for="os-responsavel">Responsável (interno)</label>
+        <select name="responsavel" id="os-responsavel">
           <option value="">A definir…</option>
           {% for u in responsaveis %}<option value="{{ u.pk }}">{{ u.get_short_name|default:u.username }}</option>{% endfor %}
         </select>
@@ -98,21 +107,22 @@
       </div>
 
       <div class="campo">
-        <label>Previsto para <small class="opcional">(opcional)</small></label>
-        <input type="date" name="previsto_para">
+        <label for="os-previsto">Previsto para <small class="opcional">(opcional)</small></label>
+        <input type="date" name="previsto_para" id="os-previsto">
       </div>
 
       <div class="form-grade" x-show="tipo === 'preventiva'" x-cloak>
-        <div class="campo"><label>Repetir a cada (meses)</label><input type="number" name="recorrencia_meses" min="1" placeholder="6"></div>
-        <div class="campo"><label>Agendada para</label><input type="date" name="agendada_para"></div>
+        <div class="campo"><label for="os-recorrencia">Repetir a cada (meses)</label><input type="number" name="recorrencia_meses" id="os-recorrencia" min="1" max="120" placeholder="6" :disabled="tipo !== 'preventiva'"></div>
+        <div class="campo"><label for="os-agendada">Agendada para</label><input type="date" name="agendada_para" id="os-agendada" :disabled="tipo !== 'preventiva'"></div>
       </div>
 
       <label class="filtro-check" x-show="alvo === 'quarto'">
-        <input type="checkbox" name="bloquear" value="1"> Bloquear o quarto durante o reparo
+        <input type="checkbox" name="bloquear" value="1" :disabled="alvo !== 'quarto'"> Bloquear o quarto durante o reparo
       </label>
 
       <div class="acoes"><button type="submit" class="botao-primario">Abrir OS</button></div>
     </form>
   </section>
+</div>
 </div>
 {% endblock %}

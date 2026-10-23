@@ -5,13 +5,20 @@
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Financeiro</p>
-<h1>Notas fiscais eletrônicas</h1>
+<div class="pagina-cabecalho">
+  <h1>Notas fiscais eletrônicas</h1>
+  {% if eh_gerente %}
+  <div class="pagina-acoes pagina-acoes-longas">
+    <a class="botao-neutro" href="{% url 'fiscal:produtos' %}">Cadastro fiscal de produtos</a>
+    <a class="botao-neutro" href="{% url 'integracoes' %}">Configuração e ensaios</a>
+  </div>
+  {% endif %}
+</div>
 <p class="subtitulo">
   Acompanhe os documentos de serviço (NFS-e) e de consumo (NFC-e).
   {% if gateway == 'simulado' %}<strong>Modo de teste: os documentos não têm valor fiscal.</strong>
   {% else %}<span class="selo">Integração: {{ gateway }}</span>{% endif %}
 </p>
-{% if eh_gerente %}<div class="acoes bloco-fim"><a class="botao-neutro" href="{% url 'fiscal:produtos' %}">Cadastro fiscal de produtos</a><a class="botao-neutro" href="{% url 'integracoes' %}">Configuração e ensaios</a></div>{% endif %}
 
 <table class="tabela">
   <thead>

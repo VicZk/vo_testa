@@ -1,6 +1,8 @@
 from decimal import Decimal, InvalidOperation
 
 from django import forms
+from django.contrib.auth import get_user_model
+from django.contrib.auth.validators import UnicodeUsernameValidator
 
 from .models import (
     UH,
@@ -108,6 +110,36 @@ class HospedeForm(forms.ModelForm):
 def _brl(valor) -> str:
     """Decimal → '10.000,00' (sem R$, para preencher input)."""
     return f"{Decimal(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+class AcessoFuncionarioForm(forms.Form):
+    """Valida o acesso antes de persistir a ficha e o usuário juntos."""
+
+    username = forms.CharField(label="Login", required=False, max_length=150,
+                               validators=[UnicodeUsernameValidator()])
+    password = forms.CharField(label="Senha", required=False, min_length=8, strip=False)
+
+    def __init__(self, *args, usuario=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.usuario = usuario
+        if usuario:
+            self.fields["username"].disabled = True
+            self.initial["username"] = usuario.username
+
+    def clean_username(self):
+        username = self.cleaned_data.get("username", "")
+        if username and not self.usuario and get_user_model().objects.filter(username=username).exists():
+            raise forms.ValidationError("Já existe um usuário com esse login.")
+        return username
+
+    def clean(self):
+        dados = super().clean()
+        if not self.usuario:
+            if dados.get("username") and not dados.get("password") and "password" not in self.errors:
+                self.add_error("password", "Defina uma senha (mín. 8) para criar o login.")
+            if dados.get("password") and not dados.get("username") and "username" not in self.errors:
+                self.add_error("username", "Informe o login para criar o acesso.")
+        return dados
 
 
 class FuncionarioForm(forms.ModelForm):

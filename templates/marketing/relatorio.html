@@ -7,20 +7,23 @@
 {% include "marketing/_cabecalho.html" with titulo="Resultados do marketing" descricao="Compare o investimento e o retorno das campanhas no período escolhido." %}
 
 <section class="mk-secao">
-  <div class="mk-filtros">
-    <div class="mk-filtro-linha" role="group" aria-label="Mês do relatório">
-      <span class="mk-filtro-rotulo">MÊS</span>
-      {% for n, nome in meses %}
-      <a href="?mes={{ n }}&ano={{ ano_sel }}" class="mk-pil{% if n == mes_sel %} on{% endif %}"{% if n == mes_sel %} aria-current="page"{% endif %} aria-label="{{ nome }}">{{ nome|slice:":3" }}</a>
-      {% endfor %}
-    </div>
-    <div class="mk-filtro-linha" role="group" aria-label="Ano do relatório">
-      <span class="mk-filtro-rotulo">ANO</span>
-      {% for a in anos %}
-      <a href="?mes={{ mes_sel }}&ano={{ a }}" class="mk-pil{% if a == ano_sel %} on{% endif %}"{% if a == ano_sel %} aria-current="page"{% endif %}>{{ a }}</a>
-      {% endfor %}
-    </div>
-    <div class="mk-filtro-linha">
+  <div class="mk-filtros mk-relatorio-filtros">
+    <form method="get" class="mk-periodo-form" aria-label="Período do relatório">
+      <div class="campo">
+        <label for="relatorio-mes">Mês</label>
+        <select id="relatorio-mes" name="mes">
+          {% for n, nome in meses %}<option value="{{ n }}"{% if n == mes_sel %} selected{% endif %}>{{ nome }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="campo">
+        <label for="relatorio-ano">Ano</label>
+        <select id="relatorio-ano" name="ano">
+          {% for a in anos %}<option value="{{ a }}"{% if a == ano_sel %} selected{% endif %}>{{ a }}</option>{% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="botao-primario">Aplicar período</button>
+    </form>
+    <div class="mk-relatorio-exportar">
       <span class="mk-periodo">Período: <b>{{ rotulo }}</b></span>
       <div class="linha-botoes">
         <a href="?mes={{ mes_sel }}&ano={{ ano_sel }}&export=csv" class="botao-neutro">Exportar CSV</a>

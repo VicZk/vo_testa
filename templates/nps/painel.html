@@ -8,15 +8,15 @@
   <p class="pagina-eyebrow letreiro">Relacionamento</p>
   <div class="pagina-cabecalho">
     <h1>Opinião dos hóspedes</h1>
-    <span class="selo">Pesquisa pós-estadia</span>
+    <span class="contexto-secao">Pesquisa pós-estadia</span>
   </div>
   <p class="subtitulo">Acompanhe como foi a experiência de quem se hospedou na pousada.</p>
-  <form method="get" class="filtros">
+  <form method="get" class="filtros nps-periodo" aria-label="Período das avaliações">
     <div class="campo"><label for="nps-de">De</label><input id="nps-de" type="date" name="de" value="{{ inicio|date:'Y-m-d' }}"></div>
     <div class="campo"><label for="nps-ate">Até</label><input id="nps-ate" type="date" name="ate" value="{{ fim|date:'Y-m-d' }}"></div>
     <button class="botao-neutro">Filtrar</button>
   </form>
-  <div class="cartoes">
+  <div class="cartoes indicadores-compactos nps-indicadores">
     <div class="cartao"><span class="indicador-rotulo">NPS do período</span><strong class="indicador-valor">{{ resumo.score|default_if_none:'—' }}</strong><span class="ajuda">Escala de −100 a +100</span></div>
     <div class="cartao"><span class="indicador-rotulo">Respostas</span><strong class="indicador-valor">{{ resumo.total }}</strong></div>
     <div class="cartao"><span class="indicador-rotulo">Promotores · notas 9–10</span><strong class="indicador-valor">{{ resumo.promotores }}</strong></div>
@@ -25,11 +25,11 @@
   </div>
   <section class="cartao-el respiro">
     <h2 class="titulo-topo">Avaliações recebidas</h2>
-    <table class="tabela"><thead><tr><th>Hóspede e estadia</th><th>Nota</th><th>Comentário e acompanhamento</th><th>Recebida em</th></tr></thead><tbody>
+    <table class="tabela tabela-cartoes tabela-registros"><thead><tr><th>Hóspede e estadia</th><th>Nota</th><th>Comentário e acompanhamento</th><th>Recebida em</th></tr></thead><tbody>
     {% for r in pagina %}<tr>
-      <td>{{ r.hospede.nome }}<br><span class="ajuda">Reserva #{{ r.reserva_id }}</span></td>
-      <td><strong>{{ r.nota }}/10</strong><br>{{ r.faixa }}</td>
-      <td><p>{{ r.comentario|default:'Sem comentário.'|linebreaksbr }}</p>
+      <td class="registro-principal">{{ r.hospede.nome }}<br><span class="ajuda">Reserva #{{ r.reserva_id }}</span></td>
+      <td class="registro-valor" data-rotulo="Nota"><strong>{{ r.nota }}/10</strong><br>{{ r.faixa }}</td>
+      <td class="registro-texto" data-rotulo="Comentário e acompanhamento"><p>{{ r.comentario|default:'Sem comentário.'|linebreaksbr }}</p>
         <details><summary>{% if r.tratada_em %}Ver acompanhamento{% else %}Registrar acompanhamento{% endif %}</summary>
           {% if r.tratada_em %}<p class="ajuda">{{ r.tratada_por }} · {{ r.tratada_em|date:'d/m/Y H:i' }}</p>{% endif %}
           <form data-preservar-erros method="post" action="{% url 'nps:tratar' r.pk %}">{% csrf_token %}
@@ -38,7 +38,7 @@
             <button class="botao-neutro">Salvar acompanhamento</button>
           </form>
         </details>
-      </td><td>{{ r.criado_em|date:'d/m/Y H:i' }}<br><span class="ajuda">{{ r.get_canal_display }}</span></td>
+      </td><td class="registro-status" data-rotulo="Recebida em">{{ r.criado_em|date:'d/m/Y H:i' }}<br><span class="ajuda">{{ r.get_canal_display }}</span></td>
     </tr>{% empty %}<tr><td colspan="4">Ainda não há avaliações neste período.</td></tr>{% endfor %}
     </tbody></table>
     {% include "componentes/paginacao.html" %}
@@ -46,8 +46,8 @@
   <section class="cartao-el respiro">
     <h2 class="titulo-topo">Estadias encerradas sem avaliação</h2>
     <p class="ajuda">O link fica disponível por 90 dias após o check-out. Compartilhe com o hóspede para que ele registre a própria opinião.</p>
-    <table class="tabela"><thead><tr><th>Hóspede</th><th>Saída</th><th>Pesquisa</th></tr></thead><tbody>
-      {% for r in pendentes %}<tr><td>{{ r.hospede.nome }} · #{{ r.pk }}</td><td>{{ r.checkout_real|date:'d/m/Y' }}</td><td>
+    <table class="tabela tabela-cartoes tabela-registros"><thead><tr><th>Hóspede</th><th>Saída</th><th>Pesquisa</th></tr></thead><tbody>
+      {% for r in pendentes %}<tr><td class="registro-principal">{{ r.hospede.nome }} · #{{ r.pk }}</td><td data-rotulo="Saída">{{ r.checkout_real|date:'d/m/Y' }}</td><td class="registro-acoes">
         <form method="post" action="{% url 'nps:convite' r.pk %}">{% csrf_token %}<button class="botao-mini">Obter link da pesquisa</button></form>
       </td></tr>{% empty %}<tr><td colspan="3">Nenhuma pesquisa pendente.</td></tr>{% endfor %}
     </tbody></table>

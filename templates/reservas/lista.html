@@ -4,18 +4,24 @@
 {% block titulo %}Reservas | CRM Vô Testa{% endblock %}
 
 {% block conteudo %}
+<div class="reservas-listagem">
 <p class="pagina-eyebrow letreiro">Reservas</p>
-<div class="pagina-cabecalho">
+<div class="pagina-cabecalho reservas-listagem-cabecalho">
   <h1>Reservas</h1>
-  <div class="acoes">
-    <a href="{% url 'reservas:kit' %}" class="botao-neutro">Kit de contingência</a>
-    {% if eh_gerente %}<a href="{% url 'reservas:boh' %}" class="botao-neutro">BOH (Embratur)</a>
-    <a href="{% url 'reservas:painel_colchoes' %}" class="botao-neutro">Colchões</a>{% endif %}
-    <button type="button" class="botao-primario"
-            hx-get="{% url 'reservas:nova' %}" hx-target="#modal-conteudo">Nova reserva</button>
+  <div class="reservas-listagem-acoes">
+    <a href="{% url 'reservas:nova' %}" class="botao-primario"
+       hx-get="{% url 'reservas:nova' %}" hx-target="#modal-conteudo">Nova reserva</a>
+    <details class="reservas-listagem-opcoes">
+      <summary>Mais opções</summary>
+      <div class="reservas-listagem-utilitarios">
+        <a href="{% url 'reservas:kit' %}">Kit de contingência</a>
+        {% if eh_gerente %}<a href="{% url 'reservas:boh' %}">BOH (Embratur)</a>
+        <a href="{% url 'reservas:painel_colchoes' %}">Colchões</a>{% endif %}
+      </div>
+    </details>
   </div>
-{% include "reservas/partials/nav.html" %}
 </div>
+{% include "reservas/partials/nav.html" %}
 
 <form method="get" class="barra-busca busca-reservas">
   <input type="search" name="q" value="{{ busca }}" placeholder="Buscar por hóspede ou quarto" aria-label="Buscar por hóspede ou quarto">
@@ -28,24 +34,22 @@
   <button type="submit" class="botao-neutro">Filtrar</button>
 </form>
 
-<table class="tabela">
+<table class="tabela reservas-listagem-tabela">
   <thead>
     <tr><th>#</th><th>Hóspede</th><th>Quarto</th><th>Período</th><th class="num">Noites</th><th class="num">Diária</th><th>Status</th></tr>
   </thead>
   <tbody>
     {% for r in reservas %}
-      {% comment %}A linha inteira abre a reserva — mesmo padrão de Manutenção,
-      Pagamentos, Lavanderia e Restaurante. No celular o único jeito de entrar era
-      acertar o "#16", um alvo de 26 px de largura; agora a linha toda, de 358 px,
-      é o alvo, e o link continua ali para teclado e leitor de tela.{% endcomment %}
+      {% comment %}A linha inteira abre a reserva. O nome do hóspede é o link
+      explícito para teclado e leitor de tela, inclusive no cartão móvel.{% endcomment %}
       <tr class="linha-clique" onclick="location.href='{% url 'reservas:detalhe' r.pk %}'">
-        <td><a href="{% url 'reservas:detalhe' r.pk %}">#{{ r.pk }}</a></td>
-        <td>{{ r.hospede.nome }}</td>
-        <td>{{ r.uh.numero }}</td>
-        <td>{{ r.checkin|date:"d/m/Y" }} → {{ r.checkout|date:"d/m/Y" }}</td>
-        <td class="num">{{ r.noites }}</td>
-        <td class="num">{{ r.valor_diaria|intcomma_brl }}</td>
-        <td><span class="selo mapa-cor-{{ r.status }} dica" data-dica="{{ r.status_ajuda }}">{{ r.get_status_display }}</span></td>
+        <td class="reservas-listagem-id">#{{ r.pk }}</td>
+        <td class="reservas-listagem-hospede"><a href="{% url 'reservas:detalhe' r.pk %}" aria-label="Abrir reserva #{{ r.pk }} de {{ r.hospede.nome }}">{{ r.hospede.nome }}</a></td>
+        <td class="reservas-listagem-quarto" data-rotulo="Quarto">{{ r.uh.numero }}</td>
+        <td class="reservas-listagem-periodo" data-rotulo="Estadia">{{ r.checkin|date:"d/m/Y" }} → {{ r.checkout|date:"d/m/Y" }}</td>
+        <td class="num reservas-listagem-noites" data-rotulo="Noites">{{ r.noites }}</td>
+        <td class="num reservas-listagem-diaria" data-rotulo="Diária">{{ r.valor_diaria|intcomma_brl }}</td>
+        <td class="reservas-listagem-status"><span class="selo mapa-cor-{{ r.status }} dica" data-dica="{{ r.status_ajuda }}">{{ r.get_status_display }}</span></td>
       </tr>
     {% empty %}
       <tr><td colspan="7" class="vazio">Nenhuma reserva encontrada.</td></tr>
@@ -53,4 +57,5 @@
   </tbody>
 </table>
 {% include "componentes/paginacao.html" with pagina=pagina %}
+</div>
 {% endblock %}

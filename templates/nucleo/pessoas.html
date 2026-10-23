@@ -20,14 +20,14 @@
 </form>
 
 {% if filtros %}
-<div class="filtros">
+<nav class="est-abas abas-secao" aria-label="Tipos de pessoa">
   {% for f in filtros %}
     <a href="?{% if busca %}q={{ busca|urlencode }}&{% endif %}{% if f.chave %}papel={{ f.chave }}{% endif %}"
-       class="filtro-chip"{% if papel == f.chave %} aria-current="page"{% endif %}>
+       class="est-aba"{% if papel == f.chave %} aria-current="page"{% endif %}>
       {{ f.rotulo }} <span class="n">{{ f.total }}</span>
     </a>
   {% endfor %}
-</div>
+</nav>
 {% endif %}
 
 {% comment %}Larguras declaradas no CSS (.tabela-pessoas): sem elas a tabela usava

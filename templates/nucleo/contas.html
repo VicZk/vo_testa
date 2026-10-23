@@ -16,20 +16,20 @@
   <a href="?situacao=todas" class="filtro-chip"{% if situacao == 'todas' %} aria-current="page"{% endif %}>Todas</a>
 </div>
 
-<table class="tabela">
+<table class="tabela tabela-cartoes tabela-registros">
   <thead>
     <tr><th>Vencimento</th><th>Tipo</th><th>Descrição</th><th>Fornecedor/Cliente</th><th class="num">Valor</th><th>Status</th><th></th></tr>
   </thead>
   <tbody>
     {% for c in contas %}
       <tr class="{% if c.vencida %}linha-alerta{% endif %}">
-        <td>{{ c.vencimento|date:"d/m/Y" }}{% if c.vencida %} <span class="selo selo-alerta">vencida</span>{% endif %}</td>
-        <td>{{ c.get_tipo_display }}</td>
-        <td>{{ c.descricao }}</td>
-        <td>{{ c.pessoa|default:"—" }}</td>
-        <td class="num">{{ c.valor|intcomma_brl }}</td>
-        <td>{{ c.get_status_display }}</td>
-        <td>
+        <td data-rotulo="Vencimento">{{ c.vencimento|date:"d/m/Y" }}{% if c.vencida %} <span class="selo selo-alerta">vencida</span>{% endif %}</td>
+        <td data-rotulo="Tipo">{{ c.get_tipo_display }}</td>
+        <td class="registro-principal">{{ c.descricao }}</td>
+        <td data-rotulo="Fornecedor/Cliente">{{ c.pessoa|default:"—" }}</td>
+        <td class="num registro-valor" data-rotulo="Valor">{{ c.valor|intcomma_brl }}</td>
+        <td class="registro-status" data-rotulo="Situação">{{ c.get_status_display }}</td>
+        <td class="registro-acoes{% if c.status != 'aberta' %} registro-vazio{% endif %}">
           {% if c.status == "aberta" %}
             <form data-preservar-erros method="post" action="{% url 'conta_baixar' c.pk %}"
                   onsubmit="return confirm('Baixar esta conta? Um lançamento será gerado.')">

@@ -27,7 +27,7 @@ Config por variável de ambiente (`.env` local — ver `.env.example`). `DEBUG=1
 
 O CI roda sozinho: `testes.yml` (ruff, `makemigrations --check` e a suíte contra
 PostgreSQL 16, mais o job "Fluxos no navegador" com Playwright + Chromium —
-`apps/site/tests_e2e.py` e `apps/site/tests_operacao_e2e.py`, `E2E_OBRIGATORIO=1` —,
+todos os arquivos `apps/site/tests*e2e.py`, `E2E_OBRIGATORIO=1` —,
 em todo push da `main`/`dev` e em PR)
 e `security.yml` (pip-audit, bandit, ruff de segurança e gitleaks, no push da `main`, em
 PR e toda segunda).

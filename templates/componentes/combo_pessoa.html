@@ -18,7 +18,7 @@ Parâmetros do include:
 POST continua indo pelo <input type=hidden>. É assim que a tela de movimentação
 do Estoque recalcula a prévia "saldo hoje → depois" ao trocar de produto.
 {% endcomment %}
-<div class="combo" x-data="comboPessoa" data-dados="{{ dados_id }}" data-sel="{{ valor_id|default:'' }}"
+<div class="combo" x-data="comboPessoa" hx-history="false" data-dados="{{ dados_id }}" data-sel="{{ valor_id|default:'' }}"
      @click.outside="fechar()"
      x-effect="$dispatch('combo-mudou', { campo: '{{ campo }}', id: sel })">
   <input type="hidden" name="{{ campo }}" :value="sel">
@@ -29,7 +29,7 @@ do Estoque recalcula a prévia "saldo hoje → depois" ao trocar de produto.
          x-model="q" @focus="open = true" @input="digitou()"
          @keydown.arrow-down.prevent="mover(1)" @keydown.arrow-up.prevent="mover(-1)"
          @keydown.enter="if (confirmar()) $event.preventDefault()"
-         @keydown.escape.stop="fechar()" @keydown.tab="fechar()">
+         @keydown.escape="if (open) { $event.stopPropagation(); fechar(); }" @keydown.tab="fechar()">
   <div class="combo-lista" x-show="open" x-cloak role="listbox" :id="cid + '-lista'"
        aria-label="{{ placeholder|default:'Resultados' }}">
     <template x-for="[grupo, lista] in grupos" :key="grupo">

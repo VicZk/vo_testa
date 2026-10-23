@@ -12,6 +12,16 @@ três botões parecidos.
 Sem JavaScript tudo continua funcionando: os formulários têm `action` e `method`,
 e as views redirecionam quando o pedido não vem do HTMX.
 {% endcomment %}
+<div class="governanca-filtro-compacto">
+  <label for="gov-situacao">Situação dos quartos</label>
+  <div class="governanca-filtro-linha">
+    <select id="gov-situacao" aria-label="Situação dos quartos" :value="f" @change="filtrar($event.target.value)">
+      <option value="todas">Todos ({{ linhas|length }})</option>
+      {% for e in ciclo %}<option value="{{ e.cod }}">{{ e.rotulo }} ({{ e.n }})</option>{% endfor %}
+    </select>
+    {% if meus %}<label class="governanca-filtro-meus"><input type="checkbox" :checked="soMeus" @change="alternarMeus()"> Só meus ({{ meus }})</label>{% endif %}
+  </div>
+</div>
 <div class="gov-ciclo">
   {% comment %}Sem `title`: num tablet não existe hover, e o que ele dizia (o
   resumo de cada estado) está por extenso no «Como funciona» logo acima — a dica
@@ -69,15 +79,14 @@ aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% e
 </div>
 {% endif %}
 
-<table class="tabela tabela-limpeza tabela-cartoes"
-       hx-target="#gov-quadro" hx-swap="innerHTML" hx-indicator="#gov-quadro">
+<table class="tabela tabela-limpeza tabela-cartoes governanca-listagem"
+       hx-target="#gov-quadro" hx-swap="innerHTML settle:0" hx-indicator="#gov-quadro">
   <thead>
     <tr>
       <th>Quarto</th>
       <th>Situação</th>
-      <th class="col-ronda">Conferência de ocupação</th>
-      <th class="col-camareira">Camareira</th>
       <th class="col-acao">Próximo passo</th>
+      <th class="governanca-col-operacao">Conferência e responsável</th>
     </tr>
   </thead>
   <tbody>
@@ -112,11 +121,24 @@ aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% e
         <small class="ajuda">{{ ln.explicacao }}</small>
       </td>
 
-      {% comment %}Conferência de ocupação: um toque com o que a camareira VIU. Três
-      formulários (um por botão) em vez de um com três submits — assim o valor chega
-      igual pelo HTMX e pelo formulário puro, sem depender do botão que enviou.
-      {% endcomment %}
-      <td class="col-ronda" data-rotulo="O que você viu">
+      <td class="col-acao" data-rotulo="Próximo passo">
+        <div class="acoes-quarto">
+          {% include "governanca/partials/acoes_quarto.html" with ln=ln sheet=False %}
+        </div>
+      </td>
+
+      <td class="governanca-col-operacao">
+        {% if ln.divergente %}
+          <span class="selo selo-{{ ln.divergencia }}">{{ ln.divergencia_rotulo }}</span>
+        {% endif %}
+        <div class="governanca-operacao-atual">
+          <span>{% if ln.conferencia %}Ronda: {{ ln.conferencia.get_visto_display }} · {{ ln.conferencia.registrado_em|date:"H:i" }}{% elif ln.bloqueado %}Em manutenção (fora da ronda){% else %}Ronda não registrada{% endif %}</span>
+          {% if ln.tarefa %}<span>{% if ln.tarefa.camareira %}{{ ln.tarefa.camareira.get_full_name|default:ln.tarefa.camareira.username }}{% else %}<strong>Atribuição pendente</strong>{% endif %}</span>{% endif %}
+        </div>
+        <details class="governanca-operacao-detalhes">
+          <summary>Conferência{% if ln.tarefa %} e responsável{% endif %}</summary>
+          <div class="governanca-operacao-corpo">
+            <p class="rotulo-dado">O que você viu no quarto</p>
         <div class="ronda-grupo" role="group" aria-label="O que foi visto no {{ ln.uh.numero }}">
           {% for cod, curto, longo in vistos %}
             <form method="post" action="{% url 'governanca:ronda' ln.uh.pk %}"
@@ -129,16 +151,9 @@ aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% e
             </form>
           {% endfor %}
         </div>
-        {% if ln.divergente %}
-          <span class="selo selo-{{ ln.divergencia }}">{{ ln.divergencia_rotulo }}</span>
-        {% elif ln.conferencia %}
-          <small class="ajuda">{{ ln.conferencia.registrado_em|date:"H:i" }}{% if ln.conferencia.registrado_por %} · {{ ln.conferencia.registrado_por.get_full_name|default:ln.conferencia.registrado_por.username }}{% endif %}</small>
-        {% elif ln.bloqueado %}
-          <small class="ajuda">Em manutenção (fora da ronda)</small>
-        {% endif %}
-      </td>
 
-      <td class="col-camareira" data-rotulo="Camareira">
+            {% if ln.conferencia.registrado_por %}<small class="ajuda">Último registro por {{ ln.conferencia.registrado_por.get_full_name|default:ln.conferencia.registrado_por.username }}.</small>{% endif %}
+            {% if ln.tarefa %}<p class="rotulo-dado">Responsável pela limpeza</p>
         {% if ln.tarefa %}
           {# Trocar no <select> não envia nada: aparece o "Salvar" e quem decide é a pessoa. #}
           <form method="post" action="{% url 'governanca:tarefa_acao' ln.tarefa.pk %}" class="form-inline"
@@ -167,19 +182,13 @@ aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% e
         {% else %}
           <span class="celula-vazia">—</span>
         {% endif %}
-      </td>
-
-      {% comment %}UMA ação principal por quarto, nomeada pelo que acontece — o
-      mesmo bloco da ficha do quarto (partials/acoes_quarto.html), para não
-      existirem dois "próximos passos" para o mesmo estado.{% endcomment %}
-      <td class="col-acao" data-rotulo="Próximo passo">
-        <div class="acoes-quarto">
-          {% include "governanca/partials/acoes_quarto.html" with ln=ln sheet=False %}
-        </div>
+            {% endif %}
+          </div>
+        </details>
       </td>
     </tr>
     {% empty %}
-    <tr><td colspan="5" class="vazio">Nenhum quarto cadastrado ainda. Cadastre os quartos em
+    <tr><td colspan="4" class="vazio">Nenhum quarto cadastrado ainda. Cadastre os quartos em
       <strong>Cadastros → Quartos &amp; tipos</strong> para a governança começar a acompanhar a limpeza.</td></tr>
     {% endfor %}
   </tbody>

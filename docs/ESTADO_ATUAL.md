@@ -1,10 +1,24 @@
 # Estado atual do projeto
 
-**Revisão documental: 21/10/2026.** Voltar ao [README](../README.md) ou ao
+**Atualização: 23/10/2026.** Voltar ao [README](../README.md) ou ao
 [índice da documentação](README.md). Este registro diferencia código publicado,
 trabalho local e ativação de serviços externos.
 
-## Base da revisão
+## Atualização de 23/10
+
+A [revisão de interface e uso](REVISAO_USABILIDADE_2026-10-23.md) acrescenta o
+Painel de chegadas/saídas, navegação consistente, leitura no celular e correções
+de fluxos em Manutenção, Escala, Financeiro, Conciliação e Funcionários.
+Manutenção possui anexos privados com download autenticado e histórico de OS.
+As duas migrações desta entrega adicionam a tabela de documentos e a chave de
+importação de cartão; não removem registros antigos.
+
+As evidências dessa revisão vêm de PostgreSQL e Chromium locais, com dados
+fictícios. A publicação desta versão e a identidade do artefato em produção
+devem ser conferidas no registro de release; testes locais não comprovam
+contratação, credenciais ou funcionamento de provedores externos.
+
+## Base da revisão documental de 21/10
 
 | Referência | Estado conferido |
 |---|---|

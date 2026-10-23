@@ -104,12 +104,12 @@
       <h1>Funil de vendas</h1>
     </div>
     <div class="pagina-acoes">
-      <a href="{% url 'comercial:tarefas' %}" class="botao-neutro">Tarefas</a>
-      <a href="{% url 'comercial:email_campanhas' %}" class="botao-neutro">E-mail</a>
-      <a href="{% url 'comercial:painel' %}" class="botao-neutro">Painel</a>
       <a href="{% url 'comercial:nova' %}{% if campanha_filtro %}?campanha={{ campanha_filtro.pk }}{% endif %}"
          hx-get="{% url 'comercial:nova' %}{% if campanha_filtro %}?campanha={{ campanha_filtro.pk }}{% endif %}" hx-target="#modal-conteudo"
          class="botao-primario">+ Novo lead</a>
+      <a href="{% url 'comercial:tarefas' %}" class="botao-neutro">Tarefas</a>
+      <a href="{% url 'comercial:email_campanhas' %}" class="botao-neutro">E-mail</a>
+      <a href="{% url 'comercial:painel' %}" class="botao-neutro">Painel</a>
     </div>
   </div>
   <p class="subtitulo">Acompanhe quem demonstrou interesse, combine o próximo contato e prepare a reserva. Abra um cartão para atender ou use Mover para mudar de etapa.</p>
@@ -127,12 +127,12 @@
       <div class="funil-kpi"><span class="valor">{{ ponderado_total|intcomma_brl }}</span><span class="rotulo">Previsão ponderada</span></div>
       <div class="funil-kpi"><span class="valor">{{ qtd_total }}</span><span class="rotulo">Abertas</span></div>
     </div>
-    <div class="seg-filtro">
-      <a href="{% querystring fat=None %}" class="{% if not fat %}ativo{% endif %}">Todos</a>
+    <nav class="est-abas abas-secao funil-faturamento" aria-label="Tipo de cliente">
+      <a href="{% querystring fat=None %}" class="est-aba"{% if not fat %} aria-current="page"{% endif %}>Todos</a>
       {% for valor, rotulo in faturamento_filtros %}
-        <a href="{% querystring fat=valor %}" class="{% if fat == valor %}ativo{% endif %}">{{ rotulo }}</a>
+        <a href="{% querystring fat=valor %}" class="est-aba"{% if fat == valor %} aria-current="page"{% endif %}>{{ rotulo }}</a>
       {% endfor %}
-    </div>
+    </nav>
   </div>
 
   <form method="get" class="funil-periodo" aria-label="Período dos fechados (Ganho/Perdido)">

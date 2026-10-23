@@ -11,25 +11,27 @@
 <div class="colunas colunas-2-1">
   <section>
     <h2>Pendentes</h2>
-    <table class="tabela">
-      <thead><tr><th>Turno</th><th>Sai</th><th>Entra</th><th>Motivo</th><th></th></tr></thead>
+    <table class="tabela tabela-cartoes tabela-registros" id="trocas-pendentes">
+      <thead><tr><th>Turno</th><th>Sai</th><th>Entra</th><th>Motivo</th><th>Ações</th></tr></thead>
       <tbody>
         {% for t in pendentes %}
           <tr>
-            <td>{{ t.atribuicao.turno.nome }} · {{ t.atribuicao.data|date:"d/m" }}</td>
-            <td>{{ t.solicitante.pessoa.nome }}</td>
-            <td>{{ t.substituto.pessoa.nome }}</td>
-            <td>{{ t.motivo }}</td>
-            <td class="num">
+            <td class="registro-principal" data-rotulo="Turno">{{ t.atribuicao.turno.nome }} · {{ t.atribuicao.data|date:"d/m/Y" }}</td>
+            <td data-rotulo="Sai">{{ t.solicitante.pessoa.nome }}</td>
+            <td data-rotulo="Entra">{{ t.substituto.pessoa.nome }}</td>
+            <td class="registro-texto" data-rotulo="Motivo">{{ t.motivo|default:"Não informado" }}</td>
+            <td class="registro-acoes" data-rotulo="Ações">
               {% if eh_gerente %}
+                <div class="escala-troca-acoes">
                 <form data-preservar-erros method="post" action="{% url 'escala:decidir_troca' t.pk %}" class="form-embutido">
                   {% csrf_token %}<input type="hidden" name="acao" value="aprovar">
-                  <button class="botao-mini" title="Aprovar">✓</button>
+                  <button type="submit" class="botao-neutro" aria-label="Aprovar troca de {{ t.solicitante.pessoa.nome }} por {{ t.substituto.pessoa.nome }} em {{ t.atribuicao.data|date:'d/m/Y' }}">Aprovar troca</button>
                 </form>
                 <form data-preservar-erros method="post" action="{% url 'escala:decidir_troca' t.pk %}" class="form-embutido">
                   {% csrf_token %}<input type="hidden" name="acao" value="recusar">
-                  <button class="chip-x" title="Recusar">&times;</button>
+                  <button type="submit" class="botao-neutro" aria-label="Recusar troca de {{ t.solicitante.pessoa.nome }} por {{ t.substituto.pessoa.nome }} em {{ t.atribuicao.data|date:'d/m/Y' }}">Recusar troca</button>
                 </form>
+                </div>
               {% else %}<span class="opcional">aguardando</span>{% endif %}
             </td>
           </tr>
@@ -41,12 +43,12 @@
 
     {% if recentes %}
       <h2 class="secao-titulo respiro-medio">Decididas</h2>
-      <table class="tabela">
+      <table class="tabela tabela-cartoes tabela-registros" id="trocas-decididas">
         <thead><tr><th>Sai → Entra</th><th>Situação</th></tr></thead>
         <tbody>
           {% for t in recentes %}
-            <tr><td>{{ t.solicitante.pessoa.nome }} → {{ t.substituto.pessoa.nome }}</td>
-                <td><span class="selo {% if t.status == 'aprovada' %}selo-limpa{% else %}selo-alerta{% endif %}">{{ t.get_status_display }}</span></td></tr>
+            <tr><td class="registro-principal" data-rotulo="Sai → Entra">{{ t.solicitante.pessoa.nome }} → {{ t.substituto.pessoa.nome }}</td>
+                <td class="registro-status" data-rotulo="Situação"><span class="selo {% if t.status == 'aprovada' %}selo-limpa{% else %}selo-alerta{% endif %}">{{ t.get_status_display }}</span></td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -57,17 +59,17 @@
     <h2 class="titulo-topo">Solicitar troca</h2>
     <form data-preservar-erros method="post" class="form-cartao">
       {% csrf_token %}
-      <div class="campo"><label>Turno a ceder</label>
-        <select name="atribuicao" required>
+      <div class="campo"><label for="troca-atribuicao">Turno a ceder</label>
+        <select id="troca-atribuicao" name="atribuicao" required>
           <option value="">Escolha…</option>
           {% for a in atribuicoes %}<option value="{{ a.pk }}">{{ a.data|date:"d/m" }} · {{ a.turno.nome }} · {{ a.funcionario.pessoa.nome }}</option>{% endfor %}
         </select>
       </div>
-      <div class="campo"><label>Substituto</label>
-        <select name="substituto" required>{% for f in funcionarios %}<option value="{{ f.pk }}">{{ f.pessoa.nome }}</option>{% endfor %}</select>
+      <div class="campo"><label for="troca-substituto">Substituto</label>
+        <select id="troca-substituto" name="substituto" required><option value="">Escolha…</option>{% for f in funcionarios %}<option value="{{ f.pk }}">{{ f.pessoa.nome }}</option>{% endfor %}</select>
       </div>
-      <div class="campo"><label>Motivo</label><input type="text" name="motivo"></div>
-      <div class="acoes"><button type="submit" class="botao-primario">Solicitar</button></div>
+      <div class="campo"><label for="troca-motivo">Motivo <small class="opcional">(opcional)</small></label><input id="troca-motivo" type="text" name="motivo" maxlength="160"></div>
+      <div class="acoes"><button type="submit" class="botao-primario">Solicitar troca</button></div>
     </form>
   </section>
 </div>

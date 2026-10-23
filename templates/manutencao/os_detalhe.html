@@ -1,9 +1,10 @@
 {% extends "base.html" %}
-{% load moeda %}
+{% load moeda l10n %}
 
 {% block titulo %}OS #{{ os.pk }} | Manutenção{% endblock %}
 
 {% block conteudo %}
+<div class="manutencao-detalhe">
 <a href="{% url 'manutencao:painel' %}" class="voltar">
   <svg viewBox="0 0 24 24" class="ico"><path d="M15 6l-6 6 6 6"/></svg> Manutenção
 </a>
@@ -18,9 +19,10 @@
 <div class="colunas colunas-2-1">
   <section class="painel-bloco">
     <dl class="ficha">
-      <div><dt>Alvo</dt><dd>{{ os.alvo }}{% if os.bloqueia_uh %} <span class="selo prioridade-urgente">bloqueado</span>{% endif %}</dd></div>
+      <div><dt>Alvo</dt><dd>{{ os.alvo }}{% if os.bloqueio_ativo_hoje %} <span class="selo prioridade-urgente">bloqueado por esta OS hoje</span>{% endif %}</dd></div>
+      {% if os.bloqueia_uh %}<div><dt>Período do bloqueio</dt><dd>{{ os.bloqueio_inicio|date:'d/m/Y' }}{% if os.bloqueio_fim %} a {{ os.bloqueio_fim|date:'d/m/Y' }}{% else %} até a conclusão{% endif %}{% if not os.aberta_ou_andamento %} · encerrado{% endif %}</dd></div>{% endif %}
       <div><dt>Tipo</dt><dd>{{ os.get_tipo_display }}</dd></div>
-      <div><dt>Prioridade</dt><dd><span class="selo prioridade-{{ os.prioridade }}">{{ os.get_prioridade_display }}</span></dd></div>
+      <div><dt>Prioridade</dt><dd><span class="manutencao-prioridade prioridade-{{ os.prioridade }}">{{ os.get_prioridade_display }}</span></dd></div>
       <div><dt>Responsável</dt><dd>{% if os.responsavel %}{{ os.responsavel.get_short_name|default:os.responsavel.username }}{% else %}A definir{% endif %}</dd></div>
       {% if os.prestador %}<div><dt>Prestador</dt><dd>{{ os.prestador.nome }} <small>(externo)</small></dd></div>{% endif %}
       <div><dt>Aberta em</dt><dd>{{ os.aberta_em|date:"d/m/Y H:i" }} por {{ os.criado_por.get_short_name|default:os.criado_por.username }}</dd></div>
@@ -37,7 +39,7 @@
   </section>
 
   {% if os.aberta_ou_andamento %}
-  <section class="painel-bloco">
+  <section class="painel-bloco" id="acoes-os">
     <h2 class="titulo-topo">Ações</h2>
 
     {% if os.status == 'aberta' %}
@@ -49,17 +51,18 @@
 
     <details class="acao-bloco" open>
       <summary>Concluir OS</summary>
-      <form data-preservar-erros method="post" action="{% url 'manutencao:concluir' os.pk %}" class="form-cartao">
+      <form data-preservar-erros method="post" action="{% url 'manutencao:concluir' os.pk %}" enctype="multipart/form-data" class="form-cartao">
         {% csrf_token %}
         <div class="form-grade">
-          <div class="campo"><label>Mão de obra (R$)</label><input type="number" name="custo_maodeobra" min="0" step="0.01" value="{{ os.custo_maodeobra }}"></div>
-          <div class="campo"><label>Peças (R$)</label><input type="number" name="custo_pecas" min="0" step="0.01" value="{{ os.custo_pecas }}"></div>
+          <div class="campo"><label for="os-custo-maodeobra">Mão de obra (R$)</label><input id="os-custo-maodeobra" type="number" name="custo_maodeobra" min="0" max="99999999.99" step="0.01" value="{{ os.custo_maodeobra|unlocalize }}"></div>
+          <div class="campo"><label for="os-custo-pecas">Peças (R$)</label><input id="os-custo-pecas" type="number" name="custo_pecas" min="0" max="99999999.99" step="0.01" value="{{ os.custo_pecas|unlocalize }}"></div>
         </div>
         <div class="form-grade">
-          <div class="campo"><label>Nota fiscal / documento <small class="opcional">(opcional)</small></label><input type="text" name="nota_fiscal" value="{{ os.nota_fiscal }}"></div>
-          <div class="campo"><label>Garantia até <small class="opcional">(opcional)</small></label><input type="date" name="garantia_ate" value="{{ os.garantia_ate|date:'Y-m-d' }}"></div>
+          <div class="campo"><label for="os-numero-nota">Número da nota / documento <small class="opcional">(opcional)</small></label><input type="text" id="os-numero-nota" name="nota_fiscal" maxlength="60" value="{{ os.nota_fiscal }}"></div>
+          <div class="campo"><label for="os-garantia">Garantia até <small class="opcional">(opcional)</small></label><input id="os-garantia" type="date" name="garantia_ate" value="{{ os.garantia_ate|date:'Y-m-d' }}"></div>
         </div>
-        <div class="campo"><label>Resolução</label><textarea name="resolucao" rows="2" placeholder="O que foi feito"></textarea></div>
+        <div class="campo"><label for="os-anexo-conclusao">Anexar nota fiscal / documento <small class="opcional">(opcional)</small></label><input id="os-anexo-conclusao" type="file" name="anexo_nota_fiscal" accept=".pdf,.jpg,.jpeg,.png,.xml" aria-describedby="os-anexo-ajuda"><p class="ajuda" id="os-anexo-ajuda">PDF, JPG, PNG ou XML, até 10 MB. Você também pode anexar depois de concluir.</p></div>
+        <div class="campo"><label for="os-resolucao">Resolução</label><textarea id="os-resolucao" name="resolucao" rows="2" placeholder="O que foi feito"></textarea></div>
         <div class="acoes"><button type="submit" class="botao-primario">Concluir{% if os.bloqueia_uh %} e liberar quarto{% endif %}</button></div>
       </form>
     </details>
@@ -69,12 +72,29 @@
         <summary>Cancelar OS</summary>
         <form data-preservar-erros method="post" action="{% url 'manutencao:cancelar' os.pk %}" class="form-cartao">
           {% csrf_token %}
-          <div class="campo"><label>Motivo</label><input type="text" name="motivo" required></div>
+          <div class="campo"><label for="os-motivo-cancelamento">Motivo</label><input id="os-motivo-cancelamento" type="text" name="motivo" required></div>
           <div class="acoes"><button type="submit" class="botao-perigo">Cancelar OS</button></div>
         </form>
       </details>
     {% endif %}
   </section>
   {% endif %}
+</div>
+<section class="painel-bloco respiro manutencao-documentos" id="documentos-os" aria-labelledby="documentos-os-titulo">
+  <h2 id="documentos-os-titulo" class="titulo-topo">Documentos da OS</h2>
+  <p class="ajuda">Notas fiscais e comprovantes ficam disponíveis para a equipe com acesso à Manutenção.</p>
+  <ul class="documentos-lista">
+    {% for documento in documentos %}
+      <li><div><a href="{% url 'manutencao:documento' os.pk documento.pk %}" hx-boost="false" download>{{ documento.nome }}</a><span class="ajuda">{{ documento.tamanho|filesizeformat }} · {{ documento.enviado_em|date:'d/m/Y H:i' }} · {{ documento.enviado_por.get_short_name|default:documento.enviado_por.username }}</span></div><a class="botao-neutro" href="{% url 'manutencao:documento' os.pk documento.pk %}" hx-boost="false" download aria-label="Baixar {{ documento.nome }}">Baixar</a></li>
+    {% empty %}<li class="ajuda">Nenhum documento anexado.</li>{% endfor %}
+  </ul>
+  {% if documentos|length < 10 %}
+    <form data-preservar-erros method="post" action="{% url 'manutencao:anexar_documento' os.pk %}" enctype="multipart/form-data" class="form-cartao">
+      {% csrf_token %}
+      <div class="campo"><label for="os-anexo-documento">Adicionar documento</label><input id="os-anexo-documento" type="file" name="anexo_nota_fiscal" accept=".pdf,.jpg,.jpeg,.png,.xml" required aria-describedby="os-documentos-ajuda"><p class="ajuda" id="os-documentos-ajuda">PDF, JPG, PNG ou XML, até 10 MB por arquivo. Até 10 documentos por OS.</p></div>
+      <div class="acoes"><button type="submit" class="botao-primario">Anexar documento</button></div>
+    </form>
+  {% else %}<p class="ajuda">Limite de 10 documentos atingido.</p>{% endif %}
+</section>
 </div>
 {% endblock %}

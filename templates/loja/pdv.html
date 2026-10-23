@@ -14,7 +14,10 @@
 {% if not local %}
   <p class="subtitulo">Nenhum local de estoque ativo. Cadastre um depósito da Loja em Estoque → Locais.</p>
 {% else %}
-<div class="pdv-shell" x-data="pdv()">
+{# Os itens gerados por x-for dependem de escopos vivos: histórico deve pedir HTML limpo. #}
+<div class="pdv-shell" x-data="pdv()" hx-history="false" data-edicao-pendente="manual"
+     data-descarte-mensagem="Há itens no carrinho. Deseja sair e descartar esta venda? Escolha Cancelar para continuar a venda."
+     x-effect="$el.dataset.dirty = !concluida &amp;&amp; cart.length ? '1' : '0'">
 <div class="pdv pdv-loja" :data-painel="painel">
   <div class="pdv-etapas" role="group" aria-label="Etapas da venda">
     <button type="button" :aria-pressed="painel === 'produtos'" @click="verPainel('produtos')">Produtos</button>
@@ -41,6 +44,7 @@
       </form>
     </div>
 
+    <p class="pdv-categorias-ajuda">Categorias <span>Deslize para ver todas</span></p>
     <div class="pdv-categorias" role="group" aria-label="Categorias de produtos">
       <button type="button" class="filtro-chip" :aria-pressed="categoria === ''" @click="categoria = ''">
         <svg viewBox="0 0 24 24" class="ico" aria-hidden="true" focusable="false"><use href="{% static 'vendor/lucide/catalogo.svg' %}#package"></use></svg>
@@ -159,7 +163,7 @@
       iconesUrl: '{% static "vendor/lucide/catalogo.svg" %}',
       cart: [], filtro: '', categoria: '', painel: 'produtos', aviso: '',
       arrastando: null, sobreCarrinho: false, desconto: 0, destino: 'caixa',
-      forma_id: '', conta_id: '', enviando: false,
+      forma_id: '', conta_id: '', enviando: false, concluida: false,
       // O cliente vem do combobox (componente Alpine próprio): lemos o hidden
       // dele na hora de enviar, em vez de duplicar o estado aqui.
       clienteEscolhido() {
@@ -246,6 +250,8 @@
           });
           const d = await r.json();
           if (!r.ok) { toast(d.erro || 'Não foi possível finalizar.', 'error'); this.enviando = false; return; }
+          this.concluida = true;
+          this.$root.dataset.dirty = '0';
           window.location.href = d.url;
         } catch (e) {
           toast('Falha de conexão. Tente de novo: a venda não sai em dobro.', 'error');

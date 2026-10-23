@@ -173,9 +173,15 @@ def _data(s) -> date | None:
 
 @transaction.atomic
 def importar_cartao_csv(*, conteudo, arquivo_nome="", adquirente="SafraPay", usuario=None):
-    """Importa o CSV de vendas da adquirente. Mapeia colunas por nome (tolerante a acento)."""
+    """Importa vendas, reutilizando linhas idênticas mesmo em arquivos sobrepostos."""
+    import hashlib
+    import json
+
     if isinstance(conteudo, bytes):
-        conteudo = conteudo.decode("latin-1", "replace")
+        try:
+            conteudo = conteudo.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            conteudo = conteudo.decode("latin-1")
     amostra = conteudo[:2000]
     delim = ";" if amostra.count(";") >= amostra.count(",") else ","
     reader = csv.DictReader(io.StringIO(conteudo), delimiter=delim)
@@ -193,7 +199,7 @@ def importar_cartao_csv(*, conteudo, arquivo_nome="", adquirente="SafraPay", usu
 
     lote = LoteCartao.objects.create(
         adquirente=adquirente, arquivo_nome=arquivo_nome, importado_por=usuario)
-    novos = 0
+    novos = ignorados = 0
     for row in reader:
         nsu = (row.get(mapa["nsu"]) or "").strip()
         bruto = _valor(row.get(mapa["bruto"]))
@@ -205,16 +211,34 @@ def importar_cartao_csv(*, conteudo, arquivo_nome="", adquirente="SafraPay", usu
             liquido = bruto - (taxa or Decimal("0"))
         if taxa is None:
             taxa = bruto - liquido
-        TransacaoCartao.objects.create(
-            lote=lote, nsu=nsu, bruto=bruto, taxa=taxa, liquido=liquido,
-            data_venda=(_data(row.get(mapa["data_venda"])) if "data_venda" in mapa else None)
+        dados = {
+            "nsu": nsu, "bruto": bruto, "taxa": taxa, "liquido": liquido,
+            "data_venda": (_data(row.get(mapa["data_venda"])) if "data_venda" in mapa else None)
             or timezone.localdate(),
-            data_liquidacao=_data(row.get(mapa["data_liquidacao"])) if "data_liquidacao" in mapa else None,
-            bandeira=((row.get(mapa["bandeira"]) or "").strip() if "bandeira" in mapa else ""),
-            autorizacao=((row.get(mapa["autorizacao"]) or "").strip() if "autorizacao" in mapa else ""),
+            "data_liquidacao": _data(row.get(mapa["data_liquidacao"])) if "data_liquidacao" in mapa else None,
+            "bandeira": ((row.get(mapa["bandeira"]) or "").strip() if "bandeira" in mapa else ""),
+            "autorizacao": ((row.get(mapa["autorizacao"]) or "").strip() if "autorizacao" in mapa else ""),
+        }
+        # Registros anteriores à chave permanecem intactos, inclusive os vínculos.
+        if TransacaoCartao.objects.filter(
+            chave_importacao__isnull=True, lote__adquirente__iexact=adquirente.strip(), **dados,
+        ).exists():
+            ignorados += 1
+            continue
+        # NSU pode repetir em outro dia/adquirente ou em parcelas distintas.
+        # A chave inclui os dados da linha; UNIQUE também protege dois uploads juntos.
+        identidade = {
+            "adquirente": adquirente.strip().casefold(),
+            **{campo: format(valor.quantize(Decimal("0.01")), "f") if isinstance(valor, Decimal)
+               else str(valor) if valor is not None else None for campo, valor in dados.items()},
+        }
+        chave = hashlib.sha256(json.dumps(identidade, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
+        _, criado = TransacaoCartao.objects.get_or_create(
+            chave_importacao=chave, defaults={"lote": lote, **dados},
         )
-        novos += 1
-    return {"lote": lote, "novos": novos}
+        novos += int(criado)
+        ignorados += int(not criado)
+    return {"lote": lote, "novos": novos, "ignorados": ignorados}
 
 
 # ── Conciliação bancária (extrato × CRM) ─────────────────────────────────────

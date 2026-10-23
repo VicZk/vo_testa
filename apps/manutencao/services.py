@@ -5,8 +5,8 @@ Reservas); a ocupação atual é consultada por `reservas.services` — nunca po
 import de model interno. Operações que mexem no quarto são auditadas.
 """
 import calendar
-from datetime import timedelta
-from decimal import Decimal
+import re
+from datetime import date, datetime, timedelta
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -15,9 +15,60 @@ from django.utils import timezone
 from apps.nucleo.models import UH, modulo_ativo, registrar_auditoria
 from apps.nucleo.modulos import Modulo
 from apps.nucleo.sinais import emitir
+from apps.nucleo.validadores import decimal_valido
 
 from .models import OrdemServico
 from .signals import reparo_concluido
+
+
+def custo_valido(valor, *, nome="Custo"):
+    """Aceita decimal simples ou BRL com vírgula, sem arredondar nem zerar erros."""
+    if isinstance(valor, str):
+        texto = valor.strip()
+        if len(texto) > 64:
+            raise ValidationError(f"{nome}: número fora do limite permitido.")
+        if "," in texto and re.fullmatch(r"-?(?:[0-9]+|[0-9]{1,3}(?:\.[0-9]{3})+),[0-9]{1,2}", texto):
+            valor = texto.replace(".", "").replace(",", ".")
+        elif re.fullmatch(r"-?[0-9]+(?:\.[0-9]{1,2})?", texto):
+            valor = texto
+        else:
+            raise ValidationError(f"{nome}: informe um valor válido, com até duas casas decimais.")
+    return decimal_valido(valor, nome=nome)
+
+
+def _data_valida(valor, nome):
+    if valor in (None, ""):
+        return None
+    if isinstance(valor, datetime):
+        return valor.date()
+    if isinstance(valor, date):
+        return valor
+    try:
+        if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", str(valor)):
+            raise ValueError
+        return date.fromisoformat(valor)
+    except (TypeError, ValueError):
+        raise ValidationError(f"{nome}: informe uma data válida.")
+
+
+def validar_programacao(tipo, recorrencia_meses, agendada_para, previsto_para):
+    if recorrencia_meses not in (None, ""):
+        texto = str(recorrencia_meses)
+        if not re.fullmatch(r"[0-9]{1,3}", texto) or not 1 <= int(texto) <= 120:
+            raise ValidationError("A recorrência deve ser de 1 a 120 meses.")
+        if tipo != OrdemServico.Tipo.PREVENTIVA:
+            raise ValidationError("Somente uma OS preventiva pode ter recorrência.")
+        recorrencia_meses = int(texto)
+        # Impede que uma data válida produza ano fora do calendário ao concluir.
+        try:
+            _somar_meses(agendada_para or timezone.localdate(), recorrencia_meses)
+        except (ValueError, OverflowError):
+            raise ValidationError("A próxima preventiva ficaria fora do calendário. Ajuste a data ou a recorrência.")
+    else:
+        recorrencia_meses = None
+    if agendada_para and previsto_para and previsto_para < agendada_para:
+        raise ValidationError("O prazo previsto não pode ser anterior à data agendada.")
+    return recorrencia_meses
 
 
 def _somar_meses(d, n):
@@ -81,6 +132,21 @@ def abrir_os(operador, *, uh=None, area="", titulo, descricao="",
         raise ValidationError("Informe apenas um alvo: quarto OU área comum.")
     if bloquear and not uh:
         raise ValidationError("Só é possível bloquear um quarto (não uma área).")
+    if uh and uh.status == UH.Status.INATIVA:
+        raise ValidationError("Escolha um quarto ativo.")
+    if responsavel and not responsavel.is_active:
+        raise ValidationError("Escolha um responsável ativo.")
+    if prestador and not prestador.ativo:
+        raise ValidationError("Escolha um prestador ativo.")
+    if tipo not in OrdemServico.Tipo.values:
+        raise ValidationError("Escolha um tipo de ordem de serviço válido.")
+    if prioridade not in OrdemServico.Prioridade.values:
+        raise ValidationError("Escolha uma prioridade válida.")
+    previsto_para = _data_valida(previsto_para, "Previsto para")
+    agendada_para = _data_valida(agendada_para, "Agendada para")
+    bloqueio_inicio = _data_valida(bloqueio_inicio, "Início do bloqueio")
+    bloqueio_fim = _data_valida(bloqueio_fim, "Fim do bloqueio")
+    recorrencia_meses = validar_programacao(tipo, recorrencia_meses, agendada_para, previsto_para)
 
     # Janela do bloqueio (por datas): início = agendada/hoje; fim = previsto ou aberto.
     b_ini = b_fim = None
@@ -93,7 +159,7 @@ def abrir_os(operador, *, uh=None, area="", titulo, descricao="",
         if b_fim and b_fim < b_ini:
             raise ValidationError("O fim do bloqueio não pode ser antes do início.")
 
-    ordem = OrdemServico.objects.create(
+    ordem = OrdemServico(
         uh=uh, area=area, titulo=titulo, descricao=descricao or "",
         tipo=tipo, prioridade=prioridade, responsavel=responsavel,
         prestador=prestador, previsto_para=previsto_para,
@@ -103,6 +169,8 @@ def abrir_os(operador, *, uh=None, area="", titulo, descricao="",
         agendada_para=agendada_para,
         criado_por=operador,
     )
+    ordem.full_clean()
+    ordem.save()
     if ordem.bloqueia_uh:
         _registrar_bloqueio(uh, operador, ordem)
     return ordem
@@ -132,20 +200,23 @@ def concluir_os(ordem, usuario, *, resolucao="",
         return OrdemServico.objects.filter(anterior=ordem).first()
     if not ordem.aberta_ou_andamento:
         raise ValidationError("Esta OS já foi encerrada.")
+    # Valide tudo antes de tocar na instância: um campo incorreto não pode deixar
+    # custo parcial em memória nem marcar a OS como concluída.
+    valores = {}
     if custo_maodeobra is not None:
-        v = Decimal(custo_maodeobra)
-        if v < 0:
-            raise ValidationError("Custo de mão de obra não pode ser negativo.")
-        ordem.custo_maodeobra = v
+        valores["custo_maodeobra"] = custo_valido(custo_maodeobra, nome="Custo de mão de obra")
     if custo_pecas is not None:
-        v = Decimal(custo_pecas)
-        if v < 0:
-            raise ValidationError("Custo de peças não pode ser negativo.")
-        ordem.custo_pecas = v
+        valores["custo_pecas"] = custo_valido(custo_pecas, nome="Custo de peças")
     if nota_fiscal is not None:
-        ordem.nota_fiscal = nota_fiscal
+        nota_fiscal = str(nota_fiscal).strip()
+        if len(nota_fiscal) > 60:
+            raise ValidationError("O número da nota fiscal deve ter no máximo 60 caracteres.")
+        valores["nota_fiscal"] = nota_fiscal
     if garantia_ate is not None:
-        ordem.garantia_ate = garantia_ate
+        valores["garantia_ate"] = _data_valida(garantia_ate, "Garantia até")
+    recorrencia = validar_programacao(ordem.tipo, ordem.recorrencia_meses, ordem.agendada_para, ordem.previsto_para)
+    for campo, valor in valores.items():
+        setattr(ordem, campo, valor)
     ordem.resolucao = resolucao or ""
     ordem.status = OrdemServico.Status.CONCLUIDA
     ordem.concluida_em = timezone.now()
@@ -169,7 +240,7 @@ def concluir_os(ordem, usuario, *, resolucao="",
 
     # Preventiva com recorrência: agenda a próxima OS.
     proxima = None
-    if ordem.tipo == OrdemServico.Tipo.PREVENTIVA and ordem.recorrencia_meses:
+    if ordem.tipo == OrdemServico.Tipo.PREVENTIVA and recorrencia:
         base = ordem.agendada_para or timezone.localdate()
         proxima = OrdemServico.objects.create(
             anterior=ordem,
@@ -260,6 +331,9 @@ def cancelar_os(ordem, usuario, motivo=""):
     travar(ordem)
     if not ordem.aberta_ou_andamento:
         raise ValidationError("Esta OS já foi encerrada.")
+    motivo = (motivo or "").strip()
+    if not motivo:
+        raise ValidationError("Informe o motivo do cancelamento.")
     if ordem.bloqueia_uh and ordem.uh_id:
         from apps.nucleo.sistema import travar_quartos
 

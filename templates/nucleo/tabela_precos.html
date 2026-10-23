@@ -6,13 +6,40 @@
 <p class="pagina-eyebrow letreiro">Núcleo</p>
 <div class="pagina-cabecalho">
   <h1>Tabela de preços</h1>
-  <a href="{% url 'reservas:restricoes' %}" class="botao-neutro">Restrições de venda</a>
-  <a href="{% url 'temporada_nova' %}" class="botao-neutro">+ Feriado especial</a>
+  <div class="pagina-acoes">
+    <a href="{% url 'temporada_nova' %}" class="botao-primario">+ Feriado especial</a>
+    <a href="{% url 'reservas:restricoes' %}" class="botao-neutro">Restrições de venda</a>
+  </div>
 </div>
 <p class="subtitulo">Preço por quarto (agrupado por ala) em cada temporada. Cada célula: <strong>base</strong> (2 adultos), <strong>+adulto</strong> (pessoa adicional) e <strong>meia</strong> (criança 6-15). Meia em branco = metade do +adulto; ≤5 não paga. Natal/Ano Novo viram colunas próprias quando você cadastra o feriado.</p>
 
-<form method="post" class="form-cartao form-largo precos-form" data-preservar-erros>
+{% if grupos %}
+<div class="precos-filtros" data-precos-filtros hidden>
+  <div class="precos-filtros-campos">
+    <label for="precos-ala">Ala
+      <select id="precos-ala" data-precos-ala-filtro>
+        <option value="">Todas as alas</option>
+        {% for g in grupos %}<option value="{{ forloop.counter }}">{{ g.titulo }}</option>{% endfor %}
+      </select>
+    </label>
+    <label for="precos-quarto">Quarto
+      <select id="precos-quarto" data-precos-quarto-filtro>
+        <option value="">Todos os quartos</option>
+        {% for g in grupos %}{% for q in g.quartos %}<option value="{{ q.uh_id }}" data-ala="{{ forloop.parentloop.counter }}">{{ q.numero }}{% if q.tematico %} · {{ q.tematico }}{% endif %}</option>{% endfor %}{% endfor %}
+      </select>
+    </label>
+    <button type="button" class="botao-neutro" data-precos-mostrar-todos>Mostrar todos</button>
+  </div>
+  <p class="ajuda" data-precos-resumo role="status"></p>
+</div>
+{% endif %}
+
+<form method="post" class="form-cartao form-largo precos-form" data-preservar-erros data-precos-metodo="{{ request.method }}">
   {% csrf_token %}
+  <div class="precos-salvar" id="precos-salvar">
+    <div><span data-estado-edicao role="status">Nenhuma alteração pendente</span><small>Salva as alterações de todos os quartos e parâmetros.</small></div>
+    <button type="submit" class="botao-primario">Salvar tabela</button>
+  </div>
   <table class="tabela precos-tabela">
     <thead>
       <tr>
@@ -27,9 +54,9 @@
           aparecem aqui para preencher.</td></tr>
       {% endif %}
       {% for g in grupos %}
-        <tr class="mapa-grupo"><td colspan="{{ colunas|length|add:1 }}"><strong>{{ g.titulo }}</strong></td></tr>
+        <tr class="mapa-grupo" data-precos-grupo="{{ forloop.counter }}"><td colspan="{{ colunas|length|add:1 }}"><strong>{{ g.titulo }}</strong></td></tr>
         {% for q in g.quartos %}
-        <tr>
+        <tr data-precos-quarto="{{ q.uh_id }}" data-precos-ala="{{ forloop.parentloop.counter }}">
           <td class="precos-unidade">{{ q.numero }}{% if q.tematico %} · <small>{{ q.tematico }}</small>{% endif %}</td>
           {% for cel in q.celulas %}
           <td class="num" data-temporada="{{ cel.rotulo }}">
@@ -103,7 +130,7 @@
   </div>
 
   <div class="acoes">
-    <button type="submit" class="botao-primario">Salvar tabela</button>
+    <a href="#precos-salvar" class="botao-neutro">Revisar e salvar</a>
     <a href="{% url 'temporadas' %}" class="botao-neutro">Voltar</a>
   </div>
 </form>
@@ -111,7 +138,31 @@
 <style>
   /* A grade é larga (3 campos × temporadas): a largura vem do `.form-largo` (app.css). */
   .precos-tabela td, .precos-tabela th { white-space: nowrap; }
-  .precos-form { container: precos / inline-size; }
+  .form-cartao.precos-form { container: precos / inline-size; overflow:visible; }
+  .precos-filtros { max-width:100%; margin:1rem 0; }
+  .precos-filtros-campos { display:flex; flex-wrap:wrap; align-items:end; gap:.65rem; }
+  .precos-filtros-campos > label { display:grid; gap:.3rem; min-width:0; flex:1 1 13rem; font-size:.84rem; font-weight:600; }
+  .precos-filtros-campos select { width:100%; min-width:0; min-height:44px; padding:.6rem .75rem; font:inherit; color:var(--tinta); background:var(--superficie); border:1px solid var(--fio-forte); border-radius:var(--raio-p); }
+  .precos-filtros-campos > button { min-height:44px; }
+  .precos-filtros > .ajuda { margin:.5rem 0 0; }
+  .precos-tabela tr[hidden] { display:none !important; }
+  .precos-salvar {
+    display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:.65rem;
+    position:sticky; top:calc(var(--topbar-h) + .4rem); z-index:5;
+    padding:.65rem .75rem; margin:0 0 1rem; background:var(--superficie);
+    border:1px solid var(--fio); border-radius:var(--raio-p); box-shadow:var(--sombra-1);
+    scroll-margin-top:calc(var(--topbar-h) + .4rem);
+  }
+  .precos-salvar [data-estado-edicao] { display:block; font-size:.8rem; font-weight:600; overflow-wrap:anywhere; }
+  .precos-salvar small { display:block; font-size:.72rem; color:var(--tinta-suave); margin-top:.2rem; }
+  .precos-salvar > button { min-height:44px; white-space:nowrap; padding:.55rem .7rem; }
+  .precos-form[data-dirty="1"] .precos-salvar { border-color:var(--lampiao); }
+  @media (max-width:520px) {
+    .precos-filtros-campos { display:grid; grid-template-columns:1fr; }
+    .precos-filtros-campos > button { justify-self:start; }
+    .precos-salvar { padding:.6rem; }
+    .precos-salvar small { grid-column:1/-1; }
+  }
   .precos-cel { display: flex; gap: .3rem; justify-content: flex-end; }
   .precos-cel label { margin: 0; min-width: 0; }
   .precos-cel label > span { display: none; }

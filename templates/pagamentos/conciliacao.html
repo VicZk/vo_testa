@@ -82,13 +82,22 @@
               <div x-data="{ aberto: false }">
                 <button type="button" class="botao-neutro" @click="aberto = !aberto"
                         :aria-expanded="aberto">Liquidar</button>
-                <div class="reveal-liquidar" x-ref="painel" x-cloak
-                     :style="aberto ? 'max-height:' + $refs.painel.scrollHeight + 'px;opacity:1' : 'max-height:0;opacity:0'">
-                  <form data-preservar-erros method="post" action="{% url 'pagamentos:liquidar' c.pk %}" class="conc-acao-painel">
+                <div class="reveal-liquidar" x-cloak :inert="!aberto" :aria-hidden="!aberto"
+                     :style="aberto ? 'max-height:none;opacity:1' : 'max-height:0;opacity:0'">
+                  <form data-preservar-erros method="post" action="{% url 'pagamentos:liquidar' c.pk %}" class="conc-acao-painel form-inline">
                     {% csrf_token %}
-                    <input type="number" name="valor_liquido" step="0.01" placeholder="Líquido (R$)">
-                    <input type="date" name="data_liquidacao">
-                    <input type="text" name="id_liquidacao" placeholder="ID do depósito">
+                    <div class="campo">
+                      <label for="liq-valor-{{ c.pk }}">Valor líquido (R$)</label>
+                      <input id="liq-valor-{{ c.pk }}" type="number" name="valor_liquido" step="0.01" placeholder="0,00">
+                    </div>
+                    <div class="campo">
+                      <label for="liq-data-{{ c.pk }}">Data da liquidação</label>
+                      <input id="liq-data-{{ c.pk }}" type="date" name="data_liquidacao">
+                    </div>
+                    <div class="campo">
+                      <label for="liq-deposito-{{ c.pk }}">ID do depósito</label>
+                      <input id="liq-deposito-{{ c.pk }}" type="text" name="id_liquidacao" placeholder="Referência no extrato">
+                    </div>
                     <button type="submit" class="botao-primario">Confirmar</button>
                   </form>
                 </div>
