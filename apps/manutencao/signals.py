@@ -8,3 +8,9 @@ from django.dispatch import Signal
 
 # kwargs: uh, ordem, usuario
 reparo_concluido = Signal()
+
+
+def avisar_disponibilidade(sender, instance, raw=False, **kwargs):
+    if not raw and instance.uh_id:
+        from apps.reservas.services import notificar_distribuicao_alterada
+        notificar_distribuicao_alterada("manutencao")

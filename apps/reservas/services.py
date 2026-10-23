@@ -346,6 +346,7 @@ def reservas_no_periodo(uh: UH, checkin: date, checkout: date):
     )
 
 
+@transaction.atomic
 def expirar_vencidas() -> int:
     """Cancela as pré-reservas cujo prazo de retenção venceu, liberando o quarto.
     Chamada pelo cron (management command) e antes de alocar uma nova reserva."""
@@ -367,6 +368,8 @@ def expirar_vencidas() -> int:
                         alvo_id=str(pk), detalhe={"motivo": motivo})
         for pk in vencidas
     ])
+    if n:
+        notificar_distribuicao_alterada("expiracao_retencao")
     return n
 
 
@@ -3312,3 +3315,27 @@ def fechamentos(inicio: date, fim: date):
     from .models import FechamentoDiario
 
     return FechamentoDiario.objects.filter(data__range=(inicio, fim))
+
+
+def previa_distribuicao_canais(mapeamentos, inicio, fim):
+    """Estoque e preço por noite para categorias externas explicitamente mapeadas."""
+    from .distribuicao import previa
+    return previa(mapeamentos, inicio, fim)
+
+
+def notificar_distribuicao_alterada(origem):
+    """Interface para módulos que alteram a disponibilidade física da hospedagem."""
+    from .signals import distribuicao_alterada
+    distribuicao_alterada.send(sender=notificar_distribuicao_alterada, origem=origem)
+
+
+def aplicar_reserva_canal(dados, destinos, vinculos, usuario):
+    """Aplica uma revisão de canal por inteiro, preservando disponibilidade e caixa."""
+    from .distribuicao import aplicar
+    return aplicar(dados, destinos, vinculos, usuario)
+
+
+def conferir_reservas_canal(dados, ids, usuario, *, anteriores=(), destinos=None):
+    """Valida vínculos informados pela recepção para encerrar uma pendência externa."""
+    from .distribuicao import conferir_vinculos
+    return conferir_vinculos(dados, ids, usuario, anteriores=anteriores, destinos=destinos)

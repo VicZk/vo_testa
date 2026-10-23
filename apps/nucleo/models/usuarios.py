@@ -100,6 +100,9 @@ class ModuloContratado(models.Model):
                     f"O módulo {Modulo(self.codigo).label} depende de: "
                     f"{', '.join(faltando)}."
                 )
+        elif self.pk:
+            from apps.nucleo.modulos import conferir_desativacao
+            conferir_desativacao(self.codigo)
 
 
 # Dentro de uma requisição (ModulosPorRequisicaoMiddleware), os módulos ativos são lidos

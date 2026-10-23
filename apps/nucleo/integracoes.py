@@ -75,6 +75,8 @@ def situacao_integracoes():
             "pendencias":pendencias,"pronto":pronto,"assinatura":assinatura,"orientacao":orientacao,
             "ensaio":ensaio if valido else None,"ensaio_desatualizado":bool(ensaio and not valido),
             "situacao":"Simulação" if modo == "simulado" else ("Configuração pendente" if not pronto else ("Ensaio registrado" if valido else "Aguardando ensaio"))})
+    from apps.canais.services import resumo_integracao
+    itens.append(resumo_integracao())
     return itens
 
 
@@ -86,7 +88,7 @@ def painel(request):
         try:
             item=next((i for i in itens if i["codigo"] == request.POST.get("canal")),None)
             evidencia=request.POST.get("evidencia","").strip()
-            if not item or not item["pronto"]:
+            if not item or not item.get("pronto") or item.get("url_name"):
                 raise ValidationError("Complete a configuração real antes de registrar um ensaio.")
             if not 20 <= len(evidencia) <= 2000 or request.POST.get("confirmado") != "sim":
                 raise ValidationError("Descreva o resultado em 20 a 2000 caracteres e confirme a conferência no provedor.")

@@ -1,6 +1,7 @@
 """Roda as rotinas agendadas do sistema num processo só (serviço de cron do Railway).
 
 Grupos:
+- canais (a cada minuto): recebe revisões e atualiza a distribuição quando há alterações;
 - frequentes (a cada 10 min): expira pré-reservas e recibos do site vencidos, reenvia à
   FNRH o que ficou pendente, dispara as campanhas de e-mail agendadas e reenvia as
   confirmações do site e os e-mails do Comercial que não saíram, e reprocessa os
@@ -19,7 +20,7 @@ Healthchecks.io ou compatível), o grupo avisa o começo (`/start`), o fim e a f
 (`/fail`, com o nome das tarefas). Se o cron parar de rodar, travar ou falhar, quem
 alerta é o monitor — o Railway só pinta a execução de vermelho e ninguém fica sabendo.
 
-Uso: manage.py rotinas [--grupo frequentes|diarias] [--so tarefa1,tarefa2]
+Uso: manage.py rotinas [--grupo canais|frequentes|diarias] [--so tarefa1,tarefa2]
 Configuração dos serviços de cron: deploy/railway.rotinas*.json (ver README, seção 10).
 """
 
@@ -36,6 +37,7 @@ from django.db import connections
 logger = logging.getLogger(__name__)
 
 GRUPOS = {
+    "canais": ["sincronizar_canais"],  # a cada minuto; independente das rotinas de dez minutos
     "frequentes": [
         "expirar_reservas",
         "expirar_recibos_site",

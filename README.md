@@ -94,7 +94,8 @@ consultadas nesta revisão. Esta é uma **fork de desenvolvimento**: publicar na
 | FNRH Digital (envio ao governo) | Integração Serpro escrita; credenciais e homologação precisam ser verificadas no ambiente |
 | Fiscal (NFS-e/NFC-e) | Focus NFe v2 implementado; cadastro, credenciais e homologação pendentes de configuração |
 | NPS | Pesquisa pós-estadia, resposta por token e painel implementados |
-| CRM do Hóspede, Canais/OTAs | Integração de canais pendente de escolha e configuração do provedor |
+| Canais/OTAs | Adaptador Channex e operação no CRM; ativação e homologação real pendentes ([guia](docs/CANAIS.md)) |
+| CRM do Hóspede | Evolução de catálogo |
 
 Os gateways usam **`simulado`** por padrão, com uma exceção importante de comportamento:
 `EMAIL_GATEWAY=simulado` envia pelo backend do Django e pode usar **SMTP real** se
@@ -756,15 +757,17 @@ mídia fica no disco do container, que é apagado a cada deploy.
 container novo entrar no ar; se falharem, o deploy é abortado) e o gunicorn sobe com 2
 workers × 4 threads e timeout de 60 s.
 
-**Rotinas agendadas.** `python manage.py rotinas --grupo frequentes|diarias` roda as
+**Rotinas agendadas.** `python manage.py rotinas --grupo canais|frequentes|diarias` roda as
 tarefas periódicas, cada uma isolada: uma falha vai para o log, não impede as outras e
 faz o comando terminar com erro. No Railway, crie dois serviços de Cron a partir deste
 repositório, com as mesmas variáveis do serviço web e o arquivo de configuração
 `deploy/railway.rotinas.json` (a cada 10 min) ou `deploy/railway.rotinas-diarias.json`
-(03h15 de Brasília).
+(03h15 de Brasília). Para Canais, há um serviço independente a cada minuto em
+`deploy/railway.rotinas-canais.json`; sem módulo e conexão ativos ele não acessa o provedor.
 
 | Grupo | Comando | O que faz |
 |---|---|---|
+| canais | `sincronizar_canais` | captura revisões, confirma recebimento após persistir e atualiza disponibilidade, tarifas e restrições quando necessário |
 | frequentes | `expirar_reservas` | cancela pré-reservas e grupos com retenção vencida |
 | frequentes | `expirar_recibos_site` | marca como expirados os recibos do site não pagos |
 | frequentes | `enviar_fnrh_pendentes` | reenvia à FNRH Digital as fichas pendentes ou com erro |

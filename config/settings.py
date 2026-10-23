@@ -74,6 +74,7 @@ INSTALLED_APPS = [
     "apps.nucleo",
     "apps.reservas",
     "apps.daypass",
+    "apps.canais",
     "apps.estoque",
     "apps.loja",
     "apps.governanca",
@@ -544,6 +545,7 @@ SITE_PUBLIC_URL = os.environ.get("SITE_PUBLIC_URL", "http://127.0.0.1:8000").rst
 # de rodar, travar ou falhar, o monitor manda o alerta (e-mail, Telegram…). O
 # Railway só marca a execução em vermelho. Vazio (padrão) = não avisa ninguém.
 ROTINAS_MONITOR = {
+    "canais": os.environ.get("ROTINAS_MONITOR_CANAIS", ""),
     "frequentes": os.environ.get("ROTINAS_MONITOR_FREQUENTES", ""),
     "diarias": os.environ.get("ROTINAS_MONITOR_DIARIAS", ""),
 }
@@ -613,3 +615,11 @@ EMAIL_COMERCIAL_HOST_PASSWORD = os.environ.get("EMAIL_COMERCIAL_HOST_PASSWORD", 
 EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", "15"))
 EMAIL_ENVIO_ASSINCRONO = os.environ.get("EMAIL_ENVIO_ASSINCRONO", "1") == "1"
 
+
+# Channex: chaves separadas por ambiente; conexão inicia desabilitada no CRM.
+CHANNEX_API_KEY = os.getenv("CHANNEX_API_KEY", "")
+CHANNEX_API_KEY_HML = os.getenv("CHANNEX_API_KEY_HML", "")
+CHANNEX_WEBHOOK_SECRET = os.getenv("CHANNEX_WEBHOOK_SECRET", "")
+CHANNEX_WEBHOOK_SECRET_HML = os.getenv("CHANNEX_WEBHOOK_SECRET_HML", "")
+# Só habilitar numa instalação isolada, com banco de teste e dados fictícios.
+CANAIS_HOMOLOGACAO_APLICAR = os.getenv("CANAIS_HOMOLOGACAO_APLICAR", "0") == "1"

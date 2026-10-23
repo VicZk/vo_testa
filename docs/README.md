@@ -29,6 +29,7 @@ original. Uma checklist marcada ou um teste antigo não comprova o ambiente atua
 | Documento | Classificação e leitura |
 |---|---|
 | [FNRH Digital](Implementar_FNRH_API.md) | Guia de integração; adapter escrito, ativação/homologação a validar |
+| [Canais e OTAs](CANAIS.md) | Channex, preparação, conferência e limites; credenciais e homologação real pendentes |
 | [Safrapay](Implementar_Safrapay.md) | Guia e evidências HML datadas; não atesta produção |
 | [Decisão SafraPay](SafraPay/DECISAO.md) | Histórico da estratégia de contratação e maquininha |
 | [Pacote de evidências Safrapay](../evidencias/safrapay/README.md) | Registro HML de 01/10/2026 |

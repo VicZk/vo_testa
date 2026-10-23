@@ -9,6 +9,21 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 22/10/2026: canais de venda preparados para configuração e homologação
+
+- Canais tem conexão por ambiente, responsável, categorias e unidades físicas,
+  limite de venda, margem de segurança e prévia de disponibilidade.
+- Reservas recebidas ficam numa fila durável. Novas reservas, alterações e
+  cancelamentos compatíveis usam as travas do PMS; divergências ficam para
+  conferência, sem registrar pagamento ou consentimento comercial automaticamente.
+- Alterações da operação alimentam a fila de publicação. Notificações exigem
+  assinatura, envios interrompidos são retomados e falhas têm espera progressiva.
+  Fechamento confirmado é obrigatório antes de desligar uma conexão publicada.
+- Telas e formulários foram conferidos em seis larguras; nomes longos permanecem
+  dentro das fichas e tabelas. Erros de validação preservam o preenchimento.
+- Credenciais, contratação e homologação reais permanecem pendentes; os ensaios
+  automatizados usam respostas fictícias. A conexão inicia desativada.
+
 ## 22/10/2026: textos contidos nos cartões e contagem utilizável no celular
 
 - O aviso de limpeza dispensada quebra dentro da porta do quarto; os cartões

@@ -14,3 +14,7 @@ from django.dispatch import Signal
 
 quarto_liberado = Signal()
 reserva_encerrada = Signal()
+
+# Interface pública: estoque físico, preço ou restrição de venda mudou. O receptor
+# enfileira trabalho na mesma transação; não faz chamadas de rede.
+distribuicao_alterada = Signal()

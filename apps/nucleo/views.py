@@ -4,7 +4,7 @@ from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import Q, Sum
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -341,6 +341,7 @@ def modulos_central(request):
     )
 
 
+@transaction.atomic
 def _alternar_modulo(request, codigo, acao):
     from .modulos import DEPENDENCIAS, Modulo
 
@@ -376,6 +377,11 @@ def _alternar_modulo(request, codigo, acao):
             return
         modulo.ativo = False
         modulo.desativado_em = timezone.now()
+        try:
+            modulo.full_clean()
+        except ValidationError as erro:
+            messages.error(request, " ".join(erro.messages))
+            return
         modulo.save()
         messages.success(request, f"Módulo {label} desativado.")
 
@@ -658,6 +664,7 @@ def estrutura(request):
 
 
 @requer_area(Area.QUARTOS)
+@transaction.atomic
 def tipo_uh_form(request, pk=None):
     tipo = get_object_or_404(TipoUH, pk=pk) if pk else None
     form = TipoUHForm(request.POST or None, instance=tipo)
@@ -761,6 +768,7 @@ def _ficha_comercial_do_quarto(request, uh):
 
 
 @requer_area(Area.QUARTOS)
+@transaction.atomic
 def uh_form(request, pk=None):
     from .estrutura import capacidade, descricao_camas
     from .models import ConfiguracaoUH
@@ -885,6 +893,7 @@ def _tarifas_temporada(temporada):
 
 
 @requer_area(Area.TEMPORADAS)
+@transaction.atomic
 def temporada_form(request, pk=None):
     temporada = get_object_or_404(Temporada, pk=pk) if pk else None
     form = TemporadaForm(request.POST or None, instance=temporada)
@@ -910,6 +919,7 @@ _CANAIS_CUSTO = [("ota", "Sites de reserva (OTA)"), ("site", "Site da pousada"),
 
 
 @requer_area(Area.QUARTOS)
+@transaction.atomic
 def tabela_precos(request):
     """Tabela central de preços: quartos (por ala) × Baixa/Alta/Feriados (+ feriados
     especiais Natal/Ano Novo), cada célula = base (2 adultos) + adulto + meia (6-15).

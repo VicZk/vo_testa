@@ -246,7 +246,10 @@ ativação/homologação externa; o que entrou depois está no [CHANGELOG](CHANG
 - **Day pass:** módulo próprio de turnos, capacidade, visitantes, caixa e comandas;
   veja `docs/Reservas/DAY_PASS.md`. Nenhuma capacidade física é presumida.
 - **Formulários:** veja `docs/FORMULARIOS.md`; erro não deve apagar campos ou fechar modal.
-- **Futuro:** CRM do Hóspede, Canais/OTAs e telefonia.
+- **Canais/OTAs:** conexão Channex, mapeamento, fila de revisões e publicação de
+  disponibilidade/tarifas/restrições. Inicia desativada; credenciais e homologação
+  real dependem do provedor. Rotina independente a cada minuto (`--grupo canais`).
+- **Futuro:** CRM do Hóspede e telefonia.
   Frigobar foi removido; não existe app ativo desse módulo.
 
 Detalhes técnicos devem ficar em [Arquitetura](docs/ARQUITETURA.md) e

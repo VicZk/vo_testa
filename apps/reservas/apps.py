@@ -14,3 +14,5 @@ class ReservasConfig(AppConfig):
         from .services import desfazer_credito_do_estorno
 
         ao_estornar(desfazer_credito_do_estorno)
+        from .eventos_distribuicao import conectar
+        conectar()

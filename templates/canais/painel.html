@@ -1,0 +1,33 @@
+{% extends "base.html" %}{% load nucleo_extras %}
+{% block titulo %}Canais de venda{% endblock %}
+{% block conteudo %}<div class="eleg">
+<p class="pagina-eyebrow letreiro">Distribuição · Reservas</p>
+<div class="pagina-cabecalho"><h1>Canais de venda</h1><span class="selo">{{ conexao.get_ambiente_display }}</span></div>
+<p class="subtitulo">Confira as reservas recebidas e acompanhe a disponibilidade enviada pela Channex aos canais conectados.</p>
+<form method="get" class="barra-filtros"><label for="conexao">Conexão</label><select name="conexao" id="conexao">{% for item in conexoes %}<option value="{{ item.pk }}" {% if item.pk == conexao.pk %}selected{% endif %}>{{ item }} · {{ item.pk }}</option>{% endfor %}</select><button class="botao-neutro">Consultar</button></form>
+<div class="kpis">
+<div class="kpi"><span class="kpi-rotulo">Conexão</span><strong>{% if conexao.ativo %}Habilitada{% else %}Desabilitada{% endif %}</strong><span class="kpi-nota">{% if conexao.ultima_execucao %}Última rotina: {{ conexao.ultima_execucao|date:"d/m H:i" }}{% else %}Nenhuma rotina executada{% endif %}</span></div>
+<div class="kpi"><span class="kpi-rotulo">Conferência</span><strong>{{ pendentes }}</strong><span class="kpi-nota">Revisões aguardando a equipe</span></div>
+<div class="kpi"><span class="kpi-rotulo">Permissão de venda</span><strong>{% if conexao.vendas_abertas %}Aberta{% else %}Fechada{% endif %}</strong><span class="kpi-nota">Pendências podem zerar a oferta enviada</span></div>
+</div>
+{% if conexao.ultima_falha %}<div class="cartao respiro" role="alert"><h2 class="letreiro bloco-subtitulo">Atualização requer atenção</h2><p>{{ conexao.ultima_falha }}</p>{% if conexao.proxima_tentativa %}<p class="nota-cartao">Próxima tentativa a partir de {{ conexao.proxima_tentativa|date:"d/m H:i" }}.</p>{% endif %}</div>{% endif %}
+<section class="cartao respiro"><h2 class="letreiro bloco-subtitulo">Preparação da conexão</h2>
+<dl class="ficha"><div><dt>Credencial</dt><dd>{% if situacao.chave_presente %}Presente no servidor{% else %}Pendente{% endif %}</dd></div><div><dt>Validação</dt><dd>{% if situacao.validada %}Registrada para esta configuração{% elif situacao.validacao_desatualizada %}Revisar após as alterações{% else %}Pendente{% endif %}</dd></div><div><dt>Responsável</dt><dd>{{ conexao.responsavel|default:"Não definido" }}</dd></div></dl>
+{% if situacao.pendencias %}<ul class="lista-passos bloco-respiro">{% for aviso in situacao.pendencias %}<li>{{ aviso }}</li>{% endfor %}</ul>{% endif %}
+{% if conexao.ambiente == 'homologacao' %}<p class="nota-cartao">As reservas de homologação ficam separadas da operação. A aplicação de testes só é liberada numa instalação isolada.</p>{% endif %}
+{% if request.user.is_staff or request.user.is_superuser %}<div class="acoes bloco-respiro"><a class="botao-neutro" href="{% url 'canais:conexao' conexao.pk %}">Configurar conexão</a><a class="botao-neutro" href="{% url 'canais:validacao' conexao.pk %}">Registrar validação</a><a class="botao-neutro" href="{% url 'canais:conexao_nova' %}">Nova conexão</a></div>{% endif %}
+</section>
+<section class="cartao respiro"><div class="cartao-cabeca"><h2 class="letreiro bloco-subtitulo">Categorias mapeadas</h2>{% if request.user.is_staff or request.user.is_superuser %}<a class="botao-neutro" href="{% url 'canais:mapeamento_novo' conexao.pk %}">Mapear categoria</a>{% endif %}</div>
+<p>{% if total_mapas %}{{ total_mapas }} categoria{{ total_mapas|pluralize }} cadastrada{{ total_mapas|pluralize }} nesta conexão.{% else %}Nenhuma categoria mapeada. Configure as unidades antes de validar a conexão.{% endif %}</p>
+<p><a class="botao-neutro" href="{% url 'canais:categorias' conexao.pk %}">Conferir categorias</a></p>
+<div class="acoes bloco-respiro"><a class="botao-neutro" href="{% url 'canais:disponibilidade' conexao.pk %}">Conferir disponibilidade</a><a class="botao-neutro" href="{% url 'canais:envios' conexao.pk %}">Histórico de envios</a>
+{% if request.user.is_staff or request.user.is_superuser %}<form method="post" action="{% url 'canais:solicitar' conexao.pk %}">{% csrf_token %}<button class="botao-neutro" {% if not conexao.ativo %}disabled{% endif %}>Solicitar atualização</button></form>{% endif %}</div>
+{% if conexao.sincronizacao_solicitada %}<p class="nota-cartao">Atualização solicitada, aguardando a rotina agendada.</p>{% endif %}
+{% if ultimo_envio %}<p class="nota-cartao">Último envio: {{ ultimo_envio.get_estado_display }} em {{ ultimo_envio.criado_em|date:"d/m H:i" }}. {% if ultimo_envio.conferido_em %}Conferência registrada pela equipe.{% else %}Resultado no canal ainda não conferido.{% endif %}</p>{% endif %}
+</section>
+<section class="bloco-respiro-largo"><h2>Reservas recebidas</h2>
+<form method="get" class="barra-filtros"><input type="hidden" name="conexao" value="{{ conexao.pk }}"><label for="estado">Exibir</label><select name="estado" id="estado"><option value="pendentes" {% if filtro == 'pendentes' %}selected{% endif %}>Conferência necessária</option><option value="ensaio" {% if filtro == 'ensaio' %}selected{% endif %}>Homologação</option><option value="todas" {% if filtro == 'todas' %}selected{% endif %}>Todas as revisões</option></select><button class="botao-neutro">Filtrar</button></form>
+<div class="tabela-envolve"><table class="tabela tabela-cartoes"><thead><tr><th>Reserva no canal</th><th>Hóspede</th><th>Recebida</th><th>Situação</th><th>Ação</th></tr></thead><tbody>
+{% for item in pagina %}<tr><td data-rotulo="Reserva no canal">{{ item.reserva }}</td><td data-rotulo="Hóspede">{{ item.dados.cliente.nome|default:"Não informado" }}</td><td data-rotulo="Recebida">{{ item.recebida_em|date:"d/m/Y H:i" }}</td><td data-rotulo="Situação"><span class="selo">{{ item.get_estado_display }}</span></td><td data-rotulo="Ação"><a class="botao-mini" href="{% url 'canais:revisao' item.pk %}">Conferir</a></td></tr>
+{% empty %}<tr><td colspan="5">Nenhuma revisão neste filtro.</td></tr>{% endfor %}</tbody></table></div>{% include "componentes/paginacao.html" with pagina=pagina %}</section>
+</div>{% endblock %}

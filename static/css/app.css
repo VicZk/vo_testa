@@ -1912,7 +1912,9 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
     display: flex; align-items: center; justify-content: space-between; gap: .8rem;
     padding: .3rem 0; border-bottom: none;
     position: static; box-shadow: none;
+    min-width: 0; white-space: normal; overflow-wrap: anywhere;
   }
+  .tabela.tabela-cartoes td > * { min-width: 0; max-width: 100%; }
   .tabela.tabela-cartoes td[data-rotulo]::before {
     content: attr(data-rotulo);
     flex: none; font-size: .66rem; font-weight: 700; letter-spacing: .08em;
@@ -3923,7 +3925,7 @@ div.porta.dica[data-dica] { cursor: default; }
   .ficha > div { grid-template-columns: minmax(0, 1fr); gap: .1rem; }
 }
 .ficha dt { color: var(--tinta-suave); font-size: .8rem; }
-.ficha dd { margin: 0; font-size: .92rem; }
+.ficha dd { margin: 0; min-width: 0; font-size: .92rem; overflow-wrap: anywhere; }
 .ficha-texto { margin: 1rem 0 0; font-size: .92rem; line-height: 1.5; }
 .opcional { color: var(--tinta-suave); font-weight: 400; font-size: .72rem; }
 .prazo-campo { display: inline-flex; align-items: center; gap: .4rem; font-size: .82rem; color: var(--tinta-suave); }

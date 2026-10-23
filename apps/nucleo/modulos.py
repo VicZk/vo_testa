@@ -41,6 +41,19 @@ DEPENDENCIAS: dict[str, list[str]] = {
     Modulo.CANAIS: [Modulo.RESERVAS],
 }
 
+
+_ANTES_DESATIVAR = {}
+
+
+def antes_desativar_modulo(codigo, validador):
+    """Módulos registram pendências operacionais sem expor models ao núcleo."""
+    _ANTES_DESATIVAR[codigo] = validador
+
+
+def conferir_desativacao(codigo):
+    if codigo in _ANTES_DESATIVAR:
+        _ANTES_DESATIVAR[codigo]()
+
 # Grupo do menu, ordem de exibição e descrição curta (cards do dashboard).
 # O agrupamento reflete as áreas reais de operação da pousada (ver ESPECIFICACAO §3).
 APRESENTACAO: dict[str, dict] = {
@@ -137,6 +150,7 @@ APRESENTACAO: dict[str, dict] = {
         "grupo": "Online",
         "ordem": 140,
         "descricao": "Integração com Booking, Airbnb e outros canais.",
+        "url_name": "canais:painel",
     },
     Modulo.AUDITORIA: {
         "grupo": "Gestão",

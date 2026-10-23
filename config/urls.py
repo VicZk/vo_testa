@@ -95,6 +95,7 @@ urlpatterns = [
     path("crm/", include("apps.nucleo.urls")),
     path("crm/reservas/", include("apps.reservas.urls")),
     path("crm/day-pass/", include("apps.daypass.urls")),
+    path("crm/canais/", include("apps.canais.urls")),
     path("day-pass/", daypass_views.publico, name="daypass_publico"),
     path("crm/estoque/", include("apps.estoque.urls")),
     path("crm/loja/", include("apps.loja.urls")),

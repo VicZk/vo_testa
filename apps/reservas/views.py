@@ -1519,6 +1519,7 @@ def restricoes(request):
 
 
 @requer_area(Area.TEMPORADAS)
+@transaction.atomic
 def restricao_form(request, pk=None):
     restricao = get_object_or_404(RestricaoVenda, pk=pk) if pk else None
     form = RestricaoVendaForm(request.POST or None, instance=restricao)
@@ -1536,6 +1537,7 @@ def restricao_form(request, pk=None):
 
 
 @requer_area(Area.TEMPORADAS)
+@transaction.atomic
 def restricao_alternar(request, pk):
     """Liga/desliga a regra sem apagá-la (o histórico do Réveillon passado serve de
     molde para o próximo). A trilha de auditoria registra sozinha, pelo signal."""

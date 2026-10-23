@@ -14,6 +14,7 @@
   {% if item.modo == 'simulado' %}<p class="ajuda">Os resultados deste modo são de teste. A ativação exige configurar o provedor e conferir um ensaio.</p>{% endif %}
   {% if item.pendencias %}<ul>{% for pendencia in item.pendencias %}<li>{{ pendencia }}</li>{% endfor %}</ul>{% endif %}
   <p>{{ item.orientacao }}</p>
+  {% if item.url_name %}<p><a class="botao-neutro" href="{% url item.url_name %}">Conferir configuração</a></p>{% endif %}
   {% if item.ensaio_desatualizado %}<p class="mensagem warning">A configuração mudou desde o último ensaio. Repita a conferência antes de operar.</p>{% endif %}
   {% if item.ensaio %}<p><strong>Conferido por {{ item.ensaio.registrado_por }}</strong> em {{ item.ensaio.realizado_em|date:"d/m/Y H:i" }}.</p><p>{{ item.ensaio.evidencia|linebreaksbr }}</p>{% endif %}
   {% if item.pronto %}<details><summary>Registrar resultado do ensaio</summary>

@@ -17,12 +17,154 @@ from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 
+from apps.canais.tests import DadosCanais
+from apps.canais.tests_fila import CONFIGURACAO as CONFIGURACAO_CANAIS
 from apps.nucleo.models import saldo
 
 from .tests_e2e import _PLAYWRIGHT_OK, _BaseE2E, _FunilComercialMixin
 
 if _PLAYWRIGHT_OK:
     from playwright.sync_api import expect
+
+
+@unittest.skipUnless(_PLAYWRIGHT_OK, "playwright não instalado (ver tests_e2e)")
+@override_settings(**CONFIGURACAO_CANAIS)
+class CanaisOperacaoE2ETests(DadosCanais, _BaseE2E):
+    LOCALE = "pt-BR"
+    _login = _FunilComercialMixin._login
+
+    def setUp(self):
+        super().setUp()
+        cache.clear()
+        self.page.add_init_script("localStorage.setItem('sidebar', 'aberta')")
+        self._login("canais-qa", "canais-ficticio-qa")
+
+    def _foto(self, nome):
+        OperacaoUsabilidadeE2ETests._foto(self, nome, full_page=True)
+
+    def test_telas_e_formularios_cabem_em_seis_larguras_com_texto_extenso(self):
+        from apps.canais import services
+        item = self.bruto()
+        item["attributes"]["customer"].update(name="Hóspede fictício com nome extenso para conferência", surname="Sobrenome"*10)
+        rev = self.capturar(item)
+        self.mapa.nome = "Categoria de suítes de teste com nome extenso para conferir leitura no celular"
+        self.mapa.save()
+        envio = services.publicar(self.cfg, self.gateway)
+        telas = [("painel", []), ("conexao", [self.cfg.pk]), ("conexao_nova", []),
+            ("categorias", [self.cfg.pk]), ("mapeamento", [self.cfg.pk, self.mapa.pk]),
+            ("mapeamento_novo", [self.cfg.pk]), ("validacao", [self.cfg.pk]),
+            ("disponibilidade", [self.cfg.pk]), ("revisao", [rev.pk]),
+            ("envios", [self.cfg.pk]), ("envio", [envio.pk])]
+        p, erros = self.page, []
+        p.on("pageerror", lambda erro: erros.append(str(erro)))
+        for largura in (320, 390, 414, 768, 821, 1440):
+            p.set_viewport_size({"width": largura, "height": 900})
+            for nome, args in telas:
+                with self.subTest(largura=largura, tela=nome):
+                    resposta = p.goto(self.url(reverse(f"canais:{nome}", args=args)), wait_until="networkidle")
+                    self.assertEqual(resposta.status, 200)
+                    p.evaluate("document.fonts.ready")
+                    self.assertLessEqual(p.evaluate("document.documentElement.scrollWidth"), largura+1)
+                    falhas = p.evaluate("""() => {
+                        const falhas=[];
+                        for(const caixa of document.querySelectorAll('.conteudo .cartao,.conteudo .form-cartao,.conteudo .kpi,.conteudo .tabela-cartoes tbody tr')){
+                            const limite=caixa.getBoundingClientRect();
+                            const walker=document.createTreeWalker(caixa,NodeFilter.SHOW_TEXT);let node;
+                            while(node=walker.nextNode()){
+                                const pai=node.parentElement;
+                                if(!node.textContent.trim()||!pai.getClientRects().length||pai.closest('option,script,style'))continue;
+                                const range=document.createRange();range.selectNodeContents(node);
+                                for(const r of range.getClientRects())if(r.width&&(r.left<limite.left-2||r.right>limite.right+2||r.bottom>limite.bottom+2)){
+                                    falhas.push(node.textContent.trim());break;
+                                }
+                            }
+                        }
+                        return falhas;
+                    }""")
+                    self.assertFalse(falhas, falhas)
+                    if largura in (320, 821, 1440):
+                        self._foto(f"fase7-canais-{nome}-{largura}.png")
+        self.assertFalse(erros, erros)
+
+    def test_aplicar_alterar_e_cancelar_reserva_pela_fila_no_celular(self):
+        from apps.canais.models import RevisaoCanal
+        from apps.reservas.models import Reserva
+        p = self.page
+        p.set_viewport_size({"width": 390, "height": 844})
+        item = self.bruto()
+        revisao = self.capturar(item)
+        p.goto(self.url(reverse("canais:painel")))
+        p.get_by_role("link", name="Conferir", exact=True).click()
+        motivo = "Conferência fictícia mantida após vínculo incorreto."
+        p.get_by_label("Números das reservas no PMS").fill("999999")
+        p.get_by_label("Conferência realizada", exact=True).fill(motivo)
+        p.get_by_role("button", name="Concluir conferência").click()
+        expect(p.locator("[data-erros-envio]")).to_contain_text("não existe")
+        expect(p.get_by_label("Conferência realizada", exact=True)).to_have_value(motivo)
+        expect(p.get_by_label("Números das reservas no PMS")).to_have_value("999999")
+        self.assertFalse(Reserva.objects.exists())
+        p.on("dialog", lambda dialog: dialog.accept())
+        p.get_by_role("button", name="Conferir e aplicar revisão").click()
+        expect(p.get_by_text("Aplicada no PMS", exact=True)).to_be_visible()
+        reserva = Reserva.objects.get()
+        self.assertEqual(reserva.valor_hospedagem, Decimal("600"))
+        expect(p.get_by_role("link", name=f"Reserva {reserva.pk}", exact=True)).to_be_visible()
+        novo = self.nova_versao(item, amount="650.00")
+        novo["attributes"]["rooms"][0].update(amount="650.00", days={})
+        alteracao = self.capturar(novo)
+        p.goto(self.url(reverse("canais:revisao", args=[alteracao.pk])))
+        p.get_by_role("button", name="Conferir e aplicar revisão").click()
+        expect(p.get_by_text("Aplicada no PMS", exact=True)).to_be_visible()
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.valor_hospedagem, Decimal("650"))
+        cancelado = self.nova_versao(novo, status="cancelled", rooms=[], inserted_at=(timezone.now()+timedelta(minutes=3)).isoformat())
+        ultima = self.capturar(cancelado)
+        p.goto(self.url(reverse("canais:revisao", args=[ultima.pk])))
+        p.get_by_role("button", name="Conferir e aplicar revisão").click()
+        expect(p.get_by_text("Aplicada no PMS", exact=True)).to_be_visible()
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.status, Reserva.Status.CANCELADA)
+        self.assertEqual(Reserva.objects.count(), 1)
+        self.assertEqual(RevisaoCanal.objects.get(pk=revisao.pk).estado, RevisaoCanal.Estado.APLICADA)
+        self._foto("fase7-canais-cancelamento-390.png")
+
+    def test_configurar_mapear_validar_solicitar_e_conferir_envio_pelas_telas(self):
+        from apps.canais import services
+        p = self.page
+        p.set_viewport_size({"width": 390, "height": 844})
+        p.goto(self.url(reverse("canais:conexao", args=[self.cfg.pk])))
+        p.locator('[name="vendas_abertas"]').uncheck()
+        p.get_by_role("button", name="Salvar conexão").click()
+        expect(p.get_by_role("heading", name="Canais de venda", exact=True)).to_be_visible()
+        p.get_by_role("link", name="Conferir categorias").click()
+        p.get_by_role("link", name="Editar", exact=True).click()
+        p.locator('[name="nome"]').fill("Suítes para conferência QA")
+        p.locator('[name="limite_venda"]').fill("3")
+        p.get_by_role("button", name="Salvar categoria").click()
+        expect(p.locator("[data-erros-envio]")).to_contain_text("não podem superar")
+        expect(p.locator('[name="nome"]')).to_have_value("Suítes para conferência QA")
+        expect(p.locator('[name="limite_venda"]')).to_have_value("3")
+        self._foto("fase7-canais-mapeamento-erro-390.png")
+        p.locator('[name="limite_venda"]').fill("1")
+        p.get_by_role("button", name="Salvar categoria").click()
+        expect(p.get_by_role("heading", name="Canais de venda", exact=True)).to_be_visible()
+        p.get_by_role("link", name="Registrar validação", exact=True).click()
+        p.locator('[name="evidencia"]').fill("Conferência fictícia com preços, datas, disponibilidade e reservas no provedor de teste.")
+        p.get_by_role("button", name="Registrar validação", exact=True).click()
+        expect(p.get_by_text("Registrada para esta configuração", exact=True)).to_be_visible()
+        p.get_by_role("button", name="Solicitar atualização").click()
+        expect(p.get_by_text("Atualização solicitada, aguardando a rotina agendada.", exact=True)).to_be_visible()
+        self.cfg.refresh_from_db()
+        self.assertTrue(self.cfg.sincronizacao_solicitada)
+        self.assertEqual(self.mapa.__class__.objects.get(pk=self.mapa.pk).limite_venda, 1)
+        envio = services.publicar(self.cfg, self.gateway)
+        p.goto(self.url(reverse("canais:envio", args=[envio.pk])))
+        p.locator('[name="evidencia"]').fill("Fechamento fictício conferido em todas as categorias e datas do canal de teste.")
+        p.get_by_role("button", name="Registrar conferência").click()
+        expect(p.get_by_role("heading", name="Histórico de envios", exact=True)).to_be_visible()
+        envio.refresh_from_db()
+        self.assertIsNotNone(envio.conferido_em)
+        self.assertTrue(services._ultimo_envio_fechado(self.cfg))
 
 
 @unittest.skipUnless(_PLAYWRIGHT_OK, "playwright não instalado (ver tests_e2e)")

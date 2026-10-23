@@ -9,6 +9,12 @@ razoável, nunca quebra.
 
 # Nomes de model → português amigável.
 ALVOS = {
+    "ConfiguracaoCanais": "conexão de canais",
+    "MapeamentoCanal": "categoria de canal",
+    "ReservaCanal": "reserva externa",
+    "RevisaoCanal": "revisão de reserva externa",
+    "EnvioCanal": "envio aos canais",
+    "AvisoCanal": "notificação de canal",
     "SessaoCaixa": "caixa",
     "MovimentoCaixa": "movimento de caixa",
     "Reserva": "reserva",
@@ -31,6 +37,11 @@ ALVOS = {
 # no banco e no CSV (forense); a tela mostra palavra de gente — eram "no_show",
 # "lead_fechado_movido", "bloqueio_uh" em minúsculo, com sublinhado.
 ACOES = {
+    "configuracao_canais": "Configuração dos canais", "mapeamento_canal": "Mapeamento de categoria",
+    "validacao_canal": "Validação da conexão", "envio_canal_conferido": "Conferência do envio aos canais",
+    "sincronizacao_canal_solicitada": "Atualização dos canais solicitada", "aviso_canal_recebido": "Notificação de canal recebida",
+    "revisao_canal_aplicada": "Reserva externa aplicada", "revisao_canal_conferida": "Conferência de reserva externa",
+    "reserva_canal_aplicada": "Aplicação de reserva externa", "reserva_canal_conferida": "Vínculo com reserva externa",
     "login": "Entrada no sistema", "logout": "Saída do sistema",
     "criar": "Criação", "editar": "Edição", "excluir": "Exclusão",
     "ajuste_arredondamento": "Ajuste de arredondamento", "ajuste_estoque": "Ajuste de estoque",

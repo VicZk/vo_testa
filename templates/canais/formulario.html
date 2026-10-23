@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% load nucleo_extras %}
+{% block titulo %}{{ titulo }} | Canais{% endblock %}
+{% block conteudo_classe %}conteudo-formulario{% endblock %}
+{% block conteudo %}<div class="eleg">
+<p class="pagina-eyebrow letreiro">Distribuição · Canais de venda</p>
+<h1>{{ titulo }}</h1><p class="subtitulo">{{ descricao }}</p>
+<p class="bloco-fim"><a href="{% url 'canais:painel' %}{% if conexao.pk %}?conexao={{ conexao.pk }}{% endif %}" class="botao-neutro">Voltar aos canais</a></p>
+{% if envio %}<section class="cartao respiro"><h2 class="letreiro bloco-subtitulo">Envio {{ envio.pk }}</h2>
+<dl class="ficha"><div><dt>Ambiente</dt><dd>{{ envio.get_ambiente_display }}</dd></div><div><dt>Solicitado</dt><dd>{{ envio.criado_em|date:"d/m/Y H:i" }}</dd></div><div><dt>Situação</dt><dd>{{ envio.get_estado_display }}</dd></div><div><dt>Tarefas aceitas</dt><dd>{{ envio.tarefas|length }}</dd></div></dl>
+{% if envio.erro %}<p class="nota-cartao alerta">{{ envio.erro }}</p>{% endif %}
+{% if envio.conferido_em %}<p class="bloco-respiro">Conferido em {{ envio.conferido_em|date:"d/m/Y H:i" }} por {{ envio.conferido_por }}.</p><p>{{ envio.conferencia }}</p>{% endif %}
+</section>{% endif %}
+<form method="post" class="form-cartao" data-preservar-erros>{% csrf_token %}{{ form.non_field_errors }}
+{% for campo in form %}<div class="campo">{{ campo|rotulo }}{{ campo }}{% if campo.help_text %}<p class="ajuda">{{ campo.help_text }}</p>{% endif %}{{ campo.errors }}</div>{% endfor %}
+<div class="acoes"><button class="botao-primario">{{ botao }}</button></div>
+</form></div>{% endblock %}
