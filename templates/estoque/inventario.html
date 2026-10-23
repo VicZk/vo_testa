@@ -175,7 +175,7 @@
 {% else %}
   <p class="subtitulo">Contagem {{ inventario.get_status_display|lower }}
     {% if inventario.aplicado_em %}em {{ inventario.aplicado_em|date:"d/m/Y H:i" }}{% endif %}.
-    As diferenças viraram ajustes no kardex de cada produto.</p>
+    As diferenças foram registradas como ajustes no histórico de movimentações de cada produto.</p>
 
   <div class="kpis est-kpis">
     <div class="kpi">

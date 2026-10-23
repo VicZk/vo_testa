@@ -78,7 +78,7 @@
           <div><dt>Nenhum local ativo</dt><dd>—</dd></div>
         {% endfor %}
       </dl>
-      <a href="{% url 'estoque:kardex' produto.pk %}" class="botao-neutro est-previa-botao">Ver kardex</a>
+      <a href="{% url 'estoque:kardex' produto.pk %}" class="botao-neutro est-previa-botao">Ver movimentações</a>
       <a href="{% url 'estoque:produto_suprimentos' produto.pk %}" class="botao-neutro est-previa-botao">Embalagens e ficha técnica</a>
       <p class="ajuda est-previa-nota">O custo médio é do motor: muda sozinho a cada
         entrada, pela média ponderada. Não se digita aqui.</p>

@@ -208,7 +208,7 @@ def contagem_lote(request, pk, local_pk):
         except ValidationError as erro:
             form.add_error(None, erro)
         else:
-            messages.success(request, "Contagem do lote conferida. A diferença, quando existente, ficou no kardex e na auditoria.")
+            messages.success(request, "Contagem do lote conferida. Se houve diferença, o ajuste foi registrado no histórico de movimentações e na auditoria.")
             return redirect("estoque:lote", pk=lote.pk)
     return _formulario(request, {"form": form, "titulo": "Contar lote", "lote": lote,
                                 "descricao": f"{lote.produto.nome} · {local.nome}. Conte em {lote.produto.unidade}. Se houver movimentação durante a conferência, atualize a tela e conte novamente.",

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load moeda estoque_extras %}
 
-{% block titulo %}Kardex | {{ produto.nome }}{% endblock %}
+{% block titulo %}Movimentações | {{ produto.nome }}{% endblock %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Vendas &amp; Estoque</p>
@@ -54,6 +54,9 @@
     </a>
   {% endfor %}
 </div>
+
+<h2 class="est-titulo-secao letreiro">Histórico de movimentações</h2>
+<p class="ajuda">Entradas, saídas e saldo do produto após cada operação. Use os filtros para consultar um local ou período.</p>
 
 <form method="get" class="filtro-barra est-filtros">
   <div class="filtro-campo">

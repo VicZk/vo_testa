@@ -4,6 +4,7 @@
 {% block titulo %}Estoque | CRM Vô Testa{% endblock %}
 
 {% block conteudo %}
+<div class="est-posicao">
 <p class="pagina-eyebrow letreiro">Vendas &amp; Estoque</p>
 <div class="pagina-cabecalho">
   <h1>Posição de estoque</h1>
@@ -13,6 +14,22 @@
   </div>
 </div>
 {% include "estoque/partials/nav.html" %}
+
+<form method="get" class="filtro-barra filtro-inline est-escolha-local">
+  <div class="filtro-campo">
+    <label for="estoque-local">Depósito</label>
+    <select name="local" id="estoque-local" onchange="this.form.submit()">
+      <option value="">Todos os locais</option>
+      {% for lo in resumo_locais %}
+        <option value="{{ lo.local.pk }}"{% if local.pk == lo.local.pk %} selected{% endif %}>{{ lo.local.nome }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% if filtros.q %}<input type="hidden" name="q" value="{{ filtros.q }}">{% endif %}
+  {% if filtros.categoria %}<input type="hidden" name="categoria" value="{{ filtros.categoria }}">{% endif %}
+  {% if filtros.situacao %}<input type="hidden" name="situacao" value="{{ filtros.situacao }}">{% endif %}
+  <button type="submit" class="botao-neutro">Ver</button>
+</form>
 
 {% comment %}Indicadores do ESCOPO (o local escolhido), não da busca: a busca
 peneira a tabela; os números de cima continuam dizendo como está o depósito.{% endcomment %}
@@ -58,7 +75,8 @@ peneira a tabela; os números de cima continuam dizendo como está o depósito.{
 
 {% comment %}A seleção de local é o ponto de partida da tela: cada depósito mostra
 quanto guarda e o que está no limite, em vez de um chip com o nome e mais nada.{% endcomment %}
-<h2 class="est-titulo-secao letreiro">Onde olhar</h2>
+<details class="est-resumo-locais">
+<summary>Resumo por depósito</summary>
 <div class="est-locais">
   <a href="{% url 'estoque:posicao' %}" class="est-local"{% if not local %} aria-current="page"{% endif %}>
     <span class="est-local-nome">Todos os locais</span>
@@ -82,14 +100,22 @@ quanto guarda e o que está no limite, em vez de um chip com o nome e mais nada.
     </a>
   {% endfor %}
 </div>
+</details>
 
-<form method="get" class="filtro-barra est-filtros">
+<form method="get" class="filtro-barra filtro-inline est-filtros">
   {% if local %}<input type="hidden" name="local" value="{{ local.pk }}">{% endif %}
+  {% if catalogo %}<input type="hidden" name="catalogo" value="1">{% endif %}
+  <div class="est-busca-linha">
   <div class="filtro-campo est-filtro-busca">
-    <label for="q-produto">Buscar</label>
+    <label for="q-produto">Buscar produto</label>
     <input type="search" id="q-produto" name="q" value="{{ filtros.q }}"
            placeholder="Nome ou código de barras">
   </div>
+  <button type="submit" class="botao-primario filtro-aplicar">Buscar</button>
+  </div>
+  <details class="est-filtros-avancados"{% if filtros.categoria or filtros.situacao %} open{% endif %}>
+  <summary>Filtros{% if filtros.categoria or filtros.situacao %} ativos{% endif %}</summary>
+  <div class="est-filtros-campos">
   <div class="filtro-campo">
     <label for="f-categoria">Categoria</label>
     <select name="categoria" id="f-categoria" onchange="this.form.submit()">
@@ -108,13 +134,14 @@ quanto guarda e o que está no limite, em vez de um chip com o nome e mais nada.
     </select>
   </div>
   <button type="submit" class="botao-primario filtro-aplicar">Aplicar</button>
+  </div>
+  </details>
   {% if tem_filtro %}
     <a href="{% url 'estoque:posicao' %}{% if local %}?local={{ local.pk }}{% endif %}" class="botao-mini">Limpar</a>
   {% endif %}
 </form>
 
-{% comment %}`.tabela` (e não `.quadro`): é ela que o tabela-rol.js embrulha para
-rolar dentro do cartão no celular, com a 1ª coluna e a de ação grudadas.{% endcomment %}
+<h2 class="est-titulo-produtos">Produtos <span class="rotulo-dado num">{{ pagina.paginator.count }}</span></h2>
 <table class="tabela est-tabela">
   <thead>
     <tr>
@@ -128,8 +155,8 @@ rolar dentro do cartão no celular, com a 1ª coluna e a de ação grudadas.{% e
   </thead>
   <tbody>
     {% for l in linhas %}
-      <tr>
-        <td>
+      <tr data-produto-id="{{ l.produto.pk }}">
+        <td class="est-identidade">
           <a href="{% url 'estoque:kardex' l.produto.pk %}" class="est-produto-nome">{{ l.produto.nome }}</a>
           <span class="est-produto-meta">
             <span class="rotulo-dado">{{ l.produto.categoria.nome }}</span>
@@ -137,31 +164,34 @@ rolar dentro do cartão no celular, com a 1ª coluna e a de ação grudadas.{% e
             {% elif l.abaixo %}<span class="selo est-abaixo">Abaixo do mínimo</span>{% endif %}
           </span>
         </td>
-        <td class="num est-saldo-cel">
+        <td class="num est-saldo-cel" data-rotulo="Saldo">
           <span class="est-saldo">{{ l.saldo|qtd:l.produto.unidade }}</span>
           <span class="est-nivel est-nivel-{{ l.situacao }}"
                 role="img" aria-label="Saldo em {{ l.nivel }}% do mínimo">
             <span class="est-nivel-marca" style="width: {{ l.nivel }}%"></span>
           </span>
         </td>
-        <td class="num est-minimo">{% if l.produto.estoque_minimo %}{{ l.produto.estoque_minimo|qtd:l.produto.unidade }}{% else %}—{% endif %}</td>
-        <td class="num">{{ l.produto.custo_medio|intcomma_brl }}</td>
-        <td class="num">{{ l.valor|intcomma_brl }}</td>
+        <td class="num est-minimo" data-rotulo="Mínimo">{% if l.produto.estoque_minimo %}{{ l.produto.estoque_minimo|qtd:l.produto.unidade }}{% else %}—{% endif %}</td>
+        <td class="num" data-rotulo="Custo médio">{{ l.produto.custo_medio|intcomma_brl }}</td>
+        <td class="num" data-rotulo="Valor total">{{ l.valor|intcomma_brl }}</td>
         <td class="col-acao">
           <span class="est-acoes">
           <a href="{% url 'estoque:entrada' %}?produto={{ l.produto.pk }}{% if local %}&local={{ local.pk }}{% endif %}"
              class="est-acao" data-dica="Entrada" aria-label="Registrar entrada de {{ l.produto.nome }}">
             <svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><path d="M12 3v10"/><path d="M8 9l4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+            <span class="est-acao-texto">Entrada</span>
           </a>
           <a href="{% url 'estoque:saida' %}?produto={{ l.produto.pk }}{% if local %}&local={{ local.pk }}{% endif %}"
              class="est-acao" data-dica="Saída" aria-label="Registrar saída de {{ l.produto.nome }}">
             <svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><path d="M12 13V3"/><path d="M8 7l4-4 4 4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+            <span class="est-acao-texto">Saída</span>
           </a>
           <a href="{% url 'estoque:transferencia' %}?produto={{ l.produto.pk }}{% if local %}&local={{ local.pk }}{% endif %}"
              class="est-acao" data-dica="Transferir" aria-label="Transferir {{ l.produto.nome }}">
             <svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><path d="M4 8h12"/><path d="M13 5l3 3-3 3"/><path d="M20 16H8"/><path d="M11 13l-3 3 3 3"/></svg>
+            <span class="est-acao-texto">Transferir</span>
           </a>
-          <a href="{% url 'estoque:kardex' l.produto.pk %}" class="botao-mini">Kardex</a>
+          <a href="{% url 'estoque:kardex' l.produto.pk %}" class="botao-mini est-ver-movimentos">Movimentações</a>
           </span>
         </td>
       </tr>
@@ -169,6 +199,8 @@ rolar dentro do cartão no celular, com a 1ª coluna e a de ação grudadas.{% e
       <tr><td colspan="6" class="vazio">
         {% if tem_filtro %}Nenhum produto com esses filtros.
           <a href="{% url 'estoque:posicao' %}{% if local %}?local={{ local.pk }}{% endif %}">Ver todos</a>.
+        {% elif local %}Nenhum produto movimentado neste depósito ainda.
+          <a href="{% url 'estoque:entrada' %}?local={{ local.pk }}">Registrar uma entrada</a>.
         {% else %}Nenhum produto cadastrado ainda.
           <a href="{% url 'estoque:produto_novo' %}">Cadastre o primeiro</a>.
         {% endif %}
@@ -189,4 +221,5 @@ rolar dentro do cartão no celular, com a 1ª coluna e a de ação grudadas.{% e
   </p>
 {% endif %}
 {% include "componentes/paginacao.html" with pagina=pagina %}
+</div>
 {% endblock %}

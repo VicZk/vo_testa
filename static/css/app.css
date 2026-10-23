@@ -6654,6 +6654,97 @@ body.escala-dragging .escala-drop { cursor: copy; }
 .est-filtro-busca { flex: 1 1 220px; max-width: 400px; }
 .est-filtro-busca input { width: 100%; }
 
+/* A posição começa pelo depósito e pela busca. Os resumos adicionais abrem
+   quando necessários, sem afastar os produtos no celular. */
+.est-posicao .est-escolha-local {
+  display: flex; align-items: end; gap: .5rem; max-width: 520px;
+}
+.est-posicao .est-escolha-local .filtro-campo { flex: 1; min-width: 0; }
+.est-posicao .est-escolha-local select { width: 100%; min-width: 0; }
+.est-posicao .est-resumo-locais { margin-bottom: .8rem; }
+.est-posicao .est-resumo-locais > summary,
+.est-posicao .est-filtros-avancados > summary {
+  display: list-item; width: fit-content; max-width: 100%;
+  min-height: 44px; padding: .65rem .2rem;
+  cursor: pointer; font-size: .85rem; font-weight: 600; color: var(--tinta-suave);
+}
+.est-posicao .est-resumo-locais .est-locais { margin: .3rem 0 .8rem; }
+.est-posicao .est-local-nome { white-space: normal; overflow-wrap: anywhere; }
+.est-posicao .est-filtros { display: flex; flex-wrap: wrap; align-items: end; gap: .3rem 1rem; }
+.est-posicao .est-busca-linha { display: flex; align-items: end; gap: .5rem; flex: 1 1 320px; }
+.est-posicao .est-filtro-busca { min-width: 0; max-width: none; }
+.est-posicao .est-filtros-avancados { flex: 1 1 360px; min-width: 0; }
+.est-posicao .est-filtros-campos { display: flex; flex-wrap: wrap; align-items: end; gap: .6rem; }
+.est-posicao .est-filtros-campos .filtro-campo { flex: 1 1 160px; min-width: 0; }
+.est-posicao .est-filtros-campos select { width: 100%; min-width: 0; }
+.est-posicao .est-titulo-produtos { display: flex; align-items: baseline; gap: .5rem; margin: 1rem 0 .7rem; font-size: 1.2rem; }
+.est-posicao .est-acao-texto { display: none; }
+
+@media screen and (max-width: 1024px) {
+  .est-posicao .est-abas { margin-bottom: .8rem; }
+  .est-posicao .est-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; margin: .8rem 0 .3rem;
+  }
+  .est-posicao .est-kpis .kpi { min-width: 0; min-height: 0; padding: .65rem .7rem; gap: .2rem; }
+  .est-posicao .est-kpis .kpi-topo { min-width: 0; }
+  .est-posicao .est-kpis .kpi-rotulo { font-size: .6rem; letter-spacing: .04em; }
+  .est-posicao .est-kpis .kpi-ico { display: none; }
+  .est-posicao .est-kpis .kpi-valor { font-size: clamp(1.2rem, 4.5vw, 1.65rem); overflow-wrap: anywhere; }
+  .est-posicao .est-kpis .kpi-nota { font-size: .7rem; line-height: 1.35; }
+  .est-posicao .est-kpis .kpi:first-child {
+    grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .25rem .6rem;
+  }
+  .est-posicao .est-kpis .kpi:first-child .kpi-valor { max-width: 100%; font-size: 1.2rem; }
+  .est-posicao .est-kpis .kpi:first-child .kpi-nota { grid-column: 1 / -1; }
+  .est-posicao .est-kpis .kpi:not(:first-child) { padding-inline: .35rem; }
+  .est-posicao .est-kpis .kpi:not(:first-child) .kpi-rotulo { letter-spacing: 0; overflow-wrap: normal; }
+  .est-posicao .est-kpis .kpi:not(:first-child) .kpi-topo { min-height: 1.6rem; }
+  .est-posicao .est-kpis .kpi:not(:first-child) .kpi-nota { display: none; }
+  .est-posicao .est-filtros { gap: 0 .6rem; margin-bottom: .5rem; }
+  .est-posicao .est-busca-linha { flex-basis: 100%; }
+  .est-posicao .est-filtros-avancados { flex-basis: 100%; }
+  .est-posicao .est-filtros-campos { padding: 0 0 .7rem; }
+  .est-posicao .tabela-rol:has(> .est-tabela) { overflow: visible; background: none; box-shadow: none; border: none; }
+  .est-posicao .tabela.est-tabela { display: block; width: 100%; min-width: 0; background: none; border: none; box-shadow: none; white-space: normal; }
+  .est-posicao .est-tabela thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .est-posicao .est-tabela tbody { display: grid; gap: .7rem; }
+  .est-posicao .est-tabela tbody tr {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem .8rem;
+    min-width: 0; padding: .85rem;
+    background: var(--superficie); border: 1px solid var(--fio); border-radius: var(--raio);
+    box-shadow: var(--sombra-1);
+  }
+  .est-posicao .est-tabela tbody tr:hover { background: var(--superficie); }
+  .est-posicao .tabela.est-tabela td {
+    display: block; min-width: 0; max-width: 100%; padding: 0; border: none;
+    position: static; box-shadow: none; background: none;
+    text-align: left; white-space: normal; overflow-wrap: anywhere;
+  }
+  .est-posicao .est-tabela td[data-rotulo]::before {
+    content: attr(data-rotulo); display: block; margin-bottom: .15rem;
+    font-family: var(--fonte-ui); font-size: .66rem; font-weight: 600; color: var(--tinta-suave);
+  }
+  .est-posicao .est-tabela .est-identidade,
+  .est-posicao .est-tabela .col-acao,
+  .est-posicao .est-tabela .vazio { grid-column: 1 / -1; }
+  .est-posicao .est-produto-nome { display: inline-block; max-width: 100%; line-height: 1.4; overflow-wrap: anywhere; }
+  .est-posicao .est-tabela td > a.est-produto-nome { padding-block: 0; margin-block: 0; }
+  .est-posicao .est-produto-meta { margin-top: .35rem; gap: .25rem .5rem; }
+  .est-posicao .est-produto-meta .rotulo-dado { white-space: normal; overflow-wrap: anywhere; }
+  .est-posicao .est-saldo { font-size: 1.05rem; }
+  .est-posicao .est-nivel { margin-left: 0; }
+  .est-posicao .est-tabela td.col-acao { padding-top: .65rem; border-top: 1px solid var(--fio); }
+  .est-posicao .est-acoes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .4rem; }
+  .est-posicao .est-acao {
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    width: auto; height: auto; min-width: 0; min-height: 54px; padding: .35rem .15rem; gap: .2rem;
+    background: var(--superficie-2); border-color: var(--fio); color: var(--tinta);
+    text-decoration: none;
+  }
+  .est-posicao .est-acao-texto { display: inline; font-size: .75rem; font-weight: 600; }
+  .est-posicao .est-tabela .col-acao .est-ver-movimentos { display: flex; align-items: center; grid-column: 1 / -1; min-height: 44px; justify-content: center; }
+}
+
 /* ---------- Tabela: saldo com régua do mínimo ---------- */
 .est-produto-nome { font-weight: 600; }
 .est-produto-meta {
