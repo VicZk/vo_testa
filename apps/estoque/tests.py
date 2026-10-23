@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from apps.nucleo.models import (
@@ -309,6 +309,7 @@ class PosicaoTests(TelasBase):
         resposta = self.client.get(reverse("estoque:posicao"), {"alerta": "1"})
         self.assertEqual(resposta.context["filtros"]["situacao"], "alerta")
 
+    @override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.dummy.DummyCache"}})
     def test_consulta_nao_cresce_com_o_catalogo(self):
         from django.db import connection
         from django.test.utils import CaptureQueriesContext
@@ -368,6 +369,7 @@ class PosicaoTests(TelasBase):
 
 
 class ProdutosTests(TelasBase):
+    @override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.dummy.DummyCache"}})
     def test_saldo_vem_anotado_sem_consulta_por_linha(self):
         from django.db import connection
         from django.test.utils import CaptureQueriesContext
@@ -410,6 +412,7 @@ class KardexTests(TelasBase):
         entradas = self.client.get(url, {"tipo": "entrada"}).context["linhas"]
         self.assertTrue(all(lin["movimento"].quantidade > 0 for lin in entradas))
 
+    @override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.dummy.DummyCache"}})
     def test_consulta_nao_cresce_com_o_kardex(self):
         from django.db import connection
         from django.test.utils import CaptureQueriesContext

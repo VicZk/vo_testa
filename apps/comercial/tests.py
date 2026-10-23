@@ -3512,6 +3512,7 @@ class DesempenhoDoFunilEDoLeadTests(TestCase):
         self.assertEqual(fresco.proxima_tarefa, cedo)
         self.assertEqual(fresco.ultimo_contato, wpp)
 
+    @override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.dummy.DummyCache"}})
     def test_funil_nao_consulta_por_card(self):
         from django.urls import reverse
         for i in range(2):

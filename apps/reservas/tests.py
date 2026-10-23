@@ -2586,6 +2586,7 @@ class DesempenhoDoModalENoBancoTests(TestCase):
             funcao()
         return len(ctx.captured_queries)
 
+    @override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.dummy.DummyCache"}})
     def test_modal_de_nova_reserva_nao_consulta_por_quarto(self):
         from django.urls import reverse
 
