@@ -9,6 +9,16 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 22/10/2026: catálogo com ícones e escolha visual no cadastro
+
+- Loja, Restaurante e lista de produtos compartilham ilustrações por nome e
+  categoria. O cadastro permite escolher outro ícone e mostra a prévia ao editar.
+- O reconhecimento diferencia refrigerantes, água com ou sem gás, café, leite,
+  lanches, pratos, doces e outros grupos. Nome, preço e disponibilidade continuam
+  visíveis; a escolha do ícone é preservada se o formulário tiver erro.
+- Os 27 SVGs Lucide ficam no próprio aplicativo, com origem, hashes e licenças
+  ISC/MIT preservadas. Não são fotos ou logotipos oficiais de marcas.
+
 ## 22/10/2026: quartos e preços validados antes de salvar
 
 - O cadastro de quarto novo abre a configuração de camas. A edição confere

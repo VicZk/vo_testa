@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load moeda estoque_extras nucleo_extras %}
+{% load moeda estoque_extras nucleo_extras static %}
 
 {% block titulo %}{% if produto %}{{ produto.nome }}{% else %}Novo produto{% endif %} | Estoque{% endblock %}
 
@@ -28,6 +28,16 @@
         {% for e in form.categoria.errors %}<small class="erro">{{ e }}</small>{% endfor %}</div>
       <div class="campo">{{ form.unidade|rotulo }}{{ form.unidade }}
         <small class="ajuda">Como este produto é contado na prateleira.</small></div>
+    </div>
+
+    <div class="produto-icone-campo" data-catalogo-previa data-sprite="{% static 'vendor/lucide/catalogo.svg' %}">
+      <div class="campo">{{ form.icone_catalogo|rotulo }}{{ form.icone_catalogo }}
+        <small class="ajuda">{{ form.icone_catalogo.help_text }}</small>
+        {% for e in form.icone_catalogo.errors %}<small class="erro">{{ e }}</small>{% endfor %}</div>
+      <div class="produto-icone-previa" aria-live="polite">
+        <span class="produto-ilustracao" data-tom="neutro" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><use href="{% static 'vendor/lucide/catalogo.svg' %}#package"></use></svg></span>
+        <div><small class="ajuda">Prévia no catálogo</small><strong data-icone-nome>Produto</strong></div>
+      </div>
     </div>
 
     <h2 class="est-mov-titulo est-titulo-respiro">Preço e mínimo</h2>
@@ -79,4 +89,6 @@
     {% endif %}
   </aside>
 </div>
+{{ ilustracoes_catalogo|json_script:"catalogo-ilustracoes" }}
+<script src="{% static 'js/catalogo-previa.js' %}" defer></script>
 {% endblock %}

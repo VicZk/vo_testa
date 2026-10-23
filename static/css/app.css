@@ -3784,6 +3784,23 @@ div.porta.dica[data-dica] { cursor: default; }
 .pdv-loja .pdv-produto-nome { overflow-wrap: anywhere; flex: 1; }
 .pdv-loja .pdv-produto-meta { align-items: flex-start; flex-direction: column; gap: .2rem; }
 .pdv-produto-categoria { color: var(--tinta-suave); font-size: .68rem; text-transform: uppercase; letter-spacing: .06em; overflow-wrap: anywhere; }
+.produto-ilustracao { flex: 0 0 auto; display: inline-grid; place-items: center; width: 54px; height: 54px; max-width: 100%; color: var(--tinta-suave); background: var(--superficie-2); border-radius: var(--raio); }
+.produto-ilustracao svg { width: 32px; height: 32px; max-width: 80%; }
+.produto-ilustracao[data-tom="bebida"] { color: var(--info); background: var(--info-bg); }
+.produto-ilustracao[data-tom="cafe"] { color: var(--madeira); background: color-mix(in srgb, var(--madeira) 10%, var(--superficie)); }
+.produto-ilustracao[data-tom="fruta"] { color: var(--sucesso); background: var(--sucesso-bg); }
+.produto-ilustracao[data-tom="lanche"] { color: var(--alerta); background: var(--alerta-bg); }
+.produto-ilustracao[data-tom="refeicao"] { color: var(--lampiao-tinta); background: var(--lampiao-claro); }
+.produto-ilustracao[data-tom="doce"] { color: var(--andamento); background: var(--andamento-bg); }
+.produto-ilustracao--compacta { width: 38px; height: 38px; border-radius: var(--raio-p); }
+.produto-ilustracao--compacta svg { width: 24px; height: 24px; }
+.produto-identidade { display: flex; align-items: center; gap: .7rem; min-width: 0; }
+.produto-identidade-texto { min-width: 0; overflow-wrap: anywhere; }
+.produto-icone-campo { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr)); gap: 1rem; align-items: center; margin-top: 1.25rem; }
+.produto-icone-campo > * { min-width: 0; }
+.produto-icone-previa { display: flex; align-items: center; gap: .75rem; }
+.produto-icone-previa > div { min-width: 0; }
+.produto-icone-previa strong { display: block; overflow-wrap: anywhere; font-size: .9rem; }
 .pdv-loja .pdv-produto.selecionado { border-color: var(--lampiao); background: color-mix(in srgb, var(--lampiao) 10%, var(--superficie)); opacity: 1; }
 .pdv-selecionado { font-size: .72rem; font-weight: 650; color: var(--lampiao-tinta); }
 .pdv-loja .pdv-produto:active:not(:disabled) { transform: scale(.98); }

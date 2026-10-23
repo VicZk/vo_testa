@@ -41,6 +41,8 @@ Quartos, temporadas e tabela de preços validam o envio completo antes de gravar
 Em erro, a edição permanece preenchida e o cadastro anterior fica preservado.
 Na tabela, deixar uma tarifa inteira vazia remove a exceção; um campo ausente
 na requisição não apaga as demais tarifas. Percentuais conservam duas casas.
+O catálogo usa 27 ícones locais por nome/categoria, com escolha manual e prévia
+no cadastro; Loja, Restaurante e Estoque compartilham essa identificação.
 A estrutura inicial é de 24 quartos, quatro tipos técnicos de pernoite e quatro
 unidades de day use ativas. Os cadastros efetivos da instalação determinam a operação.
 

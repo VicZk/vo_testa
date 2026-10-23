@@ -57,6 +57,9 @@
     {% for p in produtos %}
       <tr>
         <td>
+          <div class="produto-identidade">
+          {% include "componentes/icone_catalogo.html" with ilustracao=p.ilustracao_catalogo compacto=True %}
+          <div class="produto-identidade-texto">
           <a href="{% url 'estoque:produto_editar' p.pk %}" class="est-produto-nome">{{ p.nome }}</a>
           <span class="est-produto-meta">
             <span class="rotulo-dado">{{ p.categoria.nome }}</span>
@@ -66,6 +69,8 @@
             {% if p.codigo_barras %}<span class="rotulo-dado">{{ p.codigo_barras }}</span>{% endif %}
             {% if not p.ativo %}<span class="selo selo-neutro">Inativo</span>{% endif %}
           </span>
+          </div>
+          </div>
         </td>
         <td>{{ p.get_unidade_display }}</td>
         <td class="num">{{ p.custo_medio|intcomma_brl }}</td>

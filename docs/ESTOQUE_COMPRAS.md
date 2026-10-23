@@ -136,6 +136,12 @@ e motivo e registra perda, sem recolocar o alimento preparado à venda.
 
 ## Conferência de abertura da operação
 
+O catálogo da Loja, do Restaurante e a lista de produtos exibem um ícone pelo
+nome e pela categoria. Em **Estoque → Produtos → Editar → Ícone no catálogo**,
+deixe **Automático** ou escolha outra ilustração. A prévia acompanha a edição;
+nome, preço e saldo continuam identificando o produto. As ilustrações são
+genéricas; os SVGs e suas licenças estão em `static/vendor/lucide/`.
+
 - Gerência: definir responsáveis por aprovação, recebimento, conferência de
   validade, perdas e Financeiro; adotar o tópico de compra no Livro de ocorrências.
 - Estoquista: conferir unidades, embalagens, fornecedores e saldo de cada local.

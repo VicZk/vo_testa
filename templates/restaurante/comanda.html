@@ -27,6 +27,7 @@
           <button type="button" class="pdv-produto {% if p.saldo <= 0 %}esgotado{% endif %}"
                   {% if p.saldo > 0 %}hx-get="{% url 'restaurante:pedir_item' comanda.pk p.id %}"
                   hx-target="#modal-conteudo"{% else %}disabled{% endif %}>
+            {% include "componentes/icone_catalogo.html" with ilustracao=p.ilustracao %}
             <span class="pdv-produto-nome">{{ p.nome }}</span>
             <span class="pdv-produto-meta">
               <span class="pdv-preco">{{ p.preco|intcomma_brl }}</span>

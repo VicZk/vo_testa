@@ -25,7 +25,7 @@ class ProdutoForm(forms.ModelForm):
     class Meta:
         model = Produto
         fields = [
-            "nome", "codigo_barras", "categoria", "unidade", "natureza",
+            "nome", "codigo_barras", "categoria", "icone_catalogo", "unidade", "natureza",
             "preco_venda", "estoque_minimo", "ativo",
             "controla_validade", "usa_ficha_tecnica",
         ]

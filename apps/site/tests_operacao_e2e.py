@@ -13,6 +13,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from django.core.cache import cache
+from django.templatetags.static import static
 from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -1980,6 +1981,102 @@ class PdvVisualE2ETests(_FunilComercialMixin, _BaseE2E):
 
     def carrinho(self):
         self.page.locator(".pdv-etapas button").filter(has_text="Carrinho").click()
+
+    def icone_url(self, icone):
+        return f"{static('vendor/lucide/catalogo.svg')}#{icone}"
+
+    def conferir_catalogo_ilustrado(self, nome):
+        p = self.page
+        p.wait_for_function("""() => [...document.querySelectorAll('.pdv-produto .produto-ilustracao use')]
+            .every(el => el.getBBox().width > 0 && el.getBBox().height > 0)""")
+        for largura in (320, 390, 414, 768, 821, 1440):
+            p.set_viewport_size({"width": largura, "height": 900})
+            p.evaluate("document.fonts.ready")
+            self.assertLessEqual(p.evaluate("document.documentElement.scrollWidth"), largura + 1)
+            self.assertFalse(p.evaluate("""() => [...document.querySelectorAll('.pdv-produto')].filter(el => {
+                if (!el.getClientRects().length) return false;
+                const box=el.getBoundingClientRect();
+                return [...el.querySelectorAll('.produto-ilustracao,.pdv-produto-nome,.pdv-produto-meta')].some(filho => {
+                    const r=filho.getBoundingClientRect();return r.left<box.left-1||r.right>box.right+1;
+                });
+            }).map(el => el.textContent)"""))
+            if largura in (320, 390, 821, 1440):
+                OperacaoUsabilidadeE2ETests._foto(self, f"fase10-{nome}-{largura}.png", full_page=True)
+
+    def test_catalogo_ilustrado_preserva_nome_preco_busca_e_carrinho(self):
+        from apps.nucleo.models import Produto, registrar_entrada
+        p = self.page
+        exemplos = {"Coca-Cola lata 350 ml": "cup-soda", "Pepsi zero": "cup-soda",
+                    "Café c/ leite": "coffee", "Chocolate ao leite": "candy", "Bolo de café": "cake"}
+        for nome in exemplos:
+            produto = Produto.objects.create(nome=nome, categoria=self.agua.categoria, preco_venda="8.50")
+            registrar_entrada(produto, self.local, 3, Decimal("2"), self.op)
+        respostas = []
+        p.on("response", lambda r: respostas.append(r.status) if "/vendor/lucide/catalogo" in r.url else None)
+        self.abrir(1440)
+        for nome, icone in exemplos.items():
+            botao = p.get_by_role("button", name=f"Adicionar {nome} ao carrinho", exact=True)
+            expect(botao.locator("use")).to_have_attribute("href", self.icone_url(icone))
+            expect(botao.locator(".pdv-preco")).to_have_text("R$ 8,50")
+        self.conferir_catalogo_ilustrado("loja")
+        self.assertTrue(respostas)
+        self.assertTrue(all(status == 200 for status in respostas))
+        p.get_by_label("Buscar produto", exact=True).fill("cafe leite")
+        expect(p.locator(".pdv-produto")).to_have_count(1)
+        p.get_by_role("button", name="Adicionar Café c/ leite ao carrinho", exact=True).click()
+        expect(p.locator(".pdv-item-nome")).to_have_text("Café c/ leite")
+        expect(p.locator(".pdv-total strong")).to_have_text("R$ 8,50")
+
+    def test_previa_automatica_e_escolha_manual_sobrevivem_a_erro_no_cadastro(self):
+        p = self.page
+        p.set_viewport_size({"width": 390, "height": 900})
+        p.goto(self.url(reverse("estoque:produto_editar", args=[self.agua.pk])))
+        nome = p.locator("#id_nome")
+        escolha = p.locator("#id_icone_catalogo")
+        for texto, icone in (("Café c/ leite", "coffee"), ("Bolo de café", "cake"),
+                             ("Chocolate ao leite", "candy"), ("Água s/ gás", "glass-water")):
+            nome.fill(texto)
+            expect(p.locator("[data-catalogo-previa] use")).to_have_attribute("href", self.icone_url(icone))
+        nome.fill(self.agua.nome)
+        escolha.select_option("glass-water")
+        p.locator("#id_preco_venda").fill("-1")
+        salvar = p.get_by_role("button", name="Salvar produto", exact=True)
+        salvar.evaluate("el => el.setAttribute('formnovalidate', '')")
+        salvar.click()
+        expect(p.locator(".mensagem.error")).to_be_visible()
+        expect(escolha).to_have_value("glass-water")
+        expect(nome).to_have_value(self.agua.nome)
+        expect(p.locator(".est-previa")).to_contain_text("R$ 5,50")
+        self.agua.refresh_from_db()
+        self.assertEqual(self.agua.icone_catalogo, "")
+        p.wait_for_function("document.querySelector('[data-catalogo-previa] use').getBBox().width > 0")
+        for largura in (320, 390, 821, 1440):
+            p.set_viewport_size({"width": largura, "height": 900})
+            self.assertLessEqual(p.evaluate("document.documentElement.scrollWidth"), largura + 1)
+            OperacaoUsabilidadeE2ETests._foto(self, f"fase10-cadastro-erro-{largura}.png", full_page=True)
+        p.locator("#id_preco_venda").fill("5.50")
+        salvar.click()
+        expect(p).to_have_url(self.url(reverse("estoque:produtos")))
+        self.agua.refresh_from_db()
+        self.assertEqual(self.agua.icone_catalogo, "glass-water")
+        self.abrir()
+        expect(p.get_by_role("button", name=f"Adicionar {self.agua.nome} ao carrinho", exact=True).locator("use")).to_have_attribute("href", self.icone_url("glass-water"))
+
+    def test_restaurante_compartilha_ilustracao_e_abre_pedido_correto(self):
+        from apps.nucleo.models import LocalEstoque, ModuloContratado, registrar_entrada
+        from apps.restaurante.services import abrir_comanda
+        ModuloContratado.objects.update_or_create(codigo="restaurante", defaults={"ativo": True})
+        local = LocalEstoque.objects.create(nome="Restaurante QA", modulo="restaurante")
+        registrar_entrada(self.agua, local, 2, Decimal("1"), self.op)
+        comanda = abrir_comanda(self.op, local, rotulo="Ícones no cardápio QA")
+        p = self.page
+        p.goto(self.url(reverse("restaurante:comanda", args=[comanda.pk])))
+        self.conferir_catalogo_ilustrado("restaurante")
+        agua = p.get_by_role("button").filter(has_text=self.agua.nome)
+        expect(agua.locator("use")).to_have_attribute("href", self.icone_url("bubbles"))
+        agua.click()
+        expect(p.locator("#modal-conteudo")).to_contain_text(self.agua.nome)
+        self.assertEqual(saldo(self.agua, local), Decimal("2"))
 
     def test_categoria_busca_sem_acento_e_limite_do_estoque(self):
         p = self.page

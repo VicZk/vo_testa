@@ -20,6 +20,7 @@ from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
+from apps.nucleo.catalogo import configuracao_ilustracoes
 from apps.nucleo.models import (
     CategoriaProduto,
     Inventario,
@@ -235,6 +236,10 @@ def produto_form(request, pk=None):
         produto = form.save()
         messages.success(request, f"Produto “{produto.nome}” salvo.")
         return redirect("estoque:produtos")
+    if request.method == "POST" and produto:
+        # ModelForm também altera sua instância ao validar um envio inválido.
+        # O formulário mantém os dados enviados; o resumo mostra o cadastro salvo.
+        produto.refresh_from_db()
     return render(
         request,
         "estoque/produto_form.html",
@@ -242,6 +247,7 @@ def produto_form(request, pk=None):
             "form": form,
             "produto": produto,
             "saldos": _saldos_do_produto(produto) if produto else [],
+            "ilustracoes_catalogo": configuracao_ilustracoes(),
         },
     )
 

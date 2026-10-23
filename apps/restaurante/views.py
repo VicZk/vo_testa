@@ -89,10 +89,11 @@ def abrir(request):
 
 def _contexto_comanda(request, comanda):
     local = comanda.local
-    produtos = Produto.objects.filter(ativo=True, preco_venda__gt=0)
+    produtos = Produto.objects.filter(ativo=True, preco_venda__gt=0).select_related("categoria")
     saldos = disponibilidade_produtos(produtos, local)
     cardapio = [
-        {"id": p.pk, "nome": p.nome, "preco": p.preco_venda, "saldo": saldos[p.pk]}
+        {"id": p.pk, "nome": p.nome, "preco": p.preco_venda, "saldo": saldos[p.pk],
+         "ilustracao": p.ilustracao_catalogo}
         for p in produtos
     ]
     contas = []

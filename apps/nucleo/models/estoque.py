@@ -18,6 +18,7 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, models, transaction
 from django.db.models import Sum
 
+from apps.nucleo.catalogo import ESCOLHAS_ICONES, ilustracao_produto
 from apps.nucleo.validadores import decimal_valido
 
 from .financeiro import NaturezaFiscal, centro_choices, registrar_auditoria
@@ -59,6 +60,10 @@ class Produto(models.Model):
         "código de barras", max_length=40, blank=True, db_index=True
     )
     nome = models.CharField("nome", max_length=120)
+    icone_catalogo = models.CharField(
+        "ícone no catálogo", max_length=32, blank=True, choices=ESCOLHAS_ICONES,
+        help_text="O automático acompanha o nome e a categoria. Escolha outro ícone para ajustar.",
+    )
     categoria = models.ForeignKey(
         CategoriaProduto, on_delete=models.PROTECT,
         related_name="produtos", verbose_name="categoria",
@@ -98,6 +103,10 @@ class Produto(models.Model):
 
     def saldo(self, local=None) -> Decimal:
         return saldo(self, local)
+
+    @property
+    def ilustracao_catalogo(self):
+        return ilustracao_produto(self.nome, self.categoria.nome if self.categoria_id else "", self.icone_catalogo)
 
     def clean(self):
         super().clean()

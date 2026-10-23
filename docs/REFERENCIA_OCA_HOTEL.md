@@ -25,7 +25,12 @@ Os seis addons listados nesta revisão não fornecem um channel manager homologa
 integração fiscal brasileira, FNRH Digital nem operação de day pass com capacidade
 de áreas comuns. Compras, lotes e conversões podem depender de outros módulos do
 ecossistema Odoo; não devem ser atribuídos a este repositório sem análise própria.
-As correções OP27–OP29 do nosso diagnóstico continuam necessárias.
+Na fork, as correções OP27–OP29 foram implementadas após esta comparação:
+Canais com fila e validação da configuração, Day Pass por turno e capacidade,
+e compras por embalagem com lotes e fichas técnicas. Canais ainda depende de
+credenciais/homologação; a capacidade de Day Pass e os cadastros físicos de
+estoque devem ser definidos pela operação. Solicitação e aprovação de compras
+usam o processo auxiliar do [manual de compras](ESTOQUE_COMPRAS.md).
 
 O controle de conflitos observado na reserva de mesas faz uma consulta antes da
 confirmação. Essa leitura isolada não comprova proteção contra duas confirmações
