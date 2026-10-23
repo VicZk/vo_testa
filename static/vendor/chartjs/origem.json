@@ -1,9 +1,13 @@
 {
-  "sha256": "74401d738dd3e03ee5dfb3b6841210fe2c4ead8a960c4011ca4ba0b78a9fd8f3",
+  "sha256": "0ee28337f25838a7a5d6b1e8b2b02279ab10e80e17c217a99893a7a717f2ba05",
   "name": "Chart.js",
   "retrieved": "2026-10-23",
   "version": "4.4.1",
   "license_source": "https://raw.githubusercontent.com/chartjs/Chart.js/v4.4.1/LICENSE.md",
   "license": "MIT",
-  "source": "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"
+  "source": "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js",
+  "upstream_sha256": "74401d738dd3e03ee5dfb3b6841210fe2c4ead8a960c4011ca4ba0b78a9fd8f3",
+  "modifications": [
+    "Removed only the trailing sourceMappingURL directive; the source map is not distributed. Executable code and license notices are unchanged."
+  ]
 }

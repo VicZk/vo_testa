@@ -55,6 +55,29 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Empacotar estáticos de produção (Manifest)
+        env:
+          DEBUG: "0"
+          SECRET_KEY: "ci-estaticos-chave-ficticia-sem-acesso-a-dados-de-producao-2026"
+          DJANGO_SETTINGS_MODULE: config.settings
+        run: |
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.conf import settings
+          from django.contrib.staticfiles.storage import staticfiles_storage
+          from django.core.management import call_command
+          from whitenoise.storage import CompressedManifestStaticFilesStorage
+
+          assert not settings.DEBUG and not settings.TESTING
+          assert isinstance(staticfiles_storage, CompressedManifestStaticFilesStorage)
+          call_command("collectstatic", interactive=False)
+          for name in ("vendor/chartjs/chart.umd.min.js", "js/graficos.js", "css/app.css"):
+              hashed = staticfiles_storage.stored_name(name)
+              assert staticfiles_storage.exists(hashed), hashed
+              print(f"Manifest: {name} -> {hashed}")
+          PY
+
       # Lint (config em ruff.toml): tem que dar zero. Fica de fora quando o "Novidades do
       # original" chama este workflow com `ref` para testar o merge com o original — lá o
       # que decide é a suíte; o lint do código que chega se acerta no próprio merge.
