@@ -3,12 +3,20 @@
 import json
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from django.urls import get_script_prefix, reverse
+from django.urls import NoReverseMatch, get_script_prefix, reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 
 from .pendencias import ESTADOS, origens_permitidas, url_pendencias
 
 PARAMETRO = "retorno_pendencias"
+
+
+def _rota(nome):
+    """URLconfs sem o CRM não participam do retorno contextual."""
+    try:
+        return reverse(nome)
+    except NoReverseMatch:
+        return ""
 
 
 def _partes(url):
@@ -23,7 +31,8 @@ def _partes(url):
 def validar_retorno(valor, usuario):
     """Aceita somente filtros conhecidos da Central, nunca uma URL de redirecionamento livre."""
     partes = _partes(valor)
-    if not partes or partes.scheme or partes.netloc or partes.fragment or partes.path != reverse("pendencias"):
+    central = _rota("pendencias")
+    if not central or not partes or partes.scheme or partes.netloc or partes.fragment or partes.path != central:
         return ""
     try:
         pares = parse_qsl(partes.query, keep_blank_values=True, max_num_fields=3)
@@ -50,9 +59,10 @@ def com_retorno(destino, retorno):
     partes = _partes(destino)
     if not retorno or not partes or partes.scheme or partes.netloc:
         return destino
-    if not partes.path.startswith(reverse("dashboard")):
+    raiz, central = _rota("dashboard"), _rota("pendencias")
+    if not raiz or not central or not partes.path.startswith(raiz):
         return destino
-    if partes.path.startswith(reverse("pendencias")) or partes.path in (reverse("login"), reverse("logout")):
+    if partes.path.startswith(central) or partes.path in (_rota("login"), _rota("logout")):
         return destino
     try:
         parametros = [(k, v) for k, v in parse_qsl(partes.query, keep_blank_values=True, max_num_fields=100)
@@ -76,7 +86,9 @@ class RetornoPendenciasMiddleware:
     def __call__(self, request):
         request.retorno_pendencias = ""
         prefixo = get_script_prefix().rstrip("/")
-        raiz = reverse("dashboard").removeprefix(prefixo)
+        raiz = _rota("dashboard").removeprefix(prefixo)
+        if not raiz:
+            return self.get_response(request)
         if request.path_info.startswith(raiz) and request.user.is_authenticated:
             valor = request.GET.get(PARAMETRO, "")
             if not valor and request.method == "POST":

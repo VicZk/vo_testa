@@ -8,8 +8,8 @@ from urllib.parse import parse_qs, urlsplit
 
 from django.core.cache import cache
 from django.http import HttpResponse
-from django.test import RequestFactory, TestCase, override_settings
-from django.urls import get_script_prefix, reverse, set_script_prefix
+from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
+from django.urls import get_script_prefix, path, reverse, set_script_prefix
 from django.utils import timezone
 
 from apps.comercial.models import EtapaFunil, Oportunidade
@@ -35,7 +35,41 @@ from .models import (
 )
 from .modulos import Modulo
 from .pendencias import url_pendencias
-from .retorno_pendencias import PARAMETRO, RetornoPendenciasMiddleware, com_retorno
+from .retorno_pendencias import PARAMETRO, RetornoPendenciasMiddleware, com_retorno, validar_retorno
+
+
+class _UrlsSemCentral:
+    urlpatterns = [path("crm/", lambda request: HttpResponse("CRM"), name="dashboard")]
+
+
+class RetornoPendenciasEscopoTests(SimpleTestCase):
+    def _preserva_resposta(self, caminho):
+        request = RequestFactory().post(caminho, {PARAMETRO: "/crm/pendencias/", "rascunho": "QA"})
+        request.user = SimpleNamespace(is_authenticated=True)
+        resposta = HttpResponse("Contrato original", status=302,
+            headers={"Location": "/mensagens/", "HX-Redirect": "/crm/destino/"})
+        resultado = RetornoPendenciasMiddleware(lambda _: resposta)(request)
+        self.assertIs(resultado, resposta)
+        self.assertEqual(request.retorno_pendencias, "")
+        self.assertEqual(resultado.status_code, 302)
+        self.assertEqual(resultado.content, b"Contrato original")
+        self.assertEqual(resultado["Location"], "/mensagens/")
+        self.assertEqual(resultado["HX-Redirect"], "/crm/destino/")
+
+    @override_settings(ROOT_URLCONF="apps.nucleo.tests_formularios")
+    def test_urlconf_sem_crm_preserva_resposta_e_helpers_ignoram_retorno(self):
+        self._preserva_resposta("/enviar/")
+        self.assertEqual(validar_retorno("/crm/pendencias/", None), "")
+        self.assertEqual(com_retorno("/crm/destino/", "/crm/pendencias/"), "/crm/destino/")
+
+    @override_settings(ROOT_URLCONF=_UrlsSemCentral)
+    def test_crm_sem_rota_da_central_tambem_preserva_resposta(self):
+        self._preserva_resposta("/crm/")
+        self.assertEqual(validar_retorno("/crm/pendencias/", None), "")
+        self.assertEqual(com_retorno("/crm/destino/", "/crm/pendencias/"), "/crm/destino/")
+
+    def test_pagina_fora_do_crm_ignora_contexto_mesmo_com_rotas_disponiveis(self):
+        self._preserva_resposta(reverse("core:politica_privacidade"))
 
 
 def criar_cenario_retorno():
