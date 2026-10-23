@@ -5,7 +5,7 @@ from datetime import date
 from decimal import Decimal
 from threading import Barrier
 
-from django.db import close_old_connections
+from django.db import close_old_connections, connections
 from django.test import TestCase, TransactionTestCase
 
 from .models import LoteCartao, TransacaoCartao
@@ -61,7 +61,7 @@ class ImportacaoCartaoConcorrenteTests(TransactionTestCase):
                 barreira.wait(timeout=10)
                 return importar_cartao_csv(conteudo=CSV_CARTAO)["novos"]
             finally:
-                close_old_connections()
+                connections.close_all()
 
         with ThreadPoolExecutor(max_workers=2) as executor:
             resultados = list(executor.map(lambda _: importar(), range(2)))
