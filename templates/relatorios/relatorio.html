@@ -81,7 +81,7 @@ busca na folha.{% endcomment %}
 </div>
 
 <div class="tabela-rol bloco-respiro-largo"{% if dados.colunas|length > 6 %} data-tabela-ampla{% endif %}>
-<table class="tabela{% if dados.colunas|length <= 6 %} tabela-cartoes{% endif %}">
+<table class="tabela rel-tabela{% if dados.colunas|length <= 6 %} tabela-cartoes{% endif %}">
   <thead>
     <tr>{% for c in dados.colunas %}<th {% if not forloop.first %}class="num col-numero"{% endif %}>{{ c }}</th>{% endfor %}</tr>
   </thead>

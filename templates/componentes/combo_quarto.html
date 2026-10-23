@@ -19,8 +19,8 @@ Parâmetros do include:
          placeholder="{{ placeholder|default:'Buscar quarto (nº, PCD ou ala)…' }}"
          role="combobox" aria-autocomplete="list" :aria-expanded="open"
          :aria-controls="cid + '-lista'" :aria-activedescendant="ativoId || null"
-         x-model="q" @focus="open = true" @input="digitou()"
-         @keydown.arrow-down.prevent="mover(1)" @keydown.arrow-up.prevent="mover(-1)"
+         x-model="q" @pointerdown="pronto = true" @click="open = true" @focus="if (pronto || q) open = true" @input="digitou()"
+         @keydown.arrow-down.prevent="open = true; mover(1)" @keydown.arrow-up.prevent="mover(-1)"
          @keydown.enter="if (confirmar()) $event.preventDefault()"
          @keydown.escape="if (open) { $event.stopPropagation(); fechar(); }" @keydown.tab="fechar()">
   <div class="combo-lista" x-show="open" x-cloak role="listbox" :id="cid + '-lista'"

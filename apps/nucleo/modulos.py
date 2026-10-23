@@ -103,13 +103,13 @@ APRESENTACAO: dict[str, dict] = {
         "url_name": "lavanderia:painel",
     },
     Modulo.PAGAMENTOS: {
-        "grupo": "Financeiro",
+        "grupo": "Pagamentos e fiscal",
         "ordem": 90,
         "descricao": "Cobranças e conciliação de cartão, Pix e boleto.",
         "url_name": "pagamentos:painel",
     },
     Modulo.FISCAL: {
-        "grupo": "Financeiro",
+        "grupo": "Pagamentos e fiscal",
         "ordem": 100,
         "descricao": "Emissão de notas fiscais de serviços e produtos.",
         "url_name": "fiscal:painel",
@@ -130,7 +130,7 @@ APRESENTACAO: dict[str, dict] = {
         "grupo": "Comercial",
         "ordem": 117,
         "descricao": "Entregas por tipo e situação, campanhas, verba e calendário.",
-        "url_name": "marketing:entregas",
+        "url_name": "marketing:quadro",
     },
     Modulo.APPSITE: {
         "grupo": "Online",

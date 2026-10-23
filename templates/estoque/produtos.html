@@ -5,6 +5,7 @@
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Vendas &amp; Estoque</p>
+{% include "estoque/partials/nav.html" %}
 <div class="pagina-cabecalho">
   <h1>Produtos</h1>
   <div class="pagina-acoes">
@@ -12,7 +13,6 @@
     <a href="{% url 'estoque:cadastros' %}" class="botao-neutro">Categorias e locais</a>
   </div>
 </div>
-{% include "estoque/partials/nav.html" %}
 
 <p class="subtitulo">O catálogo. Quanto cada produto custa (custo médio, calculado pelas
   entradas), por quanto é vendido e quanto existe hoje somando todos os depósitos.</p>

@@ -4,7 +4,7 @@
 {% block titulo %}Comanda #{{ comanda.pk }} | Restaurante{% endblock %}
 
 {% block conteudo %}
-{% load nucleo_extras %}{% aviso_nfce %}
+{% load nucleo_extras %}{% if eh_gerente %}{% aviso_nfce %}{% endif %}
 <a href="#" class="voltar" onclick="history.back(); return false;">
   <svg viewBox="0 0 24 24" class="ico"><path d="M15 6l-6 6 6 6"/></svg> Voltar
 </a>
@@ -62,6 +62,9 @@
     {% endif %}
   </section>
 
+  {% if comanda.aberta %}<a href="#restaurante-conta" class="comanda-barra-toque" aria-label="Ir para a comanda">
+    <span class="letreiro">Comanda</span><strong data-barra-total>{{ comanda.total|intcomma_brl }}</strong><span>Ver e fechar →</span>
+  </a>{% endif %}
   <aside class="pdv-painel" id="restaurante-conta">
     <div class="pdv-painel-topo">
       <h2>Comanda</h2>
@@ -102,7 +105,9 @@
         <button type="submit" class="botao-primario pdv-finalizar">Fechar comanda</button>
       </form>
 
-      <div class="comanda-extras">
+      <details class="mais-opcoes comanda-extras">
+        <summary>Mais ações <small>estadia, transferência, cancelamento</small></summary>
+        <div>
         {% if contas %}<form data-preservar-erros method="post" action="{% url 'restaurante:vincular' comanda.pk %}" class="campo">
           {% csrf_token %}<label for="comanda-estadia">Estadia vinculada</label>
           <select id="comanda-estadia" name="conta_id" required><option value="">Selecione o quarto / hóspede…</option>
@@ -127,9 +132,22 @@
             </form>
           </details>
         {% endif %}
-      </div>
+        </div>
+      </details>
     {% endif %}
   </aside>
+<script>
+  // A barra do pé (toque) repete o total da comanda; ela acompanha cada troca do HTMX.
+  (() => {
+    const sincronizar = () => {
+      const barra = document.querySelector('[data-barra-total]');
+      const total = document.querySelector('#comanda-itens .comanda-total-linha strong');
+      if (barra && total) barra.textContent = total.textContent;
+    };
+    document.addEventListener('htmx:afterSwap', (e) => { if (e.detail.target && e.detail.target.id === 'comanda-itens') sincronizar(); });
+    document.addEventListener('htmx:afterSettle', sincronizar);
+  })();
+</script>
 </div>
 </div>
 <script src="{% static 'js/restaurante-comanda.js' %}" defer></script>

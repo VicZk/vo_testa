@@ -1,9 +1,10 @@
 {% extends "base.html" %}{% load nucleo_extras static %}
 {% block titulo %}Cadastrar nota | Estoque{% endblock %}
 {% block conteudo %}<div class="eleg est-notas">
-<p class="pagina-eyebrow letreiro">Compras &amp; Estoque</p>
-<div class="pagina-cabecalho"><div><h1>Cadastrar nota</h1><p class="subtitulo">Transcreva os itens previstos e guarde os documentos da compra.</p></div><a href="{% url 'estoque:notas' %}" class="botao-neutro">Voltar às notas</a></div>
+<p class="pagina-eyebrow letreiro">Vendas &amp; Estoque</p>
 {% include "estoque/partials/nav.html" %}
+<div class="pagina-cabecalho"><h1>Cadastrar nota</h1><a href="{% url 'estoque:notas' %}" class="botao-neutro">Voltar às notas</a></div>
+<p class="subtitulo">Transcreva os itens previstos e guarde os documentos da compra.</p>
 <p class="nota-cartao bloco-fim">Cadastrar a nota guarda o documento e os itens previstos. O saldo e o custo do estoque mudam quando você registra o recebimento.</p>
 <form method="post" enctype="multipart/form-data" id="nota-form" class="est-nota-form" data-preservar-erros>
 {% csrf_token %}{{ form.non_field_errors }}{{ form.chave }}{{ form.chave.errors }}

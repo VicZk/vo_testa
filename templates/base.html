@@ -49,7 +49,7 @@
     // destacado é anunciado por aria-activedescendant — o foco nunca sai do campo.
     function comboComum(extras) {
       const base = {
-        q: "", open: false, sel: "", itens: [], idx: -1, cid: "",
+        q: "", open: false, pronto: false, sel: "", itens: [], idx: -1, cid: "",
         iniciarCombo() {
           this.cid = this.$el.dataset.dados || "combo";
           const dados = this.$el.closest('form')?.querySelector('[id="' + this.$el.dataset.dados + '"]')
@@ -244,8 +244,8 @@
       </div>
 
       {% for grupo in menu_modulos %}
-        <details class="nav-grupo" data-menu-grupo="{{ grupo.titulo|slugify }}" open>
-          <summary class="nav-titulo letreiro">{{ grupo.titulo }}</summary>
+        <div class="nav-grupo" data-menu-grupo="{{ grupo.titulo|slugify }}">
+          <span class="nav-titulo letreiro">{{ grupo.titulo }}</span>
           {% for m in grupo.itens %}
             {% if m.url %}
               {% if m.codigo == 'governanca' %}
@@ -280,22 +280,22 @@
               </span>
             {% endif %}
           {% endfor %}
-        </details>
+        </div>
       {% endfor %}
 
       {% if user|pode_area:'nps' %}
-      <details class="nav-grupo" data-menu-grupo="relacionamento" open>
-        <summary class="nav-titulo letreiro">Relacionamento</summary>
+      <div class="nav-grupo" data-menu-grupo="relacionamento">
+        <span class="nav-titulo letreiro">Relacionamento</span>
         <a href="{% url 'nps:painel' %}" class="nav-item {% if nav_ativa == 'nps' %}ativo{% endif %}" title="Opinião dos hóspedes" data-nav="nps">
           <svg viewBox="0 0 24 24" class="ico"><path d="M12 3l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 15.9 7.2 18l.9-5.4L4.2 8.7l5.4-.8z"/></svg>
           <span class="rotulo">NPS</span>
         </a>
-      </details>
+      </div>
       {% endif %}
 
       {% if user|pode_area:'caixa' or user|pode_area:'financeiro' or user|pode_area:'logbook' %}
-      <details class="nav-grupo" data-menu-grupo="operação" open>
-        <summary class="nav-titulo letreiro">Operação</summary>
+      <div class="nav-grupo" data-menu-grupo="operação">
+        <span class="nav-titulo letreiro">Operação</span>
         {% if user|pode_area:'caixa' or user|pode_area:'financeiro' %}
         <a href="{% url 'caixa' %}" class="nav-item {% if nav_ativa == 'caixa' %}ativo{% endif %}" title="Caixa" data-nav="caixa">
           <svg viewBox="0 0 24 24" class="ico"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg>
@@ -308,12 +308,12 @@
           <span class="rotulo">Recados do turno</span>
         </a>
         {% endif %}
-      </details>
+      </div>
       {% endif %}
 
       {% if user|pode_area:'pessoas' or user|pode_area:'funcionarios' or user|pode_area:'quartos' or user|pode_area:'temporadas' %}
-      <details class="nav-grupo" data-menu-grupo="cadastros" open>
-        <summary class="nav-titulo letreiro">Cadastros</summary>
+      <div class="nav-grupo" data-menu-grupo="cadastros">
+        <span class="nav-titulo letreiro">Cadastros</span>
         {% if user|pode_area:'pessoas' %}
         <a href="{% url 'hospedes' %}" class="nav-item {% if nav_ativa == 'hospedes' %}ativo{% endif %}" title="Hóspedes" data-nav="hospedes">
           <svg viewBox="0 0 24 24" class="ico"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20a6.5 6.5 0 0113 0"/></svg>
@@ -358,12 +358,12 @@
           <span class="rotulo">Temporadas</span>
         </a>
         {% endif %}
-      </details>
+      </div>
       {% endif %}
 
       {% if user|pode_area:'financeiro' %}
-      <details class="nav-grupo" data-menu-grupo="financeiro" open>
-        <summary class="nav-titulo letreiro">Financeiro</summary>
+      <div class="nav-grupo" data-menu-grupo="financeiro">
+        <span class="nav-titulo letreiro">Financeiro</span>
         <a href="{% url 'lancamentos' %}" class="nav-item {% if nav_ativa == 'lancamentos' %}ativo{% endif %}" title="Lançamentos" data-nav="lancamentos">
           <svg viewBox="0 0 24 24" class="ico"><path d="M7 17V9M7 9l-3 3M7 9l3 3"/><path d="M17 7v8M17 15l3-3M17 15l-3-3"/></svg>
           <span class="rotulo">Lançamentos</span>
@@ -380,12 +380,12 @@
           <svg viewBox="0 0 24 24" class="ico"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/><path d="M9 4l-2 3 2 3"/><path d="M15 14l2 3-2 3"/></svg>
           <span class="rotulo">Conciliação</span>
         </a>
-      </details>
+      </div>
       {% endif %}
 
       {% if user.is_staff or user.is_superuser %}
-      <details class="nav-grupo" data-menu-grupo="configurações" open>
-        <summary class="nav-titulo letreiro">Configurações</summary>
+      <div class="nav-grupo" data-menu-grupo="configurações">
+        <span class="nav-titulo letreiro">Configurações</span>
         <a href="{% url 'modulos_central' %}" class="nav-item {% if nav_ativa == 'modulos_central' %}ativo{% endif %}" title="Módulos" data-nav="modulos_central">
           <svg viewBox="0 0 24 24" class="ico"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
           <span class="rotulo">Módulos</span>
@@ -394,12 +394,12 @@
           <svg viewBox="0 0 24 24" class="ico"><path d="M4 6h16M4 12h16M4 18h16M8 3v6M16 9v6M9 15v6"/></svg>
           <span class="rotulo">Operação e integrações</span>
         </a>
-      </details>
+      </div>
       {% endif %}
     </nav>
 
     <div class="sidebar-rodape">
-      <a href="{% url 'mfa_config' %}" class="usuario-mini link-limpo" title="{{ user }} · Configurações da conta">
+      <a href="{% url 'mfa_config' %}" class="usuario-mini link-limpo"{% if not user.mfa_ativo %} data-mfa="desligada"{% endif %} title="{{ user }} · {% if user.mfa_ativo %}Configurações da conta{% else %}MFA desligada · ativar nas configurações da conta{% endif %}">
         <span class="avatar">{{ user.get_full_name|default:user.username|slice:":1"|upper }}</span>
         {% comment %}Nome numa janela própria: ela termina antes do botão Sair, e
         ao recolher o menu o botão passa ao lado dela, nunca por cima.{% endcomment %}
@@ -420,11 +420,6 @@
     (() => {
       const menu = document.getElementById('menu-principal');
       const chave = menu.dataset.rolagemChave;
-      menu.querySelectorAll('details[data-menu-grupo]').forEach(grupo => {
-        let salvo = null;
-        try { salvo = sessionStorage.getItem(chave + ':grupo:' + grupo.dataset.menuGrupo); } catch (_) {}
-        grupo.open = !!grupo.querySelector('.ativo') || salvo === 'aberto';
-      });
       const barra = Math.max(0, menu.offsetWidth - menu.clientWidth);
       menu.closest('.sidebar').style.setProperty('--menu-scrollbar', barra + 'px');
       try {

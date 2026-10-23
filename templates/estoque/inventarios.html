@@ -5,10 +5,10 @@
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Vendas &amp; Estoque</p>
+{% include "estoque/partials/nav.html" %}
 <div class="pagina-cabecalho">
   <h1>Inventário</h1>
 </div>
-{% include "estoque/partials/nav.html" %}
 
 <p class="subtitulo">Contagem física de um depósito. Enquanto a contagem está aberta nada
   muda no saldo; ao aplicar, o sistema gera um ajuste auditado para cada diferença,

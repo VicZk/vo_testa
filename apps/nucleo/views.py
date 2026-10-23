@@ -162,13 +162,15 @@ def dashboard(request):
         from apps.reservas.services import saidas_vencidas
 
         vencidas = saidas_vencidas()
+        from apps.nucleo.templatetags.moeda import intcomma_brl
+
         n_saldo = len(vencidas["com_saldo"])
         n_quit = len(vencidas["quitadas"])
         if n_saldo:
             atencao.append({
                 "nivel": "alerta",
                 "rotulo": (
-                    f'{n_saldo} saída{('s' if n_saldo > 1 else '')} vencida{('s' if n_saldo > 1 else '')} com saldo em aberto de R$ {vencidas['total_aberto']} a receber'
+                    f'{n_saldo} saída{('s' if n_saldo > 1 else '')} vencida{('s' if n_saldo > 1 else '')} com saldo em aberto de {intcomma_brl(vencidas['total_aberto'])} a receber'
                 ),
                 "detalhe": "Cobre no caixa e finalize o check-out",
                 "url": reverse("reservas:lista") + "?saida=vencida_saldo",

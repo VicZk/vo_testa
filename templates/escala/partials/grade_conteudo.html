@@ -12,9 +12,16 @@ contradizia a si mesma.{% endcomment %}
   .escala-al ul.al-itens li::before { content: "•"; position: absolute; left: 0; opacity: .6; }
   .escala-al .al-rot { font-weight: 700; }
 </style>
+{% for a in validacao %}{% if a.codigo == 'horas_extras' %}
+<section class="escala-he-resumo cartao" aria-label="Horas extras planejadas na semana">
+  <div class="escala-he-item"><span class="letreiro">Horas extras da semana</span><strong>{{ a.he.total }}</strong></div>
+  <div class="escala-he-item"><span class="letreiro">Banco de horas</span><strong>{{ a.he.banco }}</strong></div>
+  <div class="escala-he-item"><span class="letreiro">Hora extra</span><strong>{{ a.he.extra }}</strong></div>
+</section>
+{% endif %}{% endfor %}
 <section class="escala-val">
   <h3>Validação</h3>
-  {% for a in validacao %}
+  {% for a in validacao %}{% if a.codigo != 'horas_extras' %}
     <div class="escala-al escala-al-{{ a.nivel }}">
       <span class="ic">{% if a.nivel == 'ok' %}✓{% elif a.nivel == 'perigo' %}✕{% elif a.nivel == 'aviso' %}!{% else %}i{% endif %}</span>
       <div class="al-texto">
@@ -28,7 +35,7 @@ contradizia a si mesma.{% endcomment %}
         {% endif %}
       </div>
     </div>
-  {% endfor %}
+  {% endif %}{% endfor %}
 </section>
 {% endif %}
 
@@ -69,8 +76,10 @@ contradizia a si mesma.{% endcomment %}
                         data-remover="{{ a.pk }}">&times;</button>
               </span>
               {% for he in a.horas_extras %}
-                <span class="he-selo {{ he.tipo }}" title="Hora extra {{ he.get_tipo_display }}">
-                  +{{ he.total_txt }} · {{ he.inicio|time:'H:i' }}–{{ he.fim|time:'H:i' }} · {{ he.tipo }}
+                <span class="he-selo he-card {{ he.tipo }}" title="{{ he.get_tipo_display }} de {{ a.funcionario.pessoa.nome }}">
+                  <span class="he-card-tipo">{% if he.tipo == 'banco' %}Banco de horas{% else %}Hora extra{% endif %}</span>
+                  <span class="he-card-horas">{{ he.inicio|time:'H:i' }}–{{ he.fim|time:'H:i' }}</span>
+                  <strong class="he-card-total">+{{ he.total_txt }}</strong>
                   <button type="button" class="he-x" data-he="{{ he.pk }}" title="Remover" aria-label="Remover">&times;</button>
                 </span>
               {% endfor %}

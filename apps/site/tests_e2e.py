@@ -60,10 +60,8 @@ class _BaseE2E(StaticLiveServerTestCase):
         return self.live_server_url + caminho
 
     def abrir_grupo_menu(self, item):
-        """Revela o destino pelo controle que também é usado pela pessoa."""
-        grupo = item.locator("xpath=ancestor::details[1]")
-        if grupo.count() and not grupo.evaluate("el => el.open"):
-            grupo.locator("summary").click()
+        """Os grupos do menu são categorias fixas: o item já está à vista."""
+        self.assertTrue(item.count(), "item do menu não encontrado")
 
     def clicar_item_menu(self, seletor, pagina=None):
         item = (pagina or self.page).locator(seletor)
@@ -75,9 +73,8 @@ class _BaseE2E(StaticLiveServerTestCase):
         abrir_gaveta = botao.is_visible() and botao.get_attribute("aria-expanded") != "true"
         if abrir_gaveta:
             botao.click()
-        for grupo in self.page.locator("#menu-principal details").all():
-            if not grupo.evaluate("el => el.open"):
-                grupo.locator("summary").click()
+        self.assertEqual(self.page.locator("#menu-principal details").count(), 0,
+                         "grupos do menu são categorias fixas, não recolhíveis")
         if abrir_gaveta:
             self.page.keyboard.press("Escape")
 

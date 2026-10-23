@@ -851,7 +851,11 @@ Toda tela do CRM nasce no design system; nada de estilo paralelo nem cor fixa no
   (`--trilho-centro`) e na mesma altura nos dois estados; rótulos e títulos de grupo só
   esmaecem; a borda direita anda e recorta. O que muda de lugar (botão de recolher,
   Sair) desliza com os tokens de movimento. Regra do trilho só pode mexer em opacidade,
-  cor, giro e posição — o contrato está nos testes de design. Abaixo de 820 px o menu é
+  cor, giro e posição — o contrato está nos testes de design. Os grupos do menu são
+  categorias fixas (título + itens), nunca colapsáveis: colapsar grupo dentro de um
+  menu que já recolhe é colapso dentro de colapso, e no trilho esconderia os ícones.
+  Sem MFA, o avatar leva um ponto de alerta (`data-mfa="desligada"`), nunca
+  cápsula. Abaixo de 820 px o menu é
   gaveta e abre sempre inteiro, como diálogo: foco preso, Esc e o véu fecham, a página
   não rola por baixo e o foco volta ao botão.
 - **Contrato responsivo:** conferir ausência de rolagem lateral entre 320 e 1440 px, com o menu aberto,

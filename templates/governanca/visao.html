@@ -65,7 +65,7 @@ A barra mostra a casa inteira repartida pelos quatro estados.{% endcomment %}
 <section class="atencao-secao">
   <div class="secao-cabecalho">
     <h2>Precisa de atenção agora</h2>
-    <span class="secao-contagem">{{ atencao|length }}</span>
+    <span class="secao-contagem secao-contagem--alerta">{{ atencao|length }}</span>
   </div>
   <div class="atencao-grid">
     {% for a in atencao %}

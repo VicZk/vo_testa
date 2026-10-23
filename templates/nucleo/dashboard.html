@@ -38,7 +38,7 @@ nem chega aqui: entra direto nele (views.dashboard).{% endcomment %}
 <section class="atencao-secao">
   <div class="secao-cabecalho">
     <h2>Precisa de atenção</h2>
-    <span class="secao-contagem">{{ atencao|length }}</span>
+    <span class="secao-contagem secao-contagem--alerta">{{ atencao|length }}</span>
   </div>
   <div class="atencao-grid">
     {% for a in atencao %}

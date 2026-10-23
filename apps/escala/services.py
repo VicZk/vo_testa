@@ -582,7 +582,8 @@ def analisar_semana(inicio, setor=None):
         tot = sum(he.total_minutos for he in he_sem)
         banco = sum(he.total_minutos for he in he_sem if he.tipo == "banco")
         extra = sum(he.total_minutos for he in he_sem if he.tipo == "extra")
-        alertas.append({"nivel": "info",
+        alertas.append({"nivel": "info", "codigo": "horas_extras",
+                        "he": {"total": _fmt(tot), "banco": _fmt(banco), "extra": _fmt(extra)},
                         "texto": f"Horas extras planejadas na semana: {_fmt(tot)} "
                                  f"(banco {_fmt(banco)} · extra {_fmt(extra)})."})
 

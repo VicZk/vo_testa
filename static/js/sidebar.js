@@ -26,10 +26,6 @@
       const link = item.matches('a') ? item : item.querySelector('.nav-item-principal');
       if (selecionado) link?.setAttribute('aria-current', 'page');
       else link?.removeAttribute('aria-current');
-      if (selecionado && ativa !== anterior) {
-        const grupo = item.closest('details');
-        if (grupo) grupo.open = true;
-      }
     });
   }
   function atualizar(evento) {
@@ -65,12 +61,6 @@
   // Só o bootstrap inline restaura scrollTop, antes da primeira pintura.
   // Nunca repetir no DOMContentLoaded, load ou ao trocar abas.
   menu.addEventListener('scroll', salvar, {passive: true});
-  menu.querySelectorAll('details[data-menu-grupo]').forEach(grupo => {
-    grupo.addEventListener('toggle', () => {
-      try { sessionStorage.setItem(chave + ':grupo:' + grupo.dataset.menuGrupo, grupo.open ? 'aberto' : 'fechado'); } catch (_) {}
-      salvar();
-    });
-  });
   window.addEventListener('pagehide', salvar);
   window.addEventListener('pageshow', evento => {
     if (!evento.persisted) return;

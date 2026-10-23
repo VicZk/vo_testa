@@ -48,9 +48,6 @@ class AuditoriaShellE2ETests(_BaseE2E):
 
     def clicar_menu(self, chave):
         item = self.page.locator(f'#menu-principal [data-nav="{chave}"]')
-        grupo = item.locator("xpath=ancestor::details[1]")
-        if grupo.count() and not grupo.evaluate("el=>el.open"):
-            grupo.locator("summary").click()
         item.click()
 
     def registrar(self, nome, dados):
@@ -70,9 +67,6 @@ class AuditoriaShellE2ETests(_BaseE2E):
             with self.subTest(movimento=movimento):
                 self.page.emulate_media(reduced_motion=movimento)
                 self.abrir()
-                grupo = self.page.locator('[data-nav="estoque"]').locator("xpath=ancestor::details[1]")
-                grupo.locator("summary").click()
-                self.assertFalse(grupo.evaluate("el=>el.open"))
                 self.page.evaluate("""() => {
                   window.__opacidades=[]; window.__estaveis=[]; window.__efeitos=[]; window.__amostrar=true;
                   function medir() {
@@ -98,7 +92,8 @@ class AuditoriaShellE2ETests(_BaseE2E):
                 expect(self.page).to_have_url(self.url(reverse("estoque:posicao")))
                 self.page.go_forward()
                 expect(self.page).to_have_url(self.url(destino))
-                self.assertFalse(grupo.evaluate("el=>el.open"), "trocar a aba não deve reabrir um grupo recolhido")
+                self.assertEqual(self.page.locator("#menu-principal details").count(), 0, "grupos do menu são categorias fixas, não recolhíveis")
+                expect(self.page.locator('[data-nav="estoque"]')).to_be_visible()
                 self.page.evaluate("window.__amostrar=false")
                 valores = self.page.evaluate("window.__opacidades")
                 self.assertTrue(valores and min(valores) == 1, valores)
@@ -310,13 +305,11 @@ class AuditoriaShellE2ETests(_BaseE2E):
         expect(self.page.locator('#toasts .toast:visible')).to_contain_text("Terceiro aviso")
         self.registrar("fila-toasts", {"visiveis": self.page.locator('#toasts .toast:visible').count()})
 
-    def test_rolagem_e_grupos_restaurados_antes_da_primeira_pintura(self):
+    def test_rolagem_restaurada_antes_da_primeira_pintura(self):
         self.abrir()
-        grupos = self.page.locator("details[data-menu-grupo]").evaluate_all("els=>els.map(e=>e.dataset.menuGrupo)")
         chave = self.page.locator("#menu-principal").get_attribute("data-rolagem-chave")
         codigo = f"""(() => {{
           const chave={json.dumps(chave)};
-          {json.dumps(grupos)}.forEach(g=>sessionStorage.setItem(chave+':grupo:'+g,'aberto'));
           sessionStorage.setItem(chave,'350');
           new PerformanceObserver(lista=>{{
             if(lista.getEntries().some(e=>e.name==='first-contentful-paint'))

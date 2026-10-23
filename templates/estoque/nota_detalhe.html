@@ -1,9 +1,10 @@
 {% extends "base.html" %}{% load moeda estoque_extras nucleo_extras %}
 {% block titulo %}{{ nota.referencia }} | Estoque{% endblock %}
 {% block conteudo %}<div class="eleg est-notas">
-<p class="pagina-eyebrow letreiro">Compras &amp; Estoque</p>
-<div class="pagina-cabecalho"><div><h1>{{ nota.referencia }}</h1><p class="subtitulo">{{ nota.fornecedor_nome }}</p></div><div class="linha-botoes">{% if nota.status != 'concluida' %}<a href="{% url 'estoque:nota_receber' nota.pk %}" class="botao-primario">Receber itens</a>{% endif %}<a href="{% url 'estoque:notas' %}" class="botao-neutro">Voltar às notas</a></div></div>
+<p class="pagina-eyebrow letreiro">Vendas &amp; Estoque</p>
 {% include "estoque/partials/nav.html" %}
+<div class="pagina-cabecalho"><h1>{{ nota.referencia }}</h1><div class="linha-botoes">{% if nota.status != 'concluida' %}<a href="{% url 'estoque:nota_receber' nota.pk %}" class="botao-primario">Receber itens</a>{% endif %}<a href="{% url 'estoque:notas' %}" class="botao-neutro">Voltar às notas</a></div></div>
+<p class="subtitulo">{{ nota.fornecedor_nome }}</p>
 <section class="cartao respiro est-nota-secao"><dl class="est-nota-resumo">
   <div><dt>Recebimento</dt><dd><span class="est-nota-status" data-status="{{ nota.status }}">{{ nota.status_label }}</span></dd></div><div><dt>Emissão</dt><dd>{{ nota.emissao|date:"d/m/Y" }}</dd></div><div><dt>Valor previsto</dt><dd>{{ nota.valor_total|intcomma_brl }}</dd></div><div><dt>Itens</dt><dd>{{ nota.total_itens }}</dd></div>
   {% if nota.fornecedor_documento %}<div><dt>CPF / CNPJ do fornecedor</dt><dd>{{ nota.fornecedor_documento }}</dd></div>{% endif %}

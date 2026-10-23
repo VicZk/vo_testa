@@ -5,11 +5,11 @@
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Vendas &amp; Estoque</p>
+{% include "estoque/partials/nav.html" %}
 <div class="pagina-cabecalho">
   <h1>Movimentar estoque</h1>
   <a href="{% url 'estoque:posicao' %}" class="botao-neutro">Ver posição</a>
 </div>
-{% include "estoque/partials/nav.html" %}
 
 {% comment %}As quatro operações eram quatro itens na navegação do módulo, cada
 uma com o mesmo formulário genérico. Agora são um segmentado só: a pessoa vê

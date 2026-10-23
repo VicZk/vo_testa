@@ -4,7 +4,7 @@
 {% block titulo %}Loja | PDV{% endblock %}
 
 {% block conteudo %}
-{% load nucleo_extras %}{% aviso_nfce %}
+{% load nucleo_extras %}{% if eh_gerente %}{% aviso_nfce %}{% endif %}
 <p class="pagina-eyebrow letreiro">Vendas & Estoque</p>
 <div class="pagina-cabecalho">
   <h1>Loja: venda no balcão</h1>

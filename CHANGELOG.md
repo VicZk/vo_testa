@@ -9,6 +9,63 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 23/10/2026: revisão da rodada de interface (trilho, abas, avisos)
+
+- Os grupos do menu deixaram de ser colapsáveis: são categorias fixas (título + itens)
+  em todos os estados. Com os grupos fechados o trilho virava uma coluna de setas sem
+  ícone, e colapsar grupo dentro de um menu que já recolhe era colapso dentro de
+  colapso. O menu volta a mostrar o ícone de todos os módulos sempre.
+- Quem está sem verificação em duas etapas vê de novo o aviso: um ponto de alerta no
+  avatar, com o motivo no título do link — a cápsula "MFA off" não volta.
+- O contador vermelho de "Precisa de atenção" (painel e Governança) voltou a ter o
+  número claro; os outros contadores de seção seguem como número solto, sem pílula.
+- Abas de módulo que quebram linha: o fio passou a pertencer a cada aba, então o
+  sublinhado dourado encosta no fio da própria aba em qualquer linha; abaixo de 30 rem
+  de largura útil as abas ficam mais compactas (Estoque a 390 px: 3 linhas em vez de 4).
+  O Estoque abre em **Posição**; Notas, Compras e Lotes vêm depois do fluxo principal.
+- A página "Nova reserva" (e o modal) não abre mais a lista de hóspedes por cima dos
+  campos ao carregar: a lista aparece ao clicar, digitar ou usar ↓.
+- O grupo de menu "Financeiro" dos módulos (Pagamentos Online, Fiscal) passou a
+  "Pagamentos e fiscal": não há mais dois grupos com o mesmo nome.
+- Filtro clicável (`.filtro-chip`) volta a ter forma de cápsula, distinta da aba de
+  navegação. Relatórios: colunas numéricas com largura natural (a primeira coluna
+  não engole mais toda a sobra). Portal e pagamento ganharam o piso de 12 px de
+  rótulo no toque (`base.css` regenerado).
+- Rodapé do menu de volta em linha (avatar, nome e Sair na mesma altura) com o menu
+  aberto e na gaveta; só o trilho empilha o Sair. O botão de recolher fica no canto
+  superior direito nos dois estados e anda em linha reta ao recolher (antes ia em
+  diagonal para baixo do símbolo).
+- Lotes e validade: a frase de apoio abaixo do título saiu (deslocava a barra de seções).
+- Faixa colorida de cartão (funil, cartão de lead, "Precisa de atenção", fila da
+  Governança, comandas, recados) deixou de ser borda grossa, que afinava no canto e
+  parecia gradiente vazando: virou sombra interna, que acompanha o raio.
+- Escala: chips da grade redesenhados (etiqueta discreta, nome com reticências, "+" e
+  "×" redondos e centrados, 44 px no toque; violação = faixa interna colorida). Hora
+  extra e banco de horas ganharam um cartão próprio embaixo do chip, com tipo, horário
+  e total; o resumo semanal de horas extras virou cartão, fora da lista de avisos.
+- Estoque: a barra de seções vem logo abaixo do nome do módulo e antes do título da
+  tela, em todas as 15 telas — ela nasce sempre na mesma altura e não salta ao trocar
+  de aba (antes variava 39 px no computador e 129 px no celular). O subtítulo das
+  telas de nota fica abaixo da barra e o sobre-título é "Vendas & Estoque" em todas.
+- Marketing abre no quadro de campanhas (Entregas vira a segunda aba) e, no celular,
+  o quadro vira lista por fase em vez de sete colunas rolando de lado.
+- Restaurante no celular: barra fixa no pé com o total e "Ver e fechar"; vincular
+  estadia, transferir e cancelar ficam dobrados em "Mais ações"; o aviso da NFC-e só
+  aparece para a gerência (o garçom não decide isso). O painel formata o saldo das
+  saídas vencidas como dinheiro (R$ 10.892,40).
+- **Modificado:** `templates/base.html` (grupos do menu como `<div>`, bootstrap só da
+  rolagem, rodapé, sinal de MFA), `static/js/sidebar.js`, `static/css/app.css` (blocos
+  "Revisão pós-rodada 1", "Faixas sem vazar", chips e cartões da Escala, abas, rodapé,
+  botão de recolher), `static/css/base.css` + `apps/nucleo/css_publico.txt`,
+  `apps/nucleo/modulos.py`, `apps/nucleo/views.py` (saldo formatado),
+  `apps/escala/services.py` + `templates/escala/partials/grade_conteudo.html`,
+  `templates/componentes/combo_pessoa.html` e `combo_quarto.html`, as 15 telas de
+  `templates/estoque/` + `partials/nav.html`, `templates/marketing/_tabs.html`,
+  `templates/restaurante/comanda.html`, `templates/loja/pdv.html`,
+  `templates/relatorios/relatorio.html`, `templates/nucleo/dashboard.html`,
+  `templates/governanca/visao.html`; testes E2E do shell e da sidebar sem o passo de
+  abrir grupo (`apps/site/tests_auditoria_shell_e2e.py`, `apps/site/tests_e2e.py`).
+
 ## 23/10/2026: restaurante, entregas de Marketing e pendências operacionais
 
 - Comandas e pedidos têm identidade persistida: reenviar a mesma abertura ou

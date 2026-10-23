@@ -894,8 +894,13 @@ button.link:hover { color: var(--lampiao); background: color-mix(in srgb, var(--
     opacity: 1;
     transition: opacity var(--mov-rapido) var(--curva) var(--mov-toque);
   }
-  .app.recolhida .sidebar-toggle { top: 69px; right: calc(var(--trilho-centro) - var(--alvo) / 2); }
+
   .app.recolhida .sidebar-toggle .ico { transform: rotate(180deg); }
+  /* No toque o botão tem 44px e o trilho segue com 128px: a .7rem da borda ele
+     encostaria no símbolo (29px, centrado no trilho). O recuo sai da própria conta
+     (trilho − centro − alvo − meio símbolo), limitado a .7rem: com o mouse (30px) dá
+     .7rem e nada muda; no toque, 4px. Só o eixo x anda; o topo é o mesmo nos dois estados. */
+  .app.recolhida .sidebar-toggle { right: min(.7rem, calc(var(--trilho-w) - var(--trilho-centro) - var(--alvo) - 16.5px)); }
 
   /* Recolhendo, os rótulos SAEM antes de a largura fechar (sem espera). */
   .app.recolhida .acao-topo .rotulo,
@@ -7726,19 +7731,19 @@ body.escala-dragging .escala-drop { cursor: copy; }
   border:0; border-bottom:1px solid var(--fio); border-radius:0;
   padding:0; background:transparent; gap:.15rem;
 }
-:is(.filtro-chip, .chip-limpeza, .seg-filtro a, .segmentado .chip, .est-seg a,
+:is(.chip-limpeza, .seg-filtro a, .segmentado .chip, .est-seg a,
     .pdv-seg button, .pdv-seg a, .pdv-seg label, .func-aba, .mk-pil, .pq-chip) {
   min-height:44px; border:0; border-bottom:2px solid transparent; border-radius:0;
   background:transparent; box-shadow:none; padding:.55rem .8rem;
   transition:color var(--mov-rapido) var(--curva), border-color var(--mov-rapido) var(--curva);
 }
-:is(.filtro-chip, .chip-limpeza, .seg-filtro a, .segmentado .chip, .est-seg a,
+:is(.chip-limpeza, .seg-filtro a, .segmentado .chip, .est-seg a,
     .pdv-seg button, .pdv-seg a, .pdv-seg label, .func-aba, .mk-pil, .pq-chip):is(
     [aria-pressed="true"], [aria-current="page"], .ativo, .on, .chip-ativo),
 .pdv-categorias .filtro-chip[aria-pressed="true"] {
   color:var(--noturno); border-bottom-color:var(--lampiao); background:transparent; box-shadow:none;
 }
-:is(.filtro-chip, .chip-limpeza, .seg-filtro a, .segmentado .chip):active { transform:none; }
+:is(.chip-limpeza, .seg-filtro a, .segmentado .chip):active { transform:none; }
 .gov-atualizacao:not([hidden]) { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:1rem; }
 .gov-atualizacao[hidden], .nav-badge[hidden] { display:none; }
 .gov-preferencia { padding:1rem; display:grid; gap:.8rem; }
@@ -7880,26 +7885,13 @@ html.com-js [data-reserva-acoes] [data-fechar-acao][hidden] { display: inline-fl
 html.com-js [data-precos-filtros][hidden] { display: block; visibility: hidden; }
 .precos-filtros [data-precos-resumo] { min-height: 1lh; }
 .sem-js [data-reserva-acoes] [data-acao], .sem-js [data-reserva-acoes] [data-fechar-acao] { display: none; }
-.nav-grupo > summary.nav-titulo {
-  cursor: pointer; min-height: var(--alvo); display: flex; align-items: center;
-  padding-block: .25rem; list-style: none;
-}
-.nav-grupo > summary.nav-titulo::-webkit-details-marker { display: none; }
-.nav-grupo > summary.nav-titulo::before { content: '›'; position: absolute; left: .35rem; font-size: 1rem; }
-.nav-grupo[open] > summary.nav-titulo::before { transform: rotate(90deg); }
-.nav-grupo > summary.nav-titulo:focus-visible { outline-offset: -2px; }
 .sidebar nav { scroll-padding-block: 1rem; }
 .sidebar-rodape { height: calc(2 * var(--alvo) + .5rem + 1.5rem + 1px); }
 .sidebar-rodape button.link { bottom: calc(.75rem + var(--alvo) + .5rem); }
 .usuario-nome { min-width: 0; }
 .toasts .toast[hidden] { display: none; }
 .toasts { max-height: min(22rem, 40dvh); overflow-y: auto; overscroll-behavior: contain; }
-@media (width > 820px) {
-  .app.recolhida .nav-grupo > summary.nav-titulo::before {
-    color: var(--lampiao); left: calc(var(--trilho-centro) - var(--menu-inset) - .25rem);
-  }
-  .app.recolhida .nav-grupo > summary.nav-titulo::after { opacity: 0; }
-}
+
 @media (max-width: 820px) {
   .sidebar { --sidebar-topo-h: 82px; }
   .sidebar .marca-full { max-height: 68px; width: auto; }
@@ -7949,7 +7941,11 @@ html.com-js [data-precos-filtros][hidden] { display: block; visibility: hidden; 
 .gov-ciclo-passo { display: inline-flex; align-items: center; gap: .5rem; }
 .he-selo { gap: .5rem; }
 .he-selo .he-x { margin-left: .25rem; min-width: 1.5rem; min-height: 1.5rem; }
-.secao-contagem { font: 600 .85rem var(--fonte-ui); color: var(--tinta-suave); }
+.secao-contagem { font: 600 .85rem var(--fonte-ui); color: var(--tinta-suave); background: none; min-width: 0; height: auto; padding: 0; }
+/* «Precisa de atenção» é chamada à ação: pílula vermelha com número CLARO (a regra acima
+   tinha deixado o número escuro sobre o fundo vermelho). */
+.secao-contagem--alerta { min-width: 22px; height: 22px; padding: 0 .35rem; font-size: max(var(--rotulo-min), 0.72rem); font-weight: 700;
+  color: var(--perigo-texto-claro); background: var(--perigo); border-radius: var(--raio-pilula); }
 .mk-cal-periodo, .mk-cal-vista { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
 .mk-cal-vista { margin-left: auto; }
 .rolagem-indicador { margin: .5rem 0; font-size: .8rem; color: var(--tinta-suave); text-align: right; }
@@ -8022,3 +8018,155 @@ html.com-js [data-precos-filtros][hidden] { display: block; visibility: hidden; 
   .est-seg > a { border: 1px solid var(--fio); border-radius: var(--raio-p); background: var(--superficie); }
   .est-seg > a[aria-current="page"] { border-color: var(--lampiao); background: var(--alerta-bg); }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   REVISÃO PÓS-RODADA 1 (23/10) — abas que quebram linha, trilho, MFA, relatórios
+   ═══════════════════════════════════════════════════════════════ */
+/* Abas que quebram linha: o fio deixa de ser da barra (ficava só embaixo da última
+   linha) e passa a cada aba; o sublinhado dourado encosta no fio da PRÓPRIA aba. */
+.est-abas { border-bottom: 0; gap: 0; }
+.abas-secao > a.est-aba, .est-aba { flex: 1 1 auto; margin-bottom: 0; border-bottom: 1px solid var(--fio); }
+.est-aba[aria-current="page"], .est-aba.ativo { border-bottom-color: var(--fio); box-shadow: inset 0 -2px 0 var(--lampiao); }
+@container conteudo (max-width: 30rem) {
+  .est-aba { padding: .5rem .55rem; gap: .3rem; font-size: .85rem; }
+}
+
+/* MFA desligada: ponto de alerta no avatar (sem cápsula), nos dois estados do menu. */
+.usuario-mini[data-mfa="desligada"] .avatar { position: relative; }
+.usuario-mini[data-mfa="desligada"] .avatar::after {
+  content: ""; position: absolute; top: -2px; right: -2px; width: 10px; height: 10px;
+  border-radius: 50%; background: var(--alerta); border: 2px solid var(--noturno-2);
+}
+/* Relatórios: coluna numérica com largura natural (width:1% jogava toda a sobra na primeira). */
+.rel-tabela .col-numero { width: auto; min-width: 7ch; }
+
+/* Marketing no celular: o quadro vira lista por fase (uma coluna embaixo da outra),
+   em vez de sete colunas rolando de lado. */
+@container conteudo (max-width: 48rem) {
+  .mk-colunas { flex-direction: column; overflow: visible; scroll-snap-type: none; gap: 1rem; }
+  .mk-coluna { width: 100%; max-width: none; }
+}
+
+/* Comanda no celular: barra fixa no pé com o total e o atalho para fechar — o garçom
+   não precisa rolar o cardápio inteiro para conferir ou fechar. Só no toque. */
+.comanda-barra-toque { display: none; }
+@media (pointer: coarse), (max-width: 820px) {
+  .comanda-barra-toque {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    display: flex; align-items: center; justify-content: space-between; gap: .8rem;
+    min-height: 56px; padding: .6rem max(1rem, env(safe-area-inset-right)) calc(.6rem + env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+    background: var(--noturno); color: var(--pergaminho); text-decoration: none;
+    box-shadow: var(--sombra-3);
+  }
+  .comanda-barra-toque .letreiro { color: color-mix(in srgb, var(--pergaminho) 70%, transparent); }
+  .comanda-barra-toque strong { font-family: var(--fonte-titulo); font-size: 1.25rem; font-variant-numeric: tabular-nums; color: var(--lampiao-claro); }
+  .comanda-barra-toque:focus-visible { outline: 2px solid var(--lampiao); outline-offset: -3px; }
+  /* O conteúdo ganha respiro para a barra não cobrir o fim da comanda. */
+  .conteudo:has(.comanda-barra-toque) { padding-bottom: calc(3.2rem + 56px + env(safe-area-inset-bottom)); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   FAIXAS SEM VAZAR NO CANTO + CHIPS DA ESCALA (revisão 23/10, lote 2)
+   Borda grossa de um lado só, em caixa arredondada, afina no canto e parece
+   gradiente vazando. A faixa vira sombra INTERNA, que acompanha o raio.
+   ═══════════════════════════════════════════════════════════════ */
+.funil-coluna-cabeca { border-top: 0; padding-top: calc(.7rem + 3px); box-shadow: inset 0 3px 0 var(--cor-etapa, var(--fio-forte)); }
+.funil-card { --faixa: var(--fio-forte); border-left: 1px solid var(--fio); box-shadow: var(--sombra-1), inset 3px 0 0 var(--faixa); }
+.funil-card:hover { box-shadow: var(--sombra-2), inset 3px 0 0 var(--faixa); }
+.funil-card.fat-particular { --faixa: var(--info); }
+.funil-card.fat-agencia { --faixa: var(--lampiao); }
+.funil-card.fat-empresa { --faixa: var(--musgo); }
+.atencao-item { --faixa: var(--info); border-left: 1px solid var(--fio); box-shadow: var(--sombra-1), inset 3px 0 0 var(--faixa); }
+.atencao-item:hover { box-shadow: var(--sombra-2), inset 3px 0 0 var(--faixa); }
+.atencao-alerta { --faixa: var(--perigo); }
+.atencao-aviso { --faixa: var(--alerta); }
+.atencao-info { --faixa: var(--info); }
+.gov-fila-item { --faixa: var(--fio-forte); border-left: 1px solid var(--fio); box-shadow: var(--sombra-1), inset 3px 0 0 var(--faixa); }
+.gov-fila-item.fazendo { --faixa: var(--andamento); }
+.gov-ciclo-lista li { border-left: 0; box-shadow: inset 3px 0 0 var(--fio); }
+.gov-desfazer { border-left: 1px solid var(--fio); box-shadow: inset 3px 0 0 var(--sucesso); }
+.comanda-card { border-left: 1px solid var(--fio); box-shadow: var(--sombra-1), inset 3px 0 0 var(--lampiao); }
+.comanda-card:hover { box-shadow: var(--sombra-2), inset 3px 0 0 var(--lampiao); }
+.lb-occ { --faixa: var(--fio); border-left-width: 1px; box-shadow: var(--sombra-1), inset 3px 0 0 var(--faixa); }
+.lb-occ.lb-aberta { --faixa: var(--alerta); }
+.lb-occ.lb-em_andamento { --faixa: var(--info); }
+.lb-occ.lb-resolvida { --faixa: var(--sucesso); }
+
+/* Chips da Escala: etiqueta discreta (não pílula), nome com reticências e dois botões
+   redondos iguais, com o sinal centrado; violação = faixa interna colorida. */
+.escala-chip {
+  display: inline-flex; align-items: center; gap: .1rem;
+  min-height: 30px; padding: 0 .15rem 0 .6rem; margin: .15rem .2rem .15rem 0;
+  background: var(--superficie); color: var(--tinta);
+  border: 1px solid var(--fio-forte); border-radius: var(--raio-p); box-shadow: var(--sombra-1);
+  font-size: 0.8rem; font-weight: 600;
+}
+.escala-chip:hover { box-shadow: var(--sombra-2); border-color: color-mix(in srgb, var(--lampiao) 55%, var(--fio-forte)); }
+.escala-chip-nome { max-width: 11rem; overflow: hidden; text-overflow: ellipsis; margin-right: .25rem; }
+.escala-chip .he-add, .escala-chip .chip-x {
+  display: inline-grid; place-items: center; width: 24px; height: 24px; padding: 0; margin: 0;
+  border: 0; border-radius: 50%; background: transparent; color: var(--tinta-suave);
+  font: 600 1rem/1 var(--fonte-ui); cursor: pointer; filter: none;
+}
+.escala-chip .he-add { color: var(--lampiao-tinta); }
+.escala-chip .he-add:hover { background: color-mix(in srgb, var(--lampiao) 18%, transparent); color: var(--noturno); filter: none; }
+.escala-chip .chip-x:hover { background: var(--perigo-bg); color: var(--perigo); }
+.escala-chip.tem-viol.viol-perigo { background: var(--superficie); border-color: var(--perigo); box-shadow: var(--sombra-1), inset 3px 0 0 var(--perigo); }
+.escala-chip.tem-viol.viol-aviso { background: var(--superficie); border-color: var(--alerta); box-shadow: var(--sombra-1), inset 3px 0 0 var(--alerta); }
+.escala-chip .viol-dot { display: none; }
+@media (pointer: coarse) {
+  .escala-chip { min-height: 40px; }
+  .escala-chip .he-add, .escala-chip .chip-x { width: 36px; height: 36px; }
+}
+/* Hora extra e banco de horas: cartão próprio embaixo do chip, com tipo, horário e total. */
+.he-card {
+  --faixa: var(--alerta);
+  display: grid; grid-template-columns: 1fr auto auto; grid-template-rows: auto auto; align-items: center;
+  column-gap: .5rem; row-gap: .05rem; width: 100%; max-width: 18rem; margin: 0 0 .35rem;
+  padding: .35rem .3rem .35rem .65rem;
+  background: var(--superficie); color: var(--tinta); border: 1px solid var(--fio); border-radius: var(--raio-p);
+  box-shadow: inset 3px 0 0 var(--faixa); font-size: 0.74rem; font-weight: 500;
+}
+.he-card.banco { --faixa: var(--info); background: var(--superficie); color: var(--tinta); border-color: var(--fio); }
+.he-card.extra { --faixa: var(--alerta); background: var(--superficie); color: var(--tinta); border-color: var(--fio); }
+.he-card-tipo { grid-column: 1; grid-row: 1; white-space: nowrap; font-size: var(--rotulo-min); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--tinta-suave); }
+.he-card-horas { grid-column: 1; grid-row: 2; color: var(--tinta-suave); font-variant-numeric: tabular-nums; }
+.he-card-total { grid-column: 2; grid-row: 1 / span 2; font-size: 0.95rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--tinta); }
+.he-card .he-x {
+  grid-column: 3; grid-row: 1 / span 2; display: inline-grid; place-items: center; width: 24px; height: 24px; padding: 0;
+  border-radius: 50%; opacity: 1; color: var(--tinta-suave); font: 600 .95rem/1 var(--fonte-ui);
+}
+.he-card .he-x:hover { background: var(--perigo-bg); color: var(--perigo); opacity: 1; }
+
+/* Escala: resumo semanal de horas extras como cartão (saiu da lista de avisos). */
+.escala-he-resumo { display: flex; flex-direction: row; flex-wrap: wrap; align-items: start; gap: .8rem 2.2rem; padding: .85rem 1.1rem; margin: 0 0 1rem; }
+.escala-he-item { display: grid; gap: .1rem; }
+.escala-he-item strong { font-family: var(--fonte-titulo); font-size: 1.35rem; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+
+/* RODAPÉ EM LINHA:
+   com o menu aberto (e na gaveta) avatar, nome e Sair ficam na mesma linha — só o trilho
+   empilha o Sair acima do avatar. A troca anima altura e posição pelos tokens. */
+.sidebar-rodape { height: calc(var(--alvo) + 1.5rem + 1px); }
+.sidebar-rodape button.link { bottom: .75rem; }
+@media (width > 820px) {
+  .app.recolhida .sidebar-rodape { height: calc(2 * var(--alvo) + .5rem + 1.5rem + 1px); }
+  .app.recolhida .sidebar-rodape button.link { bottom: calc(.75rem + var(--alvo) + .5rem); }
+}
+
+/* ABAS NA MESMA ALTURA: nas telas de um módulo com barra de abas, o cabeçalho tem a mesma
+   altura mínima tenha ou não botões, e a barra nasce sempre no mesmo y — trocar de aba
+   não faz a barra subir e descer. O subtítulo da tela fica abaixo da barra. */
+.pagina-cabecalho:has(+ .abas-secao) { min-height: 2.75rem; align-items: center; margin-bottom: .6rem; }
+.pagina-cabecalho:has(+ .abas-secao) h1 { margin-block: 0; }
+.abas-secao + .subtitulo { margin-top: .9rem; }
+
+/* ABAS ANTES DO TÍTULO: no Estoque a barra de seções vem logo depois do nome do módulo e
+   ANTES do título da tela — assim ela nasce sempre no mesmo y, tenha a tela botões,
+   subtítulo ou não. O título passa a ser o da seção aberta. */
+.pagina-eyebrow + .abas-secao { margin: .35rem 0 1rem; }
+.abas-secao + .pagina-cabecalho { margin-top: .2rem; margin-bottom: 1.1rem; }
+
+/* BOTÃO DE RECOLHER NO CANTO: mesma posição nos dois estados (canto superior direito do
+   topo). Ao recolher, ele só acompanha a borda direita — anda em linha reta, não em
+   diagonal — e a seta gira. O símbolo do trilho continua centrado abaixo. */
+.sidebar-toggle { top: .7rem; right: .7rem; }

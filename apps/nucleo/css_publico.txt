@@ -115,6 +115,7 @@ cancelado
 @media (prefers-reduced-motion: reduce) ‖ html
 @media (prefers-reduced-motion: reduce) ‖ .botao-primario:active
 @media (prefers-reduced-motion: reduce) ‖ .botao-neutro:active
+@media (pointer: coarse), (max-width: 820px) ‖ :root
 @media (pointer: coarse), (max-width: 820px) ‖ .botao-primario
 @media (pointer: coarse), (max-width: 820px) ‖ .botao-neutro
 @media (max-width: 680px) ‖ .form-grade

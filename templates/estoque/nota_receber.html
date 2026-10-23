@@ -1,9 +1,10 @@
 {% extends "base.html" %}{% load nucleo_extras %}
 {% block titulo %}Receber {{ nota.referencia }} | Estoque{% endblock %}
 {% block conteudo %}<div class="eleg est-notas">
-<p class="pagina-eyebrow letreiro">Compras &amp; Estoque</p>
-<div class="pagina-cabecalho"><div><h1>Receber itens da nota</h1><p class="subtitulo">{{ nota.referencia }} · {{ nota.fornecedor_nome }}</p></div><a href="{% url 'estoque:nota' nota.pk %}" class="botao-neutro">Voltar à nota</a></div>
+<p class="pagina-eyebrow letreiro">Vendas &amp; Estoque</p>
 {% include "estoque/partials/nav.html" %}
+<div class="pagina-cabecalho"><h1>Receber itens da nota</h1><a href="{% url 'estoque:nota' nota.pk %}" class="botao-neutro">Voltar à nota</a></div>
+<p class="subtitulo">{{ nota.referencia }} · {{ nota.fornecedor_nome }}</p>
 <p class="nota-cartao bloco-fim">Informe somente o que chegou e foi aceito nesta entrega. Deixe a quantidade vazia nos itens que ainda não chegaram. Cada parcela pode ir para um local e lote diferentes.</p>
 <form method="post" id="nota-receber-form" class="est-nota-form" data-preservar-erros>
 {% csrf_token %}{{ form.non_field_errors }}{{ form.chave }}{{ form.chave.errors }}{{ form.versao_conferida }}{{ form.versao_conferida.errors }}{{ formset.management_form }}{{ formset.non_form_errors }}

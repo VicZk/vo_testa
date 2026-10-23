@@ -1,6 +1,6 @@
 {% extends "base.html" %}{% load nucleo_extras %}
 {% block titulo %}Ficha técnica · {{ produto.nome }}{% endblock %}
-{% block conteudo %}<div class="eleg"><p class="pagina-eyebrow letreiro">Compras &amp; Estoque</p><h1>Ficha técnica · {{ produto.nome }}</h1><p class="subtitulo">Informe o consumo de cada ingrediente para uma unidade vendida, na unidade base exibida junto ao ingrediente.</p><p class="bloco-fim"><a class="botao-neutro" href="{% url 'estoque:produto_suprimentos' produto.pk %}">Voltar ao produto</a></p>
+{% block conteudo %}<div class="eleg"><p class="pagina-eyebrow letreiro">Vendas &amp; Estoque</p><h1>Ficha técnica · {{ produto.nome }}</h1><p class="subtitulo">Informe o consumo de cada ingrediente para uma unidade vendida, na unidade base exibida junto ao ingrediente.</p><p class="bloco-fim"><a class="botao-neutro" href="{% url 'estoque:produto_suprimentos' produto.pk %}">Voltar ao produto</a></p>
 <form method="post" class="form-cartao" data-preservar-erros id="ficha-form">{% csrf_token %}{{ formset.management_form }}{{ formset.non_form_errors }}
 <div id="ficha-ingredientes">{% for form in formset %}<div class="cartao respiro bloco-fim" data-ingrediente>{{ form.non_field_errors }}{% for campo in form %}<div class="campo">{{ campo|rotulo }}{{ campo }}{{ campo.errors }}</div>{% endfor %}</div>{% endfor %}</div>
 <div class="acoes"><button type="button" class="botao-neutro" id="ficha-adicionar">Adicionar ingrediente</button><button class="botao-primario">Salvar ficha técnica</button></div></form>

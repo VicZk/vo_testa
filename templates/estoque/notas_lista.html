@@ -1,9 +1,10 @@
 {% extends "base.html" %}{% load moeda %}
 {% block titulo %}Notas fiscais | Estoque{% endblock %}
 {% block conteudo %}<div class="eleg est-notas">
-<p class="pagina-eyebrow letreiro">Compras &amp; Estoque</p>
-<div class="pagina-cabecalho"><div><h1>Notas fiscais</h1><p class="subtitulo">Registre a nota e acompanhe o que chegou e o que ainda falta receber.</p></div><a href="{% url 'estoque:nota_nova' %}" class="botao-primario">Cadastrar nota</a></div>
+<p class="pagina-eyebrow letreiro">Vendas &amp; Estoque</p>
 {% include "estoque/partials/nav.html" %}
+<div class="pagina-cabecalho"><h1>Notas fiscais</h1><a href="{% url 'estoque:nota_nova' %}" class="botao-primario">Cadastrar nota</a></div>
+<p class="subtitulo">Registre a nota e acompanhe o que chegou e o que ainda falta receber.</p>
 <form method="get" class="filtros bloco-fim est-notas-filtros">
   <div class="campo"><label for="nota-busca">Fornecedor, número ou chave de acesso</label><input id="nota-busca" name="q" value="{{ busca }}" type="search"></div>
   <div class="campo"><label for="nota-estado">Recebimento</label><select id="nota-estado" name="estado"><option value="">Todas as notas</option><option value="pendente"{% if estado == 'pendente' %} selected{% endif %}>Pendentes</option><option value="parcial"{% if estado == 'parcial' %} selected{% endif %}>Parciais</option><option value="concluida"{% if estado == 'concluida' %} selected{% endif %}>Concluídas</option></select></div>
