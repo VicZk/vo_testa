@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% load moeda %}
+{% block titulo %}Notas fiscais | Estoque{% endblock %}
+{% block conteudo %}<div class="eleg est-notas">
+<p class="pagina-eyebrow letreiro">Compras &amp; Estoque</p>
+<div class="pagina-cabecalho"><div><h1>Notas fiscais</h1><p class="subtitulo">Registre a nota e acompanhe o que chegou e o que ainda falta receber.</p></div><a href="{% url 'estoque:nota_nova' %}" class="botao-primario">Cadastrar nota</a></div>
+{% include "estoque/partials/nav.html" %}
+<form method="get" class="filtros bloco-fim est-notas-filtros">
+  <div class="campo"><label for="nota-busca">Fornecedor, número ou chave de acesso</label><input id="nota-busca" name="q" value="{{ busca }}" type="search"></div>
+  <div class="campo"><label for="nota-estado">Recebimento</label><select id="nota-estado" name="estado"><option value="">Todas as notas</option><option value="pendente"{% if estado == 'pendente' %} selected{% endif %}>Pendentes</option><option value="parcial"{% if estado == 'parcial' %} selected{% endif %}>Parciais</option><option value="concluida"{% if estado == 'concluida' %} selected{% endif %}>Concluídas</option></select></div>
+  <button class="botao-neutro">Filtrar</button>{% if busca or estado %}<a href="{% url 'estoque:notas' %}" class="botao-mini">Limpar</a>{% endif %}
+</form>
+<div class="quadro"><table class="tabela tabela-cartoes est-notas-tabela"><thead><tr><th>Nota</th><th>Fornecedor</th><th>Emissão</th><th>Recebimento</th><th class="num">Valor previsto</th><th>Abrir</th></tr></thead><tbody>
+{% for nota in pagina %}<tr><td data-rotulo="Nota"><div><a href="{% url 'estoque:nota' nota.pk %}">{{ nota.referencia }}</a><small class="camp-sub">{{ nota.total_itens }} ite{{ nota.total_itens|pluralize:"m,ns" }}</small></div></td><td data-rotulo="Fornecedor">{{ nota.fornecedor_nome }}</td><td data-rotulo="Emissão">{{ nota.emissao|date:"d/m/Y" }}</td><td data-rotulo="Recebimento"><span class="est-nota-status" data-status="{{ nota.status }}">{{ nota.status_label }}</span></td><td class="num" data-rotulo="Valor previsto">{{ nota.valor_total|intcomma_brl }}</td><td data-rotulo="Abrir"><a href="{% url 'estoque:nota' nota.pk %}" class="botao-mini" aria-label="Conferir {{ nota.referencia }}">Conferir nota</a></td></tr>
+{% empty %}<tr><td colspan="6"><p class="est-notas-vazio">{% if busca or estado %}Nenhuma nota corresponde a estes filtros.{% else %}As notas cadastradas aparecerão aqui. Cadastre a primeira para acompanhar as entregas.{% endif %}</p></td></tr>{% endfor %}
+</tbody></table></div>
+{% include "componentes/paginacao.html" with pagina=pagina %}
+</div>{% endblock %}

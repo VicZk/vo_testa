@@ -271,7 +271,7 @@ TIPOS_KARDEX = [
 @requer_modulo(Modulo.ESTOQUE)
 def kardex(request, pk):
     produto = get_object_or_404(Produto.objects.select_related("categoria"), pk=pk)
-    movimentos = produto.movimentos.select_related("local", "criado_por", "fornecedor")
+    movimentos = produto.movimentos.select_related("local", "criado_por", "fornecedor", "recebimento_nota__recebimento__nota")
 
     local_id = str(filtro_identificador(request.GET.get("local")) or "")
     if local_id:

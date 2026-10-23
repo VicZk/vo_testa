@@ -1,11 +1,17 @@
 from django.urls import path
 from django.views.generic import RedirectView
 
-from . import views, views_suprimentos
+from . import views, views_notas, views_suprimentos
 
 app_name = "estoque"
 
 urlpatterns = [
+    path("notas/", views_notas.notas, name="notas"),
+    path("notas/nova/", views_notas.nota_nova, name="nota_nova"),
+    path("notas/<int:pk>/", views_notas.nota_detalhe, name="nota"),
+    path("notas/<int:pk>/receber/", views_notas.nota_receber, name="nota_receber"),
+    path("notas/<int:pk>/anexos/", views_notas.nota_anexar, name="nota_anexar"),
+    path("notas/<int:pk>/anexos/<int:documento_id>/", views_notas.nota_documento, name="nota_documento"),
     path("compras/", views_suprimentos.compras, name="compras"),
     path("compras/receber/", views_suprimentos.compra_form, name="compra_receber"),
     path("produtos/<int:pk>/suprimentos/", views_suprimentos.produto_suprimentos, name="produto_suprimentos"),

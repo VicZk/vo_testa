@@ -58,7 +58,7 @@ def _formulario(request, contexto, template="estoque/suprimento_form.html"):
 @requer_modulo(Modulo.ESTOQUE)
 def compras(request):
     movimentos = MovimentoEstoque.objects.filter(tipo=MovimentoEstoque.Tipo.ENTRADA_COMPRA).select_related(
-        "produto", "local", "fornecedor", "criado_por").prefetch_related("lotes__lote")
+        "produto", "local", "fornecedor", "criado_por", "recebimento_nota__recebimento__nota").prefetch_related("lotes__lote")
     busca = request.GET.get("q", "").strip()
     if busca:
         movimentos = movimentos.filter(Q(produto__nome__icontains=busca) | Q(documento__icontains=busca)

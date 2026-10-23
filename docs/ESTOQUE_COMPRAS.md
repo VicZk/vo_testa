@@ -1,7 +1,8 @@
 # Compras, perecíveis e pratos
 
-Fluxo operacional incorporado em 22/10/2026. O estoque físico continua vindo
-do kardex do núcleo; embalagens, lotes e fichas técnicas usam esse mesmo motor.
+Fluxo operacional incorporado em 22/10/2026, com notas de entrada em 23/10.
+O estoque físico continua vindo do kardex do núcleo; notas, embalagens, lotes
+e fichas técnicas usam esse mesmo motor.
 O registro da entrega identifica o commit, os testes e o ambiente publicados.
 
 ## Antes de começar
@@ -45,6 +46,48 @@ do pagamento. Resolva o tópico após conferir entrega e obrigação; preserve a
 conversa como histórico. Esse controle é manual e depende de acesso ao Livro
 de ocorrências e das responsabilidades definidas pela pousada.
 
+## Cadastrar a nota e receber as entregas
+
+Em **Estoque → Notas → Cadastrar nota**, informe fornecedor, tipo de documento,
+número, série e emissão. A chave de acesso é opcional; quando informada, precisa
+ter 44 dígitos. Confira o CPF/CNPJ do fornecedor no cadastro antes de começar.
+Cadastre os itens e as quantidades previstas na unidade base ou na embalagem de
+compra, com o custo nessa mesma unidade. Uma nota aceita até 100 itens.
+
+**Cadastrar a nota não aumenta o estoque nem altera o custo do produto.** A nota
+guarda o que se espera receber. A ficha mostra, por item, as quantidades previstas,
+recebidas e pendentes; a situação passa de **Pendente** para **Parcial** e, ao
+completar todos os itens, para **Concluída**.
+
+Na ficha, abra **Receber itens** e informe em **Receber agora** somente o que chegou
+e foi aceito. Deixe vazios os itens que não chegaram. Escolha o local e, quando o
+produto controla validade, o lote. Cada nova entrega usa a mesma nota, respeitando
+o saldo pendente. Se um item chegar em lotes ou locais diferentes, registre as
+parcelas separadamente, reabrindo a tela para conferir o pendente atualizado.
+
+O recebimento grava todos os itens válidos daquela confirmação juntos e liga cada
+entrada à nota no kardex. Se houver erro em um item, a confirmação inteira fica
+sem efeito. A apresentação e o custo conferidos no cadastro da nota ficam
+preservados, mesmo que a embalagem seja alterada depois.
+
+A nota impede novo cadastro com a mesma identidade de fornecedor, tipo, número e
+série, ou com a mesma chave de acesso informada. Números e séries apenas numéricos
+ignoram zeros à esquerda. Sem CPF/CNPJ, a identificação usa o cadastro do fornecedor;
+evite cadastros duplicados da mesma empresa. Reenviar a mesma confirmação devolve
+o registro já concluído; reutilizar sua chave com outro conteúdo é recusado. Se
+outra pessoa receber enquanto a tela estiver aberta, atualize e confira novamente
+as quantidades antes de enviar.
+
+Anexe PDF, PNG, JPG ou XML no cadastro ou depois, na própria ficha: até dez arquivos
+de até 10 MB por nota. Um arquivo idêntico já anexado não é duplicado. Os documentos
+são privados, exigem login e acesso ao Estoque e não ganham endereço público em
+`media/`. Anexar XML apenas guarda o documento: os itens são transcritos pela equipe;
+não há importação automática, consulta ou validação fiscal na SEFAZ.
+
+Notas, itens e recebimentos formam histórico imutável. Confira os dados antes de
+registrar; esta etapa não oferece edição ou cancelamento da nota. Divergências
+devem ser registradas e conferidas pela gerência antes de movimentar o estoque.
+
 ## Receber na apresentação comprada
 
 Em **Produto → Embalagens e ficha técnica**, cadastre a apresentação:
@@ -56,25 +99,28 @@ Em **Produto → Embalagens e ficha técnica**, cadastre a apresentação:
 | Pacote de 500 g | Quilo | 0,500 |
 | Garrafa de 1 litro | Mililitro | 1000 |
 
-Em **Compras → Receber por embalagem**, confira fornecedor, documento, local,
-quantidade e custo por embalagem. A prévia mostra a conversão e o custo total.
+Use a embalagem no item da nota ou, para uma entrada avulsa, em
+**Compras → Receber por embalagem**. Na entrada avulsa, confira fornecedor,
+documento, local, quantidade e custo por embalagem. A prévia mostra a conversão
+e o custo total.
 Duas caixas de 12 unidades a R$ 60 por caixa entram como 24 unidades a R$ 5 por
 unidade. O valor de aquisição é preservado antes do arredondamento do custo
 unitário para quatro casas decimais.
 
-O recebimento guarda a embalagem e o fator usados na época. Editar a embalagem
+O recebimento avulso guarda a embalagem e o fator usados na época. Editar a embalagem
 não recalcula entradas antigas; alterar o fator enquanto a tela está aberta
 exige nova conferência. Reenviar o mesmo formulário não duplica o recebimento;
 usar sua chave com outro conteúdo é recusado.
 
-Receba somente a quantidade aceita. Em entrega parcial, registre cada parcela
-e identifique-a na observação, mantendo a referência do documento. Antes de
-abrir outro formulário, procure a nota no histórico para conferir se outra
-pessoa já registrou aquela parcela. A chave protege o reenvio do mesmo
-formulário; documentos podem aparecer em vários itens e parcelas.
+**Na entrada avulsa, o controle de duplicidade do documento continua manual.**
+Receba somente a quantidade aceita, identifique cada parcela na observação e
+procure o documento no histórico antes de abrir outro formulário. A chave protege
+o reenvio daquele formulário, mas não consolida documentos, itens e pendências.
+Para entregas parciais de uma mesma nota, prefira o fluxo **Notas** descrito acima.
+Não registre novamente como avulso um item já recebido pela nota.
 
-**Receber mercadoria não paga a compra.** Registre ou confira a conta a pagar
-no Financeiro e faça a baixa pelo procedimento financeiro já existente. O
+**Cadastrar a nota ou receber mercadoria não paga a compra.** Registre ou confira
+a conta a pagar no Financeiro e faça a baixa pelo procedimento financeiro existente. O
 recebimento não cria obrigação ou movimento de caixa automaticamente.
 
 ## Lotes, validade e correções
@@ -146,8 +192,9 @@ genéricas; os SVGs e suas licenças estão em `static/vendor/lucide/`.
   validade, perdas e Financeiro; adotar o tópico de compra no Livro de ocorrências.
 - Estoquista: conferir unidades, embalagens, fornecedores e saldo de cada local.
 - Cozinha: conferir fichas técnicas e etiquetas; identificar o saldo antigo.
-- Operação: ensaiar uma compra, transferência, venda de prato, cancelamento e
-  perda com dados de treinamento; conferir kardex, lotes e caixa ao fim.
+- Operação: ensaiar o cadastro de uma nota, duas entregas parciais, transferência,
+  venda de prato, cancelamento e perda com dados de treinamento; conferir itens
+  pendentes, kardex, lotes e caixa ao fim.
 
 Testes automatizados cobrem limites numéricos, repetição, rollback, disputa
 pelo último saldo, alteração concorrente da ficha, permissões, preservação dos

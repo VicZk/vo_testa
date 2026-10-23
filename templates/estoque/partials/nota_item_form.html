@@ -1,0 +1,12 @@
+{% load nucleo_extras %}
+<fieldset class="est-nota-item" data-nota-item>
+  <legend>Item <span data-item-numero>{{ numero }}</span></legend>
+  {{ item.non_field_errors }}{{ item.fator_conferido }}{{ item.fator_conferido.errors }}
+  <div class="est-nota-item-topo"><div class="campo">{{ item.produto|rotulo }}{{ item.produto }}{{ item.produto.errors }}</div><button type="button" class="botao-mini" data-nota-remover hidden>Remover item</button></div>
+  <div class="est-nota-campos">
+    <div class="campo">{{ item.embalagem|rotulo }}{{ item.embalagem }}{{ item.embalagem.errors }}<p class="ajuda" data-embalagem-ajuda>Deixe em unidade do produto para receber na unidade base.</p></div>
+    <div class="campo">{{ item.quantidade|rotulo }}{{ item.quantidade }}{{ item.quantidade.errors }}<p class="ajuda" data-quantidade-ajuda>Quantidade na unidade escolhida.</p></div>
+    <div class="campo">{{ item.custo_unidade_compra|rotulo }}{{ item.custo_unidade_compra }}{{ item.custo_unidade_compra.errors }}</div>
+  </div>
+  <span hidden>{{ item.DELETE }}</span>
+</fieldset>

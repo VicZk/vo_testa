@@ -9,6 +9,7 @@ As quatro movimentações (entrada, saída, transferência, ajuste) moram DENTRO
 {% endcomment %}
 {% with atual=request.resolver_match.url_name %}
 <nav class="est-abas abas-secao" aria-label="Seções do Estoque">
+  <a href="{% url 'estoque:notas' %}" class="est-aba"{% if 'nota' in atual %} aria-current="page"{% endif %}><span>Notas fiscais</span></a>
   <a href="{% url 'estoque:compras' %}" class="est-aba"{% if 'compra' in atual %} aria-current="page"{% endif %}><span>Compras</span></a>
   <a href="{% url 'estoque:lotes' %}" class="est-aba"{% if 'lote' in atual %} aria-current="page"{% endif %}><span>Lotes e validade</span></a>
   <a href="{% url 'estoque:posicao' %}" class="est-aba"{% if atual == 'posicao' %} aria-current="page"{% endif %}>

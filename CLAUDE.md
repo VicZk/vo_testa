@@ -39,6 +39,11 @@ Rotinas agendadas: `manage.py rotinas --grupo frequentes` (a cada 10 min) e
 
 ## Deploy, commit e push
 
+**Organização local:** todo o trabalho deste projeto deve permanecer dentro de
+`C:\Users\viczk\OneDrive\Desktop\Projects\Pousada`. Worktrees, ambientes de QA,
+scripts temporários e evidências ficam em `.codex-work/`, ignorado localmente pelo
+Git. Não criar pastas irmãs `Pousada-*` em `Projects` nem cópias do projeto em Temp.
+
 **NUNCA fazer deploy, commit ou push sem comando explícito do usuário.** Trabalhar
 normalmente no código local (editar, migrar, testar); versionar e subir, só quando
 ele mandar.

@@ -102,7 +102,7 @@
   </thead>
   <tbody>
     {% for l in linhas %}
-      <tr>
+      <tr id="movimento-{{ l.movimento.pk }}">
         <td class="nao-quebra">{{ l.movimento.criado_em|date:"d/m/Y" }}<small class="camp-sub">{{ l.movimento.criado_em|date:"H:i" }}</small></td>
         <td>
           {% comment %}Bolinha na cor do sentido (entra/sai) + o nome do tipo: a
@@ -117,7 +117,7 @@
         <td class="num">{{ l.movimento.custo_unitario|intcomma_brl }}</td>
         <td>
           {% if l.movimento.fornecedor %}{{ l.movimento.fornecedor.nome }}{% endif %}
-          {% if l.movimento.documento %}<small class="camp-sub">{{ l.movimento.documento }}</small>{% endif %}
+          {% if l.movimento.recebimento_nota %}<small class="camp-sub"><a href="{% url 'estoque:nota' l.movimento.recebimento_nota.recebimento.nota_id %}">{{ l.movimento.recebimento_nota.recebimento.nota.referencia }}</a></small>{% elif l.movimento.documento %}<small class="camp-sub">{{ l.movimento.documento }}</small>{% endif %}
           {% if not l.movimento.fornecedor and not l.movimento.documento %}<span class="celula-suave">—</span>{% endif %}
           <small class="camp-sub">por {{ l.movimento.criado_por.get_short_name|default:l.movimento.criado_por.username }}</small>
         </td>

@@ -57,6 +57,13 @@ from .financeiro import (
     registrar_auditoria,
 )
 from .logbook import ComentarioLogbook, EntradaLogbook
+from .notas_entrada import (
+    AnexoNotaEntrada,
+    ItemNotaEntrada,
+    ItemRecebimentoNotaEntrada,
+    NotaEntrada,
+    RecebimentoNotaEntrada,
+)
 from .suprimentos import (
     EmbalagemProduto,
     IngredienteFicha,
@@ -78,6 +85,7 @@ from .suprimentos import (
 from .usuarios import ModuloContratado, Usuario, modulo_ativo, modulos_ativos
 
 __all__ = [
+    "AnexoNotaEntrada", "ItemNotaEntrada", "ItemRecebimentoNotaEntrada", "NotaEntrada", "RecebimentoNotaEntrada",
     "EmbalagemProduto", "IngredienteFicha", "LoteEstoque", "RegistroLote",
     "composicao_estoque", "conferir_versao_ficha", "devolver_movimentos",
     "disponibilidade_produtos", "identificar_saldo", "registrar_compra",

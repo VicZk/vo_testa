@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% load nucleo_extras %}
+{% block titulo %}Receber {{ nota.referencia }} | Estoque{% endblock %}
+{% block conteudo %}<div class="eleg est-notas">
+<p class="pagina-eyebrow letreiro">Compras &amp; Estoque</p>
+<div class="pagina-cabecalho"><div><h1>Receber itens da nota</h1><p class="subtitulo">{{ nota.referencia }} · {{ nota.fornecedor_nome }}</p></div><a href="{% url 'estoque:nota' nota.pk %}" class="botao-neutro">Voltar à nota</a></div>
+{% include "estoque/partials/nav.html" %}
+<p class="nota-cartao bloco-fim">Informe somente o que chegou e foi aceito nesta entrega. Deixe a quantidade vazia nos itens que ainda não chegaram. Cada parcela pode ir para um local e lote diferentes.</p>
+<form method="post" id="nota-receber-form" class="est-nota-form" data-preservar-erros>
+{% csrf_token %}{{ form.non_field_errors }}{{ form.chave }}{{ form.chave.errors }}{{ form.versao_conferida }}{{ form.versao_conferida.errors }}{{ formset.management_form }}{{ formset.non_form_errors }}
+{% for parcela in formset %}{% with item=parcela.item_nota %}<fieldset class="cartao respiro est-nota-parcela" data-nota-parcela="{{ item.pk }}"><legend>{{ item.produto_nome|default:"Item da nota" }}</legend>
+{{ parcela.non_field_errors }}{{ parcela.item }}{{ parcela.item.errors }}
+<p class="est-nota-unidade">{% if item.embalagem_nome %}Receber em {{ item.embalagem_nome }} · {{ item.fator|floatformat:"-3" }} {{ item.unidade_base }} por embalagem{% else %}Receber na unidade base: {{ item.unidade_base }}{% endif %}</p>
+<dl class="est-nota-resumo est-nota-resumo-item"><div><dt>Previsto</dt><dd>{{ item.quantidade|floatformat:"-3" }}</dd></div><div><dt>Recebido</dt><dd>{{ item.quantidade_recebida|floatformat:"-3" }}</dd></div><div><dt>Pendente</dt><dd>{{ item.quantidade_pendente|floatformat:"-3" }}</dd></div></dl>
+<div class="est-nota-campos"><div class="campo">{{ parcela.quantidade|rotulo }}{{ parcela.quantidade }}{{ parcela.quantidade.errors }}</div><div class="campo">{{ parcela.local|rotulo }}{{ parcela.local }}{{ parcela.local.errors }}</div><div class="campo">{{ parcela.lote|rotulo }}{{ parcela.lote }}{{ parcela.lote.errors }}<p class="ajuda">{% if item.produto.controla_validade %}Obrigatório para este produto. Confira o código e a validade.{% else %}Opcional para este produto.{% endif %}</p></div></div>
+</fieldset>{% endwith %}{% empty %}<p class="cartao respiro">Todos os itens desta nota já foram recebidos.</p>{% endfor %}
+{% if formset.total_form_count %}<section class="cartao respiro est-nota-secao"><div class="campo">{{ form.observacao|rotulo }}{{ form.observacao }}{{ form.observacao.errors }}</div><p class="ajuda">Lote ainda não cadastrado? <a href="{% url 'estoque:lote_novo' %}" target="_blank" rel="noopener">Cadastrar lote em outra aba</a>. Depois, reabra esta tela para escolher o novo lote.</p></section><div class="acoes est-nota-acoes"><button class="botao-primario" type="submit">Registrar recebimento</button><a href="{% url 'estoque:nota' nota.pk %}" class="botao-neutro">Cancelar</a></div>{% endif %}
+</form></div>{% endblock %}

@@ -9,6 +9,24 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 23/10/2026: notas de entrada e ajustes de interface
+
+- A nota reúne fornecedor, número, série, emissão e itens previstos. Cadastrar
+  o documento preserva a previsão; o estoque e o custo mudam ao receber os itens.
+- Cada entrega informa quantidade, local e lote, mantém o saldo pendente e liga
+  o movimento à nota no kardex. Reenvios não duplicam a confirmação; duas abas
+  precisam conferir a versão atual antes de registrar uma nova parcela.
+- A identificação do documento evita notas repetidas. PDF, PNG, JPG e XML ficam
+  privados, acessíveis apenas a usuários autorizados no Estoque. Os anexos são
+  arquivados sem importação automática ou consulta fiscal externa.
+- O [manual de compras](docs/ESTOQUE_COMPRAS.md) diferencia notas e recebimentos
+  avulsos e mantém a conferência financeira no fluxo próprio. A migração
+  `nucleo.0061_notas_entrada` acrescenta cinco modelos, sem reescrever o kardex.
+- Campos de RH se reorganizam pela largura disponível, inclusive no cadastro
+  e na edição do funcionário; os cartões do NPS mantêm espaço entre as seções.
+- O formulário de Nova ideia fica centralizado no desktop. No celular, mantém
+  campos e ações acessíveis; tabelas de notas se apresentam como cartões completos.
+
 ## 23/10/2026: interface consistente e fluxos conferidos em uso real
 
 - Menus internos ficam estáveis durante a navegação, sem a duplicação da

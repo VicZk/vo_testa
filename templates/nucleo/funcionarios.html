@@ -17,7 +17,7 @@
   {% endfor %}
 </div>
 
-<table class="tabela">
+<table class="tabela func-lista">
   <thead>
     <tr><th>Nome</th><th>Cargo · Setor</th><th>Turno</th><th>Admissão</th><th>Acesso</th><th></th></tr>
   </thead>
@@ -27,10 +27,10 @@
           hx-get="{% url 'funcionario_painel' item.f.pk %}" hx-target="#painel-{{ item.f.pk }}"
           hx-swap="innerHTML" hx-trigger="click once">
         <td><strong>{{ item.f.pessoa.nome }}</strong>{% if item.f.usuario %} <small class="ajuda-inline">{{ item.f.usuario.username }}</small>{% endif %}</td>
-        <td>{{ item.f.cargo }}{% if item.f.setor %} · {{ item.f.setor }}{% endif %}</td>
-        <td>{% if item.f.turno %}{{ item.f.get_turno_display }}{% if item.f.expediente_inicio %} · {{ item.f.expediente_inicio|time:"H:i" }}–{{ item.f.expediente_fim|time:"H:i" }}{% endif %}{% else %}—{% endif %}</td>
-        <td>{{ item.f.admissao|date:"d/m/Y"|default:"—" }}</td>
-        <td>
+        <td data-rotulo="Cargo e setor">{{ item.f.cargo }}{% if item.f.setor %} · {{ item.f.setor }}{% endif %}</td>
+        <td data-rotulo="Turno">{% if item.f.turno %}{{ item.f.get_turno_display }}{% if item.f.expediente_inicio %} · {{ item.f.expediente_inicio|time:"H:i" }}–{{ item.f.expediente_fim|time:"H:i" }}{% endif %}{% else %}—{% endif %}</td>
+        <td data-rotulo="Admissão">{{ item.f.admissao|date:"d/m/Y"|default:"—" }}</td>
+        <td data-rotulo="Acesso">
           {# Nível de acesso é rótulo de dado, não status. #}
           {% if item.nivel == 'Gerência' %}<span class="rotulo-dado">Gerência</span>
           {% elif item.nivel == 'Operador' %}<span class="rotulo-dado">Operador</span>

@@ -24,6 +24,8 @@ tela prometer um conteúdo que não existe.{% endcomment %}
   {% endfor %}
 </nav>
 
+{% if operacao == 'entrada' %}<p class="nota-cartao bloco-fim">Com nota fiscal? <a href="{% url 'estoque:notas' %}">Receber uma nota cadastrada</a> ou <a href="{% url 'estoque:nota_nova' %}">cadastrar a nota</a> para acompanhar os itens e as entregas. Para uma entrada avulsa, use o formulário abaixo.</p>{% endif %}
+
 <form method="post" class="est-mov" x-data="movEstoque()"
       @combo-mudou="if ($event.detail.campo === 'produto') produto = $event.detail.id">
   {% csrf_token %}

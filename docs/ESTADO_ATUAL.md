@@ -51,6 +51,12 @@ Complemento operacional de 22/10: recebimento com conversão de embalagens, lote
 validade, perdas e fichas técnicas foram incorporados ao estoque. O
 [manual de compras](ESTOQUE_COMPRAS.md) separa as funções do sistema do controle
 auxiliar de solicitação/aprovação e da conferência financeira.
+Complemento de 23/10: notas de entrada reúnem fornecedor, documento e itens
+previstos, com anexos privados e recebimentos parciais ligados ao kardex. O cadastro
+da nota não altera saldo ou custo; cada entrega confere o pendente e protege contra
+reenvios e decisões de outra aba. O recebimento avulso conserva o controle manual
+de duplicidade do documento. A transcrição é manual, sem consulta à SEFAZ nem
+geração automática de contas a pagar; os limites estão no mesmo manual.
 Quartos, temporadas e tabela de preços validam o envio completo antes de gravar.
 Em erro, a edição permanece preenchida e o cadastro anterior fica preservado.
 Na tabela, deixar uma tarifa inteira vazia remove a exceção; um campo ausente

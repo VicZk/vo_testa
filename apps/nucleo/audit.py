@@ -21,6 +21,7 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from django.apps import apps as django_apps
+from django.db.models import BinaryField
 from django.db.models.signals import post_delete, post_save, pre_save
 
 _contexto = threading.local()
@@ -63,7 +64,7 @@ CAMPOS_SENSIVEIS = {"salario"}
 
 # Documento e nascimento (LGPD, minimização): a trilha registra QUE mudou, nunca o valor
 # — o valor já mora no cadastro, e a trilha é lida e exportada por mais gente.
-CAMPOS_PII = {"documento", "documento_numero", "cpf", "rg", "passaporte",
+CAMPOS_PII = {"documento", "documento_numero", "chave_acesso", "cpf", "rg", "passaporte",
               "nascimento", "data_nascimento"}
 _OCULTO = "•••"
 
@@ -196,7 +197,10 @@ def _snapshot(instance, campos=None) -> dict:
     """Valores dos campos concretos; com `campos` (update_fields), só esses."""
     dados = {}
     for campo in instance._meta.concrete_fields:
-        if campo.name in CAMPOS_IGNORADOS or campo_credencial(campo.name) or campo.primary_key:
+        # Documentos privados ficam no modelo de origem; a trilha guarda apenas
+        # seus metadados e nunca uma segunda cópia do conteúdo do arquivo.
+        if (campo.name in CAMPOS_IGNORADOS or campo_credencial(campo.name)
+                or campo.primary_key or isinstance(campo, BinaryField)):
             continue
         if campos is not None and campo.name not in campos and campo.attname not in campos:
             continue
