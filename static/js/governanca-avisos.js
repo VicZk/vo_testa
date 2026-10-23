@@ -17,10 +17,11 @@
       if (!Number.isSafeInteger(pendentes) || pendentes < 0) return;
       const numero = badge.querySelector('.nav-badge-numero');
       if (numero) numero.textContent = pendentes > 99 ? '99+' : String(pendentes);
-      const descricao = `${pendentes} serviço(s) de limpeza pendente(s)`;
+      const servicos = `${pendentes} serviço${pendentes === 1 ? '' : 's'}`;
+      const descricao = `${servicos} de limpeza pendente${pendentes === 1 ? '' : 's'}`;
       badge.setAttribute('aria-label', descricao);
       badge.removeAttribute('title');
-      badge.setAttribute('data-dica', `${pendentes} serviço(s) de limpeza aguardando início. Abrir a lista.`);
+      badge.setAttribute('data-dica', `${servicos} de limpeza aguardando início. Abrir a lista.`);
       badge.setAttribute('data-dica-lado', 'direita');
       if (pendentes === 0 && document.activeElement === badge) {
         badge.closest('.nav-item')?.querySelector('.nav-item-principal')?.focus({preventScroll: true});
@@ -32,7 +33,7 @@
         const aviso = document.querySelector('[data-governanca-atualizacao]');
         if (aviso) aviso.hidden = false;
         else if (!document.querySelector('[data-central-pendencias]') && typeof window.toast === 'function') {
-          window.toast(`Governança: ${pendentes} serviço(s) aguardando início. Abra Pendências para consultar a lista.`, 'info');
+          window.toast(`Governança: ${servicos} aguardando início. Abra Pendências para consultar a lista.`, 'info');
         }
       }
       versao = atual;

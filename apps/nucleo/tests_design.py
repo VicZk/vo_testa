@@ -515,9 +515,9 @@ class DesenhadoParaODedoTests(TestCase):
                       ".conteudo .ajuda, .conteudo .bloco-subtitulo"):
             bloco = re.search(rf"\n  {re.escape(regra)} \{{([^}}]*)\}}", self.toque)
             self.assertIsNotNone(bloco, regra)
-            tamanho = re.search(r"font-size: \.(\d+)rem", bloco.group(1))
+            tamanho = re.search(r"font-size: ([\d.]+)rem", bloco.group(1))
             self.assertIsNotNone(tamanho, regra)
-            self.assertGreaterEqual(int(tamanho.group(1)), 80, regra)   # ≥ .80rem
+            self.assertGreaterEqual(float(tamanho.group(1)), .8, regra)
 
     def test_sobreposicao_encosta_embaixo_no_toque(self):
         """O modal nasce a 6vh do TOPO: no celular as ações dele caem longe do
@@ -582,7 +582,7 @@ class CorredorDaGovernancaTests(TestCase):
     O ESTADO do quarto saía num rótulo de 9 px em maiúsculas (o "Pronto" azul
     quase desaparecia no fundo azul-noite), o maior texto do bloco era o TIPO do
     quarto, e "a limpar" e "em limpeza" tinham o mesmo fundo. Esta seção é a
-    exceção de hex da casa (paleta noturna própria): o contrato é que todo estado
+    paleta noturna por tokens: o contrato é que todo estado
     passe 4,5:1 nas DUAS pontas do gradiente do seu bloco.
     """
 
@@ -598,15 +598,21 @@ class CorredorDaGovernancaTests(TestCase):
     def setUp(self):
         self.css = CSS.read_text(encoding="utf-8").replace("\r\n", "\n")
 
-    def _cor(self, seletor):
-        achado = re.search(rf"{re.escape(seletor)} \{{ color: (#[0-9A-Fa-f]{{6}}); \}}",
-                           self.css)
+    def _resolver_cores(self, valor):
+        tokens = dict(re.findall(r"(--[\w-]+):\s*(#[0-9A-Fa-f]{6})\s*;", self.css))
+        return re.sub(r"var\((--[\w-]+)\)", lambda m: tokens[m.group(1)], valor)
+
+    def _cor(self, seletor, propriedade="color"):
+        achado = re.search(rf"{re.escape(seletor)} \{{\s*{propriedade}: ([^;]+);", self.css)
         self.assertIsNotNone(achado, seletor)
-        return achado.group(1)
+        return self._resolver_cores(achado.group(1))
 
     def test_cada_estado_passa_contraste_nas_duas_pontas_do_gradiente(self):
-        for classe, fundos in self.ESTADOS.items():
+        for classe in self.ESTADOS:
             cor = self._cor(f".corredor-gov .{classe} .porta-estado")
+            fundo_declarado = self._cor(f".corredor-gov .porta.{classe}", "background")
+            fundos = re.findall(r"#[0-9A-Fa-f]{6}", fundo_declarado)
+            self.assertEqual(len(fundos), 2, classe)
             for fundo in fundos:
                 self.assertGreaterEqual(
                     _contraste(cor, fundo), 4.5,
@@ -616,11 +622,8 @@ class CorredorDaGovernancaTests(TestCase):
         """Porta com trinco de uma cor e texto de outra dava dois sinais."""
         for classe in self.ESTADOS:
             texto = self._cor(f".corredor-gov .{classe} .porta-estado")
-            trinco = re.search(
-                rf"\.corredor-gov \.{re.escape(classe)} \.porta-fecho \{{ background: (#[0-9A-Fa-f]{{6}})",
-                self.css)
-            self.assertIsNotNone(trinco, classe)
-            self.assertEqual(trinco.group(1), texto, classe)
+            trinco = self._cor(f".corredor-gov .{classe} .porta-fecho", "background")
+            self.assertEqual(trinco, texto, classe)
 
     def test_a_limpar_e_em_limpeza_nao_compartilham_o_fundo(self):
         fundos = {}
@@ -664,13 +667,16 @@ class MovimentoDaNavegacaoTests(TestCase):
         self.base = (Path(settings.BASE_DIR) / "templates" / "base.html").read_text(encoding="utf-8")
 
     def test_so_o_conteudo_anima_na_troca_de_pagina(self):
-        """A transição pegava a página inteira como um bloco só: menu e barra do
-        topo esmaeciam e subiam junto com o conteúdo a cada clique — a "piscada"
-        (diferença média de 62/255 na faixa do menu aos 40 ms; agora < 1). E valia
-        para TODA troca do HTMX, até cada tecla num filtro."""
+        """Abas mantêm shell/cabeçalho estáveis e animam somente os blocos novos.
+        O E2E mede opacidade, alvos e presença de movimento quadro a quadro."""
         self.assertNotIn('"globalViewTransitions": true', self.base)
         nav = re.search(r'<nav id="menu-principal"[^>]*>', self.base).group(0)
-        self.assertIn("transition:true", nav)
+        self.assertNotIn("transition:true", nav)
+        self.assertIn('hx-target="#conteudo"', nav)
+        navegacao = (Path(settings.BASE_DIR) / "static/js/navegacao.js").read_text(encoding="utf-8")
+        self.assertNotIn("conteudo.animate(", navegacao)
+        self.assertIn("navegacao-conteudo-local", navegacao)
+        self.assertIn("prefers-reduced-motion: reduce", navegacao)
         self.assertRegex(self.css, r"@view-transition \{ navigation: auto; \}")
         for seletor, nome in ((".sidebar", "menu"), (".topbar", "topo"), (".conteudo", "conteudo")):
             self.assertIn(f"{seletor} {{ view-transition-name: {nome}; }}", self.css)
@@ -696,7 +702,10 @@ class MovimentoDaNavegacaoTests(TestCase):
         self.assertIn("TOAST_ICO", self.base)
         # O erro não some sozinho: quem perde a mensagem perde o motivo.
         self.assertIn("toast-error", self.base)
-        self.assertRegex(self.base, r"classList\.contains\('toast-error'\)\)\s*return;")
+        self.assertRegex(self.base, r"else if \(!el\.classList\.contains\('toast-error'\)[^{]*\{\s*"
+                         r"temporizadoresToast\.set\(el, setTimeout")
+        self.assertIn("if (el.hidden)", self.base)
+        self.assertIn("clearTimeout(temporizadoresToast.get(el))", self.base)
 
     def test_largura_da_sidebar_anima(self):
         bloco = re.search(r"\n\.app \{([^}]*)\}", self.css)
@@ -851,7 +860,11 @@ class MenuLateralTests(TestCase):
             self.assertIn("overflow: hidden", bloco.group(1), seletor)
         self.assertRegex(self.base, r'<span class="marca-janela"><img[^>]*class="marca-full"')
         self.assertRegex(self.base,
-                         r'<span class="usuario-texto">[\s\S]{0,200}usuario-nome[\s\S]{0,200}selo')
+                         r'<span class="usuario-texto">[\s\S]{0,200}usuario-nome')
+        rodape = self.base.split('<div class="sidebar-rodape">', 1)[1].split('</aside>', 1)[0]
+        self.assertNotIn('selo-alerta', rodape)
+        self.assertNotIn('Verificação em duas etapas desativada', rodape)
+        self.assertIn("{% url 'mfa_config' %}", rodape)
 
     def test_o_que_muda_de_lugar_desliza_com_os_tokens(self):
         """O botão de recolher e o Sair mudam de lugar entre os estados, e o
@@ -1382,7 +1395,7 @@ class CorSoPorTokenTests(TestCase):
         achados = []
         for arq in sorted(raiz.rglob("*.html")):
             rel = arq.relative_to(raiz).as_posix()
-            if "email" in rel or rel.startswith("site/") or rel in self.FORA:
+            if rel in {"comercial/email/proposta.html", "comercial/email/campanha.html", "reservas/email/kit_contingencia.html"} or rel.startswith("site/") or rel in self.FORA:
                 continue
             css = "\n".join(re.findall(r"<style[^>]*>(.*?)</style>", arq.read_text(encoding="utf-8"), re.S))
             literais = re.findall(r"#[0-9A-Fa-f]{3,8}\b|rgba?\([^)]*\)", css)
@@ -1411,7 +1424,7 @@ class SemEmojiNoCrmTests(TestCase):
         achados = []
         for arq in sorted(raiz.rglob("*.html")):
             rel = arq.relative_to(raiz).as_posix()
-            if rel.startswith(("site/", "lp/")) or "email" in rel or rel in self.FORA:
+            if rel.startswith(("site/", "lp/")) or rel in {"comercial/email/proposta.html", "comercial/email/campanha.html", "reservas/email/kit_contingencia.html"} or rel in self.FORA:
                 continue
             emojis = [e for e in self.EMOJI.findall(arq.read_text(encoding="utf-8"))
                       if e not in self.GLIFOS]

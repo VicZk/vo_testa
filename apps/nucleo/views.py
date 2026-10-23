@@ -432,21 +432,21 @@ def pessoas(request, perfil=None):
             | Q(email__icontains=busca)
         )
 
-    if perfil:  # tela focada: só aquele papel, sem chips de outros
-        titulo, chave, novo_papel = PERFIS_PESSOA[perfil]
-        pagina = paginar(request, base.filter(PAPEL_FILTROS[chave][1]))
-        return render(request, "nucleo/pessoas.html", {
-            "pessoas": pagina, "pagina": pagina,
-            "busca": busca, "papel": chave, "perfil": perfil,
-            "titulo": titulo, "novo_papel": novo_papel, "filtros": [],
-        })
-
     # Contadores por papel respeitam a busca atual.
     filtros = [{"chave": "", "rotulo": "Todos", "total": base.count()}]
     for chave, (rotulo, condicao) in PAPEL_FILTROS.items():
         filtros.append(
             {"chave": chave, "rotulo": rotulo, "total": base.filter(condicao).count()}
         )
+
+    if perfil:  # mantém o recorte e oferece navegação para os demais papéis
+        titulo, chave, novo_papel = PERFIS_PESSOA[perfil]
+        pagina = paginar(request, base.filter(PAPEL_FILTROS[chave][1]))
+        return render(request, "nucleo/pessoas.html", {
+            "pessoas": pagina, "pagina": pagina,
+            "busca": busca, "papel": chave, "perfil": perfil,
+            "titulo": titulo, "novo_papel": novo_papel, "filtros": filtros,
+        })
 
     lista = base
     if papel in PAPEL_FILTROS:
@@ -678,7 +678,7 @@ def tipo_uh_form(request, pk=None):
     return render(
         request,
         "nucleo/form_simples.html",
-        {"form": form, "titulo": "Tipo de quarto", "voltar": "estrutura"},
+        {"form": form, "titulo": f"Editar {tipo.nome}" if tipo else "Novo tipo de quarto", "voltar": "estrutura"},
     )
 
 
@@ -924,7 +924,7 @@ def temporada_form(request, pk=None):
     return render(
         request,
         "nucleo/temporada_form.html",
-        {"form": form, "titulo": "Temporada", "voltar": "temporadas",
+        {"form": form, "titulo": f"Editar {temporada.nome}" if temporada else "Nova temporada", "voltar": "temporadas",
          "temporada": temporada, "tarifas_temporada": _tarifas_temporada(temporada, request)},
     )
 
@@ -1080,7 +1080,7 @@ def tabela_precos(request):
                     for k, rotulo in _CANAIS_CUSTO]
 
     return render(request, "nucleo/tabela_precos.html",
-                  {"colunas": colunas, "grupos": grupos, "day_use": day_use,
+                  {"colunas": colunas, "grupos": grupos, "day_use": day_use, "total_quartos": len(uhs),
                    "parametros": parametros, "custos_canal": custos_canal})
 
 

@@ -1,8 +1,10 @@
-{% load static nucleo_extras %}
+{% load static nucleo_extras navegacao_extras %}
+{% navegacao_ativa request as nav_ativa %}
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" class="sem-js">
 <head>
   <meta charset="utf-8">
+  <script>document.documentElement.classList.replace("sem-js", "com-js");</script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block titulo %}CRM Vô Testa{% endblock %}</title>
   <link rel="icon" href="{% static 'img/simbolo-dourado.png' %}" type="image/png">
@@ -14,8 +16,7 @@
   `Fluid` já na execução, durante o parse — com defer ele ainda não existiria.{% endcomment %}
   <script src="{% static 'js/fluid.js' %}"></script>
   {# Embrulha as tabelas de dados num contêiner rolante (ver o próprio arquivo). #}
-  <script src="{% static 'vendor/chartjs/chart.umd.min.js' %}" defer></script>
-  <script src="{% static 'js/graficos.js' %}" defer></script>
+  <script src="{% static 'js/graficos.js' %}" data-chart-src="{% static 'vendor/chartjs/chart.umd.min.js' %}" defer></script>
   <script src="{% static 'js/tabela-rol.js' %}" defer></script>
   {# Validação em pt-BR no lugar do balão em inglês do navegador. #}
   <script src="{% static 'js/form-pt.js' %}" defer></script>
@@ -30,14 +31,13 @@
   <script src="{% static 'js/copiar.js' %}" defer></script>
   <script src="{% static 'js/governanca-avisos.js' %}" defer></script>
   <script src="{% static 'js/pendencias.js' %}" defer></script>
+  <script src="{% static 'js/retorno-pendencias.js' %}" defer></script>
   <script src="{% static 'js/sidebar.js' %}" defer></script>
   <script src="{% static 'js/navegacao.js' %}" defer></script>
-  {% comment %}Movimento na navegação: a View Transition vale só para a troca de
-  página (o hx-boost do menu leva `transition:true`; a navegação comum, o
-  `@view-transition` do app.css). As trocas parciais do HTMX (item na comanda,
-  filtro, ronda) animam só o pedaço trocado, pelas classes .htmx-swapping/
-  .htmx-settling. Antes valia para TODA troca: a página inteira — menu
-  incluído — esmaecia a cada clique e até a cada tecla num filtro.{% endcomment %}
+  {% comment %}navegacao.js compara blocos e anima somente o que mudou, mantendo
+  menu, título e abas estáveis. Fragmentos HTMX (item na comanda, filtro, ronda)
+  preservam seu movimento local pelas classes .htmx-swapping/.htmx-settling.
+  A página inteira nunca esmaece ao navegar entre as seções de um módulo.{% endcomment %}
   {# HTMX e Alpine servidos pelo próprio sistema (static/vendor/), não pelo unpkg. #}
   <script src="{% static 'vendor/htmx-2.0.4.min.js' %}" defer></script>
   <script>
@@ -52,7 +52,9 @@
         q: "", open: false, sel: "", itens: [], idx: -1, cid: "",
         iniciarCombo() {
           this.cid = this.$el.dataset.dados || "combo";
-          this.itens = JSON.parse(document.getElementById(this.$el.dataset.dados).textContent);
+          const dados = this.$el.closest('form')?.querySelector('[id="' + this.$el.dataset.dados + '"]')
+            || document.getElementById(this.$el.dataset.dados);
+          this.itens = JSON.parse(dados.textContent);
           const inicial = this.$el.dataset.sel;
           if (inicial) {
             this.sel = inicial;
@@ -200,6 +202,10 @@
 {% if user.is_authenticated and not tela_acesso %}
 {% with atual=request.resolver_match.url_name %}
 <div class="app" id="app">
+  <script>
+    try { if (localStorage.getItem('sidebar') !== 'aberta') document.getElementById('app').classList.add('recolhida'); }
+    catch (_) { document.getElementById('app').classList.add('recolhida'); }
+  </script>
   <div class="sidebar-backdrop" onclick="fecharSidebarMobile()"></div>
   <aside class="sidebar">
     <div class="sidebar-topo">
@@ -224,45 +230,45 @@
     {% endif %}
 
     <nav id="menu-principal" aria-label="Menu principal" data-rolagem-chave="votesta:menu:{% url 'dashboard' %}:{{ user.pk }}"
-         hx-boost="true" hx-target="#conteudo" hx-select="#conteudo" hx-sync="#menu-principal:replace"
-         hx-swap="outerHTML show:none transition:true">
+         hx-boost="true" hx-target="#conteudo" hx-select="#conteudo" hx-sync="#conteudo:replace"
+         hx-swap="outerHTML show:none settle:0">
       <div class="nav-grupo">
-        <a href="{% url 'dashboard' %}" class="nav-item {% if atual == 'dashboard' %}ativo{% endif %}" title="Visão geral">
+        <a href="{% url 'dashboard' %}" class="nav-item {% if nav_ativa == 'dashboard' %}ativo{% endif %}" title="Visão geral" data-nav="dashboard">
           <svg viewBox="0 0 24 24" class="ico"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
           <span class="rotulo">Visão geral</span>
         </a>
-        <a href="{% url 'pendencias' %}" class="nav-item {% if atual == 'pendencias' %}ativo{% endif %}" title="Pendências das suas áreas">
+        <a href="{% url 'pendencias' %}" class="nav-item {% if nav_ativa == 'pendencias' %}ativo{% endif %}" title="Pendências das suas áreas" data-nav="pendencias">
           <svg viewBox="0 0 24 24" class="ico"><path d="M9 5h11M9 12h11M9 19h11M3 5l1 1 2-2M3 12l1 1 2-2M3 19l1 1 2-2"/></svg>
           <span class="rotulo">Pendências</span>
         </a>
       </div>
 
       {% for grupo in menu_modulos %}
-        <div class="nav-grupo">
-          <span class="nav-titulo letreiro">{{ grupo.titulo }}</span>
+        <details class="nav-grupo" data-menu-grupo="{{ grupo.titulo|slugify }}" open>
+          <summary class="nav-titulo letreiro">{{ grupo.titulo }}</summary>
           {% for m in grupo.itens %}
             {% if m.url %}
               {% if m.codigo == 'governanca' %}
-              <div class="nav-item nav-item-dividido {% if request.resolver_match.namespace == m.codigo %}ativo{% endif %}" title="{{ m.nome }}">
+              <div class="nav-item nav-item-dividido {% if nav_ativa == m.codigo %}ativo{% endif %}" title="{{ m.nome }}" data-nav="{{ m.codigo }}">
                 <a class="nav-item-principal" href="{{ m.url }}" aria-label="{{ m.nome }}">
                   {% include "componentes/icone_modulo.html" with codigo=m.codigo %}
                   <span class="rotulo">{{ m.nome }}</span>
                 </a>
-                <a class="nav-badge nav-badge-link" data-governanca-avisos="{% url 'governanca:atualizacoes' %}" href="{% url 'pendencias' %}?origem=governanca&amp;estado=pendente" title="{{ governanca_pendentes|default:0 }} serviço(s) de limpeza aguardando início. Abrir a lista." aria-label="{{ governanca_pendentes|default:0 }} serviço(s) de limpeza pendente(s)"{% if not governanca_pendentes %} hidden{% endif %}><span class="nav-badge-numero">{% if governanca_pendentes > 99 %}99+{% else %}{{ governanca_pendentes|default:0 }}{% endif %}</span></a>
+                <a class="nav-badge nav-badge-link" data-governanca-avisos="{% url 'governanca:atualizacoes' %}" href="{% url 'pendencias' %}?origem=governanca&amp;estado=pendente" title="{{ governanca_pendentes|default:0 }} serviço{{ governanca_pendentes|pluralize }} de limpeza aguardando início. Abrir a lista." aria-label="{{ governanca_pendentes|default:0 }} serviço{{ governanca_pendentes|pluralize }} de limpeza pendente{{ governanca_pendentes|pluralize }}"{% if not governanca_pendentes %} hidden{% endif %}><span class="nav-badge-numero">{% if governanca_pendentes > 99 %}99+{% else %}{{ governanca_pendentes|default:0 }}{% endif %}</span></a>
               </div>
               {% else %}
-              <a href="{{ m.url }}" class="nav-item {% if request.resolver_match.namespace == m.codigo %}ativo{% endif %}" title="{{ m.nome }}"{% if m.codigo == 'loja' %} data-pdv-entrada{% endif %}>
+              <a href="{{ m.url }}" class="nav-item {% if nav_ativa == m.codigo %}ativo{% endif %}" title="{{ m.nome }}"{% if m.codigo == 'loja' %} data-pdv-entrada{% endif %} data-nav="{{ m.codigo }}">
                 {% include "componentes/icone_modulo.html" with codigo=m.codigo %}
                 <span class="rotulo">{{ m.nome }}</span>
-                {% if m.codigo == 'comercial' and wpp_nao_lidas_total %}<span class="nav-badge" role="img" title="{{ wpp_nao_lidas_total }} conversa(s) de WhatsApp aguardando resposta" aria-label="{{ wpp_nao_lidas_total }} conversa(s) de WhatsApp aguardando resposta"><span class="nav-badge-numero">{% if wpp_nao_lidas_total > 99 %}99+{% else %}{{ wpp_nao_lidas_total }}{% endif %}</span></span>{% endif %}
+                {% if m.codigo == 'comercial' and wpp_nao_lidas_total %}<span class="nav-badge" role="img" title="{{ wpp_nao_lidas_total }} conversa{{ wpp_nao_lidas_total|pluralize }} de WhatsApp aguardando resposta" aria-label="{{ wpp_nao_lidas_total }} conversa{{ wpp_nao_lidas_total|pluralize }} de WhatsApp aguardando resposta"><span class="nav-badge-numero">{% if wpp_nao_lidas_total > 99 %}99+{% else %}{{ wpp_nao_lidas_total }}{% endif %}</span></span>{% endif %}
               </a>
               {% endif %}
               {% if m.codigo == 'comercial' %}
-              <a href="{% url 'comercial:paginas' %}" class="nav-item {% if request.resolver_match.namespace == 'comercial' and 'pagina' in request.resolver_match.url_name %}ativo{% endif %}" title="Páginas de Captação (Landing Pages)">
+              <a href="{% url 'comercial:paginas' %}" class="nav-item {% if nav_ativa == 'comercial_paginas' %}ativo{% endif %}" title="Páginas de captação (landing pages)" data-nav="comercial_paginas">
                 <svg viewBox="0 0 24 24" class="ico"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 14h8M8 17h5"/></svg>
                 <span class="rotulo">LP Páginas</span>
               </a>
-              <a href="{% url 'comercial:respostas' %}" class="nav-item {% if request.resolver_match.namespace == 'comercial' and 'resposta' in request.resolver_match.url_name %}ativo{% endif %}" title="Respostas rápidas (textos pré-salvos)">
+              <a href="{% url 'comercial:respostas' %}" class="nav-item {% if nav_ativa == 'comercial_respostas' %}ativo{% endif %}" title="Respostas rápidas (textos pré-salvos)" data-nav="comercial_respostas">
                 <svg viewBox="0 0 24 24" class="ico"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 <span class="rotulo">Respostas rápidas</span>
               </a>
@@ -274,132 +280,131 @@
               </span>
             {% endif %}
           {% endfor %}
-        </div>
+        </details>
       {% endfor %}
 
       {% if user|pode_area:'nps' %}
-      <div class="nav-grupo">
-        <span class="nav-titulo letreiro">Relacionamento</span>
-        <a href="{% url 'nps:painel' %}" class="nav-item {% if request.resolver_match.namespace == 'nps' %}ativo{% endif %}" title="Opinião dos hóspedes">
+      <details class="nav-grupo" data-menu-grupo="relacionamento" open>
+        <summary class="nav-titulo letreiro">Relacionamento</summary>
+        <a href="{% url 'nps:painel' %}" class="nav-item {% if nav_ativa == 'nps' %}ativo{% endif %}" title="Opinião dos hóspedes" data-nav="nps">
           <svg viewBox="0 0 24 24" class="ico"><path d="M12 3l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 15.9 7.2 18l.9-5.4L4.2 8.7l5.4-.8z"/></svg>
           <span class="rotulo">NPS</span>
         </a>
-      </div>
+      </details>
       {% endif %}
 
       {% if user|pode_area:'caixa' or user|pode_area:'financeiro' or user|pode_area:'logbook' %}
-      <div class="nav-grupo">
-        <span class="nav-titulo letreiro">Operação</span>
+      <details class="nav-grupo" data-menu-grupo="operação" open>
+        <summary class="nav-titulo letreiro">Operação</summary>
         {% if user|pode_area:'caixa' or user|pode_area:'financeiro' %}
-        <a href="{% url 'caixa' %}" class="nav-item {% if atual == 'caixa' %}ativo{% endif %}" title="Caixa">
+        <a href="{% url 'caixa' %}" class="nav-item {% if nav_ativa == 'caixa' %}ativo{% endif %}" title="Caixa" data-nav="caixa">
           <svg viewBox="0 0 24 24" class="ico"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg>
           <span class="rotulo">Caixa</span>
         </a>
         {% endif %}
         {% if user|pode_area:'logbook' %}
-        <a href="{% url 'logbook' %}" class="nav-item {% if atual == 'logbook' %}ativo{% endif %}" title="Recados do turno">
+        <a href="{% url 'logbook' %}" class="nav-item {% if nav_ativa == 'logbook' %}ativo{% endif %}" title="Recados do turno" data-nav="logbook">
           <svg viewBox="0 0 24 24" class="ico"><path d="M4 5h13a2 2 0 012 2v12H6a2 2 0 01-2-2z"/><path d="M8 8h7M8 12h7"/></svg>
           <span class="rotulo">Recados do turno</span>
         </a>
         {% endif %}
-      </div>
+      </details>
       {% endif %}
 
       {% if user|pode_area:'pessoas' or user|pode_area:'funcionarios' or user|pode_area:'quartos' or user|pode_area:'temporadas' %}
-      <div class="nav-grupo">
-        <span class="nav-titulo letreiro">Cadastros</span>
+      <details class="nav-grupo" data-menu-grupo="cadastros" open>
+        <summary class="nav-titulo letreiro">Cadastros</summary>
         {% if user|pode_area:'pessoas' %}
-        <a href="{% url 'hospedes' %}" class="nav-item {% if atual == 'hospedes' %}ativo{% endif %}" title="Hóspedes">
+        <a href="{% url 'hospedes' %}" class="nav-item {% if nav_ativa == 'hospedes' %}ativo{% endif %}" title="Hóspedes" data-nav="hospedes">
           <svg viewBox="0 0 24 24" class="ico"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20a6.5 6.5 0 0113 0"/></svg>
           <span class="rotulo">Hóspedes</span>
         </a>
-        <a href="{% url 'agencias' %}" class="nav-item {% if atual == 'agencias' %}ativo{% endif %}" title="Agências">
+        <a href="{% url 'agencias' %}" class="nav-item {% if nav_ativa == 'agencias' %}ativo{% endif %}" title="Agências" data-nav="agencias">
           <svg viewBox="0 0 24 24" class="ico"><path d="M2 22l20-9L2 4v6l14 3-14 3z"/></svg>
           <span class="rotulo">Agências</span>
         </a>
-        <a href="{% url 'empresas' %}" class="nav-item {% if atual == 'empresas' %}ativo{% endif %}" title="Empresas">
+        <a href="{% url 'empresas' %}" class="nav-item {% if nav_ativa == 'empresas' %}ativo{% endif %}" title="Empresas" data-nav="empresas">
           <svg viewBox="0 0 24 24" class="ico"><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M8 7h3M13 7h3M8 11h3M13 11h3M8 15h3M13 15h3"/></svg>
           <span class="rotulo">Empresas</span>
         </a>
-        <a href="{% url 'fornecedores' %}" class="nav-item {% if atual == 'fornecedores' %}ativo{% endif %}" title="Fornecedores">
+        <a href="{% url 'fornecedores' %}" class="nav-item {% if nav_ativa == 'fornecedores' %}ativo{% endif %}" title="Fornecedores" data-nav="fornecedores">
           <svg viewBox="0 0 24 24" class="ico"><path d="M3 7h13v8H3z"/><path d="M16 10h3.5L22 13v2h-6z"/><circle cx="7" cy="17" r="1.6"/><circle cx="18" cy="17" r="1.6"/></svg>
           <span class="rotulo">Fornecedores</span>
         </a>
-        <a href="{% url 'pessoas' %}" class="nav-item {% if atual == 'pessoas' or 'pessoa' in atual %}ativo{% endif %}" title="Pessoas (todas)">
+        <a href="{% url 'pessoas' %}" class="nav-item {% if nav_ativa == 'pessoas' %}ativo{% endif %}" title="Pessoas (todas)" data-nav="pessoas">
           <svg viewBox="0 0 24 24" class="ico"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0111 0"/><path d="M16 11a3 3 0 000-6"/><path d="M15 20a5.5 5.5 0 016-5"/></svg>
           <span class="rotulo">Pessoas (todas)</span>
         </a>
         {% endif %}
         {% if user|pode_area:'funcionarios' %}
-        <a href="{% url 'funcionarios' %}" class="nav-item {% if 'funcionario' in atual %}ativo{% endif %}" title="Funcionários">
+        <a href="{% url 'funcionarios' %}" class="nav-item {% if nav_ativa == 'funcionarios' %}ativo{% endif %}" title="Funcionários" data-nav="funcionarios">
           <svg viewBox="0 0 24 24" class="ico"><path d="M4 20a5 5 0 0110 0"/><circle cx="9" cy="8" r="3"/><path d="M15 8h5M15 12h5M15 16h3"/></svg>
           <span class="rotulo">Funcionários</span>
         </a>
         {% endif %}
         {% if user|pode_area:'quartos' %}
-        <a href="{% url 'estrutura' %}" class="nav-item {% if 'uh' in atual or atual == 'estrutura' %}ativo{% endif %}" title="Quartos &amp; tipos">
+        <a href="{% url 'estrutura' %}" class="nav-item {% if nav_ativa == 'estrutura' %}ativo{% endif %}" title="Quartos e tipos" data-nav="estrutura">
           <svg viewBox="0 0 24 24" class="ico"><path d="M3 21V9l9-6 9 6v12"/><path d="M9 21v-6h6v6"/></svg>
-          <span class="rotulo">Quartos &amp; tipos</span>
+          <span class="rotulo">Quartos e tipos</span>
         </a>
-        <a href="{% url 'tabela_precos' %}" class="nav-item {% if atual == 'tabela_precos' %}ativo{% endif %}" title="Tabela de preços">
+        <a href="{% url 'tabela_precos' %}" class="nav-item {% if nav_ativa == 'tabela_precos' %}ativo{% endif %}" title="Tabela de preços" data-nav="tabela_precos">
           <svg viewBox="0 0 24 24" class="ico"><path d="M3 6h18M3 12h18M3 18h18M8 3v18M16 3v18"/></svg>
           <span class="rotulo">Tabela de preços</span>
         </a>
         {% endif %}
         {% if user|pode_area:'temporadas' %}
-        <a href="{% url 'temporadas' %}" class="nav-item {% if 'temporada' in atual %}ativo{% endif %}" title="Temporadas">
+        <a href="{% url 'temporadas' %}" class="nav-item {% if nav_ativa == 'temporadas' %}ativo{% endif %}" title="Temporadas" data-nav="temporadas">
           <svg viewBox="0 0 24 24" class="ico"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>
           <span class="rotulo">Temporadas</span>
         </a>
         {% endif %}
-      </div>
+      </details>
       {% endif %}
 
       {% if user|pode_area:'financeiro' %}
-      <div class="nav-grupo">
-        <span class="nav-titulo letreiro">Financeiro</span>
-        <a href="{% url 'lancamentos' %}" class="nav-item {% if 'lancamento' in atual %}ativo{% endif %}" title="Lançamentos">
+      <details class="nav-grupo" data-menu-grupo="financeiro" open>
+        <summary class="nav-titulo letreiro">Financeiro</summary>
+        <a href="{% url 'lancamentos' %}" class="nav-item {% if nav_ativa == 'lancamentos' %}ativo{% endif %}" title="Lançamentos" data-nav="lancamentos">
           <svg viewBox="0 0 24 24" class="ico"><path d="M7 17V9M7 9l-3 3M7 9l3 3"/><path d="M17 7v8M17 15l3-3M17 15l-3-3"/></svg>
           <span class="rotulo">Lançamentos</span>
         </a>
-        <a href="{% url 'contas' %}" class="nav-item {% if 'conta' in atual %}ativo{% endif %}" title="Contas a pagar/receber">
+        <a href="{% url 'contas' %}" class="nav-item {% if nav_ativa == 'contas' %}ativo{% endif %}" title="Contas a pagar e receber" data-nav="contas">
           <svg viewBox="0 0 24 24" class="ico"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>
-          <span class="rotulo">Contas a pagar/receber</span>
+          <span class="rotulo">Contas a pagar e receber</span>
         </a>
-        <a href="{% url 'caixa_sessoes' %}" class="nav-item {% if 'caixa_sess' in atual %}ativo{% endif %}" title="Sessões de caixa">
+        <a href="{% url 'caixa_sessoes' %}" class="nav-item {% if nav_ativa == 'caixa_sessoes' %}ativo{% endif %}" title="Sessões de caixa" data-nav="caixa_sessoes">
           <svg viewBox="0 0 24 24" class="ico"><rect x="3" y="4" width="18" height="5" rx="1.5"/><rect x="3" y="10.5" width="18" height="5" rx="1.5"/><rect x="3" y="17" width="18" height="3" rx="1.5"/></svg>
           <span class="rotulo">Sessões de caixa</span>
         </a>
-        <a href="{% url 'conciliacao:painel' %}" class="nav-item {% if atual == 'conciliacao' %}ativo{% endif %}" title="Conciliação">
+        <a href="{% url 'conciliacao:painel' %}" class="nav-item {% if nav_ativa == 'conciliacao' %}ativo{% endif %}" title="Conciliação" data-nav="conciliacao">
           <svg viewBox="0 0 24 24" class="ico"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/><path d="M9 4l-2 3 2 3"/><path d="M15 14l2 3-2 3"/></svg>
           <span class="rotulo">Conciliação</span>
         </a>
-      </div>
+      </details>
       {% endif %}
 
       {% if user.is_staff or user.is_superuser %}
-      <div class="nav-grupo">
-        <span class="nav-titulo letreiro">Configurações</span>
-        <a href="{% url 'modulos_central' %}" class="nav-item {% if atual == 'modulos_central' %}ativo{% endif %}" title="Módulos">
+      <details class="nav-grupo" data-menu-grupo="configurações" open>
+        <summary class="nav-titulo letreiro">Configurações</summary>
+        <a href="{% url 'modulos_central' %}" class="nav-item {% if nav_ativa == 'modulos_central' %}ativo{% endif %}" title="Módulos" data-nav="modulos_central">
           <svg viewBox="0 0 24 24" class="ico"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
           <span class="rotulo">Módulos</span>
         </a>
-        <a href="{% url 'integracoes' %}" class="nav-item {% if atual == 'integracoes' %}ativo{% endif %}" title="Operação e integrações">
+        <a href="{% url 'integracoes' %}" class="nav-item {% if nav_ativa == 'integracoes' %}ativo{% endif %}" title="Operação e integrações" data-nav="integracoes">
           <svg viewBox="0 0 24 24" class="ico"><path d="M4 6h16M4 12h16M4 18h16M8 3v6M16 9v6M9 15v6"/></svg>
           <span class="rotulo">Operação e integrações</span>
         </a>
-      </div>
+      </details>
       {% endif %}
     </nav>
 
     <div class="sidebar-rodape">
-      <a href="{% url 'mfa_config' %}" class="usuario-mini link-limpo" title="Verificação em duas etapas (MFA)">
+      <a href="{% url 'mfa_config' %}" class="usuario-mini link-limpo" title="{{ user }} · Configurações da conta">
         <span class="avatar">{{ user.get_full_name|default:user.username|slice:":1"|upper }}</span>
-        {% comment %}Nome e cápsula numa janela própria: ela termina antes do botão Sair, e
+        {% comment %}Nome numa janela própria: ela termina antes do botão Sair, e
         ao recolher o menu o botão passa ao lado dela, nunca por cima.{% endcomment %}
         <span class="usuario-texto">
           <span class="usuario-nome">{{ user }}</span>
-          {% if not user.mfa_ativo %}<span class="selo selo-alerta">MFA off</span>{% endif %}
         </span>
       </a>
       <form method="post" action="{% url 'logout' %}">
@@ -410,6 +415,25 @@
       </form>
     </div>
   </aside>
+  <script>
+    // Executa durante o parse, antes do conteúdo e dos scripts deferidos.
+    (() => {
+      const menu = document.getElementById('menu-principal');
+      const chave = menu.dataset.rolagemChave;
+      menu.querySelectorAll('details[data-menu-grupo]').forEach(grupo => {
+        let salvo = null;
+        try { salvo = sessionStorage.getItem(chave + ':grupo:' + grupo.dataset.menuGrupo); } catch (_) {}
+        grupo.open = !!grupo.querySelector('.ativo') || salvo === 'aberto';
+      });
+      const barra = Math.max(0, menu.offsetWidth - menu.clientWidth);
+      menu.closest('.sidebar').style.setProperty('--menu-scrollbar', barra + 'px');
+      try {
+        const top = Number(sessionStorage.getItem(chave));
+        if (Number.isFinite(top) && top >= 0) menu.scrollTop = top;
+      } catch (_) {}
+      menu.dataset.rolagemInicial = '1';
+    })();
+  </script>
 
   <div class="main">
     <header class="topbar">
@@ -424,7 +448,16 @@
       </button>
     </header>
 
-    <main id="conteudo" hx-history-elt class="conteudo {% block conteudo_classe %}{% endblock %}">
+    <main id="conteudo" data-nav-ativa="{{ nav_ativa }}" data-crm-raiz="{% url 'dashboard' %}"{% if request.retorno_pendencias %} data-retorno-pendencias="{{ request.retorno_pendencias }}"{% endif %} hx-history-elt class="conteudo {% block conteudo_classe %}{% endblock %}">
+      <span hidden data-nav-contexto="{{ nav_ativa }}"></span>
+      {% if request.retorno_pendencias %}
+      <nav class="respiro-curto" aria-label="Retorno às pendências">
+        <a href="{{ request.retorno_pendencias }}" class="botao-neutro" data-retorno-pendencias-link>
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>
+          Voltar para Pendências
+        </a>
+      </nav>
+      {% endif %}
       {% block conteudo %}{% endblock %}
     </main>
   </div>
@@ -434,7 +467,7 @@
 <div class="barra-progresso" id="barra-progresso" aria-hidden="true"></div>
 
 {# Toasts (mensagens Django viram notificações) #}
-<div class="toasts" id="toasts">
+<div class="toasts" id="toasts" aria-label="Notificações" tabindex="-1">
   {% for message in messages %}
     <div class="toast toast-{{ message.tags|default:'info' }}" role="status">
       <span class="toast-txt">{{ message }}</span>
@@ -534,14 +567,16 @@
     guardarFoco();
     APP.classList.add('sidebar-aberta');
     document.body.classList.add('sem-rolagem');
+    window.votestaSidebar?.travarPagina();
     const b = document.getElementById('btn-menu-mobile');
     if (b) { b.setAttribute('aria-expanded', 'true'); b.setAttribute('aria-label', 'Fechar menu'); }
-    const alvo = document.querySelector('.sidebar a, .sidebar button');
-    if (alvo) alvo.focus();
+    const alvo = document.querySelector('#menu-principal .nav-item.ativo a, #menu-principal a.nav-item.ativo') || document.querySelector('#menu-principal a[href]');
+    if (alvo) alvo.focus({preventScroll: true});
   }
   function fecharSidebarMobile() {
     const estava = APP.classList.contains('sidebar-aberta');
     APP.classList.remove('sidebar-aberta');
+    window.votestaSidebar?.soltarPagina();
     if (!caixaAberta()) document.body.classList.remove('sem-rolagem');
     const b = document.getElementById('btn-menu-mobile');
     if (b) { b.setAttribute('aria-expanded', 'false'); b.setAttribute('aria-label', 'Abrir menu'); }
@@ -560,19 +595,8 @@
     if (e.target.classList && e.target.classList.contains('money-mask')) mascararMoeda(e.target);
   });
 
-  // Navegação suave (hx-boost): a sidebar não é trocada, então marcamos o item
-  // ativo pela URL atual (maior prefixo que casa). Fecha o menu mobile também.
-  function marcarNavAtiva() {
-    const path = location.pathname;
-    let melhor = null, melhorLen = -1;
-    document.querySelectorAll('.sidebar .nav-item').forEach(item => {
-      item.classList.remove('ativo');
-      const link = item.matches('a') ? item : item.querySelector('.nav-item-principal');
-      const href = link?.getAttribute('href') || '';
-      if (href && path.startsWith(href) && href.length > melhorLen) { melhor = item; melhorLen = href.length; }
-    });
-    if (melhor) melhor.classList.add('ativo');
-  }
+  // O servidor fornece a chave do item; URL e maneira de chegar não a mudam.
+  function marcarNavAtiva() { window.votestaSidebar?.marcarAtivo(); }
   document.body.addEventListener('htmx:pushedIntoHistory', () => { marcarNavAtiva(); fecharSidebarMobile(); });
   document.body.addEventListener('htmx:historyRestore', () => { marcarNavAtiva(); fecharSidebarMobile(); });
 
@@ -696,7 +720,7 @@
     htmx.ajax('GET', '{% url "reservas:nova" %}', '#modal-conteudo');
   }
   document.body.addEventListener('htmx:afterSwap', e => {
-    if (e.detail.target.id === 'modal-conteudo') { arranjoTocado = false; abrirModal(); atualizarTarifaHint(); }
+    if (e.detail.target.id === 'modal-conteudo') abrirModal();
   });
 
   // ---------- Recarregar sem perder o lugar na tela ----------
@@ -754,18 +778,39 @@
     el.innerHTML = iconeToast(tipo)
       + '<span class="toast-txt"></span><button class="toast-x" aria-label="Fechar">&times;</button>';
     el.querySelector('.toast-txt').textContent = msg;
-    el.querySelector('.toast-x').onclick = () => el.remove();
+    el.querySelector('.toast-x').onclick = () => retirarToast(el);
+    const repetido = Array.from(cont.children).find(item => item.classList.contains('toast-' + tipo)
+      && item.querySelector('.toast-txt')?.textContent === msg);
+    if (repetido) { repetido.scrollIntoView({block: 'nearest'}); return; }
     cont.appendChild(el);
+    cont.scrollTop = cont.scrollHeight;
     agendarSaida(el);
   }
-  function agendarSaida(el) {
-    // Erro NÃO some sozinho: quem perdeu a mensagem perdeu o motivo da falha.
-    if (el.classList.contains('toast-error')) return;
-    setTimeout(() => {
-      el.classList.add('toast-saindo');
-      setTimeout(() => el.remove(), 400);
-    }, 5000);
+  const temporizadoresToast = new WeakMap();
+  function retirarToast(el) {
+    clearTimeout(temporizadoresToast.get(el));
+    temporizadoresToast.delete(el);
+    el.remove();
+    atualizarFilaToasts();
   }
+  function atualizarFilaToasts() {
+    const avisos = Array.from(document.querySelectorAll('#toasts .toast'));
+    const limite = GAVETA.matches ? 1 : 3;
+    avisos.forEach((el, i) => {
+      el.hidden = i >= limite;
+      const fechar = el.querySelector('.toast-x');
+      if (fechar) fechar.onclick = () => retirarToast(el);
+      el.setAttribute('aria-label', avisos.length > limite ? `Notificação ${i + 1} de ${avisos.length}` : 'Notificação');
+      if (el.hidden) {
+        clearTimeout(temporizadoresToast.get(el));
+        temporizadoresToast.delete(el);
+      } else if (!el.classList.contains('toast-error') && !temporizadoresToast.has(el)) {
+        temporizadoresToast.set(el, setTimeout(() => retirarToast(el), 5000));
+      }
+    });
+  }
+  function agendarSaida() { atualizarFilaToasts(); }
+  GAVETA.addEventListener('change', atualizarFilaToasts);
   // Os que vêm do Django (messages) chegam sem ícone e sem ordem de entrada.
   document.querySelectorAll('#toasts .toast').forEach((el, i) => {
     el.style.setProperty('--i', i);
@@ -829,7 +874,7 @@
     {% endif %}
     {% if user|pode_area:'financeiro' %}
     { rotulo: 'Lançamentos', tipo: 'Ir para', url: '{% url "lancamentos" %}' },
-    { rotulo: 'Contas a pagar/receber', tipo: 'Ir para', url: '{% url "contas" %}' },
+    { rotulo: 'Contas a pagar e receber', tipo: 'Ir para', url: '{% url "contas" %}' },
     {% endif %}
     {% if user|pode_area:'pessoas' %}
     { rotulo: 'Pessoas', tipo: 'Ir para', url: '{% url "pessoas" %}' },
@@ -1008,28 +1053,38 @@
   }
 
   // ---------- Aviso ao vivo da tarifa + arranjo de camas no modal de reserva ----------
-  let arranjoTocado = false;  // o atendente mexeu em casais/solteiros/sofá?
-  async function atualizarTarifaHint() {
-    const hint = document.getElementById('tarifa-hint');
+  const arranjosTocados = new WeakSet();
+  function formularioDaReserva(origem) {
+    const local = origem?.closest?.('form');
+    if (local) return local;
+    return document.querySelector('#modal-conteudo form:has(#tarifa-hint)')
+      || document.querySelector('#conteudo form:has(#tarifa-hint)');
+  }
+  async function atualizarTarifaHint(origem) {
+    const form = formularioDaReserva(origem);
+    if (!form) return;
+    const arranjoTocado = arranjosTocados.has(form) || form.dataset.arranjoTocado === '1';
+    const porId = id => form.querySelector('[id="' + id + '"]');
+    const hint = porId('tarifa-hint');
     if (!hint) return;
-    const uh = document.getElementById('id_uh');
-    const ci = document.getElementById('id_checkin');
-    const co = document.getElementById('id_checkout');
-    const colch = document.getElementById('colchoes-hint');
-    const restr = document.getElementById('restricao-hint');
+    const uh = porId('id_uh');
+    const ci = porId('id_checkin');
+    const co = porId('id_checkout');
+    const colch = porId('colchoes-hint');
+    const restr = porId('restricao-hint');
     if (!uh || !ci || !co || !uh.value || !ci.value || !co.value) {
       hint.innerHTML = ''; if (colch) colch.innerHTML = '';
       if (restr) restr.innerHTML = ''; return;
     }
-    const ad = document.getElementById('id_adultos');
-    const c05 = document.getElementById('id_criancas_0_5');
-    const c615 = document.getElementById('id_criancas_6_15');
-    const iss = document.getElementById('id_cobra_iss');
-    const tur = document.getElementById('id_cobra_taxa_turismo');
-    const nr = document.getElementById('id_nao_reembolsavel');
-    const ca = document.getElementById('id_casais');
-    const so = document.getElementById('id_solteiros');
-    const sf = document.getElementById('id_usa_sofa_cama');
+    const ad = porId('id_adultos');
+    const c05 = porId('id_criancas_0_5');
+    const c615 = porId('id_criancas_6_15');
+    const iss = porId('id_cobra_iss');
+    const tur = porId('id_cobra_taxa_turismo');
+    const nr = porId('id_nao_reembolsavel');
+    const ca = porId('id_casais');
+    const so = porId('id_solteiros');
+    const sf = porId('id_usa_sofa_cama');
     try {
       let url = hint.dataset.url + '?uh=' + uh.value + '&checkin=' + ci.value + '&checkout=' + co.value
         + '&adultos=' + (ad ? ad.value : '')
@@ -1084,45 +1139,65 @@
     }
   }
   document.addEventListener('change', e => {
-    if (['id_casais', 'id_solteiros', 'id_usa_sofa_cama'].includes(e.target.id)) arranjoTocado = true;
+    const form = e.target.closest('form');
+    if (form && ['id_casais', 'id_solteiros', 'id_usa_sofa_cama'].includes(e.target.id)) {
+      arranjosTocados.add(form);
+      form.dataset.arranjoTocado = '1';
+    }
     if (['id_uh', 'id_checkin', 'id_checkout', 'id_adultos', 'id_criancas_0_5',
          'id_criancas_6_15', 'id_cobra_iss', 'id_cobra_taxa_turismo', 'id_nao_reembolsavel',
-         'id_casais', 'id_solteiros', 'id_usa_sofa_cama'].includes(e.target.id)) atualizarTarifaHint();
+         'id_casais', 'id_solteiros', 'id_usa_sofa_cama'].includes(e.target.id)) atualizarTarifaHint(e.target);
   });
 
-  // ---------- Cadastro rápido de hóspede no modal ----------
-  function abrirNovoHospede() {
-    document.getElementById('bloco-novo-hospede').style.display = 'block';
-    document.getElementById('nh-nome').focus();
+  function iniciarTarifas(raiz) {
+    raiz.querySelectorAll('#tarifa-hint').forEach(hint => atualizarTarifaHint(hint));
   }
-  function fecharNovoHospede() {
-    document.getElementById('bloco-novo-hospede').style.display = 'none';
-    document.getElementById('nh-erro').textContent = '';
+  document.addEventListener('DOMContentLoaded', () => iniciarTarifas(document));
+  document.addEventListener('htmx:afterSwap', e => iniciarTarifas(e.detail.target));
+  document.addEventListener('htmx:historyRestore', () => iniciarTarifas(document));
+
+  // ---------- Cadastro rápido de hóspede no formulário atual ----------
+  function abrirNovoHospede(origem) {
+    const form = formularioDaReserva(origem);
+    if (!form) return;
+    const porId = id => form.querySelector('[id="' + id + '"]');
+    porId('bloco-novo-hospede').style.display = 'block';
+    porId('nh-nome').focus();
+  }
+  function fecharNovoHospede(origem) {
+    const form = formularioDaReserva(origem);
+    if (!form) return;
+    const porId = id => form.querySelector('[id="' + id + '"]');
+    porId('bloco-novo-hospede').style.display = 'none';
+    porId('nh-erro').textContent = '';
     ['nome', 'documento', 'telefone', 'email'].forEach(c => {
-      document.getElementById('nh-' + c).value = '';
+      porId('nh-' + c).value = '';
     });
   }
-  async function salvarNovoHospede() {
-    const bloco = document.getElementById('bloco-novo-hospede');
-    const erro = document.getElementById('nh-erro');
-    const nome = document.getElementById('nh-nome').value.trim();
+  async function salvarNovoHospede(origem) {
+    const form = formularioDaReserva(origem);
+    if (!form) return;
+    const porId = id => form.querySelector('[id="' + id + '"]');
+    const bloco = porId('bloco-novo-hospede');
+    const erro = porId('nh-erro');
+    const nome = porId('nh-nome').value.trim();
     erro.textContent = '';
     if (!nome) { erro.textContent = 'Informe o nome do hóspede.'; return; }
     const dados = new FormData();
     dados.append('nome', nome);
-    dados.append('documento', document.getElementById('nh-documento').value);
-    dados.append('telefone', document.getElementById('nh-telefone').value);
-    dados.append('email', document.getElementById('nh-email').value);
-    const csrf = document.querySelector('#modal-conteudo [name=csrfmiddlewaretoken]').value;
+    dados.append('documento', porId('nh-documento').value);
+    dados.append('telefone', porId('nh-telefone').value);
+    dados.append('email', porId('nh-email').value);
+    const csrf = form.querySelector('[name=csrfmiddlewaretoken]').value;
     try {
       const resp = await fetch(bloco.dataset.url, { method: 'POST', headers: { 'X-CSRFToken': csrf }, body: dados });
       const dado = await resp.json();
       if (!resp.ok) { erro.textContent = dado.erro || 'Não foi possível salvar.'; return; }
       // O campo hóspede é o combobox de pessoa (comboPessoa), não um <select>:
       // adiciona a pessoa recém-criada à lista do combo e já a seleciona.
-      const comboEl = document.querySelector('#modal-conteudo [name=hospede]').closest('.combo');
+      const comboEl = form.querySelector('[name=hospede]').closest('.combo');
       Alpine.$data(comboEl).adicionar({ id: dado.id, nome: dado.nome, grupo: 'Hóspedes' });
-      fecharNovoHospede();
+      fecharNovoHospede(form);
       toast('Hóspede cadastrado.', 'success');
     } catch (e) { erro.textContent = 'Falha de conexão. Tente de novo.'; }
   }

@@ -20,18 +20,18 @@
   </p>
 
   <div class="quadro quadro-lista">
-    <table>
+    <table class="tabela tabela-cartoes">
       <thead><tr><th>Nome</th><th>Assunto</th><th>Ativo</th><th class="acao"></th></tr></thead>
       <tbody>
         {% for t in itens %}
           <tr class="clic" onclick="location.href='{% url 'comercial:email_template_editar' t.pk %}'">
-            <td class="camp-nome">{{ t.nome }}</td>
-            <td class="celula-texto">{{ t.assunto|truncatechars:80 }}</td>
-            <td>{% if t.ativo %}<span class="selo selo-pub">Ativo</span>{% else %}<span class="selo selo-enc">Inativo</span>{% endif %}</td>
-            <td class="acao"><a href="{% url 'comercial:email_template_editar' t.pk %}" class="botao-mini" onclick="event.stopPropagation()">Editar</a></td>
+            <td class="camp-nome" data-rotulo="Nome"><div class="tabela-valor">{{ t.nome }}</div></td>
+            <td class="celula-texto" data-rotulo="Assunto"><div class="tabela-valor">{{ t.assunto|truncatechars:80 }}</div></td>
+            <td data-rotulo="Ativo"><div class="tabela-valor">{% if t.ativo %}<span class="selo selo-pub">Ativo</span>{% else %}<span class="selo selo-enc">Inativo</span>{% endif %}</div></td>
+            <td class="acao" data-rotulo="Ação"><div class="tabela-valor"><a href="{% url 'comercial:email_template_editar' t.pk %}" class="botao-mini" onclick="event.stopPropagation()">Editar</a></div></td>
           </tr>
         {% empty %}
-          <tr><td colspan="4" class="vazio-el">Nenhum template ainda. Crie o primeiro ou salve um a partir de um lead. ✉️</td></tr>
+          <tr><td colspan="4" class="vazio">Nenhum template ainda. Crie o primeiro ou salve um a partir de um lead.</td></tr>
         {% endfor %}
       </tbody>
     </table>

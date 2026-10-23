@@ -17,7 +17,7 @@
 
 <div class="est-mov">
   <div class="est-mov-campos">
-    <table class="tabela est-tabela">
+    <table class="tabela est-tabela tabela-cartoes">
       <thead>
         <tr>
           <th>Contagem</th>
@@ -31,24 +31,24 @@
       <tbody>
         {% for inv in inventarios %}
           <tr>
-            <td class="nao-quebra">
+            <td class="nao-quebra" data-rotulo="Contagem"><div class="tabela-valor">
               <a href="{% url 'estoque:inventario' inv.pk %}" class="est-produto-nome">#{{ inv.pk }} · {{ inv.criado_em|date:"d/m/Y" }}</a>
               <small class="camp-sub">por {{ inv.criado_por.get_short_name|default:inv.criado_por.username }}</small>
-            </td>
-            <td>{{ inv.local.nome }}</td>
-            <td>
+            </div></td>
+            <td data-rotulo="Local"><div class="tabela-valor">{{ inv.local.nome }}</div></td>
+            <td data-rotulo="Situação"><div class="tabela-valor">
               <span class="selo {% if inv.status == 'aberto' %}selo-pendente{% elif inv.status == 'aplicado' %}selo-concluida{% else %}selo-neutro{% endif %}">{{ inv.get_status_display }}</span>
-            </td>
-            <td class="num">{{ inv.itens_contados }} <span class="celula-suave">/ {{ inv.itens_total }}</span></td>
+            </div></td>
+            <td class="num" data-rotulo="Contados"><div class="tabela-valor">{{ inv.itens_contados }} <span class="celula-suave">/ {{ inv.itens_total }}</span></div></td>
             {% comment %}Falta é vermelho; sobra, verde. Os dois merecem olhar,
             mas só a falta é dinheiro que sumiu.{% endcomment %}
-            <td class="num {% if inv.valor_diferenca < 0 %}est-previa-erro{% elif inv.valor_diferenca > 0 %}est-dif-sobra{% endif %}">
+            <td class="num {% if inv.valor_diferenca < 0 %}est-previa-erro{% elif inv.valor_diferenca > 0 %}est-dif-sobra{% endif %}" data-rotulo="Diferença"><div class="tabela-valor">
               {% if inv.itens_contados %}{{ inv.valor_diferenca|intcomma_brl }}{% else %}—{% endif %}
-            </td>
-            <td class="col-acao">
+            </div></td>
+            <td class="col-acao" data-rotulo="Ações"><div class="tabela-valor">
               <a href="{% url 'estoque:inventario' inv.pk %}" class="botao-mini">
                 {% if inv.status == 'aberto' %}Continuar{% else %}Ver{% endif %}</a>
-            </td>
+            </div></td>
           </tr>
         {% empty %}
           <tr><td colspan="6" class="vazio">Nenhuma contagem ainda. Abra a primeira ao lado.</td></tr>

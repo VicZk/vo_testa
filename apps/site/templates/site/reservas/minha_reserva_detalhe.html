@@ -5,19 +5,19 @@
 
 {% block hospede_card %}
 <div class="cartao-hospede w-full max-w-md rounded-[10px] border border-lampiao/45 p-7 md:p-8">
-  <p class="text-[11px] uppercase tracking-wider font-semibold text-madeira/75 mb-1">Área do hóspede</p>
+  <p class="text-xs uppercase tracking-wider font-semibold text-madeira/75 mb-1">Área do hóspede</p>
   <h1 class="font-display text-2xl font-bold text-noturno mb-5">Olá, {{ reserva.hospede.nome.split.0 }}!</h1>
 
   <!-- Código -->
   <div class="bg-white rounded-xl border border-madeira/10 p-4 text-center mb-4">
-    <p class="text-madeira/40 text-[11px] uppercase tracking-wider mb-1">Código da reserva</p>
+    <p class="text-madeira/40 text-xs uppercase tracking-wider mb-1">Código da reserva</p>
     <p class="font-display text-2xl font-black text-noturno tracking-widest">{{ reserva.codigo }}</p>
   </div>
 
   <!-- Status -->
   <div class="mb-4">
-    <p class="text-madeira/40 text-[11px] uppercase tracking-wider mb-2">Status</p>
-    <div class="flex items-center justify-center gap-1.5 flex-wrap text-[11px]">
+    <p class="text-madeira/40 text-xs uppercase tracking-wider mb-2">Status</p>
+    <div class="flex items-center justify-center gap-1.5 flex-wrap text-xs">
       {% for chave, rotulo in reserva.STATUS_CHOICES %}
         {% if chave == 'aguardando' or chave == 'confirmada' or chave == 'checkin' or chave == 'finalizada' %}
           <span class="px-2.5 py-1 rounded-full {% if chave == reserva.status %}bg-madeira text-pergaminho font-semibold{% else %}bg-madeira/5 text-madeira/30{% endif %}">{{ rotulo }}</span>

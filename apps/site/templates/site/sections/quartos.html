@@ -17,18 +17,15 @@
 
         <div class="grid md:grid-cols-3 gap-6 sm:gap-8">
             {% for quarto in quartos %}
-            <a href="{% url 'core:quarto_detalhe' quarto.uh_id %}" class="group block bg-noturno border border-lampiao/20 rounded-2xl overflow-hidden hover:border-lampiao/50 transition-all duration-500 hover:-translate-y-2 cursor-pointer">
+            <a href="{% url 'core:quarto_detalhe' quarto.uh_id %}" class="group flex flex-col h-full bg-noturno border border-lampiao/20 rounded-2xl overflow-hidden hover:border-lampiao/50 transition-all duration-500 hover:-translate-y-2 cursor-pointer">
                 <div class="aspect-[4/3] bg-gradient-to-br from-madeira/30 to-madeira/10 flex items-center justify-center relative overflow-hidden">
                     {% if quarto.foto_principal %}
                     <img src="{{ quarto.foto_principal.url }}" alt="{{ quarto.nome }}" class="w-full h-full object-cover">
                     {% else %}
-                    <div class="flex flex-col items-center gap-2 text-pergaminho/70">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 19.5h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5z"/></svg>
-                        <span class="text-xs tracking-wide uppercase">Foto em breve</span>
-                    </div>
+                    {% include 'site/partials/foto_ausente.html' %}
                     {% endif %}
                 </div>
-                <div class="p-5 sm:p-6">
+                <div class="p-5 sm:p-6 flex flex-col flex-1">
                     <div class="flex items-center gap-2 mb-2">
                         <svg class="w-4 h-4 text-lampiao gear-spin" viewBox="0 0 100 100"><circle cx="50" cy="50" r="20" fill="none" stroke="currentColor" stroke-width="5"/><rect x="44" y="15" width="12" height="14" rx="3" fill="currentColor"/><rect x="44" y="71" width="12" height="14" rx="3" fill="currentColor"/><rect x="15" y="44" width="14" height="12" rx="3" fill="currentColor"/><rect x="71" y="44" width="14" height="12" rx="3" fill="currentColor"/></svg>
                         <span class="text-lampiao/60 text-xs uppercase tracking-wider">{{ quarto.categoria.nome }}</span>
@@ -42,7 +39,7 @@
                     maior fonte de saturação da home.{% endcomment %}
                     <p class="text-pergaminho/70 text-xs uppercase tracking-wider mb-4">{{ quarto.qualidades|join:" · " }}</p>
                     {% endif %}
-                    <div class="flex items-center justify-between">
+                    <div class="flex flex-wrap items-center justify-between gap-3 mt-auto">
                         <div>
                             <span class="text-pergaminho/70 text-xs block">a partir de</span>
                             <span class="text-lampiao font-body text-2xl font-bold">R$ {{ quarto.preco_base|floatformat:0 }}</span>
@@ -65,7 +62,7 @@
         </div>
 
         <div class="text-center mt-12">
-            <a href="{% url 'core:quartos_todos' %}" class="text-lampiao border border-lampiao/30 px-8 py-3 rounded-full hover:bg-lampiao hover:text-noturno transition text-sm font-semibold">
+            <a href="{% url 'core:quartos_todos' %}" class="inline-flex items-center min-h-[44px] text-lampiao border border-lampiao/30 px-8 py-3 rounded-full hover:bg-lampiao hover:text-noturno transition text-sm font-semibold">
                 Ver todos os quartos →
             </a>
         </div>

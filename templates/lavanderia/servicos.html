@@ -12,12 +12,12 @@
 <div class="colunas">
   <section>
     <h2>Serviços</h2>
-    <table class="tabela">
+    <table class="tabela tabela-cartoes">
       <thead><tr><th>Serviço</th><th>Unidade</th><th class="num">Preço</th><th>Situação</th></tr></thead>
       <tbody>
         {% for s in servicos %}
-          <tr><td>{{ s.nome }}</td><td>{{ s.get_unidade_display }}</td><td class="num">{{ s.preco|intcomma_brl }}</td>
-              <td>{% if s.ativo %}<span class="selo selo-limpa">Ativo</span>{% else %}<span class="selo selo-neutro">Inativo</span>{% endif %}</td></tr>
+          <tr><td data-rotulo="Serviço"><div class="tabela-valor">{{ s.nome }}</div></td><td data-rotulo="Unidade"><div class="tabela-valor">{{ s.get_unidade_display }}</div></td><td class="num" data-rotulo="Preço"><div class="tabela-valor">{{ s.preco|intcomma_brl }}</div></td>
+              <td data-rotulo="Situação"><div class="tabela-valor">{% if s.ativo %}<span class="selo selo-limpa">Ativo</span>{% else %}<span class="selo selo-neutro">Inativo</span>{% endif %}</div></td></tr>
         {% empty %}
           <tr><td colspan="4" class="vazio">Nenhum serviço ainda.</td></tr>
         {% endfor %}

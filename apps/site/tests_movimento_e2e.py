@@ -41,6 +41,7 @@ class MovimentoNavegacaoE2ETests(_BaseE2E):
 
     def abrir(self):
         self.page.goto(self.url(reverse("dashboard")), wait_until="networkidle")
+        self.abrir_grupos_menu()
         self.page.evaluate("document.fonts.ready")
         self.page.evaluate("""() => {
           window.__navegacao={nativas:0,entradas:[],frames:[],finalizado:true};
@@ -51,7 +52,8 @@ class MovimentoNavegacaoE2ETests(_BaseE2E):
           };
           const animar=Element.prototype.animate;
           Element.prototype.animate=function(...args){
-            if(this.id==='conteudo')window.__navegacao.entradas.push({id:this.id,frames:args[0]});
+            if(this.closest('#conteudo'))window.__navegacao.entradas.push({id:this.id,
+              global:this.id==='conteudo',estavel:!!this.querySelector('.abas-secao,.pagina-cabecalho'),frames:args[0]});
             return animar.apply(this,args);
           };
           document.addEventListener('htmx:beforeRequest',e=>{
@@ -81,7 +83,7 @@ class MovimentoNavegacaoE2ETests(_BaseE2E):
         }""")
 
     def ir(self, rota):
-        self.page.locator(f'#menu-principal a[href="{reverse(rota)}"]').click()
+        self.clicar_item_menu(f'#menu-principal a[href="{reverse(rota)}"]')
         self.page.wait_for_url("**" + reverse(rota))
         self.page.wait_for_function("window.__navegacao.finalizado")
 
@@ -95,9 +97,9 @@ class MovimentoNavegacaoE2ETests(_BaseE2E):
             for rota in ("governanca:painel", "manutencao:painel", "estoque:posicao"):
                 self.ir(rota)
         medidas = self.page.evaluate("window.__navegacao")
-        self.assertEqual(medidas["nativas"], 6)
+        self.assertEqual(medidas["nativas"], 0)
         self.assertGreater(len(medidas["frames"]), 60)
-        self.assertTrue(any(
+        self.assertFalse(any(
             a.get("pseudo") == "::view-transition-new(conteudo)"
             for f in medidas["frames"] for a in f["animacoes"]))
         self.assertTrue(all(
@@ -105,8 +107,8 @@ class MovimentoNavegacaoE2ETests(_BaseE2E):
             and f["conectado"] and f["menus"] == 1 and f["topo"] == "none"
             and f["sidebar"] == "none" and f["old"] == "none" and f["atual"] == "1"
             for f in medidas["frames"]), medidas["frames"])
-        # O fade de página não roda duas vezes (snapshot + animação do elemento).
-        self.assertEqual(medidas["entradas"], [])
+        self.assertTrue(medidas["entradas"])
+        self.assertTrue(all(not e["global"] and not e["estavel"] for e in medidas["entradas"]))
         destino = os.environ.get("MOVIMENTO_E2E_SCREENSHOTS")
         if destino:
             pasta = Path(destino)
@@ -119,17 +121,19 @@ class MovimentoNavegacaoE2ETests(_BaseE2E):
         self.ir("manutencao:painel")
         self.page.locator("#menu-principal").evaluate("el=>el.scrollTop=100")
         self.page.wait_for_timeout(40)
+        antes = self.page.evaluate("window.__navegacao.entradas.length")
         self.page.go_back()
         self.page.wait_for_url("**" + reverse("governanca:painel"))
-        self.page.wait_for_function("window.__navegacao.entradas.length===1")
+        self.page.wait_for_function("antes => window.__navegacao.entradas.length > antes", arg=antes)
         self.assertEqual(self.page.locator("#menu-principal").evaluate("el=>el.scrollTop"), 100)
+        antes = self.page.evaluate("window.__navegacao.entradas.length")
         self.page.go_forward()
         self.page.wait_for_url("**" + reverse("manutencao:painel"))
-        self.page.wait_for_function("window.__navegacao.entradas.length===2")
+        self.page.wait_for_function("antes => window.__navegacao.entradas.length > antes", arg=antes)
         self.assertEqual(self.page.locator("#menu-principal").evaluate("el=>el.scrollTop"), 100)
         self.assertEqual(self.page.locator("#menu-principal").count(), 1)
         entradas = self.page.evaluate("window.__navegacao.entradas")
-        self.assertTrue(all(e["id"] == "conteudo" for e in entradas))
+        self.assertTrue(all(not e["global"] and not e["estavel"] for e in entradas))
 
     def test_reduced_motion_fallback_e_modal_nao_animam_a_casca(self):
         self.abrir()
@@ -140,10 +144,11 @@ class MovimentoNavegacaoE2ETests(_BaseE2E):
         self.page.emulate_media(reduced_motion="no-preference")
         self.page.evaluate("document.startViewTransition=undefined")
         self.ir("manutencao:painel")
-        self.assertEqual(self.page.evaluate("window.__navegacao.entradas.length"), 1)
+        antes = self.page.evaluate("window.__navegacao.entradas.length")
+        self.assertGreater(antes, 0)
         self.page.locator(".acao-topo").click()
         expect(self.page.locator("#modal-reserva")).to_be_visible()
-        self.assertEqual(self.page.evaluate("window.__navegacao.entradas.length"), 1)
+        self.assertEqual(self.page.evaluate("window.__navegacao.entradas.length"), antes)
         self.assertEqual(self.page.evaluate("window.__navegacao.nativas"), 0)
         self.assertEqual(self.page.locator("#conteudo").evaluate("el=>getComputedStyle(el).opacity"), "1")
 
@@ -154,8 +159,8 @@ class MovimentoNavegacaoE2ETests(_BaseE2E):
         self.page.route("**" + rota_lenta, lambda route: pendentes.append(route))
         self.abrir()
         with self.page.expect_request(lambda req: req.url.endswith(rota_lenta)):
-            self.page.locator(f'#menu-principal a[href="{rota_lenta}"]').click()
-        self.page.locator(f'#menu-principal a[href="{reverse("manutencao:painel")}"]').click()
+            self.clicar_item_menu(f'#menu-principal a[href="{rota_lenta}"]')
+        self.clicar_item_menu(f'#menu-principal a[href="{reverse("manutencao:painel")}"]')
         self.page.wait_for_url("**" + reverse("manutencao:painel"))
         self.assertEqual(len(pendentes), 1)
         pendentes[0].fulfill(content_type="text/html", body=conteudo_lento)
@@ -174,7 +179,7 @@ class MovimentoNavegacaoE2ETests(_BaseE2E):
         expect(self.page.locator(".sidebar")).to_be_hidden()
         expect(self.page.get_by_role("button", name="Abrir menu", exact=True)).to_be_focused()
         self.assertEqual(self.page.evaluate("window.__navegacao.nativas"), 0)
-        self.assertEqual(self.page.evaluate("window.__navegacao.entradas.length"), 1)
+        self.assertGreater(self.page.evaluate("window.__navegacao.entradas.length"), 0)
         self.assertNotEqual(self.page.evaluate("getComputedStyle(document.body).overflow"), "hidden")
         medidas = self.page.evaluate("window.__navegacao.frames")
         self.assertTrue(all(f["conectado"] and f["menus"] == 1 for f in medidas))
@@ -196,9 +201,14 @@ class MovimentoNavegacaoE2ETests(_BaseE2E):
               return ativo.left>=faixa.left-1 && ativo.right<=faixa.right+1;
             }""")
             abas = p.locator(".abas-secao a").evaluate_all(
-                "els=>els.map(el=>({y:el.getBoundingClientRect().top,h:el.getBoundingClientRect().height}))")
-            self.assertLess(max(a["y"] for a in abas) - min(a["y"] for a in abas), 1)
+                "els=>els.map(el=>{const r=el.getBoundingClientRect();return {x:r.left,y:r.top,w:r.width,h:r.height}})")
             self.assertTrue(all(a["h"] >= 44 for a in abas))
+            for i, aba in enumerate(abas):
+                for outra in abas[i + 1:]:
+                    self.assertTrue(aba["x"] + aba["w"] <= outra["x"] + 1 or
+                                    outra["x"] + outra["w"] <= aba["x"] + 1 or
+                                    aba["y"] + aba["h"] <= outra["y"] + 1 or
+                                    outra["y"] + outra["h"] <= aba["y"] + 1, abas)
             self.assertLessEqual(p.evaluate("document.documentElement.scrollWidth"), largura + 1)
         p.set_viewport_size({"width": 390, "height": 600})
         notas = p.locator('.abas-secao a').first
@@ -234,7 +244,7 @@ class MovimentoNavegacaoE2ETests(_BaseE2E):
           });
         }""", {"governanca": reverse("governanca:painel"), "cadastros": reverse("estoque:cadastros")})
         p.get_by_role("button", name="Abrir menu", exact=True).click()
-        p.locator(f'#menu-principal a[href="{reverse("governanca:painel")}"]').click()
+        self.clicar_item_menu(f'#menu-principal a[href="{reverse("governanca:painel")}"]', pagina=p)
         expect(p).to_have_url(self.url(reverse("governanca:painel")))
         p.wait_for_function("window.__trocaAbas.concluida && window.scrollY===0")
         p.go_back()
@@ -258,6 +268,7 @@ class MovimentoNavegacaoE2ETests(_BaseE2E):
         p.wait_for_function("Math.abs(window.scrollY-180)<2")
         p.evaluate("""() => {
           htmx.config.defaultSettleDelay=300;
+          document.querySelector('#menu-principal').setAttribute('hx-swap','outerHTML show:none settle:300ms');
           window.__retornoAntesSettle={sequencia:[],concluido:false};
           document.addEventListener('htmx:afterSwap',e=>{
             if(e.detail.target?.id!=='conteudo')return;
@@ -277,7 +288,7 @@ class MovimentoNavegacaoE2ETests(_BaseE2E):
           },{once:true});
         }""")
         p.get_by_role("button", name="Abrir menu", exact=True).click()
-        p.locator(f'#menu-principal a[href="{reverse("governanca:painel")}"]').click()
+        self.clicar_item_menu(f'#menu-principal a[href="{reverse("governanca:painel")}"]', pagina=p)
         p.wait_for_function("window.__retornoAntesSettle.concluido")
         expect(p).to_have_url(self.url(reverse("estoque:cadastros")))
         expect(p.locator('.abas-secao [aria-current="page"]')).to_have_text("Cadastros")

@@ -113,8 +113,13 @@ class EstoqueMobileE2ETests(_BaseE2E):
         self.esperar_layout()
 
     def conferir_parametros(self, **esperados):
+        esperados = {chave: [str(valor)] for chave, valor in esperados.items()}
+        # Links internos atualizam a URL por HTMX: o documento já carregado
+        # continua em "load" enquanto a resposta da navegação ainda chega.
+        self.page.wait_for_url(
+            lambda url: parse_qs(urlsplit(url).query) == esperados, timeout=10000)
         parametros = parse_qs(urlsplit(self.page.url).query)
-        self.assertEqual(parametros, {chave: [str(valor)] for chave, valor in esperados.items()})
+        self.assertEqual(parametros, esperados)
 
     def conferir_geometria(self, *, primeira_tela=False):
         medidas = self.page.locator(".est-posicao").evaluate("""painel => {
@@ -137,8 +142,12 @@ class EstoqueMobileE2ETests(_BaseE2E):
         self.assertGreaterEqual(medidas["painel"]["left"], -1, medidas)
         self.assertLessEqual(medidas["painel"]["right"], medidas["largura"] + 1, medidas)
         if primeira_tela:
-            # Com quatro depósitos, o primeiro produto já começa no primeiro viewport.
-            self.assertLess(medidas["primeiro"]["top"], 800, medidas)
+            # Os destinos do módulo agora quebram em linhas para ficarem todos
+            # visíveis. Conserva o espaço útil anterior para filtros/resumos,
+            # descontando somente as linhas adicionais da navegação de 44px.
+            abas = self.page.locator(".est-posicao .abas-secao").bounding_box()
+            linhas_adicionais = max(0, abas["height"] - 44)
+            self.assertLess(medidas["primeiro"]["top"] - linhas_adicionais, 800, medidas)
         for rolagem in medidas["rolagens"]:
             self.assertLessEqual(rolagem["conteudo"], rolagem["largura"] + 1, rolagem)
         for linha in medidas["linhas"]:
@@ -185,9 +194,9 @@ class EstoqueMobileE2ETests(_BaseE2E):
                 expect(self.linha(self.grande)).to_contain_text("R$ 15.241.576,53")
                 expect(self.linha(self.baixo)).to_contain_text("Abaixo do mínimo")
                 expect(self.linha(self.zerado)).to_contain_text("Sem saldo")
+                self.foto(str(largura))
                 self.conferir_geometria(primeira_tela=True)
                 self.page.evaluate("window.scrollTo(0,0)")
-                self.foto(str(largura))
 
     def test_busca_categoria_situacao_e_limpar_preservam_deposito(self):
         self.page.set_viewport_size({"width": 390, "height": 900})
@@ -285,7 +294,7 @@ class EstoqueMobileE2ETests(_BaseE2E):
                 if (event.target.id === 'conteudo') window.estoqueEstavel=true;
             });
         }""")
-        self.page.locator(f'.sidebar a[href="{reverse("estoque:posicao")}"]').click()
+        self.clicar_item_menu(f'.sidebar a[href="{reverse("estoque:posicao")}"]')
         self.page.wait_for_function("window.estoqueEstavel === true")
         self.page.set_viewport_size({"width": 390, "height": 900})
         self.esperar_layout()

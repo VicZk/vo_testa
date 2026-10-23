@@ -393,11 +393,13 @@ section{position:relative}
 .rodape nav i{font-size:1.2rem}
 
 /* CTA fixo no celular */
-.cta-fixo{position:fixed;z-index:60;left:0;right:0;bottom:0;display:none;align-items:center;justify-content:space-between;gap:.8rem;padding:.65rem .9rem calc(.65rem + env(safe-area-inset-bottom));
+.cta-fixo{position:fixed;z-index:60;left:0;right:0;bottom:0;display:none;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.8rem;padding:.65rem .9rem calc(.65rem + env(safe-area-inset-bottom));
   background:rgba(5,28,44,.84);-webkit-backdrop-filter:blur(16px) saturate(150%);backdrop-filter:blur(16px) saturate(150%);border-top:1px solid rgba(215,160,72,.25);transform:translateY(110%);transition:transform .45s var(--spring)}
 .cta-fixo.on{transform:none}
 .cta-fixo-date{font-size:.86rem;line-height:1.25;color:var(--perg-80);white-space:nowrap}
 .cta-fixo-date b{display:block;color:var(--lampiao);font-size:1rem}
+.cta-fixo .btn{flex:1 1 12rem;min-width:0;max-width:100%;}
+@media (max-width:359px){.cta-fixo-date{width:100%;text-align:center}.cta-fixo-date b{display:inline;margin-right:.3rem}.cta-fixo{gap:.5rem}}
 @media (max-width:767px){.cta-fixo{display:flex}}
 
 /* ============ Responsivo ============ */

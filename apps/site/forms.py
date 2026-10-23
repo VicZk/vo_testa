@@ -164,8 +164,8 @@ class BuscaDisponibilidadeForm(forms.Form):
 
 
 _CAMPO = (
-    'w-full rounded-xl border border-madeira/15 px-3 py-2.5 '
-    'text-madeira bg-white focus:border-lampiao outline-none'
+    'w-full min-w-0 min-h-[44px] rounded-xl border border-madeira/15 px-3 py-2.5 '
+    'text-madeira bg-white focus:border-lampiao focus:ring-2 focus:ring-lampiao/30 outline-none'
 )
 
 

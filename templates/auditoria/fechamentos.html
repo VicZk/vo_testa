@@ -47,7 +47,7 @@
   <div class="cartao"><span class="indicador-rotulo letreiro">Consumo</span><span class="indicador-valor">{{ totais.receita_consumo|intcomma_brl }}</span></div>
 </div>
 
-<table class="tabela bloco-respiro-largo">
+<table class="tabela bloco-respiro-largo tabela-cartoes">
   <thead>
     <tr>
       <th>Dia</th><th class="num">Ocupação</th><th class="num">Chegadas</th>
@@ -59,16 +59,16 @@
   <tbody>
     {% for dia in fechamentos %}
       <tr>
-        <td title="Fechado em {{ dia.criado_em|date:'d/m/Y H:i' }}">{{ dia.data|date:"D, d/m/Y" }}</td>
-        <td class="num">{{ dia.quartos_ocupados }}/{{ dia.quartos_disponiveis }} · {{ dia.taxa_ocupacao }}%</td>
-        <td class="num">{{ dia.chegadas }}</td>
-        <td class="num">{{ dia.saidas }}</td>
-        <td class="num">{{ dia.no_shows }}</td>
-        <td class="num">{{ dia.receita_diarias|intcomma_brl }}</td>
-        <td class="num">{{ dia.adr|intcomma_brl }}</td>
-        <td class="num">{{ dia.receita_servico|intcomma_brl }}</td>
-        <td class="num">{{ dia.receita_consumo|intcomma_brl }}</td>
-        <td class="num">{{ dia.saldo_em_aberto|intcomma_brl }}</td>
+        <td title="Fechado em {{ dia.criado_em|date:'d/m/Y H:i' }}" data-rotulo="Dia"><div class="tabela-valor">{{ dia.data|date:"D, d/m/Y" }}</div></td>
+        <td class="num" data-rotulo="Ocupação"><div class="tabela-valor">{{ dia.quartos_ocupados }}/{{ dia.quartos_disponiveis }} · {{ dia.taxa_ocupacao }}%</div></td>
+        <td class="num" data-rotulo="Chegadas"><div class="tabela-valor">{{ dia.chegadas }}</div></td>
+        <td class="num" data-rotulo="Saídas"><div class="tabela-valor">{{ dia.saidas }}</div></td>
+        <td class="num" data-rotulo="No-shows"><div class="tabela-valor">{{ dia.no_shows }}</div></td>
+        <td class="num" data-rotulo="Diárias"><div class="tabela-valor">{{ dia.receita_diarias|intcomma_brl }}</div></td>
+        <td class="num" data-rotulo="ADR"><div class="tabela-valor">{{ dia.adr|intcomma_brl }}</div></td>
+        <td class="num" data-rotulo="Serviço"><div class="tabela-valor">{{ dia.receita_servico|intcomma_brl }}</div></td>
+        <td class="num" data-rotulo="Consumo"><div class="tabela-valor">{{ dia.receita_consumo|intcomma_brl }}</div></td>
+        <td class="num" data-rotulo="Em aberto"><div class="tabela-valor">{{ dia.saldo_em_aberto|intcomma_brl }}</div></td>
       </tr>
     {% empty %}
       <tr><td colspan="10" class="vazio">Nenhum dia fechado no período. A rotina da madrugada fecha o dia anterior (comando <code>fechar_dia</code>).</td></tr>

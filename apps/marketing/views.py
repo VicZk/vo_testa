@@ -484,6 +484,7 @@ def relatorio(request):
         return resp
     return render(request, "marketing/relatorio.html", {
         "dados": dados, "inicio": inicio, "fim": fim, "rotulo": rotulo,
+        "tem_serie_gastos": any(item["gasto"] for item in dados["serie"]),
         "atual": "marketing", "aba": "relatorio", **selecao_periodo(request),
     })
 

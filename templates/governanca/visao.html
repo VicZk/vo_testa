@@ -81,7 +81,7 @@ A barra mostra a casa inteira repartida pelos quatro estados.{% endcomment %}
 </section>
 {% else %}
 <section class="atencao-secao">
-  <div class="estado-vazio">
+  <div class="vazio-bloco">
     {% if plano.a_fazer %}
     <p>A limpeza já está distribuída.</p>
     <p class="ajuda">Ainda há {{ plano.a_fazer }} quarto{{ plano.a_fazer|pluralize }} no plano do dia abaixo. Acompanhe o andamento pela lista de quartos.</p>
@@ -160,7 +160,7 @@ A barra mostra a casa inteira repartida pelos quatro estados.{% endcomment %}
               <i class="parte-fazendo" style="width: {{ c.barra_fazendo }}%"></i>
               <i class="parte-pendentes" style="width: {{ c.barra_pendentes }}%"></i>
             </span>
-            <span class="gov-carga-num"><b>{{ c.na_mao }}</b> em atendimento · {{ c.feitas }} concluído{{ c.feitas|pluralize }}</span>
+            <span class="gov-carga-num"><b>{{ c.pendentes }}</b> pendente{{ c.pendentes|pluralize }} · {{ c.fazendo }} em andamento · {{ c.feitas }} concluído{{ c.feitas|pluralize }}</span>
           </li>
         {% endfor %}
       </ul>

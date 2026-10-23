@@ -450,7 +450,9 @@ class RegistroEViewTests(BaseReceita):
             # A nota explica o relatório na própria tela (e no CSV e na impressão).
             self.assertContains(resp, resp.context["dados"]["nota"][:40])
             # Coluna de número nasce alinhada: `.num` no <th> (regra da casa).
-            self.assertContains(resp, '<th class="num">')
+            cabecalho = re.search(r"<thead>(.*?)</thead>", resp.content.decode(), re.S).group(1)
+            numericos = re.findall(r'<th\b[^>]*class="[^"]*\bnum\b[^"]*"[^>]*>', cabecalho)
+            self.assertEqual(len(numericos), len(resp.context["dados"]["colunas"]) - 1)
 
     def test_carteira_abre_no_proximo_mes(self):
         hoje = timezone.localdate()

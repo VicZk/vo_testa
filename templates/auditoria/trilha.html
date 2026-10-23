@@ -50,18 +50,18 @@
   <a href="{% url 'auditoria:trilha' %}" class="botao-neutro botao-fim-linha">Limpar</a>
 </form>
 
-<table class="tabela">
+<table class="tabela tabela-cartoes">
   <thead>
-    <tr><th>Quando</th><th>Usuário</th><th>Ação</th><th>Alvo</th><th>Detalhe</th></tr>
+    <tr><th class="col-data">Quando</th><th>Usuário</th><th>Ação</th><th>Alvo</th><th>Detalhe</th></tr>
   </thead>
   <tbody>
     {% for t in registros %}
       <tr>
-        <td>{{ t.criado_em|date:"d/m/Y H:i" }}</td>
-        <td>{% if t.usuario %}<a href="?usuario={{ t.usuario.pk }}&mes={{ mes_sel }}&ano={{ ano_sel }}" title="Ver só as ações de {{ t.usuario }}">{{ t.usuario }}</a>{% else %}—{% endif %}</td>
-        <td><span class="selo">{{ t.acao|rotulo_acao }}</span></td>
-        <td>{{ t.alvo|rotulo_alvo }} #{{ t.alvo_id }}</td>
-        <td><span title="{{ t.detalhe }}">{{ t|frase_auditoria }}</span></td>
+        <td class="col-data" data-rotulo="Quando"><div class="tabela-valor">{{ t.criado_em|date:"d/m/Y H:i" }}</div></td>
+        <td data-rotulo="Usuário"><div class="tabela-valor">{% if t.usuario %}<a href="?usuario={{ t.usuario.pk }}&mes={{ mes_sel }}&ano={{ ano_sel }}" title="Ver só as ações de {{ t.usuario }}">{{ t.usuario }}</a>{% else %}—{% endif %}</div></td>
+        <td data-rotulo="Ação"><div class="tabela-valor"><span class="selo">{{ t.acao|rotulo_acao }}</span></div></td>
+        <td data-rotulo="Alvo"><div class="tabela-valor">{{ t.alvo|rotulo_alvo }} #{{ t.alvo_id }}</div></td>
+        <td data-rotulo="Detalhe"><div class="tabela-valor"><span title="{{ t.detalhe }}">{{ t|frase_auditoria }}</span></div></td>
       </tr>
     {% empty %}
       <tr><td colspan="5" class="vazio">Nenhum registro no filtro.</td></tr>

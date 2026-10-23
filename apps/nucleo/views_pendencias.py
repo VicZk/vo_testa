@@ -5,11 +5,13 @@ from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseBadRequest, JsonResponse
 from django.shortcuts import render
 from django.template.loader import render_to_string
+from django.urls import reverse
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET
 
 from .paginacao import paginar
 from .pendencias import ESTADOS, origens_permitidas, pendencias_usuario, url_pendencias
+from .retorno_pendencias import com_retorno
 
 
 def _contexto(request):
@@ -24,6 +26,16 @@ def _contexto(request):
     itens_origem = [i for i in dados["itens"] if not origem or i["origem"] == origem]
     itens = [i for i in itens_origem if not estado or i["estado"] == estado]
     pagina = paginar(request, itens)
+    retorno = url_pendencias(origem, estado)
+    if request.GET.get("pagina"):
+        retorno += ("&" if "?" in retorno else "?") + f"pagina={pagina.number}"
+    for item in pagina.object_list:
+        item["url_acao"] = com_retorno(item.get("url", ""), retorno)
+    quartos = reverse("governanca:quartos")
+    if estado in ("pendente", "em_andamento"):
+        quartos += f"?servico={estado}"
+    elif estado == "inspecao":
+        quartos += "?estado=limpa"
     return {
         "origem": origem, "estado": estado,
         "origem_rotulo": permitidas.get(origem, "Todas as origens"),
@@ -38,6 +50,8 @@ def _contexto(request):
         "indisponiveis": [i for i in dados["indisponiveis"] if not origem or i["codigo"] == origem],
         "tem_governanca": "governanca" in permitidas,
         "url_sem_estado": url_pendencias(origem),
+        "url_governanca_painel": com_retorno(reverse("governanca:painel"), retorno),
+        "url_governanca_quartos": com_retorno(quartos, retorno),
     }
 
 

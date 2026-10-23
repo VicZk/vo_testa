@@ -29,14 +29,14 @@ cartão.{% endcomment %}
 <div class="colunas colunas-2-1 com-painel-colunas">
   <section>
     <h2>Funil por etapa (em aberto)</h2>
-    <table class="tabela">
+    <table class="tabela tabela-cartoes">
       <thead><tr><th>Etapa</th><th class="num">Oportunidades</th><th class="num">Valor</th></tr></thead>
       <tbody>
         {% for col in colunas %}
           <tr>
-            <td>{{ col.etapa.nome }} <small class="letreiro">· {{ col.etapa.probabilidade }}%</small></td>
-            <td class="num">{{ col.itens|length }}</td>
-            <td class="num">{{ col.total|intcomma_brl }}</td>
+            <td data-rotulo="Etapa"><div class="tabela-valor">{{ col.etapa.nome }} <small class="letreiro">· {{ col.etapa.probabilidade }}%</small></div></td>
+            <td class="num" data-rotulo="Oportunidades"><div class="tabela-valor">{{ col.itens|length }}</div></td>
+            <td class="num" data-rotulo="Valor"><div class="tabela-valor">{{ col.total|intcomma_brl }}</div></td>
           </tr>
         {% empty %}
           <tr><td colspan="3" class="vazio">Nenhuma etapa de funil configurada ainda.</td></tr>
@@ -45,11 +45,11 @@ cartão.{% endcomment %}
     </table>
 
     <h2 class="com-bloco-titulo">Tempo médio por etapa (horas)</h2>
-    <table class="tabela">
+    <table class="tabela tabela-cartoes">
       <thead><tr><th>Etapa</th><th class="num">Média (h)</th></tr></thead>
       <tbody>
         {% for t in gestao.tempo_por_etapa %}
-          <tr><td>{{ t.etapa }}</td><td class="num">{{ t.horas }}</td></tr>
+          <tr><td data-rotulo="Etapa"><div class="tabela-valor">{{ t.etapa }}</div></td><td class="num" data-rotulo="Média (h)"><div class="tabela-valor">{{ t.horas }}</div></td></tr>
         {% empty %}
           <tr><td colspan="2" class="vazio">Ainda sem histórico de movimentação no período.</td></tr>
         {% endfor %}
@@ -57,15 +57,15 @@ cartão.{% endcomment %}
     </table>
 
     <h2 class="com-bloco-titulo">Top scores (abertas)</h2>
-    <table class="tabela">
+    <table class="tabela tabela-cartoes">
       <thead><tr><th>Score</th><th>Oportunidade</th><th>Lead</th><th class="num">Valor</th></tr></thead>
       <tbody>
         {% for o in gestao.top_scores %}
           <tr>
-            <td>{{ o.score }}</td>
-            <td><a href="{% url 'comercial:oportunidade' o.pk %}">{{ o.titulo }}</a></td>
-            <td>{{ o.pessoa.nome }}</td>
-            <td class="num">{{ o.valor_estimado|intcomma_brl }}</td>
+            <td data-rotulo="Score"><div class="tabela-valor">{{ o.score }}</div></td>
+            <td data-rotulo="Oportunidade"><div class="tabela-valor"><a href="{% url 'comercial:oportunidade' o.pk %}">{{ o.titulo }}</a></div></td>
+            <td data-rotulo="Lead"><div class="tabela-valor">{{ o.pessoa.nome }}</div></td>
+            <td class="num" data-rotulo="Valor"><div class="tabela-valor">{{ o.valor_estimado|intcomma_brl }}</div></td>
           </tr>
         {% empty %}
           <tr><td colspan="4" class="vazio">Nenhuma oportunidade aberta.</td></tr>
@@ -85,11 +85,11 @@ cartão.{% endcomment %}
     </form>
 
     <h2>Motivos de perda</h2>
-    <table class="tabela">
+    <table class="tabela tabela-cartoes">
       <thead><tr><th>Motivo</th><th class="num">Qtd.</th></tr></thead>
       <tbody>
         {% for p in perdas %}
-          <tr><td>{{ p.motivo_perda__nome }}</td><td class="num">{{ p.n }}</td></tr>
+          <tr><td data-rotulo="Motivo"><div class="tabela-valor">{{ p.motivo_perda__nome }}</div></td><td class="num" data-rotulo="Qtd."><div class="tabela-valor">{{ p.n }}</div></td></tr>
         {% empty %}
           <tr><td colspan="2" class="vazio">Nenhuma perda registrada.</td></tr>
         {% endfor %}

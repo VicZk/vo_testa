@@ -59,6 +59,7 @@ def relatorio(request, chave):
         "chave": chave, "titulo": r["nome"], "grupo": r["grupo"],
         "inicio": inicio, "fim": fim, "rotulo": rotulo,
         "dados": dados, "f": request.GET, "controles": controles,
+        "linhas_rotuladas": [list(zip(dados["colunas"], linha)) for linha in dados["linhas"]],
         **services.selecao_periodo(request, r.get("periodo")),
     })
 

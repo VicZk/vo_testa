@@ -19,20 +19,20 @@
   </p>
 
   <div class="quadro quadro-lista">
-    <table>
+    <table class="tabela tabela-cartoes">
       <thead><tr><th>Nome</th><th>Assunto</th><th>Status</th><th class="num">Enviados</th><th>Quando</th><th class="acao"></th></tr></thead>
       <tbody>
         {% for c in itens %}
           <tr class="clic" onclick="location.href='{% url 'comercial:email_campanha_detalhe' c.pk %}'">
-            <td class="camp-nome">{{ c.nome }}</td>
-            <td class="celula-texto estreita">{{ c.assunto|truncatechars:70 }}</td>
-            <td><span class="selo {% if c.status == 'enviada' %}selo-pub{% elif c.status == 'cancelada' %}selo-enc{% endif %}">{{ c.get_status_display }}</span></td>
-            <td class="num">{{ c.enviados }}{% if c.total %}/{{ c.total }}{% endif %}</td>
-            <td class="celula-suave">{{ c.enviada_em|date:"d/m/Y H:i"|default:"—" }}</td>
-            <td class="acao"><a href="{% url 'comercial:email_campanha_detalhe' c.pk %}" class="botao-mini" onclick="event.stopPropagation()">Abrir</a></td>
+            <td class="camp-nome" data-rotulo="Nome"><div class="tabela-valor">{{ c.nome }}</div></td>
+            <td class="celula-texto estreita" data-rotulo="Assunto"><div class="tabela-valor">{{ c.assunto|truncatechars:70 }}</div></td>
+            <td data-rotulo="Status"><div class="tabela-valor"><span class="selo {% if c.status == 'enviada' %}selo-pub{% elif c.status == 'cancelada' %}selo-enc{% endif %}">{{ c.get_status_display }}</span></div></td>
+            <td class="num" data-rotulo="Enviados"><div class="tabela-valor">{{ c.enviados }}{% if c.total %}/{{ c.total }}{% endif %}</div></td>
+            <td class="celula-suave" data-rotulo="Quando"><div class="tabela-valor">{{ c.enviada_em|date:"d/m/Y H:i"|default:"—" }}</div></td>
+            <td class="acao" data-rotulo="Ação"><div class="tabela-valor"><a href="{% url 'comercial:email_campanha_detalhe' c.pk %}" class="botao-mini" onclick="event.stopPropagation()">Abrir</a></div></td>
           </tr>
         {% empty %}
-          <tr><td colspan="6" class="vazio-el">Nenhuma campanha ainda. Crie a primeira. 📣</td></tr>
+          <tr><td colspan="6" class="vazio">Nenhuma campanha ainda. Crie a primeira.</td></tr>
         {% endfor %}
       </tbody>
     </table>

@@ -32,8 +32,8 @@
   <section class="aviso aviso-info pendencias-explicacao" aria-label="Como funciona a contagem da Governança">
     <p><strong>O número da Governança mostra serviços de limpeza aguardando início.</strong> Ao iniciar, o serviço passa para Em andamento e sai desse número. Depois da conclusão, o quarto segue para a conferência da limpeza.</p>
     <div class="acoes">
-      <a class="botao-neutro" href="{% url 'governanca:painel' %}">Visão geral da casa</a>
-      <a class="botao-neutro" href="{% url 'governanca:quartos' %}{% if estado == 'pendente' or estado == 'em_andamento' %}?servico={{ estado }}{% elif estado == 'inspecao' %}?estado=limpa{% endif %}">Abrir quartos{% if estado == 'pendente' %} com serviços pendentes{% elif estado == 'em_andamento' %} em limpeza{% endif %}</a>
+      <a class="botao-neutro" href="{{ url_governanca_painel }}">Visão geral da casa</a>
+      <a class="botao-neutro" href="{{ url_governanca_quartos }}">Abrir quartos{% if estado == 'pendente' %} com serviços pendentes{% elif estado == 'em_andamento' %} em limpeza{% endif %}</a>
     </div>
   </section>
   {% endif %}

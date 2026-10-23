@@ -113,7 +113,7 @@ class CadastrosPrecosOperacaoE2ETests(_BaseE2E):
         base.fill("71235")
         p.locator('input[name="single_pct"]').fill("7025")
         p.locator('input[name="du_ad_alta"]').evaluate("campo => campo.value = 'NaN'")
-        p.get_by_role("button", name="Salvar tabela").click()
+        p.locator("#precos-salvar").get_by_role("button", name="Salvar tabela").click()
         expect(p.locator('[data-erros-envio]')).to_contain_text("Day use")
         expect(base).to_have_value("712,35")
         expect(p.locator('input[name="single_pct"]')).to_have_value("70,25")
@@ -122,7 +122,7 @@ class CadastrosPrecosOperacaoE2ETests(_BaseE2E):
         self.conferir_erro_responsivo("tabela-erro")
         p.locator('input[name="du_ad_alta"]').fill("9500")
         with p.expect_navigation():
-            p.get_by_role("button", name="Salvar tabela").click()
+            p.locator("#precos-salvar").get_by_role("button", name="Salvar tabela").click()
         self.tarifa.refresh_from_db()
         self.cfg.refresh_from_db()
         self.assertEqual(self.tarifa.valor, Decimal("712.35"))
@@ -916,7 +916,7 @@ class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
             });
         }""")
         for rota in ("governanca:painel", "marketing:entregas", "escala:grade", "estoque:posicao"):
-            p.locator(f'#menu-principal a[href="{reverse(rota)}"]').click()
+            self.clicar_item_menu(f'#menu-principal a[href="{reverse(rota)}"]', pagina=p)
             p.wait_for_url("**"+reverse(rota))
             p.wait_for_function("!document.querySelector('.htmx-request')")
             p.evaluate("async () => { if(document.activeViewTransition)await document.activeViewTransition.finished; }")
@@ -1012,7 +1012,7 @@ class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
                 self.assertLessEqual(p.evaluate("document.documentElement.scrollWidth"), largura + 1)
                 self._foto(f"dashboard-identificacao-{largura}.png")
 
-    def test_busca_titulo_e_formulario_compartilham_o_centro_da_area_util(self):
+    def test_busca_centralizada_e_formularios_alinhados_ao_conteudo(self):
         p = self.page
         p.emulate_media(reduced_motion="reduce")
         rotas = [reverse("mfa_config"), reverse("uh_editar", args=[self.room.pk]),
@@ -1031,15 +1031,19 @@ class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
                             const main = box('.main');
                             const cartao = box('.conteudo > .form-cartao, .conteudo-compacto > .cartao-estreito');
                             const busca = box('.busca-global');
+                            const conteudo = document.querySelector('#conteudo'), r = conteudo.getBoundingClientRect();
+                            const css = getComputedStyle(conteudo);
                             return {centro: main.x + main.width / 2,
-                                    cartao: cartao.x + cartao.width / 2,
                                     busca: busca.x + busca.width / 2,
                                     titulo: box('main h1').x, borda: cartao.x,
+                                    eixo: r.left + parseFloat(css.paddingLeft),
+                                    direita: cartao.right, limite: r.right - parseFloat(css.paddingRight),
                                     documento: document.documentElement.scrollWidth};
                         }""")
                         self.assertAlmostEqual(medidas["busca"], medidas["centro"], delta=1)
-                        self.assertAlmostEqual(medidas["cartao"], medidas["centro"], delta=1)
-                        self.assertAlmostEqual(medidas["titulo"], medidas["borda"], delta=1)
+                        self.assertAlmostEqual(medidas["borda"], medidas["eixo"], delta=1)
+                        self.assertAlmostEqual(medidas["titulo"], medidas["eixo"], delta=1)
+                        self.assertLessEqual(medidas["direita"], medidas["limite"] + 1)
                         self.assertLessEqual(medidas["documento"], largura + 1)
         p.locator('.busca-global').click()
         expect(p.get_by_role("dialog", name="Buscar na pousada", exact=True)).to_be_visible()
@@ -1142,13 +1146,10 @@ class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
                     })""")
                     self.assertTrue(grupos)
                     for grupo in grupos:
+                        self.assertLessEqual(grupo["conteudo"], grupo["largura"] + 1)
+                        self.assertFalse(grupo["fora"], grupo)
                         if grupo["faixa"]:
-                            self.assertIn(grupo["overflow"], ("auto", "scroll"))
-                            self.assertLess(max(a["y"] for a in grupo["itens"]) - min(a["y"] for a in grupo["itens"]), 1)
                             self.assertTrue(all(a["h"] >= 44 and not a["cortado"] for a in grupo["itens"]))
-                        else:
-                            self.assertLessEqual(grupo["conteudo"], grupo["largura"] + 1)
-                            self.assertFalse(grupo["fora"], grupo)
                     for faixa in p.locator(".abas-secao").all():
                         for link in (faixa.locator("a").first, faixa.locator("a").last):
                             link.focus()
@@ -1519,10 +1520,10 @@ class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
         self.abrir("estoque:transferencia")
         p.locator("#id_produto").fill("QA Água")
         p.get_by_role("option", name="QA Água", exact=False).click()
-        p.get_by_role("radiogroup", name="2. Sai de").locator("label").filter(
+        p.get_by_role("radiogroup", name="Sai de", exact=True).locator("label").filter(
             has_text="QA Loja"
         ).click()
-        p.get_by_role("radiogroup", name="3. Vai para").locator("label").filter(
+        p.get_by_role("radiogroup", name="Vai para", exact=True).locator("label").filter(
             has_text="QA Restaurante"
         ).click()
         p.locator("#id_quantidade").fill("25")

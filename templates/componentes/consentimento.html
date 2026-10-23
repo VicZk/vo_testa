@@ -12,8 +12,7 @@ paleta da marca no site, que não carrega o app.css.
   <div class="aviso-cookies-caixa">
     <p class="aviso-cookies-txt">
       <strong>Cookies e medição.</strong>
-      Usamos cookies para entender como o site é usado e melhorar a experiência de reserva.
-      Nada é carregado antes da sua escolha.
+      Cookies de medição só são ativados se você aceitar.
       <a href="{% url 'core:politica_privacidade' %}">Política de privacidade</a>.
     </p>
     <div class="aviso-cookies-acoes">
@@ -71,6 +70,9 @@ paleta da marca no site, que não carrega o app.css.
     box-shadow: 0 0 0 3px rgba(215, 160, 72, .35);
   }
   @media (max-width: 520px) {
+    .aviso-cookies { padding:0 8px 8px; }
+    .aviso-cookies-caixa { padding:12px; gap:10px; }
+    .aviso-cookies-txt { font-size:13px; line-height:1.4; }
     .aviso-cookies-acoes { width: 100%; }
     .aviso-cookies-btn { flex: 1; }
   }

@@ -10,7 +10,7 @@
 {% for item in integracoes %}
 <section class="painel-bloco">
   <div class="pagina-cabecalho"><h2>{{ item.titulo }}</h2><span class="selo {% if item.ensaio %}selo-limpa{% else %}selo-alerta{% endif %}">{{ item.situacao }}</span></div>
-  <p>{{ item.modo }}{% if item.ambiente %} · {{ item.ambiente }}{% endif %}</p>
+  <p>{{ item.modo|capfirst }}{% if item.ambiente %} · {{ item.ambiente|capfirst }}{% endif %}</p>
   {% if item.modo == 'simulado' %}<p class="ajuda">Os resultados deste modo são de teste. A ativação exige configurar o provedor e conferir um ensaio.</p>{% endif %}
   {% if item.pendencias %}<ul>{% for pendencia in item.pendencias %}<li>{{ pendencia }}</li>{% endfor %}</ul>{% endif %}
   <p>{{ item.orientacao }}</p>

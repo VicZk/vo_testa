@@ -11,19 +11,19 @@
 <div class="colunas colunas-2-1">
   <section>
     <h2>Posição do enxoval</h2>
-    <table class="tabela">
+    <table class="tabela tabela-cartoes">
       <thead>
         <tr><th>Item</th><th class="num">Limpa</th><th class="num">Em uso</th><th class="num">Suja</th><th class="num">Lavando</th><th class="num">Total</th></tr>
       </thead>
       <tbody>
         {% for l in posicao %}
           <tr>
-            <td>{{ l.item.nome }}{% if l.abaixo_minimo %} <span class="selo prioridade-alta dica" data-dica="Abaixo do mínimo ({{ l.item.minimo }})">baixo</span>{% endif %}</td>
-            <td class="num">{{ l.estados.limpa }}</td>
-            <td class="num">{{ l.estados.em_uso }}</td>
-            <td class="num">{{ l.estados.suja }}</td>
-            <td class="num">{{ l.estados.lavando }}</td>
-            <td class="num"><strong>{{ l.total }}</strong></td>
+            <td data-rotulo="Item"><div class="tabela-valor">{{ l.item.nome }}{% if l.abaixo_minimo %} <span class="selo prioridade-alta dica" data-dica="Abaixo do mínimo ({{ l.item.minimo }})">Baixo</span>{% endif %}</div></td>
+            <td class="num" data-rotulo="Limpa"><div class="tabela-valor">{{ l.estados.limpa }}</div></td>
+            <td class="num" data-rotulo="Em uso"><div class="tabela-valor">{{ l.estados.em_uso }}</div></td>
+            <td class="num" data-rotulo="Suja"><div class="tabela-valor">{{ l.estados.suja }}</div></td>
+            <td class="num" data-rotulo="Lavando"><div class="tabela-valor">{{ l.estados.lavando }}</div></td>
+            <td class="num" data-rotulo="Total"><div class="tabela-valor"><strong>{{ l.total }}</strong></div></td>
           </tr>
         {% empty %}
           <tr><td colspan="6" class="vazio">Nenhum item de enxoval. Cadastre ao lado.</td></tr>

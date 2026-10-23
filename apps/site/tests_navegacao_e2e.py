@@ -105,7 +105,7 @@ class NavegacaoModulosE2ETests(_BaseE2E):
             lambda resposta: urlparse(resposta.url).path == href
             and resposta.request.headers.get("hx-request") == "true"
         ) as recebida:
-            self.page.locator(f'#menu-principal a.nav-item[href="{href}"]').click()
+            self.clicar_item_menu(f'#menu-principal a.nav-item[href="{href}"]')
         self.assertLess(recebida.value.status, 400, (href, recebida.value.status))
         expect(self.page).to_have_url(self.url(href))
         self.page.wait_for_function("!document.querySelector('.htmx-request')")
@@ -131,14 +131,21 @@ class NavegacaoModulosE2ETests(_BaseE2E):
         abas = self.page.locator("#conteudo .abas-secao").evaluate_all("""els => els.map(el => ({
           direita:el.getBoundingClientRect().right, largura:el.clientWidth,
           rolagem:el.scrollWidth, overflow:getComputedStyle(el).overflowX,
-          centros:Array.from(el.children).filter(f => f.getClientRects().length).map(f => {
-            const r=f.getBoundingClientRect(); return r.top+r.height/2;
+          itens:Array.from(el.children).filter(f => f.getClientRects().length).map(f => {
+            const r=f.getBoundingClientRect(); return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,
+              altura:r.height,alvo:f.matches('a,button')};
           })
         }))""")
         for aba in abas:
             self.assertLessEqual(aba["direita"], self.page.viewport_size["width"] + 1, (href, aba))
-            if aba["centros"]:
-                self.assertLessEqual(max(aba["centros"]) - min(aba["centros"]), 1, (href, aba))
+            for i, item in enumerate(aba["itens"]):
+                if item["alvo"]:
+                    self.assertGreaterEqual(item["altura"], 44, (href, aba))
+                for outro in aba["itens"][i + 1:]:
+                    self.assertTrue(item["right"] <= outro["left"] + 1 or
+                                    outro["right"] <= item["left"] + 1 or
+                                    item["bottom"] <= outro["top"] + 1 or
+                                    outro["bottom"] <= item["top"] + 1, (href, aba))
             if aba["rolagem"] > aba["largura"] + 1:
                 self.assertIn(aba["overflow"], ("auto", "scroll"), (href, aba))
         return abas
@@ -253,7 +260,7 @@ class NavegacaoModulosE2ETests(_BaseE2E):
             dialogo.dismiss()
 
         self.page.once("dialog", cancelar)
-        self.page.locator(f'#menu-principal a[href="{reverse("dashboard")}"]').click()
+        self.clicar_item_menu(f'#menu-principal a[href="{reverse("dashboard")}"]')
         expect(self.page).to_have_url(self.url(reverse("loja:pdv")))
         expect(self.page.locator(".pdv-contador")).to_have_text("1 item")
         self.assertEqual(len(avisos), 1)
@@ -283,7 +290,7 @@ class NavegacaoModulosE2ETests(_BaseE2E):
         self.page.add_init_script("Object.defineProperty(window, 'navigation', {value: undefined})")
         self.iniciar()
         with self.page.expect_navigation(wait_until="load"):
-            self.page.locator("#menu-principal [data-pdv-entrada]").click()
+            self.clicar_item_menu("#menu-principal [data-pdv-entrada]")
         expect(self.page).to_have_url(self.url(reverse("loja:pdv")))
         self.assertTrue(self.page.evaluate("typeof window.__navReferencias === 'undefined'"))
         self.page.get_by_role("button", name=f"Adicionar {self.produto.nome} ao carrinho", exact=True).click()

@@ -29,7 +29,7 @@ from .forms_lead import ContatoLeadForm
 logger = logging.getLogger(__name__)
 
 _LP_PATH = Path(settings.BASE_DIR) / "LPs" / "LP_Fundador" / "LP_Fundador.html"
-_LP_CACHE = {"html": None}
+_LP_CACHE: dict[tuple[str, str], str] = {}
 
 # O JS das LPs posta o lead em '/lp/<slug>/lead/'.
 _LEAD_NO_JS = re.compile(r"""(["'`])/lp/""")
@@ -132,11 +132,13 @@ def _desembutir(html: str) -> str:
 
 
 def _lp_html() -> str:
-    # Em produção lê uma vez (cache em memória); em DEBUG relê p/ editar ao vivo.
-    if _LP_CACHE["html"] is None or settings.DEBUG:
-        _LP_CACHE["html"] = _com_toque_no_celular(_com_aviso_de_cookies(
+    # O aviso e os arquivos embutidos incluem URLs do contexto da requisição.
+    # Em DEBUG relê para editar ao vivo; em produção guarda por prefixo e estáticos.
+    chave = (get_script_prefix(), settings.STATIC_URL)
+    if chave not in _LP_CACHE or settings.DEBUG:
+        _LP_CACHE[chave] = _com_toque_no_celular(_com_aviso_de_cookies(
             _desembutir(_LP_PATH.read_text(encoding="utf-8"))))
-    return _LP_CACHE["html"]
+    return _LP_CACHE[chave]
 
 
 _BOTS = ("bot", "crawl", "spider", "facebookexternalhit", "whatsapp", "preview",
@@ -301,16 +303,17 @@ def lp_fundador_lead(request):
 # ─────────────────────────────────────────────────────────────────────────────
 _LP2_PATH = (Path(settings.BASE_DIR) / "LPs" / "LP_Fundador_II_13_09_2026"
              / "LP_Fundador_II_13_09_2026.html")
-_LP2_CACHE = {"html": None}
+_LP2_CACHE: dict[tuple[str, str], str] = {}
 _LP2_SLUG = "fundador-2"                 # casa com a PaginaCaptacao e o utm_campaign
 _VISITA2_COOKIE = "lpv_fundador_2"       # conta 1 visita por navegador (dedupe reload)
 
 
 def _lp2_html() -> str:
-    if _LP2_CACHE["html"] is None or settings.DEBUG:
-        _LP2_CACHE["html"] = _com_toque_no_celular(_com_aviso_de_cookies(
+    chave = (get_script_prefix(), settings.STATIC_URL)
+    if chave not in _LP2_CACHE or settings.DEBUG:
+        _LP2_CACHE[chave] = _com_toque_no_celular(_com_aviso_de_cookies(
             _desembutir(_LP2_PATH.read_text(encoding="utf-8"))))
-    return _LP2_CACHE["html"]
+    return _LP2_CACHE[chave]
 
 
 def _qtd_fundadores() -> int:
@@ -378,13 +381,14 @@ def lp_fundador_2_lead(request):
 # ─────────────────────────────────────────────────────────────────────────────
 _LPINAUG_PATH = (Path(settings.BASE_DIR) / "LPs" / "LP_Inauguração_31_10_2026"
                  / "LP-Inauguracao-VoTesta.html")
-_LPINAUG_CACHE = {"html": None}
+_LPINAUG_CACHE: dict[tuple[str, str], str] = {}
 _LPINAUG_SLUG = "inauguracao_31_10_2026"       # casa com a PaginaCaptacao / utm_campaign
 _VISITA_INAUG_COOKIE = "lpv_inauguracao_31_10_2026"
 
 
 def _lpinaug_html() -> str:
-    if _LPINAUG_CACHE["html"] is None or settings.DEBUG:
+    chave = (get_script_prefix(), settings.STATIC_URL)
+    if chave not in _LPINAUG_CACHE or settings.DEBUG:
         html = _LPINAUG_PATH.read_text(encoding="utf-8")
         # O HTML vem reusando o endpoint da Fundador II; aponta para a rota própria.
         html = html.replace("/lp/fundador-2/lead/", f"/lp/{_LPINAUG_SLUG}/lead/")
@@ -395,8 +399,8 @@ def _lpinaug_html() -> str:
         html = html.replace("/lp/inauguracao/assets/img/og-inauguracao-v2.jpg",
                             "/static/lp/og-inauguracao.jpg")
         html = html.replace("/lp/inauguracao/", f"/lp/{_LPINAUG_SLUG}/")
-        _LPINAUG_CACHE["html"] = _com_toque_no_celular(_com_aviso_de_cookies(_desembutir(html)))
-    return _LPINAUG_CACHE["html"]
+        _LPINAUG_CACHE[chave] = _com_toque_no_celular(_com_aviso_de_cookies(_desembutir(html)))
+    return _LPINAUG_CACHE[chave]
 
 
 @never_cache

@@ -47,7 +47,7 @@ tela prometer um conteúdo que não existe.{% endcomment %}
     {% endif %}
 
     <div class="campo est-passo">
-      <label for="id_produto">1. Produto</label>
+      <label for="id_produto">Produto</label>
       {% include "componentes/combo_pessoa.html" with dados=produtos_json dados_id="produtos-data" campo="produto" placeholder="Buscar produto pelo nome…" valor_id=escolhido %}
       {% for erro in form.produto.errors %}<small class="erro">{{ erro }}</small>{% endfor %}
       <small class="ajuda" x-show="p" x-cloak>
@@ -58,7 +58,7 @@ tela prometer um conteúdo que não existe.{% endcomment %}
 
     {% if operacao == 'transferencia' %}
       <div class="campo est-passo">
-        <label id="rot-origem">2. Sai de</label>
+        <label id="rot-origem">Sai de</label>
         <div class="est-locais-escolha" role="radiogroup" aria-labelledby="rot-origem">
           {% for lo in locais %}
             <label class="est-local-opt">
@@ -72,7 +72,7 @@ tela prometer um conteúdo que não existe.{% endcomment %}
         {% for erro in form.origem.errors %}<small class="erro">{{ erro }}</small>{% endfor %}
       </div>
       <div class="campo est-passo">
-        <label id="rot-destino">3. Vai para</label>
+        <label id="rot-destino">Vai para</label>
         <div class="est-locais-escolha" role="radiogroup" aria-labelledby="rot-destino">
           {% for lo in locais %}
             <label class="est-local-opt">
@@ -86,7 +86,7 @@ tela prometer um conteúdo que não existe.{% endcomment %}
       </div>
     {% else %}
       <div class="campo est-passo">
-        <label id="rot-local">2. {{ form.local.label }}</label>
+        <label id="rot-local">{{ form.local.label }}</label>
         <div class="est-locais-escolha" role="radiogroup" aria-labelledby="rot-local">
           {% for lo in locais %}
             <label class="est-local-opt">
@@ -103,7 +103,7 @@ tela prometer um conteúdo que não existe.{% endcomment %}
 
     <div class="est-mov-grade">
       <div class="campo">
-        <label for="id_quantidade">{% if operacao == 'transferencia' %}4{% else %}3{% endif %}. {{ form.quantidade.label }}</label>
+        <label for="id_quantidade">{{ form.quantidade.label }}</label>
         <div class="est-campo-unidade">
           <input type="number" id="id_quantidade" name="quantidade" step="0.001" min="{% if operacao == 'ajuste' %}0{% else %}0.001{% endif %}"
                  value="{{ form.quantidade.value|default_if_none:'' }}" x-model.number="qtd" required>

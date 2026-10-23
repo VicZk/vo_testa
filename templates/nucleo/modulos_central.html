@@ -14,7 +14,7 @@
 
 <div class="legenda-modulos">
   <span class="selo-status status-funcionando">Funcionando</span>
-  <span class="selo-status status-construcao">Em construção</span>
+  <span class="rotulo-dado status-construcao">Em construção</span>
   <span class="selo-status status-disponivel">Disponível</span>
 </div>
 
@@ -25,7 +25,7 @@
       <div class="modulo-card modulo-{{ m.status }}">
         <div class="modulo-card-topo">
           <strong>{{ m.nome }}</strong>
-          <span class="selo-status status-{{ m.status }}">
+          <span class="{% if m.status == 'construcao' %}rotulo-dado{% else %}selo-status{% endif %} status-{{ m.status }}">
             {% if m.status == "funcionando" %}Funcionando{% elif m.status == "construcao" %}Em construção{% else %}Disponível{% endif %}
           </span>
         </div>
@@ -40,8 +40,8 @@
             <input type="hidden" name="acao" value="desativar">
             {% if m.bloqueia_desativar %}
               <button type="button" class="botao-neutro" disabled
-                      title="{{ m.bloqueia_desativar|join:', ' }} depende(m) deste módulo">Desativar</button>
-              <span class="modulo-trava dica" data-dica="{{ m.bloqueia_desativar|join:', ' }} depende(m) deste módulo" aria-label="Não pode ser desativado: outros módulos dependem dele"><svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></span>
+                      title="{{ m.bloqueia_desativar|join:', ' }} depende{{ m.bloqueia_desativar|pluralize:"m" }} deste módulo">Desativar</button>
+              <span class="modulo-trava dica" data-dica="{{ m.bloqueia_desativar|join:', ' }} depende{{ m.bloqueia_desativar|pluralize:"m" }} deste módulo" aria-label="Não pode ser desativado: outros módulos dependem dele"><svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></span>
             {% else %}
               <button type="submit" class="botao-neutro"
                       onclick="return confirm('Desativar {{ m.nome }}? Ele some dos menus.')">Desativar</button>
@@ -51,6 +51,7 @@
             <button type="submit" class="botao-primario">Ativar</button>
           {% endif %}
         </form>
+        {% if m.ativo and m.bloqueia_desativar %}<p class="ajuda">Não pode ser desativado: {{ m.bloqueia_desativar|join:", " }} depende{{ m.bloqueia_desativar|pluralize:"m" }} deste módulo.</p>{% endif %}
       </div>
     {% endfor %}
   </div>

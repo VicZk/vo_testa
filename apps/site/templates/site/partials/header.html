@@ -47,7 +47,11 @@
 
 <!-- Menu Mobile Slide-in -->
 <nav id="mobileMenu" class="mobile-menu fixed top-0 right-0 w-72 bg-noturno z-40 site-nav-mobile shadow-2xl px-6">
-    <div class="flex flex-col gap-1">
+    <a href="{% url 'core:reservar' %}" class="mobile-link mt-6 w-full inline-flex items-center justify-center gap-2 bg-lampiao text-noturno font-semibold text-sm px-5 py-3 rounded-full">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        Fazer Reserva
+    </a>
+    <div class="mobile-menu-links flex flex-col gap-1">
         <a href="{% url 'core:home' %}#inicio" class="mobile-link text-pergaminho/80 text-lg py-3 border-b border-pergaminho/10 hover:text-lampiao transition">Início</a>
         <a href="{% url 'core:home' %}#sobre" class="mobile-link text-pergaminho/80 text-lg py-3 border-b border-pergaminho/10 hover:text-lampiao transition">Nossa História</a>
         <a href="{% url 'core:home' %}#experiencias" class="mobile-link text-pergaminho/80 text-lg py-3 border-b border-pergaminho/10 hover:text-lampiao transition">Experiências</a>
@@ -59,8 +63,5 @@
         <a href="{% url 'core:minha_reserva' %}" class="mobile-link text-pergaminho/80 text-lg py-3 border-b border-pergaminho/10 hover:text-lampiao transition">Minha reserva</a>
         <a href="{% url 'login' %}" class="mobile-link text-pergaminho/70 text-lg py-3 border-b border-pergaminho/10 hover:text-lampiao transition">Acesso da equipe</a>
     </div>
-    <a href="{% url 'core:reservar' %}" class="mobile-link mt-6 w-full inline-flex items-center justify-center gap-2 bg-lampiao text-noturno font-semibold text-sm px-5 py-3 rounded-full">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-        Fazer Reserva
-    </a>
+
 </nav>

@@ -8,9 +8,9 @@
 <h1>Nova reserva</h1>
 <p class="subtitulo">A diária vem da tarifa vigente (temporadas); orçamento não segura o quarto.</p>
 
-<form method="post" class="form-cartao">
+<form method="post" class="form-cartao" x-data="{ fat: '{{ form.faturamento.value|default:'particular' }}' }" @keydown.ctrl.enter.prevent="$el.requestSubmit()" @keydown.meta.enter.prevent="$el.requestSubmit()">
   {% csrf_token %}
-  {% include "nucleo/partials/campos.html" %}
+  {% include "reservas/partials/form_campos.html" %}
   <div class="acoes">
     <button type="submit" class="botao-primario">Criar pré-reserva</button>
     <button type="submit" name="orcamento" value="1" class="botao-neutro">Salvar como orçamento</button>

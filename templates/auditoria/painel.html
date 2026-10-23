@@ -21,17 +21,17 @@
   <div class="cartao"><span class="indicador-rotulo letreiro">Baixa</span><span class="indicador-valor">{{ resumo.por_gravidade.baixa }}</span></div>
 </div>
 
-<table class="tabela bloco-respiro-largo">
+<table class="tabela bloco-respiro-largo tabela-cartoes">
   <thead>
     <tr><th>Gravidade</th><th>Área</th><th>Pendência</th><th></th></tr>
   </thead>
   <tbody>
     {% for a in achados %}
       <tr>
-        <td><span class="selo prioridade-{% if a.gravidade == 'alta' %}urgente{% elif a.gravidade == 'media' %}alta{% else %}baixa{% endif %}">{{ a.gravidade|rotulo_gravidade }}</span></td>
-        <td>{{ a.area }}</td>
-        <td>{{ a.descricao }}</td>
-        <td class="num">{% if a.url %}<a href="{{ a.url }}" class="botao-mini">Resolver</a>{% endif %}</td>
+        <td data-rotulo="Gravidade"><div class="tabela-valor"><span class="selo prioridade-{% if a.gravidade == 'alta' %}urgente{% elif a.gravidade == 'media' %}alta{% else %}baixa{% endif %}">{{ a.gravidade|rotulo_gravidade }}</span></div></td>
+        <td data-rotulo="Área"><div class="tabela-valor">{{ a.area }}</div></td>
+        <td data-rotulo="Pendência"><div class="tabela-valor">{{ a.descricao }}</div></td>
+        <td class="num" data-rotulo="Ação"><div class="tabela-valor">{% if a.url %}<a href="{{ a.url }}" class="botao-mini">Resolver</a>{% endif %}</div></td>
       </tr>
     {% empty %}
       <tr><td colspan="4" class="vazio">Nenhuma pendência encontrada. CRM em ordem.</td></tr>

@@ -9,19 +9,19 @@
 <p class="subtitulo">Ordens entregues e canceladas.</p>
 {% include "lavanderia/partials/nav.html" %}
 
-<table class="tabela">
+<table class="tabela tabela-cartoes">
   <thead>
     <tr><th>#</th><th>Cliente</th><th>Situação</th><th class="num">Total</th><th>Fecho</th><th>Quando</th></tr>
   </thead>
   <tbody>
     {% for o in ordens %}
       <tr class="linha-clique" onclick="location.href='{% url 'lavanderia:ordem' o.pk %}'">
-        <td>{{ o.pk }}</td>
-        <td>{{ o.titulo }}</td>
-        <td><span class="selo {% if o.status == 'cancelada' %}selo-alerta{% else %}selo-limpa{% endif %}">{{ o.get_status_display }}</span></td>
-        <td class="num">{{ o.total|intcomma_brl }}</td>
-        <td>{% if o.status == 'cancelada' %}Cancelada{% elif o.conta_ref %}Conta: {{ o.conta_ref }}{% elif o.forma_pagamento %}{{ o.forma_pagamento.nome }}{% else %}—{% endif %}</td>
-        <td>{{ o.entregue_em|default:o.recebida_em|date:"d/m H:i" }}</td>
+        <td data-rotulo="Ordem"><div class="tabela-valor">{{ o.pk }}</div></td>
+        <td data-rotulo="Cliente"><div class="tabela-valor">{{ o.titulo }}</div></td>
+        <td data-rotulo="Situação"><div class="tabela-valor"><span class="selo {% if o.status == 'cancelada' %}selo-alerta{% else %}selo-limpa{% endif %}">{{ o.get_status_display }}</span></div></td>
+        <td class="num" data-rotulo="Total"><div class="tabela-valor">{{ o.total|intcomma_brl }}</div></td>
+        <td data-rotulo="Fecho"><div class="tabela-valor">{% if o.status == 'cancelada' %}Cancelada{% elif o.conta_ref %}Conta: {{ o.conta_ref }}{% elif o.forma_pagamento %}{{ o.forma_pagamento.nome }}{% else %}—{% endif %}</div></td>
+        <td data-rotulo="Quando"><div class="tabela-valor">{{ o.entregue_em|default:o.recebida_em|date:"d/m H:i" }}</div></td>
       </tr>
     {% empty %}
       <tr><td colspan="6" class="vazio">Nenhuma ordem encerrada ainda.</td></tr>

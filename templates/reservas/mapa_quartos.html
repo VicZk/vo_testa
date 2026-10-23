@@ -145,8 +145,8 @@
     });
 
     porta.addEventListener('click', e => {
-      if (suprimirClique) { e.preventDefault(); suprimirClique = false; }
-    });
+      if (suprimirClique) { e.preventDefault(); e.stopImmediatePropagation(); suprimirClique = false; }
+    }, true);
     porta.addEventListener('dragstart', e => e.preventDefault());
     porta.addEventListener('pointercancel', () => {
       ativo = false; limparAlvo(); porta.style.transform = '';

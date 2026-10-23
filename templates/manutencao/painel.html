@@ -13,8 +13,9 @@
 
 <form method="get" class="filtros manutencao-filtros" aria-label="Filtrar ordens de serviço">
   <div class="campo"><label for="os-filtro-situacao">Situação</label><select name="situacao" id="os-filtro-situacao"><option value="abertas"{% if situacao == 'abertas' %} selected{% endif %}>Em aberto</option><option value="concluidas"{% if situacao == 'concluidas' %} selected{% endif %}>Concluídas</option><option value="canceladas"{% if situacao == 'canceladas' %} selected{% endif %}>Canceladas</option><option value="todas"{% if situacao == 'todas' %} selected{% endif %}>Todas</option></select></div>
-  <div class="campo"><label for="os-filtro-busca">Buscar OS</label><input id="os-filtro-busca" type="search" name="q" value="{{ busca }}" maxlength="120" placeholder="Título, quarto, área, número ou nota fiscal"></div>
+  <div class="campo"><label for="os-filtro-busca">Buscar OS</label><input id="os-filtro-busca" type="search" name="q" value="{{ busca }}" maxlength="120" placeholder="Título, quarto ou número" aria-describedby="os-busca-ajuda"></div>
   <button type="submit" class="botao-neutro">Filtrar</button>
+  <small id="os-busca-ajuda" class="ajuda">A busca também encontra área comum e nota fiscal.</small>
 </form>
 
 {% if bloqueados %}
@@ -34,8 +35,8 @@
               <span class="manutencao-ordem-local">OS #{{ os.pk }} · {{ os.alvo }}</span>
               <h3><a href="{% url 'manutencao:detalhe' os.pk %}">{{ os.titulo }}</a></h3>
               <div class="manutencao-ordem-estados">
-                <span class="manutencao-prioridade prioridade-{{ os.prioridade }}">Prioridade {{ os.get_prioridade_display|lower }}</span>
-                <span class="manutencao-status">{{ os.get_status_display }}</span>
+                <span class="rotulo-dado manutencao-prioridade">Prioridade {{ os.get_prioridade_display|lower }}</span>
+                <span class="selo manutencao-status">{{ os.get_status_display }}</span>
                 {% if os.bloqueio_ativo_hoje %}<strong class="manutencao-bloqueio">Quarto bloqueado hoje</strong>{% elif os.bloqueia_uh and os.aberta_ou_andamento %}<span class="ajuda">Bloqueio: {{ os.bloqueio_inicio|date:'d/m/Y' }}{% if os.bloqueio_fim %} a {{ os.bloqueio_fim|date:'d/m/Y' }}{% else %} até a conclusão{% endif %}</span>{% endif %}
               </div>
             </div>

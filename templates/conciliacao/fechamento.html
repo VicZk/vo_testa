@@ -11,7 +11,7 @@
 <p class="subtitulo">Resumo do período: quanto do extrato e das vendas no cartão foi
   conciliado, taxas e divergências. <a href="{% url 'conciliacao:painel' %}">← painel</a></p>
 
-<form method="get" class="filtro-linha">
+<form method="get" class="filtro-barra">
   <label class="campo-empilhado">
     <span class="letreiro letreiro-medio">Mês</span>
     <select name="mes">
@@ -25,19 +25,21 @@
     </select>
   </label>
   <button class="botao-primario" type="submit">Ver</button>
+  <div class="pagina-acoes" role="group" aria-label="Exportar relatório">
   <a class="botao-neutro" href="?{{ request.GET.urlencode }}&export=csv">Exportar CSV</a>
   <button class="botao-neutro" type="button" onclick="window.print()">Imprimir</button>
+  </div>
   <span class="tinta-suave texto-medio">Período: <b>{{ rotulo }}</b></span>
 </form>
 
 <div class="eleg">
 
   <div class="kpis bloco-colado">
-    <div class="kpi kpi-destaque"><span class="kpi-rotulo letreiro">Extrato conciliado</span><span class="kpi-valor num">{{ dados.extrato.pct }}%</span></div>
-    <div class="kpi"><span class="kpi-rotulo letreiro">Créditos conciliados</span><span class="kpi-valor num">{{ dados.extrato.creditos|intcomma_brl }}</span></div>
-    <div class="kpi"><span class="kpi-rotulo letreiro">Débitos conciliados</span><span class="kpi-valor num">{{ dados.extrato.debitos|intcomma_brl }}</span></div>
-    <div class="kpi kpi-destaque"><span class="kpi-rotulo letreiro">Cartão conciliado</span><span class="kpi-valor num">{{ dados.cartao.pct }}%</span></div>
-    <div class="kpi"><span class="kpi-rotulo letreiro">Taxa de cartão</span><span class="kpi-valor num">{{ dados.cartao.taxa|intcomma_brl }}</span></div>
+    <div class="kpi kpi-destaque"><span class="kpi-rotulo letreiro">Extrato conciliado</span><span class="kpi-valor valor-metrica">{{ dados.extrato.pct }}%</span></div>
+    <div class="kpi"><span class="kpi-rotulo letreiro">Créditos conciliados</span><span class="kpi-valor valor-metrica">{{ dados.extrato.creditos|intcomma_brl }}</span></div>
+    <div class="kpi"><span class="kpi-rotulo letreiro">Débitos conciliados</span><span class="kpi-valor valor-metrica">{{ dados.extrato.debitos|intcomma_brl }}</span></div>
+    <div class="kpi kpi-destaque"><span class="kpi-rotulo letreiro">Cartão conciliado</span><span class="kpi-valor valor-metrica">{{ dados.cartao.pct }}%</span></div>
+    <div class="kpi"><span class="kpi-rotulo letreiro">Taxa de cartão</span><span class="kpi-valor valor-metrica">{{ dados.cartao.taxa|intcomma_brl }}</span></div>
   </div>
 
   {# Gráficos conciliado × pendente #}
@@ -64,8 +66,8 @@
         <tr><td>Conciliadas</td><td class="num">{{ dados.extrato.conciliado }}</td></tr>
         <tr><td>Pendentes</td><td class="num">{{ dados.extrato.pendente }}</td></tr>
         <tr><td>Ignoradas</td><td class="num">{{ dados.extrato.ignorado }}</td></tr>
-        <tr><td>Créditos conciliados (R$)</td><td class="num">{{ dados.extrato.creditos }}</td></tr>
-        <tr><td>Débitos conciliados (R$)</td><td class="num">{{ dados.extrato.debitos }}</td></tr>
+        <tr><td>Créditos conciliados (R$)</td><td class="num">{{ dados.extrato.creditos|intcomma_brl }}</td></tr>
+        <tr><td>Débitos conciliados (R$)</td><td class="num">{{ dados.extrato.debitos|intcomma_brl }}</td></tr>
       </tbody>
     </table>
   </div>
@@ -78,9 +80,9 @@
         <tr><td>Conciliadas</td><td class="num">{{ dados.cartao.conciliado }}</td></tr>
         <tr><td>Pendentes</td><td class="num">{{ dados.cartao.pendente }}</td></tr>
         <tr><td>Sem venda no caixa</td><td class="num">{{ dados.cartao.sem_venda }}</td></tr>
-        <tr><td>Bruto (R$)</td><td class="num">{{ dados.cartao.bruto }}</td></tr>
-        <tr><td>Líquido (R$)</td><td class="num">{{ dados.cartao.liquido }}</td></tr>
-        <tr><td>Taxa total (R$)</td><td class="num">{{ dados.cartao.taxa }}</td></tr>
+        <tr><td>Bruto (R$)</td><td class="num">{{ dados.cartao.bruto|intcomma_brl }}</td></tr>
+        <tr><td>Líquido (R$)</td><td class="num">{{ dados.cartao.liquido|intcomma_brl }}</td></tr>
+        <tr><td>Taxa total (R$)</td><td class="num">{{ dados.cartao.taxa|intcomma_brl }}</td></tr>
         <tr><td>Divergências de valor</td><td class="num">{{ dados.cartao.divergencias }}</td></tr>
       </tbody>
     </table>

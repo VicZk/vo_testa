@@ -54,7 +54,11 @@
 .flatpickr-calendar.inline .flatpickr-prev-month:hover svg,
 .flatpickr-calendar.inline .flatpickr-next-month:hover svg { fill: #4F2C1D; }
 .flatpickr-calendar.inline span.flatpickr-weekday { color: rgba(79, 44, 29, .4); font-weight: 600; }
-.flatpickr-calendar.inline .flatpickr-day { color: #4F2C1D; border-radius: .5rem; }
+.flatpickr-calendar.inline .flatpickr-day {
+    color: #4F2C1D; border-radius: .5rem; max-width: none;
+    /* O limite de 39px do vendor deixava caber oito dias na linha larga. */
+    flex: 0 0 calc(100% / 7);
+}
 .flatpickr-calendar.inline .flatpickr-day:hover { background: rgba(79, 44, 29, .08); border-color: transparent; }
 .flatpickr-calendar.inline .flatpickr-day.today { border-color: rgba(215, 160, 72, .7); }
 .flatpickr-calendar.inline .flatpickr-day.selected,
@@ -76,6 +80,18 @@
    trocar de mês com 28). Quem reserva pelo telefone erra os três. Só em
    ponteiro grosso: no mouse o cabeçalho continua compacto. */
 @media (pointer: coarse) {
+  /* O vendor fixa o invólucro em 34px e corta os controles de 44px.
+     A altura agora acompanha os filhos, inclusive em duas linhas a 320px. */
+  .flatpickr-calendar .flatpickr-months { position: relative; }
+  .flatpickr-calendar .flatpickr-months .flatpickr-month {
+    height: auto; min-height: 44px; overflow: visible; padding-inline: 44px;
+  }
+  .flatpickr-calendar .flatpickr-current-month {
+    position: static; width: 100%; height: auto; min-height: 44px;
+    display: flex; justify-content: center; align-items: center; flex-wrap: wrap;
+    padding: 0; font-size: 1rem;
+  }
+  .flatpickr-calendar .flatpickr-monthDropdown-months { min-width: 0; max-width: 100%; }
   .flatpickr-calendar .flatpickr-monthDropdown-months,
   .flatpickr-calendar .numInputWrapper,
   .flatpickr-calendar .numInputWrapper input.cur-year {

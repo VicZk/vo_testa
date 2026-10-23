@@ -8,12 +8,15 @@
 
 <section class="mk-secao fim">
   <div class="mk-cal-cab">
+    <div class="mk-cal-periodo">
     <a href="?vista={{ escala }}&ano={{ prev.ano }}&mes={{ prev.mes }}" class="mk-cal-nav" aria-label="{% if escala == 'ano' %}Ano anterior{% else %}Mês anterior{% endif %}">‹</a>
     <h2 class="mk-cal-mes">{{ tl.titulo }}</h2>
     <a href="?vista={{ escala }}&ano={{ next.ano }}&mes={{ next.mes }}" class="mk-cal-nav" aria-label="{% if escala == 'ano' %}Próximo ano{% else %}Próximo mês{% endif %}">›</a>
-    <span class="mk-sep"></span>
+    </div>
+    <div class="mk-cal-vista" role="group" aria-label="Escala do calendário">
     <a href="?vista=mes&ano={{ ano }}&mes={{ mes }}" class="mk-pil larga{% if escala == 'mes' %} on{% endif %}"{% if escala == 'mes' %} aria-current="page"{% endif %}>Mês</a>
     <a href="?vista=ano&ano={{ ano }}&mes={{ mes }}" class="mk-pil larga{% if escala == 'ano' %} on{% endif %}"{% if escala == 'ano' %} aria-current="page"{% endif %}>Ano</a>
+    </div>
   </div>
 
   {% comment %}As posições das barras saem em % — forçar PONTO decimal: a localização
@@ -22,7 +25,7 @@
   {% if tl.vazio %}
   <div class="mk-cal-vazio">Nenhuma campanha neste período.</div>
   {% endif %}
-  <div class="cal-scroll"><div class="cal-track">
+  <div class="cal-scroll" data-tabela-ampla role="region" aria-label="Calendário de campanhas" tabindex="0"><div class="cal-track">
   <div class="mk-cal-eixo">
     <span class="mk-cal-rotulos"></span>
     <span class="mk-cal-cols">

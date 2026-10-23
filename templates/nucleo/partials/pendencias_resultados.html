@@ -33,7 +33,7 @@
         <td class="registro-principal"><strong>{{ item.titulo }}</strong><small class="ajuda">{{ item.descricao }}</small></td>
         <td class="registro-status" data-rotulo="Situação"><span class="selo{% if item.estado == 'pendente' %} selo--acao{% elif item.gravidade == 'alta' %} selo-alerta{% endif %}">{{ item.estado_rotulo }}</span></td>
         <td class="registro-acoes">
-          {% if item.url %}<a class="botao-neutro" href="{{ item.url }}">{{ item.acao }}</a>{% else %}<span class="ajuda">{{ item.acao }}</span>{% endif %}
+          {% if item.url %}<a class="botao-neutro" href="{{ item.url_acao }}">{{ item.acao }}</a>{% else %}<span class="ajuda">{{ item.acao }}</span>{% endif %}
         </td>
       </tr>
       {% endfor %}

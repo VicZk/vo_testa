@@ -112,6 +112,7 @@ MIDDLEWARE = [
     # MFA obrigatório p/ superusuário (depois do auth — precisa de request.user).
     "apps.nucleo.security_headers.MFAObrigatorioMiddleware",
     "apps.nucleo.formularios.RespostaFormularioMiddleware",
+    "apps.nucleo.retorno_pendencias.RetornoPendenciasMiddleware",
 ]
 
 # CSP: começa observando (report-only). Trocar para False quando o console estiver limpo.

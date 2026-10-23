@@ -31,8 +31,10 @@
 {% include 'site/sections/galeria.html' %}
 </div>
 
+{% if galeria_faixa %}
 {% include 'site/partials/dividers.html' with type='2' %}
 {% include 'site/sections/faixa_fotos.html' %}
+{% endif %}
 
 {% include 'site/partials/dividers.html' with type='2' %}
 {% include 'site/sections/depoimentos.html' %}

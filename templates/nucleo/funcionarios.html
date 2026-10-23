@@ -10,12 +10,12 @@
 </div>
 <p class="subtitulo">Dados dos funcionários, jornada de trabalho e acesso ao sistema.</p>
 
-<div class="filtro-limpeza">
-  <a href="{% url 'funcionarios' %}" class="chip-limpeza {% if not setor %}ativo{% endif %}">Todos <b>{{ total }}</b></a>
+<nav class="est-abas abas-secao" aria-label="Setores da equipe">
+  <a href="{% url 'funcionarios' %}" class="est-aba"{% if not setor %} aria-current="page"{% endif %}>Todos <b>{{ total }}</b></a>
   {% for s in setores %}
-    <a href="?setor={{ s|urlencode }}" class="chip-limpeza {% if setor == s %}ativo{% endif %}">{{ s }}</a>
+    <a href="?setor={{ s|urlencode }}" class="est-aba"{% if setor == s %} aria-current="page"{% endif %}>{{ s }}</a>
   {% endfor %}
-</div>
+</nav>
 
 <table class="tabela func-lista">
   <thead>
@@ -35,9 +35,9 @@
           {% if item.nivel == 'Gerência' %}<span class="rotulo-dado">Gerência</span>
           {% elif item.nivel == 'Operador' %}<span class="rotulo-dado">Operador</span>
           {% else %}<span class="rotulo-dado">Sem login</span>{% endif %}
-          {% if item.f.usuario and not item.ativo %}<span class="selo selo-alerta">inativo</span>{% endif %}
+          {% if item.f.usuario and not item.ativo %}<span class="selo selo-alerta">Inativo</span>{% endif %}
         </td>
-        <td class="func-chev"><span x-text="open ? '▴' : '▾'"></span></td>
+        <td class="func-chev"><button type="button" class="botao-icone" :aria-expanded="open" aria-controls="painel-{{ item.f.pk }}" aria-label="Ficha de {{ item.f.pessoa.nome }}"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path :d="open ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'"/></svg></button></td>
       </tr>
       <tr x-show="open" x-cloak class="func-exp">
         <td colspan="6" id="painel-{{ item.f.pk }}"><div class="func-carregando">Carregando…</div></td>

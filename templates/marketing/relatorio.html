@@ -33,36 +33,36 @@
   </div>
 
   {# KPIs #}
-  <div class="mk-kpis">
-    <div class="mk-kpi">
-      <div class="mk-rotulo">TETO DO MÊS</div>
-      <div class="num mk-kpi-valor">{{ dados.teto|intcomma_brl }}</div>
-      <div class="mk-kpi-nota">definido pela gestão</div>
+  <div class="mk-kpis kpis">
+    <div class="mk-kpi kpi">
+      <div class="mk-rotulo kpi-rotulo letreiro">TETO DO MÊS</div>
+      <div class="valor-metrica mk-kpi-valor kpi-valor">{{ dados.teto|intcomma_brl }}</div>
+      <div class="mk-kpi-nota kpi-nota">definido pela gestão</div>
     </div>
-    <div class="mk-kpi">
-      <div class="mk-rotulo">GASTO REALIZADO</div>
-      <div class="num mk-kpi-valor mk-tom-perigo">{{ dados.gasto|intcomma_brl }}</div>
-      <div class="mk-kpi-nota">{% if dados.teto %}{% widthratio dados.gasto dados.teto 100 %}%{% else %}—{% endif %} do teto</div>
+    <div class="mk-kpi kpi">
+      <div class="mk-rotulo kpi-rotulo letreiro">GASTO REALIZADO</div>
+      <div class="valor-metrica mk-kpi-valor kpi-valor mk-tom-perigo">{{ dados.gasto|intcomma_brl }}</div>
+      <div class="mk-kpi-nota kpi-nota">{% if dados.teto %}{% widthratio dados.gasto dados.teto 100 %}%{% else %}—{% endif %} do teto</div>
     </div>
-    <div class="mk-kpi">
-      <div class="mk-rotulo">SOBRA</div>
-      <div class="num mk-kpi-valor {% if dados.sobra < 0 %}mk-tom-perigo{% else %}mk-tom-musgo{% endif %}">{{ dados.sobra|intcomma_brl }}</div>
-      <div class="mk-kpi-nota">não acumula para o mês seguinte</div>
+    <div class="mk-kpi kpi">
+      <div class="mk-rotulo kpi-rotulo letreiro">SOBRA</div>
+      <div class="valor-metrica mk-kpi-valor kpi-valor {% if dados.sobra < 0 %}mk-tom-perigo{% else %}mk-tom-musgo{% endif %}">{{ dados.sobra|intcomma_brl }}</div>
+      <div class="mk-kpi-nota kpi-nota">não acumula para o mês seguinte</div>
     </div>
-    <div class="mk-kpi">
-      <div class="mk-rotulo">CAMPANHAS</div>
-      <div class="num mk-kpi-valor">{{ dados.campanhas }}</div>
-      <div class="mk-kpi-nota">com movimento no mês</div>
+    <div class="mk-kpi kpi">
+      <div class="mk-rotulo kpi-rotulo letreiro">CAMPANHAS</div>
+      <div class="valor-metrica mk-kpi-valor kpi-valor">{{ dados.campanhas }}</div>
+      <div class="mk-kpi-nota kpi-nota">com movimento no mês</div>
     </div>
   </div>
 
   {# Gráfico: gasto por mês (barras) #}
-  {% if dados.serie %}
+  {% if tem_serie_gastos %}
   <div class="mk-grafico">
     <div class="mk-barras">
       {% for s in dados.serie %}
       <div class="mk-barra-col">
-        <span class="num mk-barra-val{% if s.sel %} sel{% endif %}">{% if s.gasto %}{{ s.gasto|intcomma_brl }}{% else %}—{% endif %}</span>
+        <span class="valor-metrica mk-barra-val{% if s.sel %} sel{% endif %}">{% if s.gasto %}{{ s.gasto|intcomma_brl }}{% else %}—{% endif %}</span>
         <span class="mk-barra{% if s.sel %} sel{% elif not s.gasto %} zero{% endif %}" style="height:{{ s.pct }}%"></span>
         <span class="mk-barra-lab{% if s.sel %} sel{% endif %}">{{ s.label }}</span>
       </div>
@@ -70,6 +70,8 @@
     </div>
     <p class="mk-nota">Gasto realizado por mês, contra o teto daquele ciclo. Cada mês tem seu limite. O saldo não utilizado não passa para o mês seguinte.</p>
   </div>
+  {% else %}
+  {% include "componentes/estado_vazio.html" with mensagem="Nenhum gasto registrado nos meses exibidos." only %}
   {% endif %}
 </section>
 
@@ -88,7 +90,7 @@
         </span>
         <span class="mk-linha-retorno">
           {% if l.com_rastreio %}
-          <span class="num mk-mult">{{ l.mult_txt|default:"—" }}×</span>
+          <span class="valor-metrica mk-mult">{{ l.mult_txt|default:"—" }}×</span>
           <span class="mk-mult-sub">{{ l.fechamentos }} venda{{ l.fechamentos|pluralize }} rastreada{{ l.fechamentos|pluralize }}</span>
           {% else %}
           <span class="mk-mult sem">sem rastreio</span>
@@ -100,12 +102,12 @@
         <span style="width:{% if l.com_rastreio %}{% widthratio l.mult 2 100 %}{% else %}0{% endif %}%"></span>
       </div>
       <div class="mk-linha-nums">
-        <span class="mk-linha-num">gasto<br><strong class="num">{{ l.gasto|intcomma_brl }}</strong></span>
-        <span class="mk-linha-num">rastreada<br><strong class="num mk-tom-musgo">{{ l.rastreada|intcomma_brl }}</strong></span>
-        <span class="mk-linha-num">na janela<br><strong class="num suave" title="Receita do mesmo período. Não some à receita rastreada.">{{ l.janela|intcomma_brl }}</strong></span>
-        <span class="mk-linha-num">por venda<br><strong class="num">{% if l.cac %}{{ l.cac|intcomma_brl }}{% else %}—{% endif %}</strong></span>
-        <span class="mk-linha-num">conversão<br><strong class="num">{{ l.conversao }}%</strong></span>
-        <span class="mk-linha-num">ciclo<br><strong class="num">{% if l.ciclo %}{{ l.ciclo }}d{% else %}—{% endif %}</strong></span>
+        <span class="mk-linha-num">gasto<br><strong class="valor-metrica">{{ l.gasto|intcomma_brl }}</strong></span>
+        <span class="mk-linha-num">rastreada<br><strong class="valor-metrica mk-tom-musgo">{{ l.rastreada|intcomma_brl }}</strong></span>
+        <span class="mk-linha-num">na janela<br><strong class="valor-metrica suave" title="Receita do mesmo período. Não some à receita rastreada.">{{ l.janela|intcomma_brl }}</strong></span>
+        <span class="mk-linha-num">por venda<br><strong class="valor-metrica">{% if l.cac %}{{ l.cac|intcomma_brl }}{% else %}—{% endif %}</strong></span>
+        <span class="mk-linha-num">conversão<br><strong class="valor-metrica">{{ l.conversao }}%</strong></span>
+        <span class="mk-linha-num">ciclo<br><strong class="valor-metrica">{% if l.ciclo %}{{ l.ciclo }}d{% else %}—{% endif %}</strong></span>
       </div>
     </div>
     {% empty %}

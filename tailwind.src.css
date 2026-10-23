@@ -2,7 +2,39 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    --site-header-altura: 4.5625rem;
+    --noturno: theme('colors.noturno');
+    --madeira: theme('colors.madeira');
+    --lampiao: theme('colors.lampiao');
+    --pergaminho: theme('colors.pergaminho');
+    --musgo: theme('colors.musgo');
+    --raio-p: .625rem;
+    --raio: .875rem;
+    --raio-g: 1.25rem;
+    --raio-pilula: 999rem;
+  }
+  @media (min-width: 768px) {
+    :root { --site-header-altura: 5.5625rem; }
+  }
+}
+
 @layer components {
+  .foto-ausente {
+    @apply flex h-full w-full flex-col items-center justify-center gap-2 text-pergaminho/70;
+  }
+  .foto-ausente svg { @apply h-8 w-8 shrink-0; }
+  .foto-ausente span { @apply text-xs uppercase tracking-wide; }
+  .site-divisoria { @apply px-4; }
+  .site-divisoria > div { @apply min-w-0; }
+  .site-divisoria > div > div { flex: 0 1 auto; min-width: 0; }
+  .site-divisoria :is(img, svg) { @apply shrink-0; }
+  @media (max-width: 359px) {
+    .site-divisoria > div { @apply gap-3; }
+    .site-divisoria > div > svg:first-child,
+    .site-divisoria > div > svg:last-child { display: none; }
+  }
   /* Cartão da área do hóspede ("Minha reserva" e o detalhe dela): papel claro sobre a
      noite, com o halo dourado. Morava num style="" repetido nos dois templates. */
   .cartao-hospede {

@@ -127,7 +127,7 @@
     <div class="campo"><label for="grupo-quarto">Quarto</label><select id="grupo-quarto" name="uh" required>
       <option value="">Quarto livre…</option>
       {% for uh in quartos_livres %}
-        <option value="{{ uh.pk }}">{{ uh.numero }} · {{ uh.tipo.nome }} (acomoda {{ uh|lotacao_uh }})</option>
+        <option value="{{ uh.pk }}">{{ uh.numero }} · {{ uh.tipo.nome }} (Acomoda {{ uh|lotacao_uh }} pessoa{{ uh|lotacao_uh|pluralize }})</option>
       {% endfor %}
     </select></div>
     <div class="campo"><label for="id_hospede">Hóspede do quarto</label>

@@ -12,7 +12,7 @@
 {% include "restaurante/partials/nav.html" %}
 
 {% if not tem_local %}
-  <p class="bloco-vazio">Cadastre um depósito do Restaurante em Estoque → Locais para começar.</p>
+  {% include "componentes/estado_vazio.html" with mensagem="Cadastre um depósito do Restaurante em Estoque → Locais para começar." only %}
 {% else %}
 
 <section class="painel-bloco form-abertura estreito">
@@ -52,7 +52,7 @@
       <span class="comanda-card-total">{{ c.total|intcomma_brl }}</span>
     </a>
   {% empty %}
-    <p class="bloco-vazio">Nenhuma comanda aberta. Abra a primeira acima.</p>
+    {% include "componentes/estado_vazio.html" with mensagem="Nenhuma comanda aberta. Abra a primeira acima." only %}
   {% endfor %}
 </div>
 {% endif %}

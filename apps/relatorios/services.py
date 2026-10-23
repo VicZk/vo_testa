@@ -88,7 +88,7 @@ def rel_ocupacao(inicio, fim):
     o = relatorio_ocupacao(inicio, fim)
     linhas = [[tipo, str(n)] for tipo, n in sorted(o["por_tipo"].items())]
     return {
-        "kpis": [("Ocupação", f"{o['taxa']}%"), ("Diária média (ADR)", _rs(o["adr"])),
+        "kpis": [("Ocupação", _pc(o["taxa"])), ("Diária média (ADR)", _rs(o["adr"])),
                  ("RevPAR", _rs(o["revpar"])),
                  ("Diárias-quarto", f"{o['ocupadas']}/{o['disponiveis']}")],
         "colunas": ["Tipo de quarto", "Diárias-quarto ocupadas"],
@@ -382,7 +382,7 @@ def rel_comercial(inicio, fim):
     return {
         "kpis": [("Oportunidades criadas", str(f["total"])),
                  ("Ganhas", str(f["ganhas"])), ("Perdidas", str(f["perdidas"])),
-                 ("Taxa de conversão", f"{f['conversao']}%"),
+                 ("Taxa de conversão", _pc(f["conversao"])),
                  ("Valor ganho", _rs(f["valor_ganho"]))],
         "colunas": ["Etapa (em aberto)", "Qtd.", "Valor no funil"],
         "linhas": linhas,
@@ -416,13 +416,13 @@ def rel_governanca_inspecao(inicio, fim):
     from apps.governanca.services import relatorio_inspecoes
     g = relatorio_inspecoes(inicio, fim)
     linhas = [[ln["camareira"], str(ln["inspecionadas"]), str(ln["reprovadas"]),
-               f"{ln['retrabalho']}%".replace(".", ",")]
+               _pc(ln["retrabalho"])]
               for ln in g["linhas"]]
     linhas += [[f"Motivo: {motivo}", "", str(n), ""] for motivo, n in g["motivos"]]
     return {
         "kpis": [("Aprovadas na inspeção", str(g["inspecionadas"])),
                  ("Reprovadas (refazer)", str(g["reprovadas"])),
-                 ("Retrabalho", f"{g['retrabalho']}%".replace(".", ",")),
+                 ("Retrabalho", _pc(g["retrabalho"])),
                  ("Entregues sem inspeção", str(g["sem_inspecao"]))],
         "colunas": ["Camareira", "Aprovadas", "Reprovadas", "Retrabalho"],
         "linhas": linhas,

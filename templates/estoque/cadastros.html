@@ -18,16 +18,16 @@
 <div class="est-cadastros">
   <section class="est-cadastro-bloco">
     <h2 class="est-titulo-secao letreiro">Categorias</h2>
-    <table class="tabela est-tabela">
+    <table class="tabela est-tabela tabela-cartoes">
       <thead>
         <tr><th>Categoria</th><th class="num">Produtos</th><th>Situação</th></tr>
       </thead>
       <tbody>
         {% for c in categorias %}
           <tr>
-            <td class="est-produto-nome">{{ c.nome }}</td>
-            <td class="num">{{ c.ativos }}{% if c.total != c.ativos %}<small class="camp-sub">{{ c.total }} com inativos</small>{% endif %}</td>
-            <td>{% if c.ativo %}<span class="selo selo-ativo">Ativa</span>{% else %}<span class="selo selo-neutro">Inativa</span>{% endif %}</td>
+            <td class="est-produto-nome" data-rotulo="Categoria"><div class="tabela-valor">{{ c.nome }}</div></td>
+            <td class="num" data-rotulo="Produtos"><div class="tabela-valor">{{ c.ativos }}{% if c.total != c.ativos %}<small class="camp-sub">{{ c.total }} com inativos</small>{% endif %}</div></td>
+            <td data-rotulo="Situação"><div class="tabela-valor">{% if c.ativo %}<span class="selo selo-ativo">Ativa</span>{% else %}<span class="selo selo-neutro">Inativa</span>{% endif %}</div></td>
           </tr>
         {% empty %}
           <tr><td colspan="3" class="vazio">Nenhuma categoria cadastrada. Use o formulário para criar a primeira.</td></tr>
@@ -46,20 +46,20 @@
 
   <section class="est-cadastro-bloco">
     <h2 class="est-titulo-secao letreiro">Locais de estoque</h2>
-    <table class="tabela est-tabela">
+    <table class="tabela est-tabela tabela-cartoes">
       <thead>
         <tr><th>Local</th><th class="num">Itens</th><th class="num">Valor guardado</th><th>Situação</th></tr>
       </thead>
       <tbody>
         {% for lo in locais %}
           <tr>
-            <td>
+            <td data-rotulo="Local"><div class="tabela-valor">
               <span class="est-produto-nome">{{ lo.local.nome }}</span>
               <span class="est-produto-meta"><span class="rotulo-dado">{{ lo.local.get_modulo_display }}</span></span>
-            </td>
-            <td class="num">{% if lo.resumo %}{{ lo.resumo.itens }}{% else %}—{% endif %}</td>
-            <td class="num">{% if lo.resumo %}{{ lo.resumo.valor|intcomma_brl }}{% else %}—{% endif %}</td>
-            <td>{% if lo.local.ativo %}<span class="selo selo-ativo">Ativo</span>{% else %}<span class="selo selo-neutro">Inativo</span>{% endif %}</td>
+            </div></td>
+            <td class="num" data-rotulo="Itens"><div class="tabela-valor">{% if lo.resumo %}{{ lo.resumo.itens }}{% else %}—{% endif %}</div></td>
+            <td class="num" data-rotulo="Valor guardado"><div class="tabela-valor">{% if lo.resumo %}{{ lo.resumo.valor|intcomma_brl }}{% else %}—{% endif %}</div></td>
+            <td data-rotulo="Situação"><div class="tabela-valor">{% if lo.local.ativo %}<span class="selo selo-ativo">Ativo</span>{% else %}<span class="selo selo-neutro">Inativo</span>{% endif %}</div></td>
           </tr>
         {% empty %}
           <tr><td colspan="4" class="vazio">Nenhum local cadastrado. Use o formulário para criar o almoxarifado central.</td></tr>

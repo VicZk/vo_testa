@@ -11,10 +11,8 @@
     <a href="{% url 'portal:checkout' token %}" class="botao-primario">Ver conta & check-out</a>
   </div>
   <div class="pt-atalhos">
-    <a href="{% url 'portal:nps' token %}" class="pt-atalho" title="Informações sobre a avaliação da estadia">
-      <span class="pt-ico" aria-hidden="true">
-        <svg viewBox="0 0 24 24"><path d="M12 3l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 15.9 7.2 18l.9-5.4L4.2 8.7l5.4-.8z"/></svg>
-      </span>
+    <a href="{% url 'portal:nps' token %}" class="botao-neutro" title="Informações sobre a avaliação da estadia">
+      <svg class="pt-titulo-ico" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 15.9 7.2 18l.9-5.4L4.2 8.7l5.4-.8z"/></svg>
       Sua opinião
     </a>
   </div>
@@ -62,7 +60,8 @@
     <form method="post" action="{% url 'portal:solicitar' token %}" class="pt-pedido">
       {% csrf_token %}<input type="hidden" name="tipo" value="manutencao">
       <label for="pt-descricao">O que precisa de conserto?</label>
-      <input type="text" id="pt-descricao" name="descricao" placeholder="Ex.: o ar-condicionado não está gelando">
+      <input type="text" id="pt-descricao" name="descricao" placeholder="Descreva o problema" aria-describedby="pt-descricao-ajuda">
+      <p id="pt-descricao-ajuda" class="pt-nota">Ex.: ar-condicionado não gela.</p>
       <button type="submit" class="botao-neutro">Chamar a manutenção</button>
     </form>
   </div>

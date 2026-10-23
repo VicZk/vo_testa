@@ -11,7 +11,7 @@
 <form method="post" class="form-cartao" enctype="multipart/form-data" data-preservar-erros>
   {% csrf_token %}
 
-  {% include "nucleo/partials/campos.html" %}
+  <div class="form-grade">{% include "nucleo/partials/campos.html" %}</div>
 
   {% if uh %}
   <h2>Preço por quarto</h2>
@@ -49,18 +49,17 @@
   {% if formset.non_form_errors %}
     <div class="mensagem error">{{ formset.non_form_errors|join:" " }}</div>
   {% endif %}
-  <table class="tabela">
+  <table class="tabela tabela-cartoes">
     <thead>
       <tr><th>Nome</th><th>Montagem padrão</th><th>Ordem</th><th>Excluir</th></tr>
     </thead>
     <tbody>
       {% for f in formset %}
         <tr class="campo {% if f.errors %}campo-erro{% endif %}">
-          {% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}
-          <td>{{ f.nome }}{{ f.nome.errors }}</td>
-          <td>{{ f.montagem_padrao }}{{ f.montagem_padrao.errors }}</td>
-          <td>{{ f.ordem }}{{ f.ordem.errors }}{{ f.non_field_errors }}</td>
-          <td>{% if f.instance.pk %}{{ f.DELETE }}{% else %}<span class="ajuda">nova</span>{% endif %}</td>
+          <td data-rotulo="Nome"><div class="tabela-valor">{% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}{{ f.nome }}{{ f.nome.errors }}</div></td>
+          <td data-rotulo="Montagem padrão"><div class="tabela-valor">{{ f.montagem_padrao }}{{ f.montagem_padrao.errors }}</div></td>
+          <td data-rotulo="Ordem"><div class="tabela-valor">{{ f.ordem }}{{ f.ordem.errors }}{{ f.non_field_errors }}</div></td>
+          <td data-rotulo="Excluir"><div class="tabela-valor">{% if f.instance.pk %}{{ f.DELETE }}{% else %}<span class="ajuda">nova</span>{% endif %}</div></td>
         </tr>
       {% endfor %}
     </tbody>

@@ -53,8 +53,7 @@
         if ('selecaoQuarto' in filtros.dataset) {
           ala.value = filtros.dataset.selecaoAla || '';
           quarto.value = filtros.dataset.selecaoQuarto || '';
-        } else if (matchMedia('(max-width: 820px)').matches && linhas.length > 1) {
-          quarto.value = linhas[0].dataset.precosQuarto;
+
         }
       }
       aplicar();

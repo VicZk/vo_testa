@@ -120,3 +120,11 @@ def eh_checkbox(campo):
     from django.forms import CheckboxInput
 
     return isinstance(campo.field.widget, CheckboxInput)
+
+
+@register.filter
+def eh_textarea(campo):
+    """Campos de texto livre ocupam a largura da grade de formulário."""
+    from django.forms import Textarea
+
+    return isinstance(campo.field.widget, Textarea)

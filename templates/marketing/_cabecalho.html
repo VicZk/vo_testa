@@ -1,9 +1,7 @@
 <p class="pagina-eyebrow letreiro">Marketing</p>
 <div class="pagina-cabecalho mkt-cabecalho">
-  <div>
-    <h1>{{ titulo }}</h1>
-    <p class="subtitulo">{{ descricao }}</p>
-  </div>
+  <h1>{{ titulo }}</h1>
   <a href="{% url 'marketing:nova_campanha' %}" hx-get="{% url 'marketing:nova_campanha' %}" hx-target="#modal-conteudo" class="botao-primario">Nova campanha</a>
 </div>
+<p class="subtitulo">{{ descricao }}</p>
 {% include "marketing/_tabs.html" %}

@@ -8,7 +8,11 @@ Dois cuidados que o Django não tem por padrão:
   <div class="mensagem error">{{ form.non_field_errors|join:" " }}</div>
 {% endif %}
 {% for campo in form %}
-  <div class="campo {% if campo|eh_checkbox %}campo-marcador{% endif %} {% if campo.errors %}campo-erro{% endif %}">
+  {% if campo.is_hidden %}
+    {{ campo }}
+    {% for erro in campo.errors %}<div class="mensagem error">{{ erro }}</div>{% endfor %}
+  {% else %}
+  <div class="campo {% if campo|eh_textarea %}col-2{% endif %} {% if campo|eh_checkbox %}campo-marcador{% endif %} {% if campo.errors %}campo-erro{% endif %}">
     {% if campo|eh_checkbox %}
       <label class="check-inline">{{ campo }} <span>{{ campo.label }}</span></label>
     {% else %}
@@ -18,4 +22,5 @@ Dois cuidados que o Django não tem por padrão:
     {% if campo.help_text %}<small class="ajuda">{{ campo.help_text }}</small>{% endif %}
     {% for erro in campo.errors %}<small class="erro">{{ erro }}</small>{% endfor %}
   </div>
+  {% endif %}
 {% endfor %}

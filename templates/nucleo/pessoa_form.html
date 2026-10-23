@@ -35,13 +35,13 @@
 
   <h2 class="grupo-campos">Endereço</h2>
   <div class="form-grade form-grade-endereco">
-    {% include "reservas/partials/campo.html" with campo=form.endereco classe="col-2" %}
-    {% include "reservas/partials/campo.html" with campo=form.numero %}
-    {% include "reservas/partials/campo.html" with campo=form.bairro %}
-    {% include "reservas/partials/campo.html" with campo=form.complemento classe="col-2" %}
-    {% include "reservas/partials/campo.html" with campo=form.cidade %}
-    {% include "reservas/partials/campo.html" with campo=form.uf %}
-    {% include "reservas/partials/campo.html" with campo=form.cep %}
+    {% include "reservas/partials/campo.html" with campo=form.endereco classe="campo-endereco" %}
+    {% include "reservas/partials/campo.html" with campo=form.numero classe="campo-numero" %}
+    {% include "reservas/partials/campo.html" with campo=form.bairro classe="campo-bairro" %}
+    {% include "reservas/partials/campo.html" with campo=form.complemento classe="campo-complemento" %}
+    {% include "reservas/partials/campo.html" with campo=form.cidade classe="campo-cidade" %}
+    {% include "reservas/partials/campo.html" with campo=form.uf classe="campo-uf" %}
+    {% include "reservas/partials/campo.html" with campo=form.cep classe="campo-cep" %}
   </div>
 
   <div class="form-grade">

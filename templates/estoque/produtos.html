@@ -42,7 +42,7 @@
   <button type="submit" class="botao-primario filtro-aplicar">Aplicar</button>
 </form>
 
-<table class="tabela est-tabela">
+<table class="tabela est-tabela tabela-cartoes">
   <thead>
     <tr>
       <th>Produto</th>
@@ -56,7 +56,7 @@
   <tbody>
     {% for p in produtos %}
       <tr>
-        <td>
+        <td data-rotulo="Produto"><div class="tabela-valor">
           <div class="produto-identidade">
           {% include "componentes/icone_catalogo.html" with ilustracao=p.ilustracao_catalogo compacto=True %}
           <div class="produto-identidade-texto">
@@ -71,23 +71,23 @@
           </span>
           </div>
           </div>
-        </td>
-        <td>{{ p.get_unidade_display }}</td>
-        <td class="num">{{ p.custo_medio|intcomma_brl }}</td>
-        <td class="num">
+        </div></td>
+        <td data-rotulo="Unidade"><div class="tabela-valor">{{ p.get_unidade_display }}</div></td>
+        <td class="num" data-rotulo="Custo médio"><div class="tabela-valor">{{ p.custo_medio|intcomma_brl }}</div></td>
+        <td class="num" data-rotulo="Preço de venda"><div class="tabela-valor">
           {{ p.preco_venda|intcomma_brl }}
           {% if p.margem %}<small class="camp-sub">Margem {{ p.margem|floatformat:0 }}%</small>{% endif %}
-        </td>
-        <td class="num est-saldo-cel">
+        </div></td>
+        <td class="num est-saldo-cel" data-rotulo="Saldo"><div class="tabela-valor">
           <span class="est-saldo">{{ p.saldo_total|qtd:p.unidade }}</span>
           {% if p.estoque_minimo %}<small class="camp-sub">Mín. {{ p.estoque_minimo|qtd:p.unidade }}</small>{% endif %}
-        </td>
-        <td class="col-acao">
+        </div></td>
+        <td class="col-acao" data-rotulo="Ações"><div class="tabela-valor">
           <span class="est-acoes">
             <a href="{% url 'estoque:kardex' p.pk %}" class="botao-mini">Movimentações</a>
             <a href="{% url 'estoque:produto_editar' p.pk %}" class="botao-mini">Editar</a>
           </span>
-        </td>
+        </div></td>
       </tr>
     {% empty %}
       <tr><td colspan="6" class="vazio">

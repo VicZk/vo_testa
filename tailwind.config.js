@@ -5,6 +5,7 @@
 module.exports = {
   content: [
     "./apps/site/templates/**/*.html",
+    "./templates/**/*.html",
     "./apps/site/static/site/js/**/*.js",
     // Classes montadas no Python (widgets dos formulários do site, ex.: `_CAMPO`).
     // Fora daqui, o rebuild apagava o `outline-none` dos campos da reserva.

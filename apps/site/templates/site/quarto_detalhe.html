@@ -7,15 +7,13 @@
 {% block extra_head %}
 <style>
   .qd {
-    --noturno:#051C2C; --pergaminho:#EFDBB2; --lampiao:#D7A048;
-    --madeira:#4F2C1D; --musgo:#2E483E;
     background:var(--noturno); color:var(--pergaminho);
-    min-height:100vh; padding:6.5rem 1.25rem 5rem;
+    min-height:100vh; padding:calc(var(--site-header-altura) + 1.5rem) 1.25rem 5rem;
   }
   .qd__wrap { max-width:1200px; margin:0 auto; }
   .qd__back {
-    display:inline-flex; align-items:center; gap:.5rem;
-    color:rgba(239,219,178,.55); font-size:.85rem; text-decoration:none;
+    display:inline-flex; min-height:44px; align-items:center; gap:.5rem;
+    color:color-mix(in srgb, var(--pergaminho) 55%, transparent); font-size:.85rem; text-decoration:none;
     margin-bottom:1.5rem; transition:color .2s;
   }
   .qd__back:hover { color:var(--lampiao); }
@@ -25,50 +23,52 @@
   .qd__stage { position:relative; }
   .qd__hero {
     position:relative; width:100%; aspect-ratio:16/9; max-height:min(70vh,640px);
-    border-radius:26px; overflow:hidden;
-    background:linear-gradient(135deg, rgba(79,44,29,.35), rgba(79,44,29,.12));
-    border:1px solid rgba(215,160,72,.16);
-    box-shadow:0 30px 70px -28px rgba(0,0,0,.75);
+    border-radius:var(--raio-g); overflow:hidden;
+    background:linear-gradient(135deg, color-mix(in srgb, var(--madeira) 35%, transparent), color-mix(in srgb, var(--madeira) 12%, transparent));
+    border:1px solid color-mix(in srgb, var(--lampiao) 16%, transparent);
+    box-shadow:0 30px 70px -28px color-mix(in srgb, var(--noturno) 75%, transparent);
   }
   .qd__hero img { width:100%; height:100%; object-fit:cover; display:block; }
-  .qd__hero-vazio { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:rgba(239,219,178,.3); }
+  .qd__hero:has(.qd__hero-vazio) { aspect-ratio:4/3; }
+  @media (min-width:861px) { .qd__hero-vazio .foto-ausente { width:50%; } }
+  .qd__hero-vazio { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:color-mix(in srgb, var(--pergaminho) 30%, transparent); }
   /* Scrim para o painel se destacar sobre a foto (separação sobre conteúdo) */
   .qd__hero::after {
     content:''; position:absolute; inset:0; pointer-events:none;
-    background:linear-gradient(90deg, transparent 35%, rgba(5,28,44,.55) 100%);
+    background:linear-gradient(90deg, transparent 35%, color-mix(in srgb, var(--noturno) 55%, transparent) 100%);
   }
 
   .qd__panel {
     position:absolute; top:50%; right:2.5rem; transform:translateY(-50%);
     width:min(430px,44%);
-    background:rgba(5,28,44,.68); backdrop-filter:blur(18px) saturate(140%);
-    border:1px solid rgba(215,160,72,.3); border-radius:22px;
+    background:color-mix(in srgb, var(--noturno) 68%, transparent); backdrop-filter:blur(18px) saturate(140%);
+    border:1px solid color-mix(in srgb, var(--lampiao) 30%, transparent); border-radius:var(--raio-g);
     padding:1.6rem 1.6rem 1.5rem;
-    box-shadow:0 34px 80px -22px rgba(0,0,0,.8);
+    box-shadow:0 34px 80px -22px color-mix(in srgb, var(--noturno) 80%, transparent);
   }
-  .qd__eyebrow { color:rgba(215,160,72,.85); font-size:.7rem; letter-spacing:.18em; text-transform:uppercase; margin:0 0 .5rem; }
+  .qd__eyebrow { color:color-mix(in srgb, var(--lampiao) 85%, transparent); font-size:.75rem; letter-spacing:.18em; text-transform:uppercase; margin:0 0 .5rem; }
   .qd__title { font-family:'Neco',Georgia,serif; font-weight:900; font-size:clamp(1.7rem,2.6vw,2.3rem); line-height:1.05; letter-spacing:-.02em; color:var(--pergaminho); margin:0 0 .7rem; }
-  .qd__meta { display:flex; flex-wrap:wrap; gap:.3rem .8rem; color:rgba(239,219,178,.6); font-size:.85rem; margin-bottom:1rem; }
+  .qd__meta { display:flex; flex-wrap:wrap; gap:.3rem .8rem; color:color-mix(in srgb, var(--pergaminho) 60%, transparent); font-size:.85rem; margin-bottom:1rem; }
   .qd__meta .star { color:var(--lampiao); }
-  .qd__desc { color:rgba(239,219,178,.72); font-size:.92rem; line-height:1.65; margin:0 0 1.1rem; white-space:pre-line; }
+  .qd__desc { color:color-mix(in srgb, var(--pergaminho) 72%, transparent); font-size:.92rem; line-height:1.65; margin:0 0 1.1rem; white-space:pre-line; }
   .qd__chips { display:flex; flex-wrap:wrap; gap:.45rem; margin-bottom:1.25rem; }
-  .qd__chip { font-size:.76rem; color:rgba(239,219,178,.78); border:1px solid rgba(215,160,72,.3); border-radius:999px; padding:.28rem .75rem; }
+  .qd__chip { font-size:.76rem; color:color-mix(in srgb, var(--pergaminho) 78%, transparent); border:1px solid color-mix(in srgb, var(--lampiao) 30%, transparent); border-radius:var(--raio-pilula); padding:.28rem .75rem; }
 
-  .qd__foot { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding-top:1.1rem; border-top:1px solid rgba(215,160,72,.16); }
-  .qd__price-cap { color:rgba(239,219,178,.5); font-size:.72rem; display:block; }
-  .qd__price { font-family:'Neco',Georgia,serif; font-weight:800; color:var(--lampiao); font-size:1.7rem; line-height:1.1; }
-  .qd__price small { color:rgba(239,219,178,.5); font-size:.8rem; font-weight:400; }
-  .qd__cta { background:var(--lampiao); color:var(--noturno); font-weight:700; font-size:.9rem; padding:.75rem 1.4rem; border-radius:999px; text-decoration:none; white-space:nowrap; transition:transform .12s, filter .2s; }
+  .qd__foot { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:1rem; padding-top:1.1rem; border-top:1px solid color-mix(in srgb, var(--lampiao) 16%, transparent); }
+  .qd__price-cap { color:color-mix(in srgb, var(--pergaminho) 50%, transparent); font-size:.75rem; display:block; }
+  .qd__price { white-space:nowrap; font-variant-numeric:tabular-nums; font-family:'Neco',Georgia,serif; font-weight:800; color:var(--lampiao); font-size:1.7rem; line-height:1.1; }
+  .qd__price small { color:color-mix(in srgb, var(--pergaminho) 50%, transparent); font-size:.8rem; font-weight:400; }
+  .qd__cta { display:inline-flex; align-items:center; justify-content:center; min-height:44px; background:var(--lampiao); color:var(--noturno); font-weight:700; font-size:.9rem; padding:.75rem 1.4rem; border-radius:var(--raio-pilula); text-decoration:none; white-space:nowrap; transition:transform .12s, filter .2s; }
   .qd__cta:hover { filter:brightness(1.06); }
   .qd__cta:active { transform:scale(.98); }
 
   /* Ações extras (tour 360°) — pílula icônica sobre a foto */
   .qd__tour-btn {
     position:absolute; left:1.75rem; bottom:1.75rem; z-index:2;
-    display:inline-flex; align-items:center; gap:.5rem;
-    background:rgba(5,28,44,.7); backdrop-filter:blur(10px);
+    display:inline-flex; min-height:44px; align-items:center; gap:.5rem;
+    background:color-mix(in srgb, var(--noturno) 70%, transparent); backdrop-filter:blur(10px);
     color:var(--pergaminho); font-size:.8rem; font-weight:600;
-    border:1px solid rgba(215,160,72,.35); border-radius:999px; padding:.55rem 1rem; text-decoration:none;
+    border:1px solid color-mix(in srgb, var(--lampiao) 35%, transparent); border-radius:var(--raio-pilula); padding:.55rem 1rem; text-decoration:none;
     transition:background .2s, color .2s;
   }
   .qd__tour-btn:hover { background:var(--lampiao); color:var(--noturno); }
@@ -79,7 +79,7 @@
     .qd__hero { aspect-ratio:4/3; }
     .qd__hero::after { display:none; }
     .qd__panel { position:static; transform:none; width:auto; margin-top:-2.5rem; margin-inline:.75rem;
-      background:rgba(5,28,44,.92); box-shadow:0 20px 50px -24px rgba(0,0,0,.7); }
+      background:color-mix(in srgb, var(--noturno) 92%, transparent); box-shadow:0 20px 50px -24px color-mix(in srgb, var(--noturno) 70%, transparent); }
   }
 
   /* Outros quartos */
@@ -87,15 +87,15 @@
   .qd__mais h2 { font-family:'Neco',Georgia,serif; font-weight:800; color:var(--pergaminho); font-size:1.5rem; margin-bottom:1.25rem; }
   .qd__mais-grid { display:grid; grid-template-columns:1fr; gap:1.25rem; }
   @media (min-width:640px){ .qd__mais-grid { grid-template-columns:repeat(3,1fr); } }
-  .qd__card { display:block; text-decoration:none; border:1px solid rgba(215,160,72,.2); border-radius:18px; overflow:hidden; background:rgba(239,219,178,.03); transition:transform .3s, border-color .3s; }
-  .qd__card:hover { transform:translateY(-4px); border-color:rgba(215,160,72,.5); }
-  .qd__card-img { aspect-ratio:4/3; overflow:hidden; background:linear-gradient(135deg, rgba(79,44,29,.35), rgba(79,44,29,.12)); }
+  .qd__card { display:block; text-decoration:none; border:1px solid color-mix(in srgb, var(--lampiao) 20%, transparent); border-radius:var(--raio-g); overflow:hidden; background:color-mix(in srgb, var(--pergaminho) 3%, transparent); transition:transform .3s, border-color .3s; }
+  .qd__card:hover { transform:translateY(-4px); border-color:color-mix(in srgb, var(--lampiao) 50%, transparent); }
+  .qd__card-img { aspect-ratio:4/3; overflow:hidden; background:linear-gradient(135deg, color-mix(in srgb, var(--madeira) 35%, transparent), color-mix(in srgb, var(--madeira) 12%, transparent)); }
   .qd__card-img img { width:100%; height:100%; object-fit:cover; display:block; }
   .qd__card-body { padding:.9rem 1rem 1.1rem; }
-  .qd__card-eyebrow { color:rgba(215,160,72,.6); font-size:.68rem; letter-spacing:.14em; text-transform:uppercase; }
+  .qd__card-eyebrow { color:color-mix(in srgb, var(--lampiao) 60%, transparent); font-size:.75rem; letter-spacing:.14em; text-transform:uppercase; }
   .qd__card-title { font-family:'Neco',Georgia,serif; font-weight:700; color:var(--pergaminho); font-size:1.05rem; margin:.15rem 0 .35rem; }
   .qd__card-price { color:var(--lampiao); font-weight:700; font-size:.95rem; }
-  .qd__card-price small { color:rgba(239,219,178,.4); font-weight:400; font-size:.75rem; }
+  .qd__card-price small { color:color-mix(in srgb, var(--pergaminho) 40%, transparent); font-weight:400; font-size:.75rem; }
 
   @media (prefers-reduced-motion: reduce) {
     .qd__card,.qd__cta { transition:none; }
@@ -117,7 +117,7 @@
         {% if quarto.foto_principal %}
         <img src="{{ quarto.foto_principal.url }}" alt="{{ quarto.nome }}">
         {% else %}
-        <span class="qd__hero-vazio">[ Foto do Quarto ]</span>
+        <div class="qd__hero-vazio">{% include "site/partials/foto_ausente.html" %}</div>
         {% endif %}
         {% if quarto.tour_360_url %}
         <a href="{{ quarto.tour_360_url }}" target="_blank" rel="noopener" class="qd__tour-btn">
@@ -157,7 +157,7 @@
         {% for o in outros %}
         <a href="{% url 'core:quarto_detalhe' o.uh_id %}" class="qd__card">
           <div class="qd__card-img">
-            {% if o.foto_principal %}<img src="{{ o.foto_principal.url }}" alt="{{ o.nome }}">{% endif %}
+            {% if o.foto_principal %}<img src="{{ o.foto_principal.url }}" alt="{{ o.nome }}">{% else %}{% include "site/partials/foto_ausente.html" %}{% endif %}
           </div>
           <div class="qd__card-body">
             <p class="qd__card-eyebrow">{{ o.categoria.nome }}</p>

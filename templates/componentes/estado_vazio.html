@@ -1,0 +1,6 @@
+<div class="vazio-bloco">
+  <svg class="ico vazio-icone" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8l4 5v12H4V8z"/><path d="M4 8h16M9 13h6M9 17h6"/></svg>
+  <p>{{ mensagem }}</p>
+  {% if ajuda %}<p class="ajuda">{{ ajuda }}</p>{% endif %}
+  {% if url_acao and acao %}<a class="botao-neutro" href="{{ url_acao }}">{{ acao }}</a>{% endif %}
+</div>

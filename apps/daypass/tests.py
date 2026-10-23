@@ -181,7 +181,12 @@ class DayPassTests(DadosDayPass, TestCase):
                 self.assertEqual(self.client.get(url).status_code, 200)
         r = self.client.post(reverse("daypass:turno_novo"), {"nome": "Inválido", "data": "data-errada", "capacidade": "Infinity"})
         self.assertEqual(r.status_code, 200)
-        self.assertContains(r, "errorlist")
+        for campo in ("data", "capacidade"):
+            self.assertIn(campo, r.context["form"].errors)
+            for erro in r.context["form"].errors[campo]:
+                self.assertContains(r, erro)
+        self.assertContains(r, 'value="Inválido"')
+        self.assertFalse(TurnoDayPass.objects.filter(nome="Inválido").exists())
         self.assertEqual(self.client.get(reverse("daypass:acao", args=[visita.pk, "cancelar"])).status_code, 405)
         comum = get_user_model().objects.create_user(username="daypass-sem-acesso")
         self.client.force_login(comum)

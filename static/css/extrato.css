@@ -1,7 +1,7 @@
 * { box-sizing: border-box; }
 body { margin: 0; background: #f6f4f0; color: #142c35; font: 14px/1.5 system-ui, sans-serif; }
 .extrato-acoes, .extrato { max-width: 900px; margin: 24px auto; }
-.extrato-acoes { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-inline: 20px; }
+.extrato-acoes { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .extrato-acoes a, .extrato-acoes button { padding: 12px 16px; border: 1px solid #ccd2d3; border-radius: 10px; background: white; color: #142c35; font: inherit; text-decoration: none; cursor: pointer; }
 .extrato-acoes button { background: #142c35; color: white; border-color: #142c35; }
 .extrato { padding: 40px; background: white; border: 1px solid #e4dfd6; border-radius: 16px; box-shadow: 0 5px 24px #142c350c; }
@@ -22,7 +22,7 @@ dd { margin: 0; font-weight: 600; }
 .extrato-tabela-rol { overflow-x: auto; }
 .extrato-dica-rol { display:none; }
 table { border-collapse: collapse; width: 100%; font-size: 12px; }
-th, td { padding: 10px 8px; border-bottom: 1px solid #e4e7e8; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+th, td { padding: 10px 8px; border-bottom: 1px solid #e4e7e8; text-align: left; vertical-align: top; overflow-wrap: break-word; hyphens: auto; }
 th { background: #f3f5f5; font-weight: 600; }
 td small { display: block; color: #647074; margin-top: 3px; }
 .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -42,7 +42,7 @@ td small { display: block; color: #647074; margin-top: 3px; }
   .extrato-topo { flex-wrap: wrap; gap: 8px; }
   .extrato-referencia { text-align: left; }
   table { min-width: 600px; }
-  .extrato-dica-rol { display:block; font-size:11px; color:#58666a; }
+  .extrato-dica-rol { display:block; font-size:12px; color:#58666a; }
 }
 @page { size: A4; margin: 15mm;
   @bottom-right { content:"Página " counter(page) " de " counter(pages); font:8pt sans-serif; color:#58666a; }

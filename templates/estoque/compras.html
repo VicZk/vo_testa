@@ -2,7 +2,7 @@
 {% block titulo %}Compras | Estoque{% endblock %}
 {% block conteudo %}<div class="eleg">
 <p class="pagina-eyebrow letreiro">Vendas &amp; Estoque</p>
-<div class="pagina-cabecalho"><div><h1>Compras recebidas</h1><p class="subtitulo">Nota, fornecedor, conversão e destino da mercadoria em um histórico.</p></div><div class="linha-botoes"><a href="{% url 'estoque:notas' %}" class="botao-primario">Receber nota fiscal</a><a href="{% url 'estoque:compra_receber' %}" class="botao-neutro">Receber por embalagem</a></div></div>
+<div class="pagina-cabecalho"><h1>Compras recebidas</h1><div class="pagina-acoes"><div class="linha-botoes"><a href="{% url 'estoque:notas' %}" class="botao-primario">Receber nota fiscal</a><a href="{% url 'estoque:compra_receber' %}" class="botao-neutro">Receber por embalagem</a></div></div><p class="subtitulo">Nota, fornecedor, conversão e destino da mercadoria em um histórico.</p></div>
 {% include "estoque/partials/nav.html" %}
 <details class="cartao respiro bloco-fim"><summary>Rotina de compra e recebimento</summary>
 <ol class="bloco-respiro"><li>Confira saldo e mínimo. Registre a solicitação, cotações e aprovação da gerência no controle de compras da pousada, com um número de referência.</li><li>Cadastre a embalagem no produto e confira seu fator. Na entrega, confira nota, quantidade, integridade, lote e validade.</li><li>Com nota fiscal, cadastre o documento e os itens previstos em Notas fiscais. Receba somente o que chegou e foi aceito: cada entrega mantém o pendente atualizado.</li><li>Vincule o documento à obrigação no Financeiro e confira vencimento e pagamento. Receber mercadoria não confirma pagamento.</li><li>Separe o que vence primeiro. Registre perdas com o motivo e faça a contagem por lote dos perecíveis.</li></ol>

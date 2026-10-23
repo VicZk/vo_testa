@@ -15,10 +15,10 @@
 </p>
 
 <div class="kpi-grade bloco-margem">
-  <div class="kpi"><span class="kpi-rotulo letreiro">Recebido (bruto)</span><strong class="kpi-valor num">{{ totais.recebido|intcomma_brl }}</strong></div>
-  <div class="kpi"><span class="kpi-rotulo letreiro">Taxa</span><strong class="kpi-valor num">{{ totais.taxa|intcomma_brl }}</strong></div>
-  <div class="kpi kpi-destaque"><span class="kpi-rotulo letreiro">Líquido (banco)</span><strong class="kpi-valor num">{{ totais.liquido|intcomma_brl }}</strong></div>
-  <div class="kpi"><span class="kpi-rotulo letreiro">A liquidar (qtd)</span><strong class="kpi-valor num">{{ totais.a_liquidar_qtd }}</strong></div>
+  <div class="kpi"><span class="kpi-rotulo letreiro">Recebido (bruto)</span><strong class="kpi-valor valor-metrica">{{ totais.recebido|intcomma_brl }}</strong></div>
+  <div class="kpi"><span class="kpi-rotulo letreiro">Taxa</span><strong class="kpi-valor valor-metrica">{{ totais.taxa|intcomma_brl }}</strong></div>
+  <div class="kpi kpi-destaque"><span class="kpi-rotulo letreiro">Líquido (banco)</span><strong class="kpi-valor valor-metrica">{{ totais.liquido|intcomma_brl }}</strong></div>
+  <div class="kpi"><span class="kpi-rotulo letreiro">A liquidar (qtd)</span><strong class="kpi-valor valor-metrica">{{ totais.a_liquidar_qtd }}</strong></div>
 </div>
 
 <form method="get" class="filtro-barra">
@@ -52,7 +52,7 @@
   <button type="submit" class="botao-primario filtro-aplicar">Filtrar</button>
 </form>
 
-<table class="tabela">
+<table class="tabela tabela-cartoes">
   <thead><tr>
     <th>#</th><th>Método</th><th>Descrição</th><th class="num">Bruto</th>
     <th class="num">Taxa</th><th class="num">Líquido</th><th>Liquidação</th><th>Situação</th>
@@ -61,23 +61,23 @@
   <tbody>
     {% for c in cobrancas %}
       <tr>
-        <td><a href="{% url 'pagamentos:detalhe' c.pk %}">{{ c.pk }}</a></td>
-        <td>{{ c.get_metodo_display }}</td>
-        <td>{{ c.descricao }}</td>
-        <td class="num">{{ c.valor|intcomma_brl }}</td>
-        <td class="num">{% if c.taxa != None %}{{ c.taxa|intcomma_brl }}{% else %}—{% endif %}</td>
-        <td class="num">{% if c.valor_liquido != None %}{{ c.valor_liquido|intcomma_brl }}{% else %}—{% endif %}</td>
-        <td>
+        <td data-rotulo="Ordem"><div class="tabela-valor"><a href="{% url 'pagamentos:detalhe' c.pk %}">{{ c.pk }}</a></div></td>
+        <td data-rotulo="Método"><div class="tabela-valor">{{ c.get_metodo_display }}</div></td>
+        <td data-rotulo="Descrição"><div class="tabela-valor">{{ c.descricao }}</div></td>
+        <td class="num" data-rotulo="Bruto"><div class="tabela-valor">{{ c.valor|intcomma_brl }}</div></td>
+        <td class="num" data-rotulo="Taxa"><div class="tabela-valor">{% if c.taxa != None %}{{ c.taxa|intcomma_brl }}{% else %}—{% endif %}</div></td>
+        <td class="num" data-rotulo="Líquido"><div class="tabela-valor">{% if c.valor_liquido != None %}{{ c.valor_liquido|intcomma_brl }}{% else %}—{% endif %}</div></td>
+        <td data-rotulo="Liquidação"><div class="tabela-valor">
           {% if c.liquidado %}
             <span class="selo selo-pg-pago">✓ {{ c.data_liquidacao|date:"d/m/y" }}</span>
             {% if c.id_liquidacao %}<br><small class="subtitulo">{{ c.id_liquidacao }}</small>{% endif %}
           {% elif c.status == 'pago' %}
             <span class="selo selo-pg-pendente">A liquidar</span>
           {% else %}—{% endif %}
-        </td>
-        <td><span class="selo selo-pg-{{ c.status }}">{{ c.get_status_display }}</span></td>
+        </div></td>
+        <td data-rotulo="Situação"><div class="tabela-valor"><span class="selo selo-pg-{{ c.status }}">{{ c.get_status_display }}</span></div></td>
         {% if eh_gerente %}
-          <td>
+          <td data-rotulo="Ação"><div class="tabela-valor">
             {% if c.status == 'pago' and not c.liquidado %}
               <div x-data="{ aberto: false }">
                 <button type="button" class="botao-neutro" @click="aberto = !aberto"
@@ -103,7 +103,7 @@
                 </div>
               </div>
             {% endif %}
-          </td>
+          </div></td>
         {% endif %}
       </tr>
     {% empty %}

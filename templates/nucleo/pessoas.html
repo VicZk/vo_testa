@@ -22,7 +22,7 @@
 {% if filtros %}
 <nav class="est-abas abas-secao" aria-label="Tipos de pessoa">
   {% for f in filtros %}
-    <a href="?{% if busca %}q={{ busca|urlencode }}&{% endif %}{% if f.chave %}papel={{ f.chave }}{% endif %}"
+    <a href="{% url 'pessoas' %}?{% if busca %}q={{ busca|urlencode }}&{% endif %}{% if f.chave %}papel={{ f.chave }}{% endif %}"
        class="est-aba"{% if papel == f.chave %} aria-current="page"{% endif %}>
       {{ f.rotulo }} <span class="n">{{ f.total }}</span>
     </a>
@@ -33,27 +33,27 @@
 {% comment %}Larguras declaradas no CSS (.tabela-pessoas): sem elas a tabela usava
 1290px para ~700px de conteúdo e abria um vão de 275px entre PAPÉIS e DOCUMENTO. No
 celular ficam só Nome e Papéis — o resto está na ficha da pessoa.{% endcomment %}
-<table class="tabela tabela-fixa tabela-pessoas">
+<table class="tabela tabela-fixa tabela-pessoas tabela-cartoes">
   <colgroup>
     <col class="c-nome"><col class="c-tipo"><col class="c-papeis">
     <col class="c-doc"><col class="c-tel"><col class="c-sit">
   </colgroup>
   <thead>
-    <tr><th>Nome</th><th class="c-tipo">Tipo</th><th>Papéis</th><th class="num c-doc">Documento</th><th class="c-tel">Telefone</th><th class="c-sit">Situação</th></tr>
+    <tr><th>Nome</th><th class="c-tipo">Tipo</th><th>Papéis</th><th class="c-doc">Documento</th><th class="c-tel">Telefone</th><th class="c-sit">Situação</th></tr>
   </thead>
   <tbody>
     {% for p in pessoas %}
       <tr>
-        <td><a href="{% url 'pessoa_editar' p.pk %}">{{ p.nome }}</a></td>
+        <td data-rotulo="Nome"><div class="tabela-valor"><a href="{% url 'pessoa_editar' p.pk %}">{{ p.nome }}</a></div></td>
         {% comment %}Tipo e papéis são rótulos de dado, não status: texto discreto em vez
         de cápsula. Eram 64 pílulas repetindo "PF" e "HÓSPEDE" linha a linha.{% endcomment %}
-        <td class="c-tipo"><span class="rotulo-dado dica" data-dica="{{ p.get_tipo_display }}">{{ p.sigla_tipo }}</span></td>
-        <td>
+        <td class="c-tipo" data-rotulo="Tipo"><div class="tabela-valor"><span class="rotulo-dado dica" data-dica="{{ p.get_tipo_display }}">{{ p.sigla_tipo }}</span></div></td>
+        <td data-rotulo="Papéis"><div class="tabela-valor">
           {% for papel in p.papeis %}<span class="rotulo-dado">{{ papel }}</span>{% empty %}<span class="rotulo-dado">Cliente avulso</span>{% endfor %}
-        </td>
-        <td class="num c-doc">{{ p.documento|default:"—" }}</td>
-        <td class="c-tel">{{ p.telefone|default:"—" }}</td>
-        <td class="c-sit">{% if p.ativo %}Ativa{% else %}Inativa{% endif %}</td>
+        </div></td>
+        <td class="c-doc" data-rotulo="Documento"><div class="tabela-valor">{{ p.documento|default:"—" }}</div></td>
+        <td class="c-tel" data-rotulo="Telefone"><div class="tabela-valor">{{ p.telefone|default:"—" }}</div></td>
+        <td class="c-sit" data-rotulo="Situação"><div class="tabela-valor"><span class="selo {% if not p.ativo %}selo-neutro{% endif %}">{% if p.ativo %}Ativa{% else %}Inativa{% endif %}</span></div></td>
       </tr>
     {% empty %}
       <tr><td colspan="6" class="vazio">Nenhuma pessoa neste filtro. {% if busca or papel %}<a href="{% url 'pessoas' %}">Limpar filtros</a>{% else %}Comece pela primeira!{% endif %}</td></tr>

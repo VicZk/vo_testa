@@ -3419,7 +3419,7 @@ class LpLeveECompartilhavelTests(TestCase):
         from . import views_lp
         nome = re.search(r"/lp/arquivo/([0-9a-f]{20}\.webp)", self._html()).group(1)
         views_lp._ARQUIVOS_LP.clear()
-        views_lp._LPINAUG_CACHE["html"] = None
+        views_lp._LPINAUG_CACHE.clear()
         self.assertEqual(self.client.get(f"/lp/arquivo/{nome}").status_code, 200)
         self.assertEqual(self.client.get("/lp/arquivo/0123456789abcdef0123.webp").status_code, 404)
 

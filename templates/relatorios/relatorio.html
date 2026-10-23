@@ -21,7 +21,7 @@ busca na folha.{% endcomment %}
   <p class="pagina-eyebrow letreiro">Relatórios · {{ grupo }}</p>
   <div class="pagina-cabecalho">
     <h1>{{ titulo }}</h1>
-    <div class="linha-botoes">
+    <div class="pagina-acoes">
       <a href="?{% if f.de %}de={{ f.de }}&ate={{ f.ate }}{% else %}mes={{ mes_sel }}&ano={{ ano_sel }}{% endif %}{% for c in controles %}&{{ c.nome }}={{ c.valor }}{% endfor %}&export=csv" class="botao-neutro">Exportar CSV</a>
       <button type="button" class="botao-neutro" onclick="window.print()">Imprimir / PDF</button>
       <a href="{% url 'relatorios:index' %}" class="botao-mini">Voltar</a>
@@ -80,18 +80,20 @@ busca na folha.{% endcomment %}
   {% endfor %}
 </div>
 
-<table class="tabela bloco-respiro-largo">
+<div class="tabela-rol bloco-respiro-largo"{% if dados.colunas|length > 6 %} data-tabela-ampla{% endif %}>
+<table class="tabela{% if dados.colunas|length <= 6 %} tabela-cartoes{% endif %}">
   <thead>
-    <tr>{% for c in dados.colunas %}<th {% if not forloop.first %}class="num"{% endif %}>{{ c }}</th>{% endfor %}</tr>
+    <tr>{% for c in dados.colunas %}<th {% if not forloop.first %}class="num col-numero"{% endif %}>{{ c }}</th>{% endfor %}</tr>
   </thead>
   <tbody>
-    {% for linha in dados.linhas %}
-      <tr>{% for celula in linha %}<td {% if not forloop.first %}class="num"{% endif %}>{{ celula }}</td>{% endfor %}</tr>
+    {% for linha in linhas_rotuladas %}
+      <tr>{% for rotulo_coluna, celula in linha %}<td data-rotulo="{{ rotulo_coluna }}" {% if not forloop.first %}class="num col-numero"{% endif %}><div class="tabela-valor">{{ celula }}</div></td>{% endfor %}</tr>
     {% empty %}
       <tr><td colspan="{{ dados.colunas|length }}" class="vazio">Sem dados no período.</td></tr>
     {% endfor %}
   </tbody>
 </table>
+</div>
 {% if dados.restaurante_financeiro %}
   <section class="bloco-respiro-largo" aria-label="Vendas e caixa do restaurante">
     <h2>Restaurante</h2>

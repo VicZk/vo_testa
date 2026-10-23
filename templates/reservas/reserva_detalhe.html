@@ -292,16 +292,16 @@ uma ficha: cada dado com o seu rótulo, lido de relance.{% endcomment %}
   </div>
   {% if cobrancas_reserva %}
   <div class="tabela-rol">
-  <table class="tabela">
+  <table class="tabela tabela-cartoes">
     <thead><tr><th>Cobrança</th><th>Finalidade</th><th class="num">Valor</th><th>Status</th><th>Ação</th></tr></thead>
     <tbody>
       {% for c in cobrancas_reserva %}
       <tr>
-        <td class="nao-quebra">#{{ c.pk }} · {{ c.get_metodo_display }}</td>
-        <td>{{ c.get_finalidade_display }}</td>
-        <td class="num">{{ c.valor|intcomma_brl }}</td>
-        <td><span class="selo selo-pg-{{ c.status }}">{{ c.get_status_display }}</span></td>
-        <td>
+        <td class="nao-quebra" data-rotulo="Cobrança"><div class="tabela-valor">#{{ c.pk }} · {{ c.get_metodo_display }}</div></td>
+        <td data-rotulo="Finalidade"><div class="tabela-valor">{{ c.get_finalidade_display }}</div></td>
+        <td class="num" data-rotulo="Valor"><div class="tabela-valor">{{ c.valor|intcomma_brl }}</div></td>
+        <td data-rotulo="Status"><div class="tabela-valor"><span class="selo selo-pg-{{ c.status }}">{{ c.get_status_display }}</span></div></td>
+        <td data-rotulo="Ação"><div class="tabela-valor">
           <div class="copiar-celula">
             <a href="{% url 'pagamentos:detalhe' c.pk %}" class="botao-mini">Abrir</a>
             {% comment %}Era um «Link de pagamento» que ABRIA a página do hóspede
@@ -313,7 +313,7 @@ uma ficha: cada dado com o seu rótulo, lido de relance.{% endcomment %}
               {% copiar c.link_publico mostrar=False telefone=reserva.pagador.telefone recado="Olá! Aqui está o link para pagar a sua reserva na Pousada Vô Testa:" %}
             {% endif %}
           </div>
-        </td>
+        </div></td>
       </tr>
       {% endfor %}
     </tbody>
@@ -338,14 +338,14 @@ uma ficha: cada dado com o seu rótulo, lido de relance.{% endcomment %}
   colunas de formulários que saíram. Agora fica junto do resto do dinheiro.{% endcomment %}
   {% if reserva.adiantamentos.exists %}
     <h3 class="rot-secao respiro-medio">Sinal recebido</h3>
-    <table class="tabela">
+    <table class="tabela tabela-cartoes">
       <thead><tr><th>Data</th><th>Origem</th><th class="num">Valor</th></tr></thead>
       <tbody>
         {% for a in reserva.adiantamentos.all %}
           <tr>
-            <td class="nao-quebra">{{ a.criado_em|date:"d/m/Y H:i" }}</td>
-            <td>{% if a.eh_estorno %}Estorno{% elif a.cobranca_id %}Online{% else %}{{ a.movimento_caixa.forma_pagamento }}{% endif %}{% if a.observacao %} · <em>{{ a.observacao }}</em>{% endif %}</td>
-            <td class="num">{% if a.eh_estorno %}−{% endif %}{{ a.valor_absoluto|intcomma_brl }}</td>
+            <td class="nao-quebra" data-rotulo="Data"><div class="tabela-valor">{{ a.criado_em|date:"d/m/Y H:i" }}</div></td>
+            <td data-rotulo="Origem"><div class="tabela-valor">{% if a.eh_estorno %}Estorno{% elif a.cobranca_id %}Online{% else %}{{ a.movimento_caixa.forma_pagamento }}{% endif %}{% if a.observacao %} · <em>{{ a.observacao }}</em>{% endif %}</div></td>
+            <td class="num" data-rotulo="Valor"><div class="tabela-valor">{% if a.eh_estorno %}−{% endif %}{{ a.valor_absoluto|intcomma_brl }}</div></td>
           </tr>
         {% endfor %}
       </tbody>
@@ -358,24 +358,20 @@ uma ficha: cada dado com o seu rótulo, lido de relance.{% endcomment %}
 {# ---------- FNRH (Ficha Nacional de Registro de Hóspedes) ---------- #}
 <section class="reserva-secao" aria-labelledby="reserva-fnrh-titulo">
 <h2 id="reserva-fnrh-titulo">Ficha de hóspedes (FNRH)
-  {% if fnrh_pronta %}
-    <span class="selo selo-ok">Completa</span>
-  {% else %}
-    <span class="selo selo-alerta">{{ fnrh_completas }}/{{ fnrh_total }} preenchida{{ fnrh_total|pluralize }}</span>
-  {% endif %}
+  {% include "reservas/partials/fnrh_progresso.html" %}
 </h2>
 <p class="subtitulo">Registro obrigatório (Embratur) de cada hóspede, com uma ficha completa por
   pessoa libera o check-in.</p>
 {% if reserva.fichas_fnrh.exists %}
-  <table class="tabela">
+  <table class="tabela tabela-cartoes">
     <thead><tr><th>Hóspede</th><th>Documento</th><th>Situação</th><th>Via</th></tr></thead>
     <tbody>
       {% for f in reserva.fichas_fnrh.all %}
         <tr>
-          <td>{{ f.nome|default:"—" }} {% if f.titular %}<span class="selo selo-neutro">Responsável</span>{% endif %}</td>
-          <td>{{ f.documento_numero|default:"—" }}</td>
-          <td>{% if f.completa %}<span class="selo selo-ok">Completa</span>{% else %}<span class="selo selo-alerta">Pendente</span>{% endif %}</td>
-          <td>{{ f.get_origem_display }}</td>
+          <td data-rotulo="Hóspede"><div class="tabela-valor">{{ f.nome|default:"—" }} {% if f.titular %}<span class="selo selo-neutro">Responsável</span>{% endif %}</div></td>
+          <td data-rotulo="Documento"><div class="tabela-valor">{{ f.documento_numero|default:"—" }}</div></td>
+          <td data-rotulo="Situação"><div class="tabela-valor">{% if f.completa %}<span class="selo selo-ok">Completa</span>{% else %}<span class="selo selo-alerta">Pendente</span>{% endif %}</div></td>
+          <td data-rotulo="Via"><div class="tabela-valor">{{ f.get_origem_display }}</div></td>
         </tr>
       {% endfor %}
     </tbody>
@@ -436,37 +432,37 @@ uma ficha: cada dado com o seu rótulo, lido de relance.{% endcomment %}
     </div>
   </dl>
 
-  <table class="tabela">
+  <table class="tabela tabela-cartoes">
     <thead>
       <tr><th>Data</th><th>Tipo</th><th>Natureza</th><th>Descrição</th><th class="num">Valor</th></tr>
     </thead>
     <tbody>
       {% for l in conta.lancamentos.all %}
         <tr>
-          <td>{{ l.criado_em|date:"d/m H:i" }}</td>
-          <td>{{ l.get_tipo_display }}</td>
-          <td>{{ l.get_natureza_display }}</td>
-          <td>{{ l.descricao }}</td>
-          <td class="num">{% if l.tipo == "desconto" %}−{% endif %}{{ l.valor|intcomma_brl }}</td>
+          <td data-rotulo="Data"><div class="tabela-valor">{{ l.criado_em|date:"d/m H:i" }}</div></td>
+          <td data-rotulo="Tipo"><div class="tabela-valor">{{ l.get_tipo_display }}</div></td>
+          <td data-rotulo="Natureza"><div class="tabela-valor">{{ l.get_natureza_display }}</div></td>
+          <td data-rotulo="Descrição"><div class="tabela-valor">{{ l.descricao }}</div></td>
+          <td class="num" data-rotulo="Valor"><div class="tabela-valor">{% if l.tipo == "desconto" %}−{% endif %}{{ l.valor|intcomma_brl }}</div></td>
         </tr>
       {% endfor %}
       {% for p in conta.pagamentos.all %}
         <tr>
-          <td>{{ p.criado_em|date:"d/m H:i" }}</td>
-          <td>{% if p.eh_estorno %}Estorno de pagamento{% elif p.conta_receber_id %}Faturado{% else %}Pagamento{% endif %}</td>
-          <td>—</td>
-          <td>{% if p.movimento_caixa_id %}{{ p.movimento_caixa.forma_pagamento }}{% if p.movimento_caixa.autorizacao %} · NSU {{ p.movimento_caixa.autorizacao }}{% endif %}{% elif p.cobranca_id %}Online{% elif p.conta_receber_id %}A receber de {{ reserva.titular.nome }} · vence {{ p.conta_receber.vencimento|date:"d/m/Y" }}{% endif %}{% if p.observacao %} · <em>{{ p.observacao }}</em>{% endif %}</td>
+          <td data-rotulo="Data"><div class="tabela-valor">{{ p.criado_em|date:"d/m H:i" }}</div></td>
+          <td data-rotulo="Tipo"><div class="tabela-valor">{% if p.eh_estorno %}Estorno de pagamento{% elif p.conta_receber_id %}Faturado{% else %}Pagamento{% endif %}</div></td>
+          <td data-rotulo="Natureza"><div class="tabela-valor">—</div></td>
+          <td data-rotulo="Descrição"><div class="tabela-valor">{% if p.movimento_caixa_id %}{{ p.movimento_caixa.forma_pagamento }}{% if p.movimento_caixa.autorizacao %} · NSU {{ p.movimento_caixa.autorizacao }}{% endif %}{% elif p.cobranca_id %}Online{% elif p.conta_receber_id %}A receber de {{ reserva.titular.nome }} · vence {{ p.conta_receber.vencimento|date:"d/m/Y" }}{% endif %}{% if p.observacao %} · <em>{{ p.observacao }}</em>{% endif %}</div></td>
           {# Pagamento abate a conta (−); o estorno dele volta a cobrar (+). #}
-          <td class="num">{% if p.eh_estorno %}+{% else %}−{% endif %}{{ p.valor_absoluto|intcomma_brl }}</td>
+          <td class="num" data-rotulo="Valor"><div class="tabela-valor">{% if p.eh_estorno %}+{% else %}−{% endif %}{{ p.valor_absoluto|intcomma_brl }}</div></td>
         </tr>
       {% endfor %}
       {% for a in reserva.adiantamentos.all %}
         <tr>
-          <td>{{ a.criado_em|date:"d/m H:i" }}</td>
-          <td>{% if a.eh_estorno %}Estorno de adiantamento{% else %}Adiantamento{% endif %}</td>
-          <td>—</td>
-          <td>{% if a.observacao %}{{ a.observacao }}{% elif a.cobranca_id %}Sinal pago online{% else %}Crédito de sinal{% endif %}</td>
-          <td class="num">{% if a.eh_estorno %}+{% else %}−{% endif %}{{ a.valor_absoluto|intcomma_brl }}</td>
+          <td data-rotulo="Data"><div class="tabela-valor">{{ a.criado_em|date:"d/m H:i" }}</div></td>
+          <td data-rotulo="Tipo"><div class="tabela-valor">{% if a.eh_estorno %}Estorno de adiantamento{% else %}Adiantamento{% endif %}</div></td>
+          <td data-rotulo="Natureza"><div class="tabela-valor">—</div></td>
+          <td data-rotulo="Descrição"><div class="tabela-valor">{% if a.observacao %}{{ a.observacao }}{% elif a.cobranca_id %}Sinal pago online{% else %}Crédito de sinal{% endif %}</div></td>
+          <td class="num" data-rotulo="Valor"><div class="tabela-valor">{% if a.eh_estorno %}+{% else %}−{% endif %}{{ a.valor_absoluto|intcomma_brl }}</div></td>
         </tr>
       {% endfor %}
       {% if not conta.lancamentos.exists and not conta.pagamentos.exists and not reserva.adiantamentos.exists %}

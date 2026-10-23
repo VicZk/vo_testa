@@ -58,14 +58,16 @@ cancelado
 .fnrh-ficha
 .fnrh-ficha-cab
 .fnrh-ficha-cab::-webkit-details-marker
-.fnrh-ficha-cab::after
-.fnrh-ficha[open] > .fnrh-ficha-cab::after
+.fnrh-ficha-cab::before
+.fnrh-ficha[open] > .fnrh-ficha-cab::before
 .fnrh-ficha-cab:hover h3
 .fnrh-ficha-cab:focus-visible
 .fnrh-ficha-cab .selo
 .fnrh-ficha-cab h3
 .fnrh-ficha-nome
 .fnrh-ficha-cab h3 > span:not(.fnrh-ficha-ico)
+@media (max-width: 600px) ‖ .fnrh-ficha-cab
+@media (max-width: 600px) ‖ .fnrh-ficha-cab .selo
 .fnrh-ficha-ico
 .fnrh-ficha:first-of-type .fnrh-ficha-ico
 .fnrh-grupo

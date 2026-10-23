@@ -90,17 +90,17 @@
         <div class="pq-info">
           <div class="pq-nome">{{ item.nome }}{% if item.nome != item.uh.numero %} <span class="pq-num">· {{ item.uh.numero }}</span>{% endif %}</div>
           <div class="pq-cat">{{ item.uh.tipo.nome }}</div>
-          <div class="pq-cap"><span class="pq-ok">✓ acomoda</span> · {{ item.capacidade }}</div>
+          <div class="pq-cap"><span class="pq-ok">✓ Acomoda</span> · {{ item.capacidade }}</div>
           {% if item.arranjo %}<div class="pq-montagem">{{ item.arranjo.montagem }}</div>{% endif %}
           {% for ponto in item.pontos_atencao %}<span class="pq-selo-at">{{ ponto }}</span>{% endfor %}
         </div>
         <div class="pq-preco">
           {% if item.total %}
-            <div class="v num">{{ item.total|intcomma_brl }}</div>
+            <div class="v valor-metrica">{{ item.total|intcomma_brl }}</div>
             <div class="l">{{ item.noites }} noite{{ item.noites|pluralize }} · {{ item.diaria|intcomma_brl }}/noite</div>
             <div class="pq-venda">Pix <b>{{ item.total_pix|intcomma_brl }}</b> (−{{ item.desconto_pix|floatformat:0 }}%)<br>ou {{ item.parcelas_max }}× {{ item.parcela_valor|intcomma_brl }}</div>
           {% else %}
-            <div class="v num">{{ item.diaria|intcomma_brl }}</div>
+            <div class="v valor-metrica">{{ item.diaria|intcomma_brl }}</div>
             <div class="l">a partir de / noite</div>
           {% endif %}
         </div>

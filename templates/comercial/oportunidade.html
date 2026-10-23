@@ -6,20 +6,20 @@
 {% block titulo %}{{ op.titulo }} | Comercial{% endblock %}
 
 {% block conteudo %}
+<p class="pagina-eyebrow letreiro">Comercial · Oportunidade</p>
 <div class="pagina-cabecalho">
-  <div>
-    <p class="pagina-eyebrow letreiro">Comercial · Oportunidade</p>
-    <h1>{{ op.pessoa.nome }}</h1>
-    {% if op.titulo_curto %}<p class="subtitulo">{{ op.titulo_curto }}</p>{% endif %}
-    {% if proxima_acao %}<p class="op-proxima op-proxima-{{ proxima_acao.nivel }}">Próxima ação: <b>{{ proxima_acao.texto }}</b></p>{% endif %}
-    {% if historico_cliente %}
-    <p class="op-recorrente" title="Cliente com histórico na pousada">Cliente recorrente:
-      {% if historico_cliente.estadias %}<b>{{ historico_cliente.estadias }}</b> estadia{{ historico_cliente.estadias|pluralize:"s" }}{% if historico_cliente.ultima %} · última em {{ historico_cliente.ultima|date:"m/Y" }}{% endif %}{% endif %}{% if historico_cliente.futuras %}{% if historico_cliente.estadias %} · {% endif %}<b>{{ historico_cliente.futuras }}</b> reserva{{ historico_cliente.futuras|pluralize }} em aberto{% endif %}
-    </p>
-    {% endif %}
+  <h1>{{ op.pessoa.nome }}</h1>
+  <div class="pagina-acoes">
+    <a href="{% url 'comercial:funil' %}{% if op.campanha_id %}?campanha={{ op.campanha_id }}{% endif %}" class="botao-mini">Voltar ao funil</a>
   </div>
-  <a href="{% url 'comercial:funil' %}{% if op.campanha_id %}?campanha={{ op.campanha_id }}{% endif %}" class="botao-mini">Voltar ao funil</a>
 </div>
+{% if op.titulo_curto %}<p class="subtitulo">{{ op.titulo_curto }}</p>{% endif %}
+{% if proxima_acao %}<p class="op-proxima op-proxima-{{ proxima_acao.nivel }}">Próxima ação: <b>{{ proxima_acao.texto }}</b></p>{% endif %}
+{% if historico_cliente %}
+<p class="op-recorrente" title="Cliente com histórico na pousada">Cliente recorrente:
+  {% if historico_cliente.estadias %}<b>{{ historico_cliente.estadias }}</b> estadia{{ historico_cliente.estadias|pluralize:"s" }}{% if historico_cliente.ultima %} · última em {{ historico_cliente.ultima|date:"m/Y" }}{% endif %}{% endif %}{% if historico_cliente.futuras %}{% if historico_cliente.estadias %} · {% endif %}<b>{{ historico_cliente.futuras }}</b> reserva{{ historico_cliente.futuras|pluralize }} em aberto{% endif %}
+</p>
+{% endif %}
 {% if op.campanha %}
 <div class="alerta alerta-info funil-campanha">
   <span>Origem: <strong>{{ op.campanha.nome }}</strong></span>
@@ -116,17 +116,17 @@
     <section class="cartao op-bloco">
       <div class="cartao-cabeca"><h2>Cotações</h2></div>
       <div class="tabela-rol">
-      <table class="tabela">
+      <table class="tabela tabela-cartoes">
         <thead><tr><th>Quando</th><th>Tipo</th><th>Período</th><th class="num">Diária</th><th class="num">Total</th><th>Validade</th></tr></thead>
         <tbody>
           {% for c in cotacoes %}
             <tr>
-              <td>{{ c.criado_em|date:"d/m H:i" }}</td>
-              <td>{{ c.tipo_uh.nome }}</td>
-              <td>{{ c.checkin|date:"d/m" }} → {{ c.checkout|date:"d/m/Y" }}</td>
-              <td class="num">{{ c.valor_diaria|intcomma_brl }}</td>
-              <td class="num">{{ c.valor_total|intcomma_brl }}</td>
-              <td>{{ c.validade|date:"d/m/Y" }}</td>
+              <td data-rotulo="Quando"><div class="tabela-valor">{{ c.criado_em|date:"d/m H:i" }}</div></td>
+              <td data-rotulo="Tipo"><div class="tabela-valor">{{ c.tipo_uh.nome }}</div></td>
+              <td data-rotulo="Período"><div class="tabela-valor">{{ c.checkin|date:"d/m" }} → {{ c.checkout|date:"d/m/Y" }}</div></td>
+              <td class="num" data-rotulo="Diária"><div class="tabela-valor">{{ c.valor_diaria|intcomma_brl }}</div></td>
+              <td class="num" data-rotulo="Total"><div class="tabela-valor">{{ c.valor_total|intcomma_brl }}</div></td>
+              <td data-rotulo="Validade"><div class="tabela-valor">{{ c.validade|date:"d/m/Y" }}</div></td>
             </tr>
           {% empty %}
             <tr><td colspan="6" class="vazio">Nenhuma cotação enviada para este lead ainda.</td></tr>
@@ -152,20 +152,20 @@
         </form>
       {% endif %}
       <div class="tabela-rol">
-      <table class="tabela">
+      <table class="tabela tabela-cartoes">
         <thead><tr><th>Quando</th><th>Quem</th><th class="nao-quebra">Tipo</th><th>Descrição</th><th></th></tr></thead>
         <tbody>
           {% for at in atividades %}
             <tr class="{% if not at.concluida %}linha-pendente{% endif %}">
-              <td>{{ at.quando|date:"d/m/Y H:i" }}</td>
-              <td>{% with quem=at.criado_por|default:at.responsavel %}{% if quem %}{{ quem.get_full_name|default:quem.username }}{% else %}—{% endif %}{% endwith %}</td>
-              <td class="nao-quebra">{{ at.get_tipo_display }}</td>
-              <td>{{ at.descricao|linkar_reservas }}{% if not at.concluida %} <span class="selo selo-em_andamento">tarefa</span>{% endif %}</td>
-              <td class="num">
+              <td data-rotulo="Quando"><div class="tabela-valor">{{ at.quando|date:"d/m/Y H:i" }}</div></td>
+              <td data-rotulo="Quem"><div class="tabela-valor">{% with quem=at.criado_por|default:at.responsavel %}{% if quem %}{{ quem.get_full_name|default:quem.username }}{% else %}—{% endif %}{% endwith %}</div></td>
+              <td class="nao-quebra" data-rotulo="Tipo"><div class="tabela-valor">{{ at.get_tipo_display }}</div></td>
+              <td data-rotulo="Descrição"><div class="tabela-valor">{{ at.descricao|linkar_reservas }}{% if not at.concluida %} <span class="selo selo-em_andamento">tarefa</span>{% endif %}</div></td>
+              <td class="num" data-rotulo="Ação"><div class="tabela-valor">
                 {% if not at.concluida %}
                   <form method="post" action="{% url 'comercial:concluir_tarefa' at.pk %}">{% csrf_token %}<button class="botao-mini">Concluir</button></form>
                 {% endif %}
-              </td>
+              </div></td>
             </tr>
           {% empty %}
             <tr><td colspan="5" class="vazio">Nenhuma atividade ainda. Registre a primeira acima.</td></tr>

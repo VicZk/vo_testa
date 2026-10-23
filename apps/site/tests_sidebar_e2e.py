@@ -47,6 +47,7 @@ class SidebarOperacaoE2ETests(_BaseE2E):
         }])
         self.page.goto(self.url(reverse("restaurante:comandas")), wait_until="load")
         self.page.locator(".sidebar").wait_for()
+        self.abrir_grupos_menu()
         self._esperar_layout()
 
     def _responder_avisos(self, route):
@@ -105,6 +106,7 @@ class SidebarOperacaoE2ETests(_BaseE2E):
         self.page.add_init_script("localStorage.setItem('sidebar', 'aberta')")
         try:
             self.page.goto(self.url(reverse("restaurante:comandas")), wait_until="load")
+            self.abrir_grupos_menu()
             self._esperar_layout()
             self.assertTrue(self.page.evaluate("matchMedia('(pointer:coarse)').matches"))
             yield
@@ -139,7 +141,7 @@ class SidebarOperacaoE2ETests(_BaseE2E):
         if numero > 99:
             self.assertIn(str(numero), medidas["acessivel"], medidas)
         expect(self.page.locator("[data-governanca-avisos]")).to_have_accessible_name(
-            f"{numero} serviço(s) de limpeza pendente(s)")
+            f"{numero} serviço{'' if numero == 1 else 's'} de limpeza pendente{'' if numero == 1 else 's'}")
 
     def test_icones_centrados_no_realce_com_e_sem_espaco_da_barra(self):
         self._estado(True)
@@ -307,8 +309,8 @@ class SidebarOperacaoE2ETests(_BaseE2E):
                     "link", name="Pontos", exact=True).click()
                 expect(p).to_have_url(self.url(reverse("restaurante:mesas")))
                 self._esperar_layout()
-                self.assertFalse(p.evaluate("Boolean(window.__documentoSidebar)"),
-                                 "Pontos deve exercitar navegação completa")
+                self.assertTrue(p.evaluate("Boolean(window.__documentoSidebar)"),
+                                "Pontos deve preservar o documento e o menu")
                 for etapa in ("pontos", "reload", "voltar", "avancar"):
                     if etapa == "reload":
                         p.reload(wait_until="load")
@@ -391,10 +393,13 @@ class SidebarOperacaoE2ETests(_BaseE2E):
                           "a migração deixou o snapshot legado de body disponível")
         self.assertEqual(p.evaluate("localStorage.getItem('sidebar')"), "aberta")
         self.assertEqual(p.evaluate("localStorage.getItem('gov-filtro')"), "limpar")
-        p.locator("#menu-principal").evaluate("""(nav, href) => {
-          const item = nav.querySelector(`a[href="${href}"]`);
-          nav.scrollTop += item.getBoundingClientRect().top-nav.getBoundingClientRect().top-45;
-        }""", reverse("restaurante:comandas"))
+        # Os dois destinos precisam estar inteiros no menu antes da medição:
+        # o clique real rola automaticamente um item parcialmente recortado.
+        p.locator("#menu-principal").evaluate("""(nav, destinos) => {
+          const inicio = Math.min(...destinos.map(href =>
+            nav.querySelector(`a[href="${href}"]`).getBoundingClientRect().top));
+          nav.scrollTop += inicio-nav.getBoundingClientRect().top-45;
+        }""", [reverse("restaurante:comandas"), reverse("loja:pdv")])
         self._esperar_layout()
         antes = self._posicao_restaurante()
         self.assertGreater(antes["scroll"], 40)
@@ -405,7 +410,7 @@ class SidebarOperacaoE2ETests(_BaseE2E):
             window.__sidebarHistoryReady = true;
           }, {once:true});
         }""")
-        p.locator(f'#menu-principal a[href="{reverse("loja:pdv")}"]').click()
+        self.clicar_item_menu(f'#menu-principal a[href="{reverse("loja:pdv")}"]', pagina=p)
         expect(p).to_have_url(self.url(reverse("loja:pdv")))
         self._esperar_layout()
         expect(p.locator("#menu-principal .nav-item.ativo")).to_have_attribute("href", reverse("loja:pdv"))
@@ -424,6 +429,12 @@ class SidebarOperacaoE2ETests(_BaseE2E):
         self.assertTrue(p.locator("#app").evaluate("el => el.classList.contains('recolhida')"))
         self._estado(False)
         self.assertFalse(p.locator("#app").evaluate("el => el.classList.contains('recolhida')"))
+        # Comandas/PDV contêm seletores pessoais com hx-history=false. Cria um
+        # snapshot em uma lista elegível antes de verificar a migração única.
+        self.clicar_item_menu(f'#menu-principal a[href="{reverse("estoque:posicao")}"]', pagina=p)
+        expect(p).to_have_url(self.url(reverse("estoque:posicao")))
+        p.locator(f'.abas-secao a[href="{reverse("estoque:produtos")}"]').click()
+        expect(p).to_have_url(self.url(reverse("estoque:produtos")))
         cache_novo = p.evaluate("localStorage.getItem('htmx-history-cache')")
         self.assertTrue(cache_novo, "a navegação precisa produzir snapshots do conteúdo novo")
         p.reload(wait_until="load")

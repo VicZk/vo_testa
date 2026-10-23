@@ -10,7 +10,7 @@
 
 <form method="post" class="form-cartao">
   {% csrf_token %}
-  {% include "nucleo/partials/campos.html" %}
+  <div class="form-grade">{% include "nucleo/partials/campos.html" %}</div>
   <div class="acoes">
     <button type="submit" class="botao-primario">Salvar</button>
     <a href="{% url voltar %}" class="botao-neutro">Cancelar</a>

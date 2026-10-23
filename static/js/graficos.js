@@ -1,6 +1,32 @@
 /* Gráficos locais acompanham a navegação HTMX e o histórico do navegador. */
 (function () {
   'use strict';
+  const fonteChart = document.currentScript?.dataset.chartSrc;
+  let carregamento = null;
+  const dadosAnteriores = new Map();
+  function criarGrafico(contexto, configuracao) {
+    const canvas = contexto.canvas;
+    const assinatura = JSON.stringify(configuracao.data);
+    canvas.dataset.graficoDados = assinatura;
+    // Trocar o documento do canvas não deve reapresentar valores idênticos.
+    if (dadosAnteriores.get(canvas.id) === assinatura) {
+      configuracao.options = {...configuracao.options, animation: false};
+    }
+    dadosAnteriores.set(canvas.id, assinatura);
+    return new Chart(contexto, configuracao);
+  }
+  function carregarChart() {
+    if (window.Chart) return Promise.resolve();
+    if (carregamento) return carregamento;
+    carregamento = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = fonteChart;
+      script.onload = resolve;
+      script.onerror = () => { script.remove(); carregamento = null; reject(new Error('Gráficos indisponíveis')); };
+      document.head.appendChild(script);
+    });
+    return carregamento;
+  }
   function disponivel(id) {
     const canvas = document.getElementById(id);
     return canvas && !Chart.getChart(canvas);
@@ -24,23 +50,25 @@
   const semGrade = { grid: { display: false }, border: { display: false } };
   const gradeY = { grid: { color: FIO }, border: { display: false } };
   const ctx = id => { const el = document.getElementById(id); return el ? el.getContext('2d') : null; };
-  const reais = v => 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+  const reais = v => 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const percentual = v => Number(v).toLocaleString('pt-BR', {maximumFractionDigits: 1}) + '%';
 
   if (dados.ocupacao && disponivel('g-ocupacao')) {
     const cores = dados.ocupacao.fds.map(f => f ? ALERTA : LAMPIAO);
-    new Chart(ctx('g-ocupacao'), {
+    criarGrafico(ctx('g-ocupacao'), {
       type: 'line',
       data: { labels: dados.ocupacao.labels, datasets: [{
         data: dados.ocupacao.valores, borderColor: LAMPIAO,
         backgroundColor: 'rgba(215,160,72,.14)', fill: true, tension: .35,
         borderWidth: 2, pointRadius: 3, pointBackgroundColor: cores, pointBorderColor: cores }] },
       options: { responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.parsed.y + '% ocupado' } } },
-        scales: { x: semGrade, y: { ...gradeY, min: 0, max: 100, ticks: { callback: v => v + '%' } } } }
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => 'Ocupação: ' + percentual(c.parsed.y) } } },
+        scales: { x: semGrade, y: { ...gradeY, min: 0, max: 100, ticks: { callback: percentual } } } }
     });
   }
   if (dados.receita && disponivel('g-receita')) {
-    new Chart(ctx('g-receita'), {
+    criarGrafico(ctx('g-receita'), {
       type: 'bar',
       data: { labels: dados.receita.labels, datasets: [
         { label: 'Serviço', data: dados.receita.servico, backgroundColor: MUSGO, stack: 's', borderRadius: 3 },
@@ -51,12 +79,12 @@
     });
   }
   if (dados.tipos && disponivel('g-tipos')) {
-    new Chart(ctx('g-tipos'), {
+    criarGrafico(ctx('g-tipos'), {
       type: 'bar',
       data: { labels: dados.tipos.labels, datasets: [{ data: dados.tipos.valores, backgroundColor: MUSGO, borderRadius: 4 }] },
       options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.parsed.x + '% ocupado' } } },
-        scales: { x: { ...gradeY, min: 0, max: 100, ticks: { callback: v => v + '%' } }, y: semGrade } }
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => 'Ocupação: ' + percentual(c.parsed.x) } } },
+        scales: { x: { ...gradeY, min: 0, max: 100, ticks: { callback: percentual } }, y: semGrade } }
     });
   }
   const opcoesPizza = (fmt, extra) => ({
@@ -84,14 +112,14 @@
   const inteiro = v => v.toLocaleString('pt-BR');
   const reaisCurto = v => 'R$ ' + Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
   if (dados.canais && disponivel('g-canais')) {
-    new Chart(ctx('g-canais'), {
+    criarGrafico(ctx('g-canais'), {
       type: 'doughnut',
       data: { labels: dados.canais.labels, datasets: [{ data: dados.canais.valores, backgroundColor: PALETA, borderColor: SUPERF, borderWidth: 3, hoverOffset: 4 }] },
-      options: opcoesPizza(inteiro, { tooltip: { callbacks: { label: c => c.label + ': ' + inteiro(c.parsed) + ' reserva' + (c.parsed > 1 ? 's' : '') } } })
+      options: opcoesPizza(inteiro, { tooltip: { callbacks: { label: c => c.label + ': ' + inteiro(c.parsed) + ' reserva' + (c.parsed === 1 ? '' : 's') } } })
     });
   }
   if (dados.funil && disponivel('g-funil')) {
-    new Chart(ctx('g-funil'), {
+    criarGrafico(ctx('g-funil'), {
       type: 'bar',
       data: { labels: dados.funil.labels, datasets: [{ data: dados.funil.valores, backgroundColor: MADEIRA, borderRadius: 4 }] },
       options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
@@ -100,7 +128,7 @@
     });
   }
   if (dados.pagamento && disponivel('g-pagamento')) {
-    new Chart(ctx('g-pagamento'), {
+    criarGrafico(ctx('g-pagamento'), {
       type: 'doughnut',
       data: { labels: dados.pagamento.labels, datasets: [{ data: dados.pagamento.valores, backgroundColor: PALETA, borderColor: SUPERF, borderWidth: 3, hoverOffset: 4 }] },
       options: opcoesPizza(reaisCurto, { tooltip: { callbacks: { label: c => c.label + ': ' + reais(c.parsed) } } })
@@ -129,14 +157,14 @@
       } } } },
   };
   const ext = disponivel('g-ext') && ctx('g-ext');
-  if (ext) new Chart(ext, {
+  if (ext) criarGrafico(ext, {
     type: 'doughnut',
     data: { labels: ['Conciliado', 'Pendente', 'Ignorado'], datasets: [{
       data: [dados.extrato.conciliado, dados.extrato.pendente, dados.extrato.ignorado],
       backgroundColor: [MUSGO, LAMPIAO, MADEIRA], borderColor: '#fff', borderWidth: 3, hoverOffset: 4 }] },
     options: opc });
   const car = disponivel('g-car') && ctx('g-car');
-  if (car) new Chart(car, {
+  if (car) criarGrafico(car, {
     type: 'doughnut',
     data: { labels: ['Conciliado', 'Pendente', 'Sem venda'], datasets: [{
       data: [dados.cartao.conciliado, dados.cartao.pendente, dados.cartao.sem_venda],
@@ -144,7 +172,12 @@
     options: opc });
   }
   function iniciar() {
-    if (!window.Chart) return;
+    if (!document.querySelector('#dados-graficos, #dados-conciliacao')) return;
+    if (!window.Chart) {
+      if (fonteChart) carregarChart().then(iniciar).catch(() => {});
+      return;
+    }
+    Chart.defaults.animation = matchMedia('(prefers-reduced-motion: reduce)').matches ? false : {duration: 180};
     // Um fragmento pode remover a árvore antes de recebermos seu evento final.
     Object.values(Chart.instances).forEach(chart => {
       if (!chart.canvas?.isConnected) chart.destroy();

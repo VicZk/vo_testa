@@ -88,7 +88,7 @@
   {% if tem_filtro %}<a href="{% url 'estoque:kardex' produto.pk %}" class="botao-mini">Limpar</a>{% endif %}
 </form>
 
-<table class="tabela est-tabela">
+<table class="tabela est-tabela tabela-cartoes">
   <thead>
     <tr>
       <th>Quando</th>
@@ -103,24 +103,24 @@
   <tbody>
     {% for l in linhas %}
       <tr id="movimento-{{ l.movimento.pk }}">
-        <td class="nao-quebra">{{ l.movimento.criado_em|date:"d/m/Y" }}<small class="camp-sub">{{ l.movimento.criado_em|date:"H:i" }}</small></td>
-        <td>
+        <td class="nao-quebra" data-rotulo="Quando"><div class="tabela-valor">{{ l.movimento.criado_em|date:"d/m/Y" }}<small class="camp-sub">{{ l.movimento.criado_em|date:"H:i" }}</small></div></td>
+        <td data-rotulo="Movimento"><div class="tabela-valor">
           {% comment %}Bolinha na cor do sentido (entra/sai) + o nome do tipo: a
           cor fica no selo, e o número ao lado carrega o sinal. Sem cápsula —
           movimento de kardex não pede ação de ninguém.{% endcomment %}
           <span class="selo {% if l.movimento.entrada %}est-entra{% else %}est-sai{% endif %}">{{ l.movimento.get_tipo_display }}</span>
           {% if l.movimento.observacao %}<small class="camp-sub">{{ l.movimento.observacao }}</small>{% endif %}
-        </td>
-        <td>{{ l.movimento.local.nome }}</td>
-        <td class="num est-kardex-qtd">{{ l.movimento.quantidade|qtd_sinal:produto.unidade }}</td>
-        <td class="num est-kardex-saldo">{{ l.saldo|qtd:produto.unidade }}</td>
-        <td class="num">{{ l.movimento.custo_unitario|intcomma_brl }}</td>
-        <td>
+        </div></td>
+        <td data-rotulo="Local"><div class="tabela-valor">{{ l.movimento.local.nome }}</div></td>
+        <td class="num est-kardex-qtd" data-rotulo="Quantidade"><div class="tabela-valor">{{ l.movimento.quantidade|qtd_sinal:produto.unidade }}</div></td>
+        <td class="num est-kardex-saldo" data-rotulo="Saldo depois"><div class="tabela-valor">{{ l.saldo|qtd:produto.unidade }}</div></td>
+        <td class="num" data-rotulo="Custo unit."><div class="tabela-valor">{{ l.movimento.custo_unitario|intcomma_brl }}</div></td>
+        <td data-rotulo="Origem"><div class="tabela-valor">
           {% if l.movimento.fornecedor %}{{ l.movimento.fornecedor.nome }}{% endif %}
           {% if l.movimento.recebimento_nota %}<small class="camp-sub"><a href="{% url 'estoque:nota' l.movimento.recebimento_nota.recebimento.nota_id %}">{{ l.movimento.recebimento_nota.recebimento.nota.referencia }}</a></small>{% elif l.movimento.documento %}<small class="camp-sub">{{ l.movimento.documento }}</small>{% endif %}
           {% if not l.movimento.fornecedor and not l.movimento.documento %}<span class="celula-suave">—</span>{% endif %}
           <small class="camp-sub">por {{ l.movimento.criado_por.get_short_name|default:l.movimento.criado_por.username }}</small>
-        </td>
+        </div></td>
       </tr>
     {% empty %}
       <tr><td colspan="7" class="vazio">

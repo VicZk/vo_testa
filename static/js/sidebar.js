@@ -1,206 +1,90 @@
-/* Posição do menu é da aba, não da página aberta dentro de um módulo. */
+/* O menu pertence ao documento; grupos e rolagem pertencem à aba. */
 (() => {
   'use strict';
-
-  // O histórico antigo guardava o body inteiro; agora só guarda #conteudo.
-  // Descartar esse cache uma vez evita inserir outro menu dentro do conteúdo
-  // ao voltar para uma página aberta antes desta versão. Preferências ficam.
-  try {
-    const raiz = document.getElementById('menu-principal');
-    const versao = raiz && `${raiz.dataset.rolagemChave}:historico`;
-    if (versao && localStorage.getItem(versao) !== 'conteudo-v1') {
-      localStorage.removeItem('htmx-history-cache');
-      localStorage.setItem(versao, 'conteudo-v1');
-    }
-  } catch (_) { /* Histórico é opcional quando o armazenamento está bloqueado. */ }
-
-  // O histórico do HTMX pode recriar o body e executar o script novamente.
-  // Há um controlador por documento; cada nav antigo solta seus observadores.
-  if (window.votestaSidebar) {
-    window.votestaSidebar.atualizar();
-    return;
+  if (window.votestaSidebar) return;
+  const menu = document.getElementById('menu-principal');
+  if (!menu) return;
+  const chave = menu.dataset.rolagemChave;
+  let trava = null;
+  function salvar() {
+    try { sessionStorage.setItem(chave, String(Math.max(0, menu.scrollTop))); } catch (_) {}
   }
-
-  const memoria = new Map();
-  let menu = null, sidebar = null, chave = '';
-  let restauro = null, observador = null;
-  let quadro = 0, quadroSalvar = 0, quadroFinal = 0;
-  let fontesProntas = !document.fonts;
-  const escutasMenu = [];
-
-  function lerPosicao() {
-    if (!chave) return null;
-    try {
-      const salvo = sessionStorage.getItem(chave);
-      if (salvo !== null && salvo.trim() !== '') {
-        const numero = Number(salvo);
-        if (Number.isFinite(numero) && numero >= 0) return numero;
+  function marcarAtivo() {
+    const conteudo = document.getElementById('conteudo');
+    // O cache HTMX restaura os filhos, não os atributos do elemento histórico.
+    const contexto = conteudo?.querySelector('[data-nav-contexto]');
+    if (contexto) {
+      if ('conteudoClasse' in contexto.dataset) conteudo.className = contexto.dataset.conteudoClasse;
+      else contexto.dataset.conteudoClasse = conteudo.className;
+    }
+    const ativa = contexto?.dataset.navContexto ?? conteudo?.dataset.navAtiva;
+    if (conteudo && ativa !== undefined) conteudo.dataset.navAtiva = ativa;
+    const anterior = menu.querySelector('[data-nav].ativo')?.dataset.nav;
+    menu.querySelectorAll('[data-nav]').forEach(item => {
+      const selecionado = !!ativa && item.dataset.nav === ativa;
+      item.classList.toggle('ativo', selecionado);
+      const link = item.matches('a') ? item : item.querySelector('.nav-item-principal');
+      if (selecionado) link?.setAttribute('aria-current', 'page');
+      else link?.removeAttribute('aria-current');
+      if (selecionado && ativa !== anterior) {
+        const grupo = item.closest('details');
+        if (grupo) grupo.open = true;
       }
-    } catch (_) {
-      // Bloqueio de armazenamento não impede a navegação nem o alinhamento.
-    }
-    return memoria.has(chave) ? memoria.get(chave) : null;
-  }
-
-  function salvarPosicao() {
-    if (!menu || !menu.isConnected || !chave) return;
-    // Uma fonte ainda carregando pode limitar temporariamente o scrollTop.
-    const top = restauro ? restauro.top : Math.max(0, menu.scrollTop);
-    memoria.set(chave, top);
-    try { sessionStorage.setItem(chave, String(top)); } catch (_) { /* Aba privada. */ }
-  }
-
-  function agendarSalvamento() {
-    if (quadroSalvar) return;
-    quadroSalvar = requestAnimationFrame(() => {
-      quadroSalvar = 0;
-      salvarPosicao();
     });
   }
-
-  function medirBarra() {
-    if (!menu || !menu.isConnected || !sidebar) return;
-    // Barras sobrepostas medem zero; Windows pode reservar largura real.
+  function atualizar(evento) {
+    if (evento?.type === 'htmx:afterSwap' && evento.detail.target?.id !== 'conteudo') return;
+    marcarAtivo();
+  }
+  function travarPagina() {
+    if (trava) return;
+    const corpo = document.body;
+    trava = {x: window.scrollX, y: window.scrollY, estilo: corpo.getAttribute('style')};
+    Object.assign(corpo.style, {position: 'fixed', top: -trava.y + 'px', left: -trava.x + 'px', width: '100%'});
+  }
+  function soltarPagina() {
+    if (!trava) return;
+    const anterior = trava;
+    trava = null;
+    if (anterior.estilo === null) document.body.removeAttribute('style');
+    else document.body.setAttribute('style', anterior.estilo);
+    window.scrollTo({left: anterior.x, top: anterior.y, behavior: 'instant'});
+  }
+  window.votestaSidebar = {atualizar, marcarAtivo, travarPagina, soltarPagina};
+  function atualizarBarra() {
     const largura = Math.max(0, menu.offsetWidth - menu.clientWidth) + 'px';
+    const sidebar = menu.closest('.sidebar');
     if (sidebar.style.getPropertyValue('--menu-scrollbar') !== largura) {
       sidebar.style.setProperty('--menu-scrollbar', largura);
     }
   }
-
-  function aplicarPosicao() {
-    if (!restauro || !menu || !menu.isConnected) return;
-    const limite = Math.max(0, menu.scrollHeight - menu.clientHeight);
-    menu.scrollTop = Math.min(restauro.top, limite);
-    restauro.aplicada = menu.scrollTop;
-  }
-
-  function finalizarRestauro() {
-    if (!restauro || !fontesProntas || document.readyState !== 'complete') return;
-    if (quadroFinal) cancelAnimationFrame(quadroFinal);
-    const atual = restauro;
-    // Duas pinturas deixam fonte e dimensões finais participarem da medida.
-    quadroFinal = requestAnimationFrame(() => {
-      quadroFinal = requestAnimationFrame(() => {
-        quadroFinal = 0;
-        if (restauro !== atual) return;
-        aplicarPosicao();
-        restauro = null;
-        salvarPosicao();
-      });
+  // O bootstrap mede antes da pintura; aqui só acompanha mudança real da barra
+  // (preferência do sistema, redimensionamento ou modo sobreposto).
+  if (window.ResizeObserver) new ResizeObserver(atualizarBarra).observe(menu);
+  else window.addEventListener('resize', atualizarBarra);
+  // Só o bootstrap inline restaura scrollTop, antes da primeira pintura.
+  // Nunca repetir no DOMContentLoaded, load ou ao trocar abas.
+  menu.addEventListener('scroll', salvar, {passive: true});
+  menu.querySelectorAll('details[data-menu-grupo]').forEach(grupo => {
+    grupo.addEventListener('toggle', () => {
+      try { sessionStorage.setItem(chave + ':grupo:' + grupo.dataset.menuGrupo, grupo.open ? 'aberto' : 'fechado'); } catch (_) {}
+      salvar();
     });
-  }
-
-  function ajustar() {
-    if (quadro) return;
-    quadro = requestAnimationFrame(() => {
-      quadro = 0;
-      medirBarra();
-      aplicarPosicao();
-      finalizarRestauro();
-    });
-  }
-
-  function interromperRestauro() {
-    restauro = null;
-    if (quadroFinal) cancelAnimationFrame(quadroFinal);
-    quadroFinal = 0;
-  }
-
-  function rolou() {
-    // Além de roda/toque/teclado, respeita scroll feito por foco ou outro código.
-    // O evento assíncrono do nosso próprio scrollTop não cancela a restauração.
-    if (restauro && Math.abs(menu.scrollTop - restauro.aplicada) > 1) {
-      interromperRestauro();
-    }
-    agendarSalvamento();
-  }
-
-  function escutarMenu(tipo, funcao, opcoes) {
-    menu.addEventListener(tipo, funcao, opcoes);
-    escutasMenu.push(() => menu.removeEventListener(tipo, funcao, opcoes));
-  }
-
-  function desconectarMenu() {
-    salvarPosicao();
-    escutasMenu.splice(0).forEach(remover => remover());
-    if (observador) observador.disconnect();
-    observador = null;
-    if (quadro) cancelAnimationFrame(quadro);
-    if (quadroSalvar) cancelAnimationFrame(quadroSalvar);
-    quadro = quadroSalvar = 0;
-    interromperRestauro();
-  }
-
-  function atualizar() {
-    const novo = document.getElementById('menu-principal');
-    if (novo === menu && (!novo || novo.dataset.rolagemChave === chave)) {
-      // hx-boost preserva este nav: não reatribuir scroll nem mover o foco.
-      ajustar();
-      return;
-    }
-    desconectarMenu();
-    menu = novo;
-    sidebar = menu && menu.closest('.sidebar');
-    chave = menu ? menu.dataset.rolagemChave || '' : '';
-    if (!menu) return;
-
-    const top = lerPosicao();
-    restauro = top === null ? null : { top, aplicada: menu.scrollTop };
-    escutarMenu('scroll', rolou, { passive: true });
-    ['wheel', 'touchstart', 'pointerdown'].forEach(tipo => {
-      escutarMenu(tipo, interromperRestauro, { passive: true });
-    });
-    escutarMenu('keydown', interromperRestauro);
-    escutarMenu('focusin', interromperRestauro);
-
-    if ('ResizeObserver' in window) {
-      observador = new ResizeObserver(ajustar);
-      observador.observe(menu);
-      if (sidebar) observador.observe(sidebar);
-      // O nav tem altura fixa; seus grupos denunciam mudanças de fonte/altura.
-      Array.from(menu.children).forEach(grupo => observador.observe(grupo));
-    }
-    medirBarra();
-    aplicarPosicao();
-    ajustar();
-  }
-
-  window.votestaSidebar = { atualizar };
-  window.addEventListener('resize', ajustar, { passive: true });
-  window.addEventListener('load', ajustar);
+  });
+  window.addEventListener('pagehide', salvar);
   window.addEventListener('pageshow', evento => {
-    atualizar();
-    // O BFCache reapresenta um documento vivo, com uma posição mais antiga
-    // que a usada na última página da aba. O armazenamento é a referência.
-    if (evento.persisted && menu) {
-      const top = lerPosicao();
-      if (top !== null) {
-        restauro = { top, aplicada: menu.scrollTop };
-        aplicarPosicao();
-        ajustar();
-      }
-    }
+    if (!evento.persisted) return;
+    // No BFCache o DOM já existe: a aba pode ter guardado outra posição.
+    try { menu.scrollTop = Math.max(0, Number(sessionStorage.getItem(chave)) || 0); } catch (_) {}
   });
-  window.addEventListener('pagehide', salvarPosicao);
-  window.addEventListener('popstate', salvarPosicao);
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) salvarPosicao();
-  });
-  document.addEventListener('htmx:beforeSwap', salvarPosicao);
-  document.addEventListener('htmx:beforeHistorySave', salvarPosicao);
+  document.addEventListener('htmx:beforeHistorySave', salvar);
   document.addEventListener('htmx:afterSwap', atualizar);
-  document.addEventListener('htmx:afterSettle', atualizar);
-  document.addEventListener('htmx:historyRestore', atualizar);
-
-  if (document.fonts) {
-    document.fonts.ready.then(() => {
-      fontesProntas = true;
-      ajustar();
-    });
-  }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', atualizar, { once: true });
-  } else {
-    atualizar();
-  }
+  document.addEventListener('htmx:historyRestore', atualizar, true);
+  try {
+    if (localStorage.getItem(chave + ':historico') !== 'conteudo-v3') {
+      localStorage.removeItem('htmx-history-cache');
+      localStorage.setItem(chave + ':historico', 'conteudo-v3');
+    }
+  } catch (_) {}
+  atualizar();
 })();

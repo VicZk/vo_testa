@@ -12,22 +12,22 @@
 </div>
 <p class="subtitulo">Histórico de aberturas e fechamentos, com as diferenças de conferência.</p>
 
-<table class="tabela">
+<table class="tabela tabela-cartoes">
   <thead>
     <tr><th>Aberta em</th><th>Operador</th><th>Módulo</th><th>Status</th><th class="num">Diferença</th></tr>
   </thead>
   <tbody>
     {% for s in sessoes %}
       <tr>
-        <td><a href="{% url 'caixa_sessao' s.pk %}">{{ s.aberta_em|date:"d/m/Y H:i" }}</a></td>
-        <td>{{ s.operador }}</td>
-        <td>{{ s.get_modulo_display }}</td>
-        <td>{{ s.get_status_display }}</td>
-        <td class="num">
+        <td data-rotulo="Aberta em"><div class="tabela-valor"><a href="{% url 'caixa_sessao' s.pk %}">{{ s.aberta_em|date:"d/m/Y H:i" }}</a></div></td>
+        <td data-rotulo="Operador"><div class="tabela-valor">{{ s.operador }}</div></td>
+        <td data-rotulo="Módulo"><div class="tabela-valor">{{ s.get_modulo_display }}</div></td>
+        <td data-rotulo="Status"><div class="tabela-valor"><span class="selo selo-{{ s.status }}">{{ s.get_status_display }}</span></div></td>
+        <td class="num" data-rotulo="Diferença"><div class="tabela-valor">
           {% if s.diferenca is not None %}
             <span class="{% if s.diferenca != 0 %}texto-alerta{% endif %}">{{ s.diferenca|intcomma_brl }}</span>
           {% else %}—{% endif %}
-        </td>
+        </div></td>
       </tr>
     {% empty %}
       <tr><td colspan="5" class="vazio">Nenhuma sessão de caixa registrada ainda.</td></tr>

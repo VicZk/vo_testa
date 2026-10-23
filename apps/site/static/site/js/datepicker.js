@@ -11,7 +11,6 @@
 
         var checkinEl = document.querySelector('[data-picker="checkin"]');
         var checkoutEl = document.querySelector('[data-picker="checkout"]');
-        if (!checkinEl) return;
 
         // Com altInput o Flatpickr ESCONDE o campo original e mostra um clone.
         // O <label for="..."> apontava para o campo escondido: clicar no rótulo
@@ -33,6 +32,13 @@
             disableMobile: false,  // usa o picker nativo no celular
             onReady: ligarRotulo,
         };
+
+        // Propostas usam a mesma apresentação localizada, sem impor intervalo:
+        // eventos e day use permitem data inicial e final iguais.
+        document.querySelectorAll('[data-picker="data"]').forEach(function (campo) {
+            flatpickr(campo, Object.assign({}, base, { minDate: null }));
+        });
+        if (!checkinEl) return;
 
         var fpCheckout = checkoutEl ? flatpickr(checkoutEl, base) : null;
 

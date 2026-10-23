@@ -30,15 +30,16 @@
     </label>
     <button type="button" class="botao-neutro" data-precos-mostrar-todos>Mostrar todos</button>
   </div>
-  <p class="ajuda" data-precos-resumo role="status"></p>
+  <p class="ajuda" data-precos-resumo role="status">Mostrando {{ total_quartos }} de {{ total_quartos }} quarto{{ total_quartos|pluralize }}.</p>
 </div>
 {% endif %}
 
 <form method="post" class="form-cartao form-largo precos-form" data-preservar-erros data-precos-metodo="{{ request.method }}">
   {% csrf_token %}
   <div class="precos-salvar" id="precos-salvar">
-    <div><span data-estado-edicao role="status">Nenhuma alteração pendente</span><small>Salva as alterações de todos os quartos e parâmetros.</small></div>
+    <span data-estado-edicao role="status">Nenhuma alteração pendente</span>
     <button type="submit" class="botao-primario">Salvar tabela</button>
+    <small>Salva as alterações de todos os quartos e parâmetros.</small>
   </div>
   <table class="tabela precos-tabela">
     <thead>
@@ -130,7 +131,7 @@
   </div>
 
   <div class="acoes">
-    <a href="#precos-salvar" class="botao-neutro">Revisar e salvar</a>
+    <button type="submit" class="botao-primario">Salvar tabela</button>
     <a href="{% url 'temporadas' %}" class="botao-neutro">Voltar</a>
   </div>
 </form>
@@ -154,7 +155,7 @@
     scroll-margin-top:calc(var(--topbar-h) + .4rem);
   }
   .precos-salvar [data-estado-edicao] { display:block; font-size:.8rem; font-weight:600; overflow-wrap:anywhere; }
-  .precos-salvar small { display:block; font-size:.72rem; color:var(--tinta-suave); margin-top:.2rem; }
+  .precos-salvar small { grid-column:1/-1; display:block; font-size:.72rem; color:var(--tinta-suave); margin-top:.2rem; }
   .precos-salvar > button { min-height:44px; white-space:nowrap; padding:.55rem .7rem; }
   .precos-form[data-dirty="1"] .precos-salvar { border-color:var(--lampiao); }
   @media (max-width:520px) {

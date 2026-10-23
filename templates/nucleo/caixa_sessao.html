@@ -59,20 +59,20 @@
 {% endif %}
 
 <h2>Movimentos</h2>
-<table class="tabela">
+<table class="tabela tabela-cartoes">
   <thead>
     <tr><th>Hora</th><th>Tipo</th><th>Forma</th><th class="num">Valor</th><th>Descrição</th>{% if eh_gerente %}<th></th>{% endif %}</tr>
   </thead>
   <tbody>
     {% for m in movimentos %}
       <tr>
-        <td>{{ m.criado_em|date:"d/m H:i" }}</td>
-        <td><span class="dica" data-dica="{{ m.tipo_ajuda }}">{{ m.get_tipo_display }}</span>{% if m.motivo %} <small class="ajuda">({{ m.motivo }})</small>{% endif %}</td>
-        <td>{{ m.forma_pagamento|default:"Dinheiro" }}</td>
-        <td class="num">{{ m.valor|intcomma_brl }}</td>
-        <td>{{ m.descricao }}</td>
+        <td data-rotulo="Hora"><div class="tabela-valor">{{ m.criado_em|date:"d/m H:i" }}</div></td>
+        <td data-rotulo="Tipo"><div class="tabela-valor"><span class="dica" data-dica="{{ m.tipo_ajuda }}">{{ m.get_tipo_display }}</span>{% if m.motivo %} <small class="ajuda">({{ m.motivo }})</small>{% endif %}</div></td>
+        <td data-rotulo="Forma"><div class="tabela-valor">{{ m.forma_pagamento|default:"Dinheiro" }}</div></td>
+        <td class="num" data-rotulo="Valor"><div class="tabela-valor">{{ m.valor|intcomma_brl }}</div></td>
+        <td data-rotulo="Descrição"><div class="tabela-valor">{{ m.descricao }}</div></td>
         {% if eh_gerente %}
-          <td>
+          <td data-rotulo="Ação"><div class="tabela-valor">
             {% if m.tipo == "recebimento" and sessao.aberta %}
               <details class="acao-sensivel">
                 <summary>Estornar</summary>
@@ -84,7 +84,7 @@
                 </form>
               </details>
             {% endif %}
-          </td>
+          </div></td>
         {% endif %}
       </tr>
     {% empty %}

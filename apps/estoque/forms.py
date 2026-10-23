@@ -11,7 +11,7 @@ from apps.nucleo.models import (
     Produto,
 )
 
-from .formato import para_campo
+from .campos import DecimalBRField
 
 # Produto, local e fornecedor são escolhidos por combobox com busca
 # (`estoque/partials/combo.html`), não por `<select>`: a lista de produtos
@@ -30,6 +30,7 @@ class ProdutoForm(forms.ModelForm):
             "controla_validade", "usa_ficha_tecnica",
         ]
         # custo_medio é calculado pelo motor — nunca editado à mão.
+        field_classes = {"preco_venda": DecimalBRField, "estoque_minimo": DecimalBRField}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -42,7 +43,7 @@ class ProdutoForm(forms.ModelForm):
         # O campo guarda 3 casas (existe meio quilo de café), mas abrir a ficha
         # com "24.000" escrito no campo não ajuda ninguém a editar.
         if self.instance and self.instance.pk:
-            self.initial["estoque_minimo"] = para_campo(self.instance.estoque_minimo)
+            self.initial["estoque_minimo"] = Decimal(str(self.instance.estoque_minimo)).normalize()
 
 
 class CategoriaProdutoForm(forms.ModelForm):

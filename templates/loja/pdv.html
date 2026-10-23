@@ -28,9 +28,12 @@
   </div>
   <section class="pdv-produtos" aria-label="Catálogo de produtos">
     <div class="pdv-produtos-topo">
+      <div class="pdv-busca-campo">
+      <label for="pdv-busca" class="pdv-busca-rotulo">Buscar produto</label>
       <div class="pdv-busca-wrap">
         <svg viewBox="0 0 24 24" class="ico"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
-        <input type="search" class="pdv-busca" placeholder="Buscar produto…" aria-label="Buscar produto" x-model="filtro">
+        <input type="search" id="pdv-busca" class="pdv-busca" placeholder="Nome ou categoria" x-model="filtro">
+      </div>
       </div>
       <form method="get" class="pdv-local">
         <span class="letreiro">Estoque</span>

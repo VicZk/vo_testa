@@ -9,7 +9,10 @@
   const previa = document.getElementById('compra-previa');
   const formato = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 3 });
   const moeda = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-  const numero = texto => Number(String(texto).replace(',', '.'));
+  const numero = texto => {
+    const valor = String(texto).trim();
+    return Number(valor.includes(',') ? valor.replaceAll('.', '').replace(',', '.') : valor);
+  };
   function atualizar() {
     const item = embalagens.find(linha => String(linha.id) === embalagem.value);
     previa.hidden = !item;

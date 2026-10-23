@@ -6,9 +6,7 @@
 <p class="pagina-eyebrow letreiro">Reserva #{{ reserva.pk }} · {{ reserva.hospede.nome }} · {{ reserva.uh.numero }}</p>
 <div class="pagina-cabecalho">
   <h1>Ficha de hóspedes (FNRH)</h1>
-  <span class="fnrh-progresso {% if fnrh_pronta %}ok{% endif %}">
-    {{ fnrh_completas }}/{{ fnrh_total }} completa{{ fnrh_total|pluralize }}
-  </span>
+  {% include "reservas/partials/fnrh_progresso.html" %}
 </div>
 <p class="subtitulo">Registro obrigatório (Embratur) de cada hóspede. Uma ficha completa
   por pessoa libera o check-in.</p>

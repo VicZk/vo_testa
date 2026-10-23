@@ -59,6 +59,28 @@ class _BaseE2E(StaticLiveServerTestCase):
     def url(self, caminho):
         return self.live_server_url + caminho
 
+    def abrir_grupo_menu(self, item):
+        """Revela o destino pelo controle que também é usado pela pessoa."""
+        grupo = item.locator("xpath=ancestor::details[1]")
+        if grupo.count() and not grupo.evaluate("el => el.open"):
+            grupo.locator("summary").click()
+
+    def clicar_item_menu(self, seletor, pagina=None):
+        item = (pagina or self.page).locator(seletor)
+        self.abrir_grupo_menu(item)
+        item.click()
+
+    def abrir_grupos_menu(self):
+        botao = self.page.locator("#btn-menu-mobile")
+        abrir_gaveta = botao.is_visible() and botao.get_attribute("aria-expanded") != "true"
+        if abrir_gaveta:
+            botao.click()
+        for grupo in self.page.locator("#menu-principal details").all():
+            if not grupo.evaluate("el => el.open"):
+                grupo.locator("summary").click()
+        if abrir_gaveta:
+            self.page.keyboard.press("Escape")
+
 
 class _UnidadeVendavelMixin:
     """Semeia um quarto físico vendável pelo site (venda por unidade): TipoUH + UH
@@ -672,8 +694,9 @@ class GovernancaFilaE2ETests(_FunilComercialMixin, _BaseE2E):
         expect(p.get_by_role("button", name="Concluir limpeza", exact=True)).to_be_visible()
         expect(p.locator(".gov-orientacao")).to_contain_text("Limpeza em andamento: Quarto 21")
         p.get_by_role("button", name="Concluir limpeza", exact=True).click()
-        expect(p.locator(".gov-orientacao")).to_contain_text("Você terminou")
-        expect(p.get_by_text("Nenhum quarto na sua fila agora.", exact=True)).to_be_visible()
+        expect(p.locator(".gov-orientacao")).to_have_count(0)
+        expect(p.locator(".vazio-bloco")).to_have_count(1)
+        expect(p.locator(".vazio-bloco")).to_contain_text("Você terminou os quartos da sua fila.")
         expect(p.get_by_role("heading", name="Serviços concluídos hoje 1")).to_be_visible()
         self.tarefa.refresh_from_db()
         self.assertEqual(self.tarefa.status, "concluida")
@@ -932,6 +955,7 @@ class MenuLateralE2ETests(_BaseE2E):
         self.page.evaluate("() => localStorage.setItem('sidebar', 'aberta')")
         self.page.reload(wait_until="load")
         self.page.wait_for_timeout(200)
+        self.abrir_grupos_menu()
         aberta = self.page.evaluate(self.MEDIR)
         self.page.click("#btn-recolher")
         self.page.wait_for_function(

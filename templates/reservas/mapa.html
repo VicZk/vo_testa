@@ -31,7 +31,7 @@
   <thead>
     <tr class="mapa-meses">
       <th class="mapa-uh"></th>
-      {% for m in meses %}<th colspan="{{ m.span }}">{{ m.rotulo|capfirst }}</th>{% endfor %}
+      {% for m in meses %}<th colspan="{{ m.span }}"><span>{{ m.rotulo|capfirst }}</span></th>{% endfor %}
     </tr>
     <tr>
       <th class="mapa-uh">Quarto</th>
@@ -65,7 +65,7 @@
           <td class="mapa-uh">
             <strong>{{ linha.uh.numero }}</strong>
             {% if linha.bloqueada %}
-              <span class="mapa-tag-bloq dica" data-dica="Quarto bloqueado. Indisponível para reserva.">bloqueado</span>
+              <span class="mapa-tag-bloq dica" data-dica="Quarto bloqueado. Indisponível para reserva.">Bloqueado</span>
             {% endif %}
           </td>
           {% for c in linha.celulas %}
@@ -285,7 +285,10 @@
         onComplete: () => enviarTroca(bar.dataset.reserva, uh, num, encerra)
       });
     });
-    bar.addEventListener('click', e => { if (suprimir) { e.preventDefault(); suprimir = false; } });
+    // O clique final do arrasto não deve iniciar navegação nativa ou HTMX.
+    bar.addEventListener('click', e => {
+      if (suprimir) { e.preventDefault(); e.stopImmediatePropagation(); suprimir = false; }
+    }, true);
     bar.addEventListener('dragstart', e => e.preventDefault());
     bar.addEventListener('pointercancel', () => {
       ativo = false; limpar(); bar.style.transform = ''; bar.style.zIndex = '';

@@ -8,7 +8,7 @@
 <p class="subtitulo">Organize a limpeza de quartos em permanência e a distribuição dos serviços.</p>
 {% include "governanca/partials/abas.html" %}
 <form method="post" class="form-cartao">{% csrf_token %}
-  {% for campo in form %}<div class="campo">{{ campo|rotulo }}{{ campo }}{{ campo.errors }}</div>{% endfor %}
+  <div class="form-grade">{% include "nucleo/partials/campos.html" %}</div>
   <p class="ajuda">Os quartos com hóspedes que permanecem recebem uma tarefa por dia. Saídas geram limpeza no check-out. A distribuição considera os funcionários escalados com acesso à governança.</p>
   <p class="ajuda">O horário usa o fuso da pousada. A fila é atualizada em até 10 minutos após esse horário, sem duplicar serviços já concluídos.</p>
   <div class="acoes"><button class="botao-primario">Salvar rotina</button></div>

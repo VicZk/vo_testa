@@ -55,7 +55,7 @@ contradizia a si mesma.{% endcomment %}
         </td>
         {% for c in linha.celulas %}
           <td class="escala-celula escala-drop {% if c.data == hoje %}col-hoje{% endif %} {% if c.eh_feriado %}eh-feriado{% endif %}"
-              data-turno="{{ linha.turno.pk }}" data-data="{{ c.data|date:'Y-m-d' }}">
+              data-turno="{{ linha.turno.pk }}" data-data="{{ c.data|date:'Y-m-d' }}" data-dia="{{ c.data|date:'D, d/m' }}">
             {% if c.eh_feriado %}<span class="feriado-tag">Feriado</span>{% endif %}
             {% for a in c.atribs %}
               <span class="escala-chip {% if a.violacoes %}tem-viol viol-{{ a.violacoes.0.nivel }}{% endif %}"

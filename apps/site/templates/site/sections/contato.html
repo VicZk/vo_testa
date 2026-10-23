@@ -1,3 +1,4 @@
+{% load site_forms %}
 <!-- LOCALIZAÇÃO / CONTATO -->
 <section class="fade-section py-16 sm:py-24 bg-pergaminho">
     <div class="max-w-7xl mx-auto px-4 sm:px-6">
@@ -24,7 +25,7 @@
                         </div>
                         <div>
                             <p class="text-madeira font-semibold text-sm">Telefone</p>
-                            <p class="text-madeira/50 text-sm">{% if config.telefone_publico %}{{ config.telefone_publico }}{% else %}Solicite contato pelo formulário ao lado.{% endif %}</p>
+                            <p class="text-madeira/50 text-sm">{% if config.telefone_publico %}{{ config.telefone_publico }}{% else %}Solicite contato pelo formulário desta página.{% endif %}</p>
                         </div>
                     </div>
                     <div class="flex items-start gap-4">
@@ -55,22 +56,22 @@
                 <form method="post" action="{% url 'core:pedir_proposta' %}" class="space-y-4">
                     {% csrf_token %}{% load nucleo_extras %}{% campos_antirrobo %}
                     <div>
-                        <label class="text-madeira/50 text-xs uppercase tracking-wider mb-1.5 block">Nome *</label>
-                        <input type="text" name="nome" required value="{{ proposta.nome|default:'' }}" class="w-full rounded-xl border border-madeira/15 px-3 py-2.5 text-madeira bg-pergaminho/40" placeholder="Seu nome">
+                        <label for="contato-nome" class="text-madeira/50 text-xs uppercase tracking-wider mb-1.5 block">Nome *</label>
+                        <input type="text" name="nome" id="contato-nome" required value="{{ proposta.nome|default:'' }}" class="{% classe_campo_site %}" placeholder="Seu nome">
                     </div>
                     <div class="grid sm:grid-cols-2 gap-4">
                         <div>
-                            <label class="text-madeira/50 text-xs uppercase tracking-wider mb-1.5 block">WhatsApp *</label>
-                            <input type="text" name="telefone" required value="{{ proposta.telefone|default:'' }}" class="w-full rounded-xl border border-madeira/15 px-3 py-2.5 text-madeira bg-pergaminho/40" placeholder="(00) 00000-0000" inputmode="tel" maxlength="15" data-mask="telefone" autocomplete="tel" pattern="\(\d{2}\) 9\d{4}-\d{4}" title="Informe o WhatsApp com DDD + 9 dígitos, ex.: (49) 99999-9999">
+                            <label for="contato-telefone" class="text-madeira/50 text-xs uppercase tracking-wider mb-1.5 block">WhatsApp *</label>
+                            <input type="text" name="telefone" id="contato-telefone" required value="{{ proposta.telefone|default:'' }}" class="{% classe_campo_site %}" placeholder="(00) 00000-0000" inputmode="tel" maxlength="15" data-mask="telefone" autocomplete="tel" pattern="\(\d{2}\) 9\d{4}-\d{4}" title="Informe o WhatsApp com DDD + 9 dígitos, ex.: (49) 99999-9999">
                         </div>
                         <div>
-                            <label class="text-madeira/50 text-xs uppercase tracking-wider mb-1.5 block">E-mail</label>
-                            <input type="email" name="email" value="{{ proposta.email|default:'' }}" class="w-full rounded-xl border border-madeira/15 px-3 py-2.5 text-madeira bg-pergaminho/40" placeholder="voce@email.com">
+                            <label for="contato-email" class="text-madeira/50 text-xs uppercase tracking-wider mb-1.5 block">E-mail</label>
+                            <input type="email" name="email" id="contato-email" value="{{ proposta.email|default:'' }}" class="{% classe_campo_site %}" placeholder="voce@email.com">
                         </div>
                     </div>
                     <div>
-                        <label class="text-madeira/50 text-xs uppercase tracking-wider mb-1.5 block">Interesse</label>
-                        <select name="tipo_interesse" class="w-full rounded-xl border border-madeira/15 px-3 py-2.5 text-madeira bg-pergaminho/40">
+                        <label for="contato-tipo_interesse" class="text-madeira/50 text-xs uppercase tracking-wider mb-1.5 block">Interesse</label>
+                        <select name="tipo_interesse" id="contato-tipo_interesse" class="{% classe_campo_site %}">
                             <option value="hospedagem" {% if proposta.tipo_interesse != 'evento' and proposta.tipo_interesse != 'day_use' %}selected{% endif %}>Hospedagem</option>
                             <option value="evento" {% if proposta.tipo_interesse == 'evento' %}selected{% endif %}>Evento / confraternização</option>
                             <option value="day_use" {% if proposta.tipo_interesse == 'day_use' %}selected{% endif %}>Dia na Pousada</option>
@@ -78,21 +79,21 @@
                     </div>
                     <div class="grid sm:grid-cols-3 gap-4">
                         <div>
-                            <label class="text-madeira/50 text-xs uppercase tracking-wider mb-1.5 block">Check-in</label>
-                            <input type="date" name="checkin" value="{{ proposta.checkin|default:'' }}" class="w-full rounded-xl border border-madeira/15 px-3 py-2.5 text-madeira bg-pergaminho/40">
+                            <label for="contato-checkin" class="text-madeira/50 text-xs uppercase tracking-wider mb-1.5 block">Check-in</label>
+                            <input type="date" name="checkin" id="contato-checkin" data-picker="data" value="{{ proposta.checkin|default:'' }}" class="{% classe_campo_site %}">
                         </div>
                         <div>
-                            <label class="text-madeira/50 text-xs uppercase tracking-wider mb-1.5 block">Check-out</label>
-                            <input type="date" name="checkout" value="{{ proposta.checkout|default:'' }}" class="w-full rounded-xl border border-madeira/15 px-3 py-2.5 text-madeira bg-pergaminho/40">
+                            <label for="contato-checkout" class="text-madeira/50 text-xs uppercase tracking-wider mb-1.5 block">Check-out</label>
+                            <input type="date" name="checkout" id="contato-checkout" data-picker="data" value="{{ proposta.checkout|default:'' }}" class="{% classe_campo_site %}">
                         </div>
                         <div>
-                            <label class="text-madeira/50 text-xs uppercase tracking-wider mb-1.5 block">Hóspedes</label>
-                            <input type="number" name="hospedes" min="1" value="{{ proposta.hospedes|default:'2' }}" class="w-full rounded-xl border border-madeira/15 px-3 py-2.5 text-madeira bg-pergaminho/40">
+                            <label for="contato-hospedes" class="text-madeira/50 text-xs uppercase tracking-wider mb-1.5 block">Hóspedes</label>
+                            <input type="number" name="hospedes" id="contato-hospedes" min="1" value="{{ proposta.hospedes|default:'2' }}" class="{% classe_campo_site %}">
                         </div>
                     </div>
                     <div>
-                        <label class="text-madeira/50 text-xs uppercase tracking-wider mb-1.5 block">Mensagem</label>
-                        <textarea name="mensagem" rows="3" class="w-full rounded-xl border border-madeira/15 px-3 py-2.5 text-madeira bg-pergaminho/40" placeholder="Preferências de quarto, datas flexíveis ou outros detalhes da estadia.">{{ proposta.mensagem|default:'' }}</textarea>
+                        <label for="contato-mensagem" class="text-madeira/50 text-xs uppercase tracking-wider mb-1.5 block">Mensagem</label>
+                        <textarea name="mensagem" id="contato-mensagem" rows="3" class="{% classe_campo_site %}" placeholder="Preferências de quarto, datas flexíveis ou outros detalhes da estadia.">{{ proposta.mensagem|default:'' }}</textarea>
                     </div>
                     <button type="submit" class="w-full bg-madeira text-pergaminho font-semibold py-3 rounded-full hover:bg-lampiao hover:text-madeira transition">
                         Enviar pedido de proposta

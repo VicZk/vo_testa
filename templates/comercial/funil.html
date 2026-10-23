@@ -98,11 +98,9 @@
   }
 </style>
 <div id="funil-interface">
+  <p class="pagina-eyebrow letreiro">Comercial</p>
   <div class="pagina-cabecalho">
-    <div>
-      <p class="pagina-eyebrow letreiro">Comercial</p>
-      <h1>Funil de vendas</h1>
-    </div>
+    <h1>Funil de vendas</h1>
     <div class="pagina-acoes">
       <a href="{% url 'comercial:nova' %}{% if campanha_filtro %}?campanha={{ campanha_filtro.pk }}{% endif %}"
          hx-get="{% url 'comercial:nova' %}{% if campanha_filtro %}?campanha={{ campanha_filtro.pk }}{% endif %}" hx-target="#modal-conteudo"
@@ -137,18 +135,21 @@
 
   <form method="get" class="funil-periodo" aria-label="Período dos fechados (Ganho/Perdido)">
     {% if fat %}<input type="hidden" name="fat" value="{{ fat }}">{% endif %}
-    <label class="fp-rot" for="funil-campanha">Campanha</label>
+    <div class="filtro-campo"><label class="fp-rot" for="funil-campanha">Campanha</label>
     <select id="funil-campanha" name="campanha" onchange="this.form.submit()">
       <option value="">Todas as campanhas</option>
       {% for campanha in campanhas_filtro %}<option value="{{ campanha.pk }}"{% if campanha.pk == campanha_filtro.pk %} selected{% endif %}>{{ campanha.nome }}</option>{% endfor %}
     </select>
-    <span class="fp-rot">Fechados (Ganho/Perdido):</span>
+    </div>
+    <div class="filtro-campo"><span class="fp-rot">Fechados (Ganho/Perdido)</span>
+    <div class="filtro-periodo">
     <select name="mes" aria-label="Mês" onchange="this.form.submit()" {% if todos_fechados %}disabled{% endif %}>
       {% for num, nome in meses %}<option value="{{ num }}" {% if num == mes_sel %}selected{% endif %}>{{ nome }}</option>{% endfor %}
     </select>
     <select name="ano" aria-label="Ano" onchange="this.form.submit()" {% if todos_fechados %}disabled{% endif %}>
       {% for a in anos %}<option value="{{ a }}" {% if a == ano_sel %}selected{% endif %}>{{ a }}</option>{% endfor %}
     </select>
+    </div></div>
     <label class="fp-todos"><input type="checkbox" name="fechados" value="todos" {% if todos_fechados %}checked{% endif %} onchange="this.form.submit()"> Todos</label>
   </form>
 
@@ -183,7 +184,7 @@
                      {% if op.status == 'aberta' %}draggable="true" ondragstart="cardDragStart(event, '{{ op.id }}')" ondragend="cardDragEnd(event)"{% endif %}
                      onclick="if(!event.target.closest('a,button,input,select,form'))this.querySelector('.card-abrir').click()">
               {% if op.eh_novo %}<span class="card-novo">Novo</span>{% endif %}
-              {% if op.wpp_nao_lidas %}<span class="card-wpp-nova selo selo-sucesso" title="{{ op.wpp_nao_lidas }} mensagem(ns) de WhatsApp aguardando resposta">{{ op.wpp_nao_lidas }} no WhatsApp</span>{% endif %}
+              {% if op.wpp_nao_lidas %}<span class="card-wpp-nova selo selo-sucesso" title="{{ op.wpp_nao_lidas }} mensage{{ op.wpp_nao_lidas|pluralize:"m,ns" }} de WhatsApp aguardando resposta">{{ op.wpp_nao_lidas }} no WhatsApp</span>{% endif %}
               <p class="card-nome">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
                 <a class="card-abrir" href="{% url 'comercial:oportunidade' op.pk %}">{{ op.pessoa.nome }}</a>

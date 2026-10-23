@@ -14,6 +14,7 @@ from apps.governanca import services as governanca
 from apps.governanca.models import StatusLimpeza
 from apps.nucleo.models import UH, ModuloContratado, TipoUH, Usuario
 from apps.nucleo.modulos import Modulo
+from apps.nucleo.retorno_pendencias import com_retorno
 
 from .tests_e2e import _PLAYWRIGHT_OK, _BaseE2E
 
@@ -67,6 +68,7 @@ class PendenciasOperacionaisE2ETests(_BaseE2E):
 
     def _conferir_contraste_badge(self, pagina, contexto):
         badge = pagina.locator("[data-governanca-avisos]")
+        self.abrir_grupo_menu(badge)
         pagina.mouse.move(0, 0)
         badge.evaluate("el => el.blur()")
         for estado in ("normal", "hover", "foco"):
@@ -131,7 +133,7 @@ class PendenciasOperacionaisE2ETests(_BaseE2E):
             p.goto(self.url(reverse("governanca:quartos")), wait_until="load")
         self.assertIsNone(inicial.value.finished())
         self.assertEqual(inicial.value.json()["pendentes"], 3)
-        badge = p.get_by_role("link", name="3 serviço(s) de limpeza pendente(s)", exact=True)
+        badge = p.get_by_role("link", name="3 serviços de limpeza pendentes", exact=True)
         expect(badge).to_be_visible()
         expect(badge).to_have_attribute("href", reverse("pendencias") + "?origem=governanca&estado=pendente")
         # A navegação HTMX inicia os dois fetches no afterSettle. Concluí-los
@@ -172,14 +174,16 @@ class PendenciasOperacionaisE2ETests(_BaseE2E):
         p.get_by_role("link", name="Em andamento 2", exact=True).click()
         expect(p.locator("[data-pendencia-id]")).to_have_count(2)
         expect(p.locator('[data-pendencia-estado="em_andamento"]')).to_have_count(2)
-        p.locator(".nav-item-principal").click()
+        self.clicar_item_menu(".nav-item-principal", pagina=p)
         expect(p).to_have_url(self.url(reverse("governanca:painel")))
 
     def test_link_para_quartos_preserva_recorte_de_servicos_e_ignora_filtro_antigo(self):
         self.page.add_init_script("localStorage.setItem('gov-filtro', 'inspecionada'); localStorage.setItem('gov-meus', '1')")
         self._abrir_central()
         self.page.get_by_role("link", name="Abrir quartos com serviços pendentes", exact=True).click()
-        expect(self.page).to_have_url(self.url(reverse("governanca:quartos") + "?servico=pendente"))
+        central = reverse("pendencias") + "?origem=governanca&estado=pendente"
+        expect(self.page).to_have_url(self.url(com_retorno(reverse("governanca:quartos") + "?servico=pendente", central)))
+        expect(self.page.get_by_role("link", name="Voltar para Pendências", exact=True)).to_have_attribute("href", central)
         linhas = self.page.locator(".governanca-listagem tbody tr:visible")
         expect(linhas).to_have_count(3)
         for n in (1, 2, 3):

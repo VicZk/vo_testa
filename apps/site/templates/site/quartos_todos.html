@@ -22,7 +22,7 @@
         {% if quartos|length > 1 %}
         <div data-vitrine-filtros class="hidden mb-8 rounded-2xl border border-lampiao/20 bg-noturno/60 p-4 sm:p-5">
             <div class="flex flex-wrap items-end gap-3 sm:gap-4">
-                <label class="flex flex-col gap-1.5 text-pergaminho/70 text-xs uppercase tracking-wider">
+                <label class="flex flex-col w-full sm:w-auto min-w-0 gap-1.5 text-pergaminho/70 text-xs uppercase tracking-wider">
                     Pessoas
                     <select name="pessoas" class="min-h-[44px] rounded-lg border border-lampiao/30 bg-noturno px-3 text-sm normal-case tracking-normal text-pergaminho focus:border-lampiao focus:outline-none">
                         <option value="">Qualquer</option>
@@ -30,7 +30,7 @@
                     </select>
                 </label>
                 {% if filtro_tipos|length > 1 %}
-                <label class="flex flex-col gap-1.5 text-pergaminho/70 text-xs uppercase tracking-wider">
+                <label class="flex flex-col w-full sm:w-auto min-w-0 gap-1.5 text-pergaminho/70 text-xs uppercase tracking-wider">
                     Tipo
                     <select name="tipo" class="min-h-[44px] rounded-lg border border-lampiao/30 bg-noturno px-3 text-sm normal-case tracking-normal text-pergaminho focus:border-lampiao focus:outline-none">
                         <option value="">Todos</option>
@@ -38,7 +38,7 @@
                     </select>
                 </label>
                 {% endif %}
-                <label class="flex flex-col gap-1.5 text-pergaminho/70 text-xs uppercase tracking-wider">
+                <label class="flex flex-col w-full sm:w-auto min-w-0 gap-1.5 text-pergaminho/70 text-xs uppercase tracking-wider">
                     Ordenar
                     <select name="ordem" class="min-h-[44px] rounded-lg border border-lampiao/30 bg-noturno px-3 text-sm normal-case tracking-normal text-pergaminho focus:border-lampiao focus:outline-none">
                         <option value="">Sugestão da casa</option>
@@ -74,10 +74,7 @@
                     {% if quarto.foto_principal %}
                     <img src="{{ quarto.foto_principal.url }}" alt="{{ quarto.nome }}" class="w-full h-full object-cover">
                     {% else %}
-                    <div class="flex flex-col items-center gap-2 text-pergaminho/70">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 19.5h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5z"/></svg>
-                        <span class="text-xs tracking-wide uppercase">Foto em breve</span>
-                    </div>
+                    {% include 'site/partials/foto_ausente.html' %}
                     {% endif %}
                     {% if quarto.tour_360_url %}
                     <span class="absolute bottom-3 right-3 bg-noturno/80 text-pergaminho text-xs font-semibold px-3 py-1.5 rounded-full border border-lampiao/30 flex items-center gap-1">
@@ -128,9 +125,9 @@
     {% comment %}Barra fixa: eram 5.138px de rolagem até o único botão de reserva,
     lá no fim da página. Agora o caminho para reservar acompanha quem olha.{% endcomment %}
     <div class="sticky bottom-0 z-40 mt-14 border-t border-lampiao/20 bg-noturno/90 backdrop-blur-md">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
-            <p class="text-pergaminho/70 text-xs sm:text-sm">{{ quartos|length }} quartos. Informe as datas para consultar preços e disponibilidade.</p>
-            <a href="{% url 'core:reservar' %}" class="shrink-0 bg-lampiao text-noturno font-bold px-6 py-2.5 rounded-full hover:bg-lampiao/90 transition text-sm whitespace-nowrap">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+            <p class="flex-1 min-w-[15rem] text-pergaminho/70 text-xs sm:text-sm">{{ quartos|length }} quartos. Informe as datas para consultar preços e disponibilidade.</p>
+            <a href="{% url 'core:reservar' %}" class="inline-flex min-h-[44px] items-center justify-center w-full sm:w-auto shrink-0 bg-lampiao text-noturno font-bold px-6 py-2.5 rounded-full hover:bg-lampiao/90 transition text-sm whitespace-nowrap">
                 Ver disponibilidade
             </a>
         </div>

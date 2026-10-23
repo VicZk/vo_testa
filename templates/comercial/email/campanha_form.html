@@ -33,7 +33,7 @@
 
     <fieldset class="seg">
       <legend>Segmento (deixe em branco para todos os leads)</legend>
-      <div class="seg-grid">
+      <div class="form-grade">
         <div class="campo-el"><label>Etapa</label>
           <select name="etapa"><option value="">Todas</option>{% for e in etapas %}<option value="{{ e.pk }}">{{ e.nome }}</option>{% endfor %}</select>
         </div>
@@ -66,10 +66,10 @@
   .eleg-form .campo-el label{ display:block; font-weight:600; font-size:.9rem; margin-bottom:.35rem; }
   .eleg-form input:not([type=checkbox]), .eleg-form select, .eleg-form textarea{ width:100%; }
   .eleg-form .ajuda{ font-size:.82rem; color:var(--tinta-suave); margin:.35rem 0 0; }
-  .eleg-form .ajuda code{ background:rgba(40,30,15,.06); padding:1px 5px; border-radius:5px; }
+  .eleg-form .ajuda code{ background:color-mix(in srgb, var(--tinta) 6%, transparent); padding:1px 5px; border-radius:var(--raio-p); }
   .seg{ border:1px solid var(--fio); border-radius:var(--raio); padding:1rem 1.1rem; }
   .seg legend{ font-size:.8rem; text-transform:uppercase; letter-spacing:.06em; color:var(--tinta-suave); padding:0 .4rem; }
-  .seg-grid{ display:grid; grid-template-columns:1fr 1fr; gap:.9rem; }
+  .seg-grid{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:.9rem; }
   @media (max-width:640px){ .seg-grid{ grid-template-columns:1fr; } }
 </style>
 <script>

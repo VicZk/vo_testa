@@ -5,7 +5,7 @@
 <h1>{% if turno.pk %}Editar turno{% else %}Novo turno{% endif %}</h1>
 <p class="subtitulo">Use a capacidade física e os preços aprovados para a operação. Turnos do mesmo dia não podem se sobrepor.</p>
 <a href="{% url 'daypass:painel' %}" class="botao-neutro bloco-fim">Voltar ao day pass</a>
-<form method="post" class="form-cartao">{% csrf_token %}{{ form.non_field_errors }}{% for campo in form %}<div class="campo">{{ campo|rotulo }}{{ campo }}{% if campo.help_text %}<p class="ajuda">{{ campo.help_text }}</p>{% endif %}{{ campo.errors }}</div>{% endfor %}<p class="ajuda">Após o primeiro cadastro, os horários e a regra de hóspedes ficam preservados. Os preços alterados valem apenas para novos grupos.</p>
+<form method="post" class="form-cartao">{% csrf_token %}<div class="form-grade">{% include "nucleo/partials/campos.html" %}</div><p class="ajuda">Após o primeiro cadastro, os horários e a regra de hóspedes ficam preservados. Os preços alterados valem apenas para novos grupos.</p>
 <div class="acoes">
 <button class="botao-primario">Salvar turno</button>
 </div>

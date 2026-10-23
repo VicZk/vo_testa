@@ -9,18 +9,16 @@ e nada que ela não vá tocar com a mão ocupada. O `fila=1` de cada formulário
 Sem JavaScript continua funcionando: todo formulário tem `action` e `method`, e a
 view redireciona para a fila quando o pedido não vem do HTMX.
 {% endcomment %}
+{% if fazendo or fila %}
 <p class="subtitulo gov-orientacao" role="status" aria-live="polite">
   {% if fazendo %}
     Limpeza em andamento: <strong>{{ fazendo.uh.numero }}</strong>. Ao finalizar, selecione «Concluir limpeza».
   {% elif fila %}
     <strong>{{ fila|length }} quarto{{ fila|pluralize }}</strong> na sua fila.
     Selecione «Iniciar limpeza» no quarto que será atendido.
-  {% elif feitas %}
-    Você terminou os quartos da sua fila. Seu trabalho de hoje está registrado abaixo.
-  {% else %}
-    Nenhum quarto foi atribuído a você.
   {% endif %}
 </p>
+{% endif %}
 {% include "governanca/partials/desfazer.html" %}
 
 {% if fila %}
@@ -70,11 +68,11 @@ view redireciona para a fila quando o pedido não vem do HTMX.
     {% endfor %}
   </ol>
 {% else %}
-  <div class="estado-vazio">
-    <p>Nenhum quarto na sua fila agora.</p>
-    <p class="ajuda">Os quartos aparecem aqui quando a supervisora distribui a fila ou quando
-    um hóspede faz check-out no seu andar.</p>
-  </div>
+  {% if feitas %}
+    {% include "componentes/estado_vazio.html" with mensagem="Você terminou os quartos da sua fila." ajuda="Os serviços concluídos hoje aparecem abaixo. Novos quartos entram aqui quando forem distribuídos." only %}
+  {% else %}
+    {% include "componentes/estado_vazio.html" with mensagem="Nenhum quarto na sua fila agora." ajuda="Os quartos aparecem aqui quando a supervisora distribui a fila ou quando um hóspede faz check-out no seu andar." only %}
+  {% endif %}
 {% endif %}
 
 {% if feitas %}

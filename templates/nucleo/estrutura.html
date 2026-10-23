@@ -12,19 +12,19 @@
   <h2>Tipos de quarto</h2>
   <a href="{% url 'tipo_uh_novo' %}" class="botao-primario">Novo tipo</a>
 </div>
-<table class="tabela">
+<table class="tabela tabela-cartoes">
   <thead>
-    <tr><th>Nome</th><th class="num">Lotação</th><th class="num">A partir de</th><th class="num">Tarifa base</th><th class="num">Quartos</th><th>Situação</th></tr>
+    <tr><th>Nome</th><th class="num col-numero">Lotação</th><th class="num col-numero">A partir de</th><th class="num col-numero">Tarifa base</th><th class="num col-numero">Quartos</th><th>Situação</th></tr>
   </thead>
   <tbody>
     {% for t in tipos %}
       <tr>
-        <td><a href="{% url 'tipo_uh_editar' t.pk %}">{{ t.nome }}</a></td>
-        <td class="num">{{ t.faixa_lotacao }}</td>
-        <td class="num">{% if t.tarifa_min %}{{ t.tarifa_min|intcomma_brl }}{% else %}—{% endif %}</td>
-        <td class="num ajuda">{{ t.tarifa_base|intcomma_brl }}</td>
-        <td class="num">{{ t.uhs.count }}</td>
-        <td>{% if t.ativo %}Ativo{% else %}Inativo{% endif %}</td>
+        <td class="col-texto" data-rotulo="Nome"><div class="tabela-valor"><a href="{% url 'tipo_uh_editar' t.pk %}">{{ t.nome }}</a></div></td>
+        <td class="num col-numero" data-rotulo="Lotação"><div class="tabela-valor">{{ t.faixa_lotacao }}</div></td>
+        <td class="num col-numero" data-rotulo="A partir de"><div class="tabela-valor">{% if t.tarifa_min %}{{ t.tarifa_min|intcomma_brl }}{% else %}—{% endif %}</div></td>
+        <td class="num col-numero ajuda" data-rotulo="Tarifa base"><div class="tabela-valor">{{ t.tarifa_base|intcomma_brl }}</div></td>
+        <td class="num col-numero" data-rotulo="Quartos"><div class="tabela-valor">{{ t.uhs.count }}</div></td>
+        <td data-rotulo="Situação"><div class="tabela-valor">{% if t.ativo %}Ativo{% else %}Inativo{% endif %}</div></td>
       </tr>
     {% empty %}
       <tr><td colspan="6" class="vazio">Cadastre um tipo de quarto para definir a capacidade e a tarifa base.</td></tr>
@@ -37,23 +37,23 @@
   <h2>Quartos</h2>
   <a href="{% url 'uh_nova' %}" class="botao-primario">Novo quarto</a>
 </div>
-<table class="tabela">
+<table class="tabela tabela-cartoes">
   <thead>
-    <tr><th>Número/nome</th><th>Tipo</th><th>Camas</th><th class="num">Lotação</th><th>Bloco</th><th>Status</th><th class="col-acao"></th></tr>
+    <tr><th>Número/nome</th><th>Tipo</th><th>Camas</th><th class="num col-numero">Lotação</th><th class="col-numero">Bloco</th><th>Status</th><th class="col-acao"></th></tr>
   </thead>
   <tbody>
     {% for uh in uhs %}
       <tr>
-        <td>
+        <td data-rotulo="Número/nome"><div class="tabela-valor">
           <a href="{% url 'uh_editar' uh.pk %}"><strong>{{ uh.numero }}</strong></a>
           {% if uh.nome_tematico %}<span class="celula-sub">{{ uh.nome_tematico }}</span>{% endif %}
-        </td>
-        <td>{{ uh.tipo.nome }}</td>
-        <td class="ajuda">{{ uh|camas_uh }}</td>
-        <td class="num">{% with n=uh|lotacao_uh %}{% if n %}Até {{ n }}{% else %}—{% endif %}{% endwith %}</td>
-        <td>{{ uh.bloco|default:"—" }}</td>
-        <td>{{ uh.get_status_display }}</td>
-        <td class="col-acao"><a href="{% url 'uh_editar' uh.pk %}" class="botao-mini">Editar</a></td>
+        </div></td>
+        <td data-rotulo="Tipo"><div class="tabela-valor">{{ uh.tipo.nome }}</div></td>
+        <td class="ajuda" data-rotulo="Camas"><div class="tabela-valor">{{ uh|camas_uh }}</div></td>
+        <td class="num col-numero" data-rotulo="Lotação"><div class="tabela-valor">{% with n=uh|lotacao_uh %}{% if n %}Até {{ n }}{% else %}—{% endif %}{% endwith %}</div></td>
+        <td class="col-numero" data-rotulo="Bloco"><div class="tabela-valor">{{ uh.bloco|default:"—" }}</div></td>
+        <td data-rotulo="Status"><div class="tabela-valor">{{ uh.get_status_display }}</div></td>
+        <td class="col-acao" data-rotulo="Ação"><div class="tabela-valor"><a href="{% url 'uh_editar' uh.pk %}" class="botao-mini">Editar</a></div></td>
       </tr>
     {% empty %}
       <tr><td colspan="7" class="vazio">Nenhum quarto cadastrado. Cadastre o tipo de acomodação e depois os quartos.</td></tr>

@@ -14,7 +14,7 @@
 
   <div class="mk-ocup-barras">
     {% for b in blocos %}
-    <span data-dica="{{ b.rotulo }} · {{ b.taxa|floatformat:0 }}% ocupada&#10;{{ b.livres }} noites livres{% if b.campanhas %}&#10;{{ b.campanhas }}{% endif %}"
+    <span data-dica="{{ b.rotulo }} · {{ b.taxa|floatformat:0 }}% ocupada&#10;{{ b.livres }} noite{{ b.livres|pluralize }} livre{{ b.livres|pluralize }}{% if b.campanhas %}&#10;{{ b.campanhas }}{% endif %}"
           class="mk-ocup-col">
       <span class="mk-ocup-taxa{% if b.situacao == 'problema' %} problema{% elif b.situacao == 'oportunidade' %} oportunidade{% endif %}">{{ b.taxa|floatformat:0 }}%</span>
       <span class="mk-ocup-trilho{% if b.situacao == 'oportunidade' %} oportunidade{% endif %}">

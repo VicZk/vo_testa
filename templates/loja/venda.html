@@ -23,18 +23,18 @@
   <div class="mensagem error"><strong>Cancelada:</strong> {{ venda.motivo_cancelamento }}</div>
 {% endif %}
 
-<table class="tabela tabela-estreita">
+<table class="tabela tabela-estreita tabela-cartoes">
   <thead>
     <tr><th>Produto</th><th>Natureza</th><th class="num">Qtd</th><th class="num">Preço</th><th class="num">Subtotal</th></tr>
   </thead>
   <tbody>
     {% for i in itens %}
       <tr>
-        <td>{{ i.descricao }}</td>
-        <td>{{ i.natureza|capfirst }}</td>
-        <td class="num">{{ i.quantidade|floatformat:"-3" }}</td>
-        <td class="num">{{ i.preco_unitario|intcomma_brl }}</td>
-        <td class="num">{{ i.subtotal|intcomma_brl }}</td>
+        <td data-rotulo="Produto"><div class="tabela-valor">{{ i.descricao }}</div></td>
+        <td data-rotulo="Natureza"><div class="tabela-valor">{{ i.natureza|capfirst }}</div></td>
+        <td class="num" data-rotulo="Qtd"><div class="tabela-valor">{{ i.quantidade|floatformat:"-3" }}</div></td>
+        <td class="num" data-rotulo="Preço"><div class="tabela-valor">{{ i.preco_unitario|intcomma_brl }}</div></td>
+        <td class="num" data-rotulo="Subtotal"><div class="tabela-valor">{{ i.subtotal|intcomma_brl }}</div></td>
       </tr>
     {% endfor %}
   </tbody>

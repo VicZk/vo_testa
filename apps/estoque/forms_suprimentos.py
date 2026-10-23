@@ -5,6 +5,7 @@ from django.forms import formset_factory
 
 from apps.nucleo.models import EmbalagemProduto, LocalEstoque, LoteEstoque, Produto
 
+from .campos import DecimalBRField
 from .forms import fornecedores
 
 
@@ -12,6 +13,7 @@ class EmbalagemForm(forms.ModelForm):
     class Meta:
         model = EmbalagemProduto
         fields = ["nome", "fator", "ativo"]
+        field_classes = {"fator": DecimalBRField}
 
 
 class LoteForm(forms.ModelForm):
@@ -27,12 +29,12 @@ class LoteForm(forms.ModelForm):
 
 class CompraForm(forms.Form):
     chave = forms.UUIDField(widget=forms.HiddenInput)
-    fator_conferido = forms.DecimalField(widget=forms.HiddenInput, max_digits=12, decimal_places=3,
+    fator_conferido = DecimalBRField(widget=forms.HiddenInput, max_digits=12, decimal_places=3,
                                          min_value=Decimal("0.001"), required=False)
     embalagem = forms.ModelChoiceField(label="Produto e embalagem", queryset=EmbalagemProduto.objects.none())
     local = forms.ModelChoiceField(label="Local de recebimento", queryset=LocalEstoque.objects.none())
-    quantidade = forms.DecimalField(label="Quantidade de embalagens", max_digits=12, decimal_places=3, min_value=Decimal("0.001"))
-    custo_embalagem = forms.DecimalField(label="Custo por embalagem (R$)", max_digits=12, decimal_places=4, min_value=0)
+    quantidade = DecimalBRField(label="Quantidade de embalagens", max_digits=12, decimal_places=3, min_value=Decimal("0.001"))
+    custo_embalagem = DecimalBRField(label="Custo por embalagem (R$)", max_digits=12, decimal_places=4, min_value=0)
     lote = forms.ModelChoiceField(label="Lote recebido", queryset=LoteEstoque.objects.none(), required=False)
     fornecedor = forms.ModelChoiceField(label="Fornecedor", queryset=fornecedores())
     documento = forms.CharField(label="Nota fiscal ou documento da compra", max_length=80)
@@ -53,7 +55,7 @@ class IdentificarForm(forms.Form):
     chave = forms.UUIDField(widget=forms.HiddenInput)
     lote = forms.ModelChoiceField(label="Lote conferido", queryset=LoteEstoque.objects.none())
     local = forms.ModelChoiceField(label="Local", queryset=LocalEstoque.objects.none())
-    quantidade = forms.DecimalField(label="Quantidade na unidade base", max_digits=12, decimal_places=3, min_value=Decimal("0.001"))
+    quantidade = DecimalBRField(label="Quantidade na unidade base", max_digits=12, decimal_places=3, min_value=Decimal("0.001"))
     motivo = forms.CharField(label="Como o lote e a validade foram conferidos", max_length=200)
 
     def __init__(self, *args, **kwargs):
@@ -65,7 +67,7 @@ class IdentificarForm(forms.Form):
 class ContagemLoteForm(forms.Form):
     chave = forms.UUIDField(widget=forms.HiddenInput)
     marca = forms.IntegerField(widget=forms.HiddenInput, min_value=0)
-    quantidade = forms.DecimalField(label="Quantidade contada deste lote", max_digits=12, decimal_places=3, min_value=0)
+    quantidade = DecimalBRField(label="Quantidade contada deste lote", max_digits=12, decimal_places=3, min_value=0)
     motivo = forms.CharField(label="Motivo da contagem ou correção", max_length=200)
 
 
@@ -73,7 +75,7 @@ class CorrecaoLoteForm(forms.Form):
     chave = forms.UUIDField(widget=forms.HiddenInput)
     destino = forms.ModelChoiceField(label="Lote com a identificação correta", queryset=LoteEstoque.objects.none())
     local = forms.ModelChoiceField(label="Local", queryset=LocalEstoque.objects.none())
-    quantidade = forms.DecimalField(label="Quantidade a reidentificar", max_digits=12, decimal_places=3, min_value=Decimal("0.001"))
+    quantidade = DecimalBRField(label="Quantidade a reidentificar", max_digits=12, decimal_places=3, min_value=Decimal("0.001"))
     motivo = forms.CharField(label="Motivo e evidência da conferência", max_length=200)
 
     def __init__(self, *args, lote, **kwargs):
@@ -84,7 +86,7 @@ class CorrecaoLoteForm(forms.Form):
 
 class IngredienteForm(forms.Form):
     ingrediente = forms.ModelChoiceField(label="Ingrediente", queryset=Produto.objects.none())
-    quantidade = forms.DecimalField(label="Consumo na unidade base", max_digits=12, decimal_places=3, min_value=Decimal("0.001"))
+    quantidade = DecimalBRField(label="Consumo na unidade base", max_digits=12, decimal_places=3, min_value=Decimal("0.001"))
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -93,3 +95,8 @@ class IngredienteForm(forms.Form):
 
 
 IngredientesFormSet = formset_factory(IngredienteForm, extra=3, can_delete=True, max_num=100, validate_max=True)
+
+
+from apps.nucleo.forms import rotular_selects_vazios  # noqa: E402
+
+rotular_selects_vazios(globals())

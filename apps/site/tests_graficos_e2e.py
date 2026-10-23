@@ -66,7 +66,7 @@ class GraficosNavegacaoE2ETests(_BaseE2E):
 
     def navegar_menu(self, nome):
         destino = reverse(nome)
-        self.page.locator(f'aside a.nav-item[href="{destino}"]').click()
+        self.clicar_item_menu(f'aside a.nav-item[href="{destino}"]')
         self.page.wait_for_url(self.url(destino))
         self.page.wait_for_load_state("networkidle")
 

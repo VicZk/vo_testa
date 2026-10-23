@@ -89,10 +89,15 @@ class ControlesCompactosE2ETests(_BaseE2E):
             p.evaluate("document.fonts.ready")
             self.assertLessEqual(p.evaluate("document.documentElement.scrollWidth"), largura + 1)
             caixas = p.locator(".mkt-abas a").evaluate_all(
-                "els => els.map(el => ({y:el.getBoundingClientRect().top,h:el.getBoundingClientRect().height}))")
-            self.assertLess(max(c["y"] for c in caixas) - min(c["y"] for c in caixas), 2)
-            if largura <= 768:
-                self.assertTrue(all(c["h"] >= 43 for c in caixas))
+                "els => els.map(el => {const r=el.getBoundingClientRect(); return {x:r.x,y:r.y,w:r.width,h:r.height};})")
+            self.assertTrue(all(c["h"] >= 44 and c["x"] >= 0 and c["x"] + c["w"] <= largura + 1 for c in caixas))
+            for indice, caixa in enumerate(caixas):
+                for outra in caixas[indice + 1:]:
+                    self.assertTrue(caixa["x"] + caixa["w"] <= outra["x"] + 1
+                                    or outra["x"] + outra["w"] <= caixa["x"] + 1
+                                    or caixa["y"] + caixa["h"] <= outra["y"] + 1
+                                    or outra["y"] + outra["h"] <= caixa["y"] + 1,
+                                    (caixa, outra))
             self.foto(f"marketing-relatorio-{largura}")
 
     def test_trocar_caixa_muda_destino_e_registro_vai_ao_caixa_escolhido(self):

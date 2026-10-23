@@ -1,0 +1,74 @@
+{% load nucleo_extras %}
+    {% if form.non_field_errors %}
+      <div class="mensagem error">{{ form.non_field_errors|join:" " }}</div>
+    {% endif %}
+    <div class="form-grade">
+      <div class="campo col-2 {% if form.hospede.errors %}campo-erro{% endif %}">
+        {{ form.hospede|rotulo }}
+        <div class="campo-com-acao">
+          {% include "componentes/combo_pessoa.html" with dados=hospedes_data dados_id="hospedes-data" campo="hospede" placeholder="Buscar hóspede/cliente…" valor_id=form.hospede.value autofocus=1 %}
+          <button type="button" class="botao-mini" onclick="abrirNovoHospede(this)">+ Novo</button>
+        </div>
+        {% for erro in form.hospede.errors %}<small class="erro">{{ erro }}</small>{% endfor %}
+      </div>
+
+      <div id="bloco-novo-hospede" class="bloco-inline col-2" style="display:none"
+           data-url="{% url 'pessoa_nova_rapida' %}">
+        <p class="bloco-titulo letreiro">Cadastro rápido de hóspede</p>
+        <div class="bloco-campos">
+          <input type="text" id="nh-nome" placeholder="Nome*" autocomplete="off">
+          <input type="text" id="nh-documento" class="mascara-cpfcnpj" placeholder="CPF/CNPJ"
+                 inputmode="numeric" autocomplete="off">
+          <input type="text" id="nh-telefone" class="mascara-telefone" placeholder="Telefone"
+                 inputmode="numeric" autocomplete="off">
+          <input type="email" id="nh-email" placeholder="E-mail" autocomplete="off">
+        </div>
+        <small class="erro" id="nh-erro"></small>
+        <div class="acoes">
+          <button type="button" class="botao-primario" onclick="salvarNovoHospede(this)">Salvar hóspede</button>
+          <button type="button" class="botao-neutro" onclick="fecharNovoHospede(this)">Cancelar</button>
+        </div>
+      </div>
+
+      {% include "reservas/partials/campo.html" with campo=form.uh classe="col-2" %}
+      {% include "reservas/partials/campo.html" with campo=form.checkin %}
+      {% include "reservas/partials/campo.html" with campo=form.checkout %}
+      {% include "reservas/partials/campo.html" with campo=form.adultos %}
+      {% include "reservas/partials/campo.html" with campo=form.criancas_6_15 %}
+      {% include "reservas/partials/campo.html" with campo=form.criancas_0_5 %}
+      {% include "reservas/partials/campo.html" with campo=form.canal %}
+      {% include "reservas/partials/campo.html" with campo=form.valor_diaria %}
+      <div id="tarifa-hint" class="tarifa-hint col-2" data-url="{% url 'reservas:tarifa_preview' %}"></div>
+      {# Restrição de venda do período (estadia mínima, chegada/saída, parada de vendas): #}
+      {# avisa ao vivo, antes de salvar. Vazio quando não há regra nas datas. #}
+      <div id="restricao-hint" class="tarifa-hint col-2" aria-live="polite"></div>
+      {% include "reservas/partials/campo.html" with campo=form.faturamento classe="col-2" %}
+      <div class="col-2" x-show="fat !== 'particular'" x-cloak>
+        <div class="campo {% if form.titular.errors %}campo-erro{% endif %}">
+          {{ form.titular|rotulo }}
+          {% include "componentes/combo_pessoa.html" with dados=titulares_data dados_id="titulares-data" campo="titular" placeholder="Buscar agência/empresa…" valor_id=form.titular.value %}
+          {% for erro in form.titular.errors %}<small class="erro">{{ erro }}</small>{% endfor %}
+        </div>
+      </div>
+
+      {# O balcão só precisa de hóspede, quarto, datas e gente. Camas, taxas e #}
+      {# observações ficam a um clique — nenhum campo foi removido, e o <details> #}
+      {# abre sozinho quando algum deles está com erro ou já tem conteúdo. #}
+      <details class="mais-opcoes col-2"{% if form.casais.errors or form.solteiros.errors or form.usa_sofa_cama.errors or form.usa_berco.errors or form.cobra_iss.errors or form.cobra_taxa_turismo.errors or form.nao_reembolsavel.errors or form.observacoes.errors or form.observacoes.value %} open{% endif %}>
+        <summary>Mais opções <small>camas, taxas e observações</small></summary>
+        <div class="form-grade">
+          {% include "reservas/partials/campo.html" with campo=form.casais %}
+          {% include "reservas/partials/campo.html" with campo=form.solteiros %}
+          {% include "reservas/partials/campo.html" with campo=form.usa_sofa_cama %}
+          {% include "reservas/partials/campo.html" with campo=form.usa_berco %}
+          <div id="colchoes-hint" class="tarifa-hint col-2"></div>
+          <div class="campo col-2 taxas-toggle">
+            <span class="letreiro">Taxas (inclusas no total)</span>
+            <label class="check-inline">{{ form.cobra_iss }} {{ form.cobra_iss.label }}</label>
+            <label class="check-inline">{{ form.cobra_taxa_turismo }} {{ form.cobra_taxa_turismo.label }}</label>
+            <label class="check-inline">{{ form.nao_reembolsavel }} {{ form.nao_reembolsavel.label }} <small>Desconto da tabela; mantém a política de cancelamento.</small></label>
+          </div>
+          {% include "reservas/partials/campo.html" with campo=form.observacoes classe="col-2" %}
+        </div>
+      </details>
+    </div>

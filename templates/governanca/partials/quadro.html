@@ -28,11 +28,11 @@ e as views redirecionam quando o pedido não vem do HTMX.
   era a ÚNICA forma de saber, que é justamente o que não pode.{% endcomment %}
   <button type="button" class="chip-limpeza" :class="f==='todas' && 'ativo'"
           :aria-pressed="f==='todas'" @click="filtrar('todas')">Todos <b>{{ linhas|length }}</b></button>
-  <span class="gov-ciclo-seta" aria-hidden="true">›</span>
   {% for e in ciclo %}
+    <span class="gov-ciclo-passo"><span class="gov-ciclo-seta" aria-hidden="true">›</span>
     <button type="button" class="chip-limpeza chip-{{ e.cod }}" :class="f==='{{ e.cod }}' && 'ativo'"
             :aria-pressed="f==='{{ e.cod }}'" @click="filtrar('{{ e.cod }}')"><span class="ponto"></span>{{ e.rotulo }} <b>{{ e.n }}</b></button>
-    {% if not forloop.last %}<span class="gov-ciclo-seta" aria-hidden="true">›</span>{% endif %}
+    </span>
   {% endfor %}
   {% if meus %}
     {# A camareira no corredor quer a fila dela, não o andar inteiro. #}
@@ -103,7 +103,7 @@ aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% e
       {% comment %}Sem dica de hover: num tablet ela não existe, e era a única
       forma de saber o tipo do quarto. O tipo mora agora na ficha do quarto (um
       toque no número), que é onde se pergunta por ele.{% endcomment %}
-      <td data-rotulo="Quarto" class="col-quarto">
+      <td data-rotulo="Quarto" class="col-quarto"><div class="tabela-valor">
         <a href="{% url 'governanca:quarto' ln.uh.pk %}?voltar=quartos" class="col-quarto-link"
            hx-get="{% url 'governanca:quarto' ln.uh.pk %}?voltar=quartos" hx-target="#modal-conteudo">{{ ln.uh.numero }}</a>
         {% if ln.ocupacao.rotulo %}
@@ -113,22 +113,22 @@ aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% e
         {% else %}
           <small class="ajuda">{{ ln.uh.tipo.nome }}</small>
         {% endif %}
-      </td>
+      </div></td>
 
       {% comment %}O estado nunca vem sozinho: vem com a frase que diz por que ele
       está assim e o que falta. É o que ensina o fluxo linha a linha.{% endcomment %}
-      <td class="col-estado" data-rotulo="Situação">
+      <td class="col-estado" data-rotulo="Situação"><div class="tabela-valor">
         <span class="selo selo-{{ ln.situacao }}">{{ ln.situacao_label }}</span>
         <small class="ajuda">{{ ln.explicacao }}</small>
-      </td>
+      </div></td>
 
-      <td class="col-acao" data-rotulo="Próximo passo">
+      <td class="col-acao" data-rotulo="Próximo passo"><div class="tabela-valor">
         <div class="acoes-quarto">
           {% include "governanca/partials/acoes_quarto.html" with ln=ln sheet=False %}
         </div>
-      </td>
+      </div></td>
 
-      <td class="governanca-col-operacao">
+      <td class="governanca-col-operacao" data-rotulo="Conferência e responsável"><div class="tabela-valor">
         {% if ln.divergente %}
           <span class="selo selo-{{ ln.divergencia }}">{{ ln.divergencia_rotulo }}</span>
         {% endif %}
@@ -165,7 +165,7 @@ aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% e
             alto: escolher numa lista com a casa inteira dentro — recepção,
             cozinha, quem está de folga — era adivinhação. Sem o módulo Escala o
             grupo não existe e a lista é a de sempre.{% endcomment %}
-            <select name="camareira" x-model="escolha" aria-label="Responsável o quarto {{ ln.uh.numero }}">
+            <select name="camareira" x-model="escolha" aria-label="Responsável pelo quarto {{ ln.uh.numero }}">
               <option value="">A definir</option>
               {% if de_turno %}
                 <optgroup label="De turno hoje">
@@ -186,11 +186,11 @@ aberta) e por isso fica DENTRO do quadro — o HTMX o atualiza a cada toque.{% e
             {% endif %}
           </div>
         </details>
-      </td>
+      </div></td>
     </tr>
     {% empty %}
     <tr><td colspan="4" class="vazio">Nenhum quarto cadastrado ainda. Cadastre os quartos em
-      <strong>Cadastros → Quartos &amp; tipos</strong> para a governança começar a acompanhar a limpeza.</td></tr>
+      <strong>Cadastros → Quartos e tipos</strong> para a governança começar a acompanhar a limpeza.</td></tr>
     {% endfor %}
   </tbody>
 </table>

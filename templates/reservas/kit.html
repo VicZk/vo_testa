@@ -8,12 +8,12 @@
 {% comment %}Folha A4 retrato para a recepção trabalhar sem sistema. O desenho da
 impressão mora no @media print do app.css (seção "Kit de contingência"): aqui só as
 classes. A tela é o design system de sempre.{% endcomment %}
+<p class="pagina-eyebrow letreiro">Reservas · Contingência</p>
 <div class="pagina-cabecalho kit-cabecalho">
   <div class="kit-identidade">
-    <p class="pagina-eyebrow letreiro">Reservas · Contingência</p>
     <h1>Pousada Vô Testa | Kit de contingência</h1>
   </div>
-  <div class="linha-botoes kit-acoes">
+  <div class="pagina-acoes kit-acoes">
     <button type="button" class="botao-primario" onclick="window.print()">Imprimir</button>
     <a href="{% url 'reservas:mapa_quartos' %}" class="botao-mini">Voltar</a>
   </div>
