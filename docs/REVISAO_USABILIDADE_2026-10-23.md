@@ -45,6 +45,9 @@ preferência por movimento reduzido e ausência de JavaScript nos formulários.
   situação, saldo e atalhos para as verificações existentes de entrada/saída.
   Previsão de diárias, sinal, crédito, conta aberta/ausente e cobrança de grupo
   têm significados distintos. Day Use conserva o fluxo próprio.
+  Quando os seis indicadores estão disponíveis, a grade forma linhas completas
+  de dois, três ou seis cartões conforme a largura. Perfis com menos indicadores
+  conservam a grade automática; impressão mantém o espaçamento próprio.
 - NPS, Financeiro e Pagamentos mostram valores, situação e descrição em cartões
   no celular. Períodos, caixa e categorias usam filtros compactos.
 - Preços permite filtrar ala/quarto sem desabilitar nem perder os valores dos
@@ -105,6 +108,12 @@ suítes aprovadas, backup PostgreSQL verificável e substituição apenas do
 serviço web. O manifesto dos arquivos do commit permite conferir fonte,
 imagem construída e contêiner ativo; recursos públicos são conferidos por hash.
 O histórico de execução do CI e o registro de deploy identificam a versão.
+
+O CI também executa `collectstatic` com `DEBUG=0` e o armazenamento Manifest
+usado em produção. A referência a um sourcemap ausente no Chart.js local foi
+removida sem alterar o código executável. Antes da ativação,
+o empacotamento é repetido na imagem candidata, em contêiner descartável sem
+rede nem volumes de produção, conferindo os arquivos e as URLs com hash.
 
 ## Limites da evidência
 

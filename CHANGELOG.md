@@ -36,6 +36,8 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ### Chegadas, saídas e saldos no Painel da recepção
 
+- Os seis indicadores formam linhas completas de dois, três ou seis cartões,
+  conforme a largura, sem deixar um cartão isolado no desktop.
 - As listas do dia aparecem antes dos gráficos, com quarto, hóspede, situação,
   saldo e atalhos de check-in/check-out para a etapa existente da reserva.
 - Chegadas sem conta mostram a previsão de diárias e taxas descontando o sinal;

@@ -3294,6 +3294,21 @@ form.htmx-request .botao-primario {
 .painel-visao .atencao-item { padding:.65rem .8rem; min-height:44px; }
 .painel-visao .mural-cabecalho { flex-wrap:wrap; gap:.4rem .8rem; }
 .painel-visao > .corredor-hero { margin-top:1.5rem; }
+/* O painel completo tem seis indicadores: evita uma última linha com só um
+   cartão. Perfis com menos indicadores mantêm a grade automática; papel também. */
+@media screen and (min-width:821px) {
+  .painel-visao > .kpis:has(> :nth-child(6):last-child) { grid-template-columns:repeat(2,minmax(0,1fr)); gap:.75rem; }
+  .painel-visao > .kpis:has(> :nth-child(6):last-child) > .kpi { min-width:0; padding:1rem; }
+  .painel-visao > .kpis:has(> :nth-child(6):last-child) .kpi-topo { gap:.3rem; align-items:start; }
+  .painel-visao > .kpis:has(> :nth-child(6):last-child) :is(.kpi-rotulo,.kpi-valor,.kpi-nota) { min-width:0; overflow-wrap:anywhere; }
+  .painel-visao > .kpis:has(> :nth-child(6):last-child) .kpi-ico { width:16px; height:16px; flex:none; }
+}
+@media screen and (min-width:900px) {
+  .painel-visao > .kpis:has(> :nth-child(6):last-child) { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+@media screen and (min-width:1440px) {
+  .painel-visao > .kpis:has(> :nth-child(6):last-child) { grid-template-columns:repeat(6,minmax(0,1fr)); }
+}
 @media (max-width:820px) {
   .painel-visao > .kpis { grid-template-columns:repeat(2,minmax(0,1fr)); gap:.6rem; margin:1.15rem 0; }
   .painel-visao > .kpis .kpi { min-width:0; padding:.8rem; gap:.2rem; }

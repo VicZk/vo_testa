@@ -171,6 +171,77 @@ class PainelOperacionalE2ETests(_BaseE2E):
                 if largura in (320, 390, 1440, 2560):
                     self.foto(str(largura))
 
+    def test_seis_indicadores_formam_linhas_completas_em_cada_largura(self):
+        self.abrir()
+        indicadores = self.page.locator(".painel-visao > .kpis > .kpi")
+        # O perfil de recepção conserva seus três indicadores.
+        expect(indicadores).to_have_count(3)
+        padding_padrao = indicadores.first.evaluate(
+            "el => parseFloat(getComputedStyle(el).paddingTop)")
+        self.usuario.is_superuser = True
+        self.usuario.save(update_fields=["is_superuser"])
+        estoque, _ = ModuloContratado.objects.update_or_create(
+            codigo=Modulo.ESTOQUE, defaults={"ativo": True})
+        cache.clear()
+        self.abrir()
+        expect(indicadores).to_have_count(6)
+        # Exercita números maiores e a nota mais longa sem depender de centenas
+        # de registros: são os mesmos campos e fontes usados pela tela real.
+        self.page.locator(".kpi-valor").evaluate_all(
+            "els => els.forEach((el,i) => el.textContent = i === 0 ? '100%' : '9.999')")
+        self.page.locator(".kpi-nota").first.evaluate(
+            "el => el.textContent = '999 de 999 quartos ocupados'")
+        problemas = []
+        for largura in (1440, 821, 390, 320, 900, 1024, 2560):
+            for recolhida in (False, True):
+                self.page.set_viewport_size({"width": largura, "height": 1000})
+                self.page.locator("#app").evaluate(
+                    "(el,valor) => el.classList.toggle('recolhida',valor)", recolhida)
+                margem = (128 if recolhida else 258) if largura > 820 else 0
+                self.page.wait_for_function(
+                    "x => Math.abs(document.querySelector('.main').getBoundingClientRect().left-x)<1",
+                    arg=margem)
+                medidas = self.page.locator(".painel-visao > .kpis").evaluate("""grade => {
+                    const linhas = {};
+                    for (const card of grade.children) {
+                        const y = card.getBoundingClientRect().top.toFixed(1);
+                        linhas[y] = (linhas[y] || 0) + 1;
+                    }
+                    return {linhas:Object.values(linhas),
+                        documento:document.documentElement.scrollWidth,
+                        cortados:[...grade.querySelectorAll('.kpi-rotulo,.kpi-valor,.kpi-nota')]
+                            .filter(el => el.scrollWidth > el.clientWidth + 1).map(el => el.textContent),
+                        container:getComputedStyle(grade.parentElement).containerType};
+                }""")
+                esperado = [6] if largura >= 1440 else [3, 3] if largura >= 900 else [2, 2, 2]
+                if medidas["linhas"] != esperado:
+                    problemas.append({"largura": largura, "recolhida": recolhida, **medidas})
+                self.assertLessEqual(medidas["documento"], largura + 1, medidas)
+                self.assertEqual(medidas["cortados"], [], medidas)
+                self.assertEqual(medidas["container"], "normal")
+                destino = os.environ.get("EVIDENCIAS_DIR") or os.environ.get("E2E_EVIDENCIAS")
+                if destino and largura in (390, 821, 1440):
+                    pasta = Path(destino)
+                    pasta.mkdir(parents=True, exist_ok=True)
+                    self.page.evaluate("window.scrollTo(0,0)")
+                    self.page.screenshot(path=str(pasta / f"painel-kpis-{largura}-{'recolhida' if recolhida else 'aberta'}.png"))
+
+        self.page.emulate_media(media="print")
+        self.assertAlmostEqual(indicadores.first.evaluate(
+            "el => parseFloat(getComputedStyle(el).paddingTop)"), padding_padrao, delta=.1)
+        expect(self.page.locator(".sidebar")).to_be_hidden()
+        self.page.emulate_media(media="screen")
+        # Sem Estoque, os cinco cartões seguem a grade automática existente.
+        estoque.ativo = False
+        estoque.save(update_fields=["ativo"])
+        cache.clear()
+        self.page.set_viewport_size({"width": 1440, "height": 1000})
+        self.abrir()
+        expect(indicadores).to_have_count(5)
+        self.assertAlmostEqual(indicadores.first.evaluate(
+            "el => parseFloat(getComputedStyle(el).paddingTop)"), padding_padrao, delta=.1)
+        self.assertEqual(problemas, [], problemas)
+
     def test_checkin_e_checkout_abrem_confirmacao_e_concluem_fluxos_existentes(self):
         self.abrir()
         self.page.set_viewport_size({"width": 390, "height": 844})
