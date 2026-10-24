@@ -215,6 +215,48 @@ class AuditoriaTemplatesE2ETests(_BaseE2E):
                         expect(self.page.locator(".escala-chip").first).to_be_visible()
                         self.assertEqual(self.page.locator(".escala-celula[data-dia]").count(), 7)
 
+    def test_manutencao_com_estados_variados_e_mural_com_texto_longo(self):
+        from apps.manutencao.models import OrdemServico
+        from apps.nucleo.models import EntradaLogbook
+
+        for estado, prioridade in zip(OrdemServico.Status.values, OrdemServico.Prioridade.values):
+            OrdemServico.objects.create(
+                titulo=f"Conferência {estado}: manutenção e vistoria da área externa",
+                area="Área externa da pousada", status=estado, prioridade=prioridade,
+                responsavel=self.c.usuario if estado != "cancelada" else None,
+                criado_por=self.c.usuario)
+        EntradaLogbook.objects.create(
+            autor=self.c.usuario, importante=True,
+            texto="Conferir os materiais de limpeza e avisar o próximo turno sobre a reposição dos quartos.")
+        EntradaLogbook.objects.create(autor=self.c.usuario, texto="Conferência concluída.")
+        for largura, trilho in self.ESTADOS:
+            with self.subTest(largura=largura, trilho=trilho):
+                self._abrir("manutencao:painel", largura, trilho, query="?situacao=todas")
+                linhas = self.page.locator(".manutencao-ordem")
+                expect(linhas).to_have_count(5)
+                eixos = []
+                for linha in linhas.all():
+                    responsavel = linha.locator(".manutencao-ordem-responsavel")
+                    eixos.append(self._dentro(responsavel, linha)["x"])
+                    self._dentro(linha.locator(".manutencao-ordem-acao"), linha)
+                self.assertLessEqual(max(eixos) - min(eixos), 1)
+                self._foto("manutencao-estados-variados", largura, trilho)
+                self._abrir("dashboard", largura, trilho)
+                notas = self.page.locator(".mural-nota")
+                self.assertGreaterEqual(notas.count(), 2)
+                for nota in notas.all():
+                    self._dentro(nota, self.page.locator(".mural"))
+                    self._dentro(nota.locator(".mural-nota-txt"), nota)
+                    alfinete = nota.evaluate("""e => {
+                        const s = getComputedStyle(e, '::before');
+                        return {top: parseFloat(s.top), left: parseFloat(s.left),
+                            width: parseFloat(s.width), limite: e.clientWidth};
+                    }""")
+                    self.assertGreaterEqual(alfinete["top"], 1)
+                    self.assertGreaterEqual(alfinete["left"], 1)
+                    self.assertLessEqual(alfinete["left"] + alfinete["width"], alfinete["limite"])
+                self._foto("mural-textos-variados", largura, trilho)
+
     def test_produto_com_virgula_salva_sem_perder_valor_e_previa_da_compra_confere(self):
         self._abrir("estoque:produto_editar", 390, args=(self.c.produto.pk,))
         self.page.locator('[name="preco_venda"]').fill("19,95")
