@@ -221,6 +221,7 @@ class UsabilidadeOperacionalE2ETests(_BaseE2E):
         dialogo.get_by_label("Quantidade", exact=False).fill("2")
         dialogo.get_by_role("button", name="Adicionar à comanda", exact=True).click()
         expect(dialogo).to_be_hidden()
+        p.get_by_role("link", name="Itens e fechamento", exact=True).click()
         expect(p.locator("#comanda-itens .comanda-total-linha")).to_contain_text("14,00")
         fechar = p.locator("form.comanda-fechar")
         fechar.locator('[name="forma"]').select_option(str(self.dinheiro.pk))
