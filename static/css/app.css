@@ -8081,7 +8081,45 @@ html.com-js [data-precos-filtros][hidden] { display: block; visibility: hidden; 
 /* Relatórios: coluna numérica com largura natural (width:1% jogava toda a sobra na primeira). */
 .rel-tabela .col-numero { width: auto; min-width: 7ch; }
 .tabela-rol > .rel-tabela th { white-space: normal; }
-.rel-tabela.tabela td.col-numero { white-space: normal; }
+.rel-tabela .rel-valor-monetario { white-space: nowrap; }
+/* Muitas colunas precisam de mais espaço que uma lista curta. Cada registro
+   vira um cartão com campos legíveis antes de apertar ou separar a moeda. */
+@media screen {
+@container tabela (max-width: 75rem) {
+  .tabela.rel-tabela--ampla {
+    display: block; width: 100%; min-width: 0; border: 0;
+    background: none; box-shadow: none; white-space: normal;
+  }
+  .tabela.rel-tabela--ampla thead {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%);
+  }
+  .tabela.rel-tabela--ampla tbody { display: grid; gap: .8rem; }
+  .tabela.rel-tabela--ampla tbody tr {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(13rem, 100%), 1fr));
+    gap: .9rem 1.2rem; margin: 0; padding: 1rem;
+    border: 1px solid var(--fio); border-radius: var(--raio);
+    background: var(--superficie); box-shadow: var(--sombra-1);
+  }
+  .tabela.rel-tabela--ampla td {
+    display: block; min-width: 0; width: auto; padding: 0;
+    border: 0; position: static; box-shadow: none; white-space: normal;
+  }
+  .tabela.rel-tabela--ampla td:first-child { grid-column: 1 / -1; }
+  .tabela.rel-tabela--ampla td:first-child .tabela-valor { font-weight: 600; }
+  .tabela.rel-tabela--ampla td[data-rotulo]::before {
+    content: attr(data-rotulo); display: block; max-width: none; margin-bottom: .3rem;
+    font-size: var(--rotulo-min); font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; text-align: left; color: var(--tinta-suave); white-space: normal;
+  }
+  .tabela.rel-tabela--ampla .tabela-valor,
+  .tabela.rel-tabela--ampla td.num .tabela-valor { text-align: left; }
+}
+}
+@media print {
+  /* Cabeçalhos podem ocupar duas linhas; a unidade monetária acompanha o valor.
+     Reduz somente o espaço das células, mantendo o tamanho de leitura do texto. */
+  .tabela.rel-tabela :is(th, td) { padding: .45rem .4rem; }
+}
 
 /* Marketing no celular: o quadro vira lista por fase (uma coluna embaixo da outra),
    em vez de sete colunas rolando de lado. */

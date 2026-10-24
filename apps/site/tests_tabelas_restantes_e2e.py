@@ -145,7 +145,12 @@ class TabelasRestantesE2ETests(_BaseE2E):
                     });
                 return {rotulo:e.dataset.rotulo, texto:v.innerText, l:r.left, r:r.right,
                     limiteL:b.left, limiteR:b.right, scroll:e.scrollWidth-e.clientWidth,
-                    valor:v.scrollWidth-v.clientWidth, antes:getComputedStyle(e,'::before').content, controls};
+                    valor:v.scrollWidth-v.clientWidth, antes:getComputedStyle(e,'::before').content, controls,
+                    moeda: v.classList.contains('rel-valor-monetario'),
+                    linhasMoeda: v.classList.contains('rel-valor-monetario') ? (() => {
+                        const range = document.createRange(); range.selectNodeContents(v);
+                        return [...new Set([...range.getClientRects()].map(r => Math.round(r.top)))].length;
+                    })() : 0};
             })};
         })""")
         for tabela in medidas:
@@ -156,6 +161,8 @@ class TabelasRestantesE2ETests(_BaseE2E):
                 self.assertTrue(celula["rotulo"], celula)
                 self.assertLessEqual(celula["scroll"], 1, (rota, celula))
                 self.assertLessEqual(celula["valor"], 1, (rota, celula))
+                if celula["moeda"]:
+                    self.assertEqual(celula["linhasMoeda"], 1, (rota, celula))
                 self.assertGreaterEqual(celula["l"], celula["limiteL"] - 1, (rota, celula))
                 self.assertLessEqual(celula["r"], celula["limiteR"] + 1, (rota, celula))
                 if tabela["display"] == "block":
@@ -168,6 +175,9 @@ class TabelasRestantesE2ETests(_BaseE2E):
         destino = os.environ.get("EVIDENCIAS_DIR")
         if destino:
             self.page.screenshot(path=str(Path(destino) / foto), full_page=True)
+            if rota.startswith("relatorio-"):
+                tabelas.locator("tbody tr").first.screenshot(
+                    path=str(Path(destino) / foto.replace(".png", "-primeiro-registro.png")))
         self.evidencias.append({"rota": rota, "largura": largura, "trilho": trilho,
                                "imagem": foto, "tabelas": medidas})
 
@@ -237,6 +247,9 @@ class TabelasRestantesE2ETests(_BaseE2E):
             for largura, trilho in self.ESTADOS:
                 self._abrir("relatorios:relatorio", largura, trilho, ("reservas",))
                 self._conferir("relatorio-amplo", largura, trilho)
+                largura_util = self.page.locator(".rel-tabela").locator("..").bounding_box()["width"]
+                self.assertEqual(self.page.locator(".rel-tabela").evaluate("el=>getComputedStyle(el).display"),
+                                 "block" if largura_util <= 1200 else "table")
                 expect(self.page.locator(".rel-tabela tbody tr")).to_have_count(30)
                 expect(self.page.locator(".rel-tabela tbody tr").last).to_contain_text("Categoria completa da conferência 30")
             csv = self.client.get(reverse("relatorios:relatorio", args=["reservas"]) + "?export=csv")
@@ -257,6 +270,12 @@ class TabelasRestantesE2ETests(_BaseE2E):
         self.assertEqual(tabela.locator("thead").evaluate("el=>getComputedStyle(el).clipPath"), "none")
         expect(tabela.locator("thead th")).to_have_count(9)
         expect(tabela.locator("tbody td")).to_have_count(270)
+        moedas = tabela.locator(".rel-valor-monetario").evaluate_all("""els => els.map(el => {
+            const range = document.createRange(); range.selectNodeContents(el);
+            return [...new Set([...range.getClientRects()].map(r => Math.round(r.top)))].length;
+        })""")
+        self.assertEqual(len(moedas), 150)
+        self.assertTrue(all(linhas == 1 for linhas in moedas), moedas)
         destino = os.environ.get("EVIDENCIAS_DIR")
         if destino:
             self.page.pdf(path=str(Path(destino) / "relatorio-amplo.pdf"), prefer_css_page_size=True, print_background=True)

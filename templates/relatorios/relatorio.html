@@ -82,13 +82,13 @@ busca na folha.{% endcomment %}
 </div>
 
 <div class="tabela-rol bloco-respiro-largo">
-<table class="tabela rel-tabela tabela-cartoes">
+<table class="tabela rel-tabela tabela-cartoes{% if dados.colunas|length > 6 %} rel-tabela--ampla{% endif %}">
   <thead>
     <tr>{% for c in dados.colunas %}<th scope="col" {% if not forloop.first %}class="num col-numero"{% endif %}>{{ c }}</th>{% endfor %}</tr>
   </thead>
   <tbody>
     {% for linha in linhas_rotuladas %}
-      <tr>{% for rotulo_coluna, celula in linha %}<td data-rotulo="{{ rotulo_coluna }}" {% if not forloop.first %}class="num col-numero"{% endif %}><div class="tabela-valor">{{ celula }}</div></td>{% endfor %}</tr>
+      <tr>{% for rotulo_coluna, celula in linha %}<td data-rotulo="{{ rotulo_coluna }}" {% if not forloop.first %}class="num col-numero"{% endif %}><div class="tabela-valor{% if celula|slice:':3' == 'R$ ' %} rel-valor-monetario{% endif %}">{{ celula }}</div></td>{% endfor %}</tr>
     {% empty %}
       <tr><td colspan="{{ dados.colunas|length }}" class="vazio">Sem dados no período.</td></tr>
     {% endfor %}
