@@ -211,8 +211,13 @@ class MovimentoNavegacaoE2ETests(_BaseE2E):
                                     outra["y"] + outra["h"] <= aba["y"] + 1, abas)
             self.assertLessEqual(p.evaluate("document.documentElement.scrollWidth"), largura + 1)
         p.set_viewport_size({"width": 390, "height": 600})
-        notas = p.locator('.abas-secao a').first
-        expect(notas).to_have_text("Notas fiscais")
+        posicao = p.locator('.abas-secao a').first
+        expect(posicao).to_have_text("Posição")
+        posicao.focus()
+        posicao.press("Enter")
+        expect(p).to_have_url(self.url(reverse("estoque:posicao")))
+        expect(p.locator('.abas-secao [aria-current="page"]')).to_have_text("Posição")
+        notas = p.locator('.abas-secao').get_by_role("link", name="Notas fiscais", exact=True)
         notas.focus()
         expect(notas).to_be_in_viewport(ratio=1)
         notas.press("Enter")

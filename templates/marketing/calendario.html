@@ -4,28 +4,43 @@
 {% block titulo %}Calendário | Marketing{% endblock %}
 
 {% block conteudo %}
-{% include "marketing/_cabecalho.html" with titulo="Calendário de campanhas" descricao="Veja quando cada campanha acontece e acompanhe os prazos das peças." %}
+{% include "marketing/_cabecalho.html" with titulo="Calendário de campanhas" descricao="Acompanhe as entregas da semana e as campanhas em andamento." %}
+{% include "marketing/_canais.html" %}
 
-<section class="mk-secao fim">
+<section class="mk-secao fim mkt-calendario">
   <div class="mk-cal-cab">
     <div class="mk-cal-periodo">
-    <a href="?vista={{ escala }}&ano={{ prev.ano }}&mes={{ prev.mes }}" class="mk-cal-nav" aria-label="{% if escala == 'ano' %}Ano anterior{% else %}Mês anterior{% endif %}">‹</a>
+    <a href="{{ anterior_url }}" class="mk-cal-nav" aria-label="Período anterior">‹</a>
     <h2 class="mk-cal-mes">{{ tl.titulo }}</h2>
-    <a href="?vista={{ escala }}&ano={{ next.ano }}&mes={{ next.mes }}" class="mk-cal-nav" aria-label="{% if escala == 'ano' %}Próximo ano{% else %}Próximo mês{% endif %}">›</a>
+    <a href="{{ proximo_url }}" class="mk-cal-nav" aria-label="Próximo período">›</a>
     </div>
     <div class="mk-cal-vista" role="group" aria-label="Escala do calendário">
-    <a href="?vista=mes&ano={{ ano }}&mes={{ mes }}" class="mk-pil larga{% if escala == 'mes' %} on{% endif %}"{% if escala == 'mes' %} aria-current="page"{% endif %}>Mês</a>
-    <a href="?vista=ano&ano={{ ano }}&mes={{ mes }}" class="mk-pil larga{% if escala == 'ano' %} on{% endif %}"{% if escala == 'ano' %} aria-current="page"{% endif %}>Ano</a>
+    {% for vista in vistas %}<a href="{{ vista.url }}" class="mk-pil larga{% if escala == vista.valor %} on{% endif %}"{% if escala == vista.valor %} aria-current="page"{% endif %}>{{ vista.nome }}</a>{% endfor %}
     </div>
   </div>
 
+  <div class="mkt-agenda{% if escala != 'semana' %} mkt-agenda-compacta{% endif %}">
+    {% for dia in agenda.dias %}
+    <section class="mkt-agenda-dia" aria-label="{{ dia.data|date:'l, d/m/Y' }}">
+      <h2><time datetime="{{ dia.data|date:'Y-m-d' }}">{{ dia.data|date:"l, d/m"|capfirst }}</time></h2>
+      {% for p in dia.entregas %}{% include "marketing/_entrega_linha.html" %}{% empty %}<p class="subtitulo">Sem entregas neste dia.</p>{% endfor %}
+    </section>
+    {% empty %}<p class="subtitulo">Nenhuma entrega com prazo neste período.</p>{% endfor %}
+    <section class="mkt-agenda-dia" aria-label="Campanhas no período">
+      <h2>Campanhas no período</h2>
+      {% for campanha in agenda.campanhas %}<article class="mkt-agenda-campanha"><a href="{% url 'marketing:detalhe' campanha.pk %}">{{ campanha.nome }}</a><span>{{ campanha.inicio|date:"d/m/Y" }} a {{ campanha.fim|date:"d/m/Y" }}</span><span class="selo">{{ campanha.get_fase_display }}</span></article>{% empty %}<p class="subtitulo">Nenhuma campanha com período definido.</p>{% endfor %}
+    </section>
+    <a class="botao-neutro" href="{{ agenda.sem_data_url }}{% if canal %}?canal={{ canal|urlencode }}{% endif %}">Ver todas as entregas, inclusive sem data</a>
+  </div>
+
+  {% if escala != 'semana' %}
   {% comment %}As posições das barras saem em % — forçar PONTO decimal: a localização
   pt-BR geraria "left:80,65%", CSS inválido que jogava a barra para a esquerda.{% endcomment %}
   {% localize off %}
   {% if tl.vazio %}
   <div class="mk-cal-vazio">Nenhuma campanha neste período.</div>
   {% endif %}
-  <div class="cal-scroll" data-tabela-ampla role="region" aria-label="Calendário de campanhas" tabindex="0"><div class="cal-track">
+  <div class="cal-scroll" role="region" aria-label="Linha do tempo das campanhas"><div class="cal-track">
   <div class="mk-cal-eixo">
     <span class="mk-cal-rotulos"></span>
     <span class="mk-cal-cols">
@@ -74,8 +89,9 @@
   {% endlocalize %}
 
   <div class="mk-cal-legenda">
-    <p>Barra hachurada = planejado; cheia = realizado. A linha vermelha é hoje; os pontos são as peças.</p>
+    <p>Barra hachurada = início futuro; cheia = período já iniciado. A linha vermelha é hoje; os pontos são os prazos das entregas.</p>
   </div>
+  {% endif %}
 </section>
 
 

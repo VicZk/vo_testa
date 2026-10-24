@@ -10,7 +10,7 @@ from django.views.decorators.http import require_http_methods, require_POST
 from apps.nucleo.modulos import Modulo
 from apps.nucleo.permissoes import eh_gerente, requer_modulo
 
-from . import services
+from . import services, services_agenda
 from .forms import SECOES, DadosCampanhaForm, NovaCampanhaForm
 from .models import Campanha
 
@@ -19,6 +19,7 @@ from .models import Campanha
 @requer_modulo(Modulo.MARKETING)
 def quadro(request):
     user = request.user
+    canal, canais = services_agenda.filtros_canais(request)
     so_meus = request.GET.get("meus") == "1"
     pos = services.posicao_verba()
     teto = float(pos["teto"]) or 0
@@ -29,7 +30,8 @@ def quadro(request):
     minhas = services.motivos_meus(user)
     meus_count, meus_label = services.meus_resumo(user)
     return render(request, "marketing/quadro.html", {
-        "colunas": services.quadro_colunas(minhas if so_meus else None),
+        "colunas": services.quadro_colunas(minhas if so_meus else None, canal=canal),
+        "canal": canal, "canais": canais,
         "proximos": services.banda_proximos(),
         "proximos_resumo": services.resumo_proximos(),
         "atrasados": atrasados,
@@ -382,11 +384,15 @@ from .models import PecaCampanha  # noqa: E402
 @never_cache
 @requer_modulo(Modulo.MARKETING)
 def calendario(request):
+    import calendar
     from datetime import timedelta
 
     from django.utils import timezone
     hoje = timezone.localdate()
-    escala = "ano" if request.GET.get("vista") == "ano" else "mes"
+    escala = request.GET.get("vista", "semana")
+    if escala not in ("semana", "mes", "ano"):
+        escala = "semana"
+    canal, canais = services_agenda.filtros_canais(request)
     try:
         ano = int(request.GET.get("ano") or hoje.year)
         mes = int(request.GET.get("mes") or hoje.month)
@@ -396,14 +402,42 @@ def calendario(request):
         mes = hoje.month
     if not 2 <= ano <= 9998:
         ano = hoje.year
-    if escala == "ano":
+    if escala == "semana":
+        try:
+            referencia = _date.fromisoformat(request.GET.get("data", ""))
+            if not 2 <= referencia.year <= 9998:
+                referencia = hoje
+        except (TypeError, ValueError):
+            referencia = hoje
+        inicio = referencia - timedelta(days=referencia.weekday())
+        fim = inicio + timedelta(days=6)
+        ano, mes = referencia.year, referencia.month
+        prev, nxt = {"data": (inicio - timedelta(days=7)).isoformat()}, {"data": (inicio + timedelta(days=7)).isoformat()}
+        tl = {"titulo": f"{inicio:%d/%m/%Y} a {fim:%d/%m/%Y}"}
+    elif escala == "ano":
+        inicio, fim = _date(ano, 1, 1), _date(ano, 12, 31)
         prev, nxt = {"ano": ano - 1, "mes": mes}, {"ano": ano + 1, "mes": mes}
     else:
         p = _date(ano, mes, 1) - timedelta(days=1)
         x = _date(ano, mes, 28) + timedelta(days=7)
         prev, nxt = {"ano": p.year, "mes": p.month}, {"ano": x.year, "mes": x.month}
+        inicio, fim = _date(ano, mes, 1), _date(ano, mes, calendar.monthrange(ano, mes)[1])
+    if escala != "semana":
+        tl = services.calendario_timeline(ano, mes, escala, canal=canal)
+
+    def endereco(**parametros):
+        query = request.GET.copy()
+        for chave in ("vista", "data", "ano", "mes"):
+            query.pop(chave, None)
+        query.update(parametros)
+        return "?" + query.urlencode()
+
     return render(request, "marketing/calendario.html", {
-        "tl": services.calendario_timeline(ano, mes, escala),
+        "tl": tl, "agenda": services_agenda.agenda_periodo(inicio, fim, canal=canal, semana=escala == "semana"),
+        "voltar_entrega": request.get_full_path(), "canal": canal, "canais": canais,
+        "anterior_url": endereco(vista=escala, **prev), "proximo_url": endereco(vista=escala, **nxt),
+        "vistas": [{"nome": nome, "valor": valor, "url": endereco(vista=valor, ano=ano, mes=mes, data=inicio.isoformat())}
+                   for valor, nome in (("semana", "Semana"), ("mes", "Mês"), ("ano", "Ano"))],
         "escala": escala, "ano": ano, "mes": mes, "prev": prev, "next": nxt,
         "atual": "marketing", "aba": "calendario",
     })

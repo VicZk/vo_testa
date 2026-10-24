@@ -21,8 +21,8 @@ class FundacaoMarketingTests(TestCase):
         self.assertIn(Modulo.MARKETING, APRESENTACAO)
         info = APRESENTACAO[Modulo.MARKETING]
         self.assertEqual(info["grupo"], "Comercial")
-        # A entrada mostra entregas; o quadro de campanhas mantém sua própria rota.
-        self.assertEqual(info["url_name"], "marketing:entregas")
+        # Campanhas é a entrada do módulo; Entregas mantém sua própria rota.
+        self.assertEqual(info["url_name"], "marketing:quadro")
 
     def test_area_marketing_existe(self):
         self.assertIn("marketing", Area.values)
@@ -760,7 +760,7 @@ class FichaCompletaTests(TestCase):
 
     def test_gaveta_traz_as_secoes_do_prototipo(self):
         r = self.client.get(self._url("ficha/"))
-        for txt in ("CANAIS", "TRAVADA", "DISPONÍVEL", "Para sair de Ideia",
+        for txt in ("CANAIS", "RESERVADO", "DISPONÍVEL", "Para sair de Ideia",
                     "Etapas desta campanha", "Quem está envolvido", "Conversa"):
             self.assertContains(r, txt)
         # Comentários de template não podem vazar pra tela (o {# #} multi-linha vazava).

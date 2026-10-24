@@ -10,6 +10,7 @@ urlpatterns = [
     path("entregas/nova/", views_entregas.nova_entrega, name="nova_entrega"),
     path("entregas/anexos/", views_entregas.anexos_da_entrega, name="anexos_da_entrega"),
     path("entregas/<int:pk>/editar/", views_entregas.editar_entrega, name="editar_entrega"),
+    path("entregas/<int:pk>/situacao/", views_entregas.alterar_estado, name="estado_entrega"),
     path("entregas/<int:pk>/lp/", views_entregas.abrir_lp, name="abrir_lp"),
     path("materiais/<int:pk>/", views_entregas.abrir_material, name="abrir_material"),
     path("verba/teto/", views.editar_teto, name="editar_teto"),

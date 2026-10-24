@@ -10,6 +10,12 @@
     {% if p.status == 'pronta' %}<span class="mkt-meta">{% if p.concluida_em %}Concluída em {{ p.concluida_em|date:"d/m/Y H:i" }}{% else %}Data de conclusão não registrada{% endif %}</span>{% endif %}
   </div>
   <div class="mkt-entrega-acoes">
+    {% if not na_ficha %}
+    <form method="post" action="{% url 'marketing:estado_entrega' p.pk %}">
+      {% csrf_token %}<input type="hidden" name="versao" value="{{ p.versao }}"><input type="hidden" name="voltar" value="{{ voltar_entrega }}">
+      {% if p.status == 'a_fazer' %}<button type="submit" name="status" value="em_producao" class="botao-mini">Iniciar produção</button>{% elif p.status == 'em_producao' %}<button type="submit" name="status" value="pronta" class="botao-mini">Concluir produção</button>{% else %}<button type="submit" name="status" value="em_producao" class="botao-mini">Reabrir produção</button>{% endif %}
+    </form>
+    {% endif %}
     {% if p.url_material_segura %}<a href="{{ p.url_material_segura }}" class="botao-mini" target="_blank" rel="noopener noreferrer">Abrir material</a>{% endif %}
     {% if p.material_checklist_id and p.material_checklist.arquivo %}<a href="{% url 'marketing:abrir_material' p.material_checklist_id %}" class="botao-mini">Baixar anexo</a>{% endif %}
     {% if p.lp_disponivel %}<a href="{% url 'marketing:abrir_lp' p.pk %}" class="botao-mini" target="_blank" rel="noopener noreferrer">Abrir LP</a>{% endif %}

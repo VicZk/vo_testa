@@ -8,13 +8,13 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.cache import never_cache
-from django.views.decorators.http import require_GET, require_http_methods
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from apps.nucleo.modulos import Modulo
 from apps.nucleo.paginacao import paginar
 from apps.nucleo.permissoes import requer_modulo
 
-from . import services_entregas
+from . import services_agenda, services_entregas
 from .forms_entregas import EntregaForm, FiltroEntregasForm
 from .models import ItemChecklist, PecaCampanha
 
@@ -40,11 +40,12 @@ def preparar_referencias(pecas, usuario):
 @requer_modulo(Modulo.MARKETING)
 @require_GET
 def entregas(request):
+    canal, canais = services_agenda.filtros_canais(request)
     form = FiltroEntregasForm(request.GET)
     dados = form.cleaned_data if form.is_valid() else {}
     consulta, resumo = services_entregas.consultar_entregas(
         busca=dados.get("q", ""), campanha=dados.get("campanha"),
-        tipo=dados.get("tipo", ""), situacao=dados.get("situacao", ""))
+        tipo=dados.get("tipo", ""), situacao=dados.get("situacao", ""), canal=canal)
     if form.errors:
         consulta = consulta.none()
     pagina = paginar(request, consulta, por_pagina=30)
@@ -59,8 +60,24 @@ def entregas(request):
     return render(request, "marketing/entregas.html", {
         "filtros": form, "pagina": pagina, "resumo_tipos": resumo,
         "voltar_entrega": request.get_full_path(),
+        "canal": canal, "canais": canais,
         "atual": "marketing", "aba": "entregas",
     })
+
+
+@never_cache
+@requer_modulo(Modulo.MARKETING)
+@require_POST
+def alterar_estado(request, pk):
+    entrega = get_object_or_404(PecaCampanha, pk=pk)
+    try:
+        services_entregas.alterar_estado(entrega, request.POST.get("status"), request.user,
+                                       versao=request.POST.get("versao", ""))
+    except ValidationError as erro:
+        messages.error(request, "; ".join(erro.messages))
+    else:
+        messages.success(request, "Situação da entrega atualizada.")
+    return redirect(_voltar(request))
 
 
 def _editar(request, peca=None):

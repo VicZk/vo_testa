@@ -8,6 +8,7 @@
     <a href="{% url 'marketing:nova_entrega' %}?voltar={{ request.get_full_path|urlencode }}{% if filtros.campanha.value %}&amp;campanha={{ filtros.campanha.value }}{% endif %}" class="botao-primario">Nova entrega</a>
   </div>
   {% include "marketing/_tabs.html" %}
+  {% include "marketing/_canais.html" %}
   <section class="kpis mkt-entregas-resumo" aria-label="Entregas por tipo">
     {% for tipo in resumo_tipos %}
     <div class="kpi" data-tipo="{{ tipo.tipo }}">
@@ -21,6 +22,7 @@
     {% endfor %}
   </section>
   <form method="get" class="filtros mkt-entregas-filtros" aria-label="Filtrar entregas">
+    {% if canal %}<input type="hidden" name="canal" value="{{ canal }}">{% endif %}
     {% for field in filtros %}
     <div class="filtro-campo{% if field.errors %} campo-erro{% endif %}">
       <label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}

@@ -88,7 +88,7 @@ def alterar_estado(peca, estado, usuario, *, versao=None):
     return peca
 
 
-def consultar_entregas(*, busca="", campanha=None, tipo="", situacao=""):
+def consultar_entregas(*, busca="", campanha=None, tipo="", situacao="", canal=""):
     consulta = PecaCampanha.objects.select_related(
         "campanha", "material_checklist", "concluida_por")
     if busca:
@@ -96,6 +96,8 @@ def consultar_entregas(*, busca="", campanha=None, tipo="", situacao=""):
                                    | Q(campanha__nome__icontains=busca))
     if campanha:
         consulta = consulta.filter(campanha=campanha)
+    if canal:
+        consulta = consulta.filter(canal__iexact=canal)
     contagens = {
         (linha["tipo"], linha["status"]): linha["quantidade"]
         for linha in consulta.values("tipo", "status").annotate(quantidade=Count("id"))

@@ -572,7 +572,7 @@ def marcos_do_periodo(de, ate):
     return sorted((d, n) for d, n in out if de <= d <= ate)
 
 
-def calendario_timeline(ano: int, mes: int, escala: str = "mes") -> dict:
+def calendario_timeline(ano: int, mes: int, escala: str = "mes", *, canal="") -> dict:
     """Linha do tempo: uma linha por campanha, barra cobrindo a vigência.
 
     Espelha o protótipo (buildCalendario): janela = mês (N dias) ou ano (12 meses);
@@ -614,6 +614,8 @@ def calendario_timeline(ano: int, mes: int, escala: str = "mes") -> dict:
              .prefetch_related("pecas")
              .filter(inicio__isnull=False, fim__isnull=False,
                      inicio__lte=ate, fim__gte=de).order_by("inicio"))
+    from .services_agenda import campanhas_no_canal
+    camps = campanhas_no_canal(camps, canal)
     for c in camps:
         ini = max(c.inicio, de)
         fim = min(c.fim, ate)
@@ -627,7 +629,7 @@ def calendario_timeline(ano: int, mes: int, escala: str = "mes") -> dict:
                 if c.responsavel else "sem responsável")
         pecas = []
         for p in c.pecas.all():
-            if p.data and de <= p.data <= ate:
+            if p.data and de <= p.data <= ate and (not canal or p.canal.casefold() == canal.casefold()):
                 cor = ("var(--sucesso)" if p.status == PecaCampanha.Status.PRONTA
                        else "var(--perigo)" if p.data < hoje else "var(--lampiao)")
                 pecas.append({"left": round(clamp(pos(p.data)), 2), "cor": cor,
@@ -974,14 +976,16 @@ def meus_resumo(user) -> tuple:
     return total, rot
 
 
-def quadro_colunas(minhas=None) -> list[dict]:
+def quadro_colunas(minhas=None, *, canal="") -> list[dict]:
     """As 7 colunas com cards ricos. `minhas` (dict id→motivos) liga o filtro 'Só os meus':
     mostra só as minhas, anexa o motivo (âmbar) e conta as escondidas por coluna."""
     so_meus = minhas is not None
+    from .services_agenda import campanhas_no_canal
     cols = []
     for fase, label in Campanha.Fase.choices:
         qs = (Campanha.objects.filter(fase=fase).select_related("responsavel")
               .prefetch_related("checks", "etapas", "pecas"))
+        qs = campanhas_no_canal(qs, canal)
         todas = list(qs)
         visiveis = [c for c in todas if c.id in minhas] if so_meus else todas
         escondidas = len(todas) - len(visiveis)

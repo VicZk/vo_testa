@@ -226,11 +226,11 @@
     <details class="mkt-dobra"><summary>Investimento e gastos</summary>
     {# KPIs: travada / gasta / disponível (da campanha) #}
     <div class="fx-kpis">
-      <div class="fx-kpi"><div class="fx-lb fx-kpi-rot">TRAVADA{% include "marketing/_info.html" with tip="Verba já comprometida com esta campanha (reservada do teto do mês na aprovação)." %}</div>
+      <div class="fx-kpi"><div class="fx-lb fx-kpi-rot">RESERVADO{% include "marketing/_info.html" with tip="Orçamento comprometido com esta campanha, reservado do teto do mês na aprovação." %}</div>
         <div class="num fx-kpi-val mk-tom-alerta">{{ c.verba_travada|intcomma_brl }}</div></div>
       <div class="fx-kpi"><div class="fx-lb fx-kpi-rot">GASTA{% include "marketing/_info.html" with tip="Quanto já foi efetivamente gasto nos anúncios desta campanha." %}</div>
         <div class="num fx-kpi-val mk-tom-perigo">{{ c.gasta|intcomma_brl }}</div></div>
-      <div class="fx-kpi"><div class="fx-lb fx-kpi-rot">DISPONÍVEL{% include "marketing/_info.html" with tip="Verba reservada e ainda não utilizada. Ela volta ao orçamento do mês quando a campanha é encerrada." %}</div>
+      <div class="fx-kpi"><div class="fx-lb fx-kpi-rot">DISPONÍVEL{% include "marketing/_info.html" with tip="Orçamento reservado e ainda não utilizado. Ele volta ao disponível do mês quando a campanha é encerrada." %}</div>
         <div class="num fx-kpi-val">{{ c.sobra_travada|intcomma_brl }}</div></div>
     </div>
 
