@@ -5061,17 +5061,19 @@ form.filtros:not(.subnav) :is(input:not([type=checkbox]):not([type=radio]):not([
 .cal-scroll { min-width: 0; }
 .cal-track { min-width: 0; }
 .mkt-calendario { container-type: inline-size; }
+.mkt-calendario .mk-cal-periodo { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; width: fit-content; max-width: 100%; }
+.mkt-calendario .mk-cal-mes { min-width: 0; text-align: center; text-transform: none; }
 .mkt-canais { display: flex; flex-wrap: wrap; gap: .5rem; margin-block: 1rem; }
 .mkt-canais .filtro-chip { max-width: 100%; white-space: normal; overflow-wrap: anywhere; min-height: 44px; }
 .mkt-agenda { display: grid; gap: 1rem; padding: 1rem; }
-.mkt-agenda-compacta { display: none; }
+.mkt-agenda-periodo .mkt-agenda-campanhas { display: none; }
 .mkt-agenda-dia { min-width: 0; }
 .mkt-agenda-dia h2 { font-size: 1rem; margin: 0 0 .75rem; }
 .mkt-agenda-campanha { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; padding-block: .75rem; border-bottom: 1px solid var(--fio); }
 .mkt-agenda-campanha a { overflow-wrap: anywhere; min-width: 0; }
 .mkt-agenda-campanha > span { font-size: var(--rotulo-min); }
 @container (max-width: 56rem) {
-  .mkt-agenda-compacta { display: grid; }
+  .mkt-agenda-periodo .mkt-agenda-campanhas { display: block; }
   .mkt-calendario :is(.cal-scroll, .mk-cal-legenda) { display: none; }
 }
 .cal-barra {

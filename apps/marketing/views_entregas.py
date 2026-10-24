@@ -1,5 +1,6 @@
 """Consulta e edição das entregas sem mudar a fase ou publicar a campanha."""
 from pathlib import PurePosixPath
+from urllib.parse import urlsplit
 
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -19,12 +20,17 @@ from .forms_entregas import EntregaForm, FiltroEntregasForm
 from .models import ItemChecklist, PecaCampanha
 
 
-def _voltar(request):
+def _voltar(request, *, padrao=None, considerar_origem=False):
     destino = request.POST.get("voltar") or request.GET.get("voltar") or ""
+    if not destino and considerar_origem:
+        origem = request.headers.get("HX-Current-URL", "")
+        if url_has_allowed_host_and_scheme(origem, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+            partes = urlsplit(origem)
+            destino = partes.path + ("?" + partes.query if partes.query else "")
     if destino.startswith("/") and not destino.startswith("//") and url_has_allowed_host_and_scheme(
             destino, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
         return destino
-    return reverse("marketing:entregas")
+    return padrao or reverse("marketing:entregas")
 
 
 def preparar_referencias(pecas, usuario):

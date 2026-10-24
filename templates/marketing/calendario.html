@@ -4,34 +4,22 @@
 {% block titulo %}Calendário | Marketing{% endblock %}
 
 {% block conteudo %}
+<div id="marketing-calendario">
 {% include "marketing/_cabecalho.html" with titulo="Calendário de campanhas" descricao="Acompanhe as entregas da semana e as campanhas em andamento." %}
 {% include "marketing/_canais.html" %}
 
 <section class="mk-secao fim mkt-calendario">
   <div class="mk-cal-cab">
     <div class="mk-cal-periodo">
-    <a href="{{ anterior_url }}" class="mk-cal-nav" aria-label="Período anterior">‹</a>
+    {% if anterior_url %}<a href="{{ anterior_url }}" class="mk-cal-nav" aria-label="Período anterior">‹</a>{% else %}<span class="mk-cal-nav" aria-disabled="true">‹</span>{% endif %}
     <h2 class="mk-cal-mes">{{ tl.titulo }}</h2>
-    <a href="{{ proximo_url }}" class="mk-cal-nav" aria-label="Próximo período">›</a>
+    {% if proximo_url %}<a href="{{ proximo_url }}" class="mk-cal-nav" aria-label="Próximo período">›</a>{% else %}<span class="mk-cal-nav" aria-disabled="true">›</span>{% endif %}
     </div>
     <div class="mk-cal-vista" role="group" aria-label="Escala do calendário">
     {% for vista in vistas %}<a href="{{ vista.url }}" class="mk-pil larga{% if escala == vista.valor %} on{% endif %}"{% if escala == vista.valor %} aria-current="page"{% endif %}>{{ vista.nome }}</a>{% endfor %}
     </div>
   </div>
 
-  <div class="mkt-agenda{% if escala != 'semana' %} mkt-agenda-compacta{% endif %}">
-    {% for dia in agenda.dias %}
-    <section class="mkt-agenda-dia" aria-label="{{ dia.data|date:'l, d/m/Y' }}">
-      <h2><time datetime="{{ dia.data|date:'Y-m-d' }}">{{ dia.data|date:"l, d/m"|capfirst }}</time></h2>
-      {% for p in dia.entregas %}{% include "marketing/_entrega_linha.html" %}{% empty %}<p class="subtitulo">Sem entregas neste dia.</p>{% endfor %}
-    </section>
-    {% empty %}<p class="subtitulo">Nenhuma entrega com prazo neste período.</p>{% endfor %}
-    <section class="mkt-agenda-dia" aria-label="Campanhas no período">
-      <h2>Campanhas no período</h2>
-      {% for campanha in agenda.campanhas %}<article class="mkt-agenda-campanha"><a href="{% url 'marketing:detalhe' campanha.pk %}">{{ campanha.nome }}</a><span>{{ campanha.inicio|date:"d/m/Y" }} a {{ campanha.fim|date:"d/m/Y" }}</span><span class="selo">{{ campanha.get_fase_display }}</span></article>{% empty %}<p class="subtitulo">Nenhuma campanha com período definido.</p>{% endfor %}
-    </section>
-    <a class="botao-neutro" href="{{ agenda.sem_data_url }}{% if canal %}?canal={{ canal|urlencode }}{% endif %}">Ver todas as entregas, inclusive sem data</a>
-  </div>
 
   {% if escala != 'semana' %}
   {% comment %}As posições das barras saem em % — forçar PONTO decimal: a localização
@@ -92,8 +80,24 @@
     <p>Barra hachurada = início futuro; cheia = período já iniciado. A linha vermelha é hoje; os pontos são os prazos das entregas.</p>
   </div>
   {% endif %}
+  <div class="mkt-agenda{% if escala != 'semana' %} mkt-agenda-periodo{% endif %}">
+    {% for dia in agenda.dias %}
+    <section class="mkt-agenda-dia" aria-label="{{ dia.data|date:'l, d/m/Y' }}">
+      <h2><time datetime="{{ dia.data|date:'Y-m-d' }}">{{ dia.data|date:"l, d/m"|capfirst }}</time></h2>
+      {% for p in dia.entregas %}{% include "marketing/_entrega_linha.html" %}{% empty %}<p class="subtitulo">Sem entregas neste dia.</p>{% endfor %}
+    </section>
+    {% empty %}<p class="subtitulo">Nenhuma entrega com prazo neste período.</p>{% endfor %}
+    <section class="mkt-agenda-dia mkt-agenda-campanhas" aria-label="Campanhas no período">
+      <h2>Campanhas no período</h2>
+      {% for campanha in agenda.campanhas %}<article class="mkt-agenda-campanha"><a href="{% url 'marketing:detalhe' campanha.pk %}">{{ campanha.nome }}</a><span>{{ campanha.inicio|date:"d/m/Y" }} a {{ campanha.fim|date:"d/m/Y" }}</span><span class="selo">{{ campanha.get_fase_display }}</span></article>{% empty %}<p class="subtitulo">Nenhuma campanha com período definido.</p>{% endfor %}
+    </section>
+    <a class="botao-neutro" href="{{ agenda.sem_data_url }}{% if canal %}?canal={{ canal|urlencode }}{% endif %}">Ver todas as entregas, inclusive sem data</a>
+  </div>
+
 </section>
 
+</div>
+<div hidden hx-get="{{ request.get_full_path }}" hx-trigger="marketing:atualizar from:body" hx-target="#marketing-calendario" hx-select="#marketing-calendario" hx-swap="outerHTML"></div>
 
 {% include "marketing/_moeda_js.html" %}
 {% include "marketing/_dica.html" %}

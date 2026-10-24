@@ -2,7 +2,8 @@
 from collections import defaultdict
 from datetime import timedelta
 
-from django.db.models import Q
+from django.db.models import JSONField, Q, TextField
+from django.db.models.functions import Cast, Lower
 from django.urls import reverse
 
 from .models import Campanha, PecaCampanha
@@ -12,12 +13,16 @@ def canais_disponiveis():
     canais = set(PecaCampanha.objects.exclude(canal="").values_list("canal", flat=True))
     for lista in Campanha.objects.values_list("canais", flat=True):
         canais.update(canal for canal in lista if isinstance(canal, str) and canal.strip())
-    return sorted(canais, key=str.casefold)
+    unicos = {}
+    for canal in sorted(canais):
+        unicos.setdefault(canal.lower(), canal)
+    return sorted(unicos.values(), key=str.lower)
 
 
 def filtros_canais(request):
-    selecionado = request.GET.get("canal", "").strip()[:40]
+    selecionado = request.GET.get("canal", "").strip()
     canais = canais_disponiveis()
+    selecionado = next((canal for canal in canais if canal.lower() == selecionado.lower()), selecionado)
     if selecionado and selecionado not in canais:
         canais.append(selecionado)
     return selecionado, [{"valor": canal, "nome": canal or "Todos os canais",
@@ -28,7 +33,8 @@ def campanhas_no_canal(consulta, canal):
     if not canal:
         return consulta
     # Inclui o canal da campanha e o das entregas; ambos são dados do usuário.
-    return consulta.filter(Q(canais__contains=[canal]) | Q(pecas__canal__iexact=canal)).distinct()
+    return consulta.annotate(_canais_normalizados=Cast(Lower(Cast("canais", TextField())), JSONField())).filter(
+        Q(_canais_normalizados__contains=[canal.lower()]) | Q(pecas__canal__iexact=canal)).distinct()
 
 
 def agenda_periodo(inicio, fim, *, canal="", semana=False):

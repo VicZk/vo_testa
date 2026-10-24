@@ -1,11 +1,12 @@
 """Agenda, filtros de canal e ações de produção preservam o fluxo da campanha."""
-from datetime import date
+from datetime import date, timedelta
 from urllib.parse import parse_qs, urlsplit
 
 from django.contrib.messages import ERROR
 from django.core.cache import cache
 from django.test import Client, TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.nucleo.models import ModuloContratado, Usuario
 from apps.nucleo.modulos import Modulo
@@ -17,7 +18,7 @@ class AgendaMarketingTests(TestCase):
     def setUp(self):
         cache.clear()
         ModuloContratado.objects.update_or_create(codigo=Modulo.MARKETING, defaults={"ativo": True})
-        self.usuario = Usuario.objects.create_superuser(username="agenda", password="qa-local")
+        self.usuario = Usuario.objects.create_superuser(username="agenda")
         self.client.force_login(self.usuario)
         self.campanha = Campanha.objects.create(nome="Semana da casa", fase="producao",
                                                inicio=date(2026, 10, 19), fim=date(2026, 10, 25),
@@ -61,10 +62,54 @@ class AgendaMarketingTests(TestCase):
             with self.subTest(parametros=parametros):
                 self.assertEqual(self.client.get(self.calendario, parametros).status_code, 200)
 
+    def test_bookmark_mensal_antigo_e_limites_de_navegacao(self):
+        resposta = self.client.get(self.calendario, {"ano": 2025, "mes": 9})
+        self.assertEqual(resposta.context["escala"], "mes")
+        self.assertEqual((resposta.context["ano"], resposta.context["mes"]), (2025, 9))
+        for parametros, chave in (({"vista": "ano", "ano": 2}, "anterior_url"),
+                                  ({"vista": "mes", "ano": 9998, "mes": 12}, "proximo_url"),
+                                  ({"vista": "semana", "data": "0002-01-01"}, "anterior_url")):
+            self.assertIsNone(self.client.get(self.calendario, parametros).context[chave])
+
+    def test_canal_filtra_urgencias_e_contagem_das_minhas_campanhas(self):
+        self.campanha.responsavel = self.usuario
+        self.campanha.save()
+        outra = Campanha.objects.create(nome="Campanha WhatsApp", responsavel=self.usuario, canais=["WhatsApp"])
+        hoje = timezone.localdate()
+        self.entrega.data = hoje
+        self.entrega.save()
+        PecaCampanha.objects.create(campanha=outra, nome="Aviso hoje", canal="WhatsApp", data=hoje)
+        PecaCampanha.objects.create(campanha=outra, nome="Aviso vencido", canal="WhatsApp", data=hoje - timedelta(days=1))
+        resposta = self.client.get(reverse("marketing:quadro"), {"canal": "Instagram", "meus": 1})
+        self.assertEqual([p["nome"] for p in resposta.context["proximos"]], [self.entrega.nome])
+        self.assertEqual(resposta.context["proximos_resumo"], "1 hoje")
+        self.assertEqual(resposta.context["atrasados"], [])
+        self.assertEqual(resposta.context["meus_count"], 1)
+        self.assertContains(resposta, "ORÇAMENTO GERAL")
+
+    def test_ficha_preserva_origem_local_e_rejeita_origem_externa(self):
+        ficha = reverse("marketing:ficha", args=[self.campanha.pk])
+        origem = self.calendario + "?data=2026-10-23&canal=Instagram"
+        resposta = self.client.get(ficha, headers={"HX-Request": "true", "HX-Current-URL": "http://testserver" + origem})
+        self.assertEqual(resposta.context["voltar_entrega"], origem)
+        resposta = self.client.get(ficha, headers={"HX-Request": "true", "HX-Current-URL": "https://externo.test/"})
+        self.assertEqual(resposta.context["voltar_entrega"], reverse("marketing:detalhe", args=[self.campanha.pk]))
+
     def test_canal_desconhecido_nao_remove_filtro_nem_retorna_tudo(self):
         resposta = self.client.get(self.calendario, {"data": "2026-10-23", "canal": "Não cadastrado"})
         self.assertFalse(any(dia["entregas"] for dia in resposta.context["agenda"]["dias"]))
         self.assertEqual(resposta.context["canal"], "Não cadastrado")
+
+    def test_canal_personalizado_longo_nao_e_truncado_e_caixa_nao_duplica_opcoes(self):
+        longo = "Parcerias com os estabelecimentos da região serrana"
+        self.campanha.canais = [longo, "INSTAGRAM"]
+        self.campanha.save()
+        for canal in (longo, "instagram", "INSTAGRAM"):
+            resposta = self.client.get(reverse("marketing:quadro"), {"canal": canal})
+            cards = [card["obj"].pk for coluna in resposta.context["colunas"] for card in coluna["cards"]]
+            self.assertEqual(cards, [self.campanha.pk])
+        opcoes = [canal["valor"].lower() for canal in resposta.context["canais"]]
+        self.assertEqual(opcoes.count("instagram"), 1)
 
     def test_lista_e_quadro_respeitam_canal_da_entrega_ou_campanha(self):
         outra = Campanha.objects.create(nome="Campanha de outro canal", canais=["WhatsApp"])
@@ -105,7 +150,7 @@ class AgendaMarketingTests(TestCase):
         protegido = Client(enforce_csrf_checks=True)
         protegido.force_login(self.usuario)
         self.assertEqual(protegido.post(url, {"status": "pronta", "versao": 1}).status_code, 403)
-        restrito = Usuario.objects.create_user(username="sem-marketing", password="qa-local")
+        restrito = Usuario.objects.create_user(username="sem-marketing")
         self.client.force_login(restrito)
         self.assertEqual(self.client.post(url, {"status": "pronta", "versao": 1}).status_code, 403)
         self.client.force_login(self.usuario)

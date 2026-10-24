@@ -24,7 +24,7 @@ class MarketingAgendaE2ETests(_BaseE2E):
         super().setUp()
         cache.clear()
         ModuloContratado.objects.update_or_create(codigo=Modulo.MARKETING, defaults={"ativo": True})
-        self.usuario = Usuario.objects.create_superuser(username="agenda-e2e", password="qa-local")
+        self.usuario = Usuario.objects.create_superuser(username="agenda-e2e")
         self.client.force_login(self.usuario)
         self.cookie = {"name": settings.SESSION_COOKIE_NAME,
                        "value": self.client.cookies[settings.SESSION_COOKIE_NAME].value,
@@ -77,10 +77,10 @@ class MarketingAgendaE2ETests(_BaseE2E):
                         self.conferir(pagina)
                         if largura <= 821:
                             expect(pagina.locator(".cal-scroll")).to_be_hidden()
-                            expect(pagina.locator(".mkt-agenda-compacta")).to_be_visible()
+                            expect(pagina.locator(".mkt-agenda-periodo")).to_be_visible()
                         else:
                             expect(pagina.locator(".cal-scroll")).to_be_visible()
-                            expect(pagina.locator(".mkt-agenda-compacta")).to_be_hidden()
+                            expect(pagina.locator(".mkt-agenda-periodo")).to_be_visible()
                         self.foto(pagina, f"{escala}-{largura}-{'trilho' if recolhida else 'aberta'}")
                 finally:
                     contexto.close()
@@ -119,3 +119,53 @@ class MarketingAgendaE2ETests(_BaseE2E):
         expect(self.page.locator(".mkt-entrega")).to_have_count(1)
         self.page.get_by_role("button", name="Todos os canais", exact=True).click()
         expect(self.page.get_by_label("Buscar entrega")).to_have_value("Carrossel")
+
+    def test_entrega_sem_vigencia_e_lp_aparecem_tambem_no_mes_e_ano_desktop(self):
+        from apps.comercial.models import PaginaCaptacao
+
+        ModuloContratado.objects.update_or_create(codigo=Modulo.COMERCIAL, defaults={"ativo": True})
+        lp = PaginaCaptacao.objects.create(nome="Agenda da primavera QA", slug="agenda-primavera-qa", criado_por=self.usuario)
+        self.campanha.inicio = self.campanha.fim = None
+        self.campanha.save()
+        self.entrega.tipo = "lp"
+        self.entrega.pagina_captacao_id = lp.pk
+        self.entrega.save()
+        self.page.set_viewport_size({"width": 1440, "height": 900})
+        for escala in ("semana", "mes", "ano"):
+            self.abrir(self.page, f"vista={escala}&data=2026-10-23&ano=2026&mes=10")
+            entrega = self.page.locator(f'.mkt-entrega[data-entrega="{self.entrega.pk}"]')
+            expect(entrega).to_be_visible()
+            expect(entrega.get_by_role("link", name="Abrir LP", exact=True)).to_be_visible()
+        ModuloContratado.objects.filter(codigo=Modulo.COMERCIAL).update(ativo=False)
+        cache.clear()
+        self.page.reload()
+        expect(self.page.get_by_role("link", name="Abrir LP", exact=True)).to_have_count(0)
+
+    def test_fechar_ficha_atualiza_agenda_apos_remover_entrega(self):
+        pagina = self.page
+        self.abrir(pagina, "data=2026-10-23&canal=Instagram")
+        entrega = pagina.locator(f'#marketing-calendario [data-entrega="{self.entrega.pk}"]')
+        entrega.get_by_role("link", name=self.campanha.nome, exact=True).click()
+        ficha = pagina.locator("#ficha-slot")
+        expect(ficha).to_be_visible()
+        pagina.once("dialog", lambda dialog: dialog.accept())
+        ficha.locator(f'[data-entrega="{self.entrega.pk}"]').get_by_role("button", name="Remover", exact=True).click()
+        expect(ficha.locator(f'[data-entrega="{self.entrega.pk}"]')).to_have_count(0)
+        pagina.get_by_role("button", name="Fechar campanha", exact=True).click()
+        expect(pagina.locator(f'#marketing-calendario [data-entrega="{self.entrega.pk}"]')).to_have_count(0)
+        self.assertIn("canal=Instagram", pagina.url)
+        expect(pagina.locator("#marketing-calendario h1")).to_be_focused()
+
+    def test_editar_entrega_pela_ficha_retorna_ao_periodo_e_canal_da_agenda(self):
+        pagina = self.page
+        self.abrir(pagina, "data=2026-10-23&canal=Instagram")
+        origem = pagina.url
+        pagina.locator(f'#marketing-calendario [data-entrega="{self.entrega.pk}"]').get_by_role(
+            "link", name=self.campanha.nome, exact=True).click()
+        ficha = pagina.locator("#ficha-slot")
+        expect(ficha).to_be_visible()
+        ficha.locator(f'[data-entrega="{self.entrega.pk}"]').get_by_role("link", name="Editar entrega", exact=True).click()
+        pagina.get_by_label("Nome da entrega").fill("Carrossel revisado na ficha")
+        pagina.get_by_role("button", name="Salvar entrega", exact=True).click()
+        expect(pagina).to_have_url(origem)
+        expect(pagina.get_by_role("heading", name="Carrossel revisado na ficha", exact=True)).to_be_visible()

@@ -22,22 +22,28 @@ def quadro_por_fase() -> list[dict]:
     ]
 
 
-def pecas_proximos_dias(dias: int = 7):
+def pecas_proximos_dias(dias: int = 7, *, canal=""):
     """Peças datadas a sair nos próximos `dias` (ainda não prontas)."""
     hoje = timezone.localdate()
-    return (PecaCampanha.objects
+    consulta = (PecaCampanha.objects
             .filter(data__gte=hoje, data__lte=hoje + timedelta(days=dias))
             .exclude(status=PecaCampanha.Status.PRONTA)
-            .select_related("campanha").order_by("data")[:20])
+            .select_related("campanha").order_by("data", "pk"))
+    if canal:
+        consulta = consulta.filter(canal__iexact=canal)
+    return consulta[:20]
 
 
-def pecas_atrasadas():
+def pecas_atrasadas(*, canal=""):
     """Peças com data no passado e ainda não prontas — o que já devia ter saído."""
     hoje = timezone.localdate()
-    return (PecaCampanha.objects
+    consulta = (PecaCampanha.objects
             .filter(data__lt=hoje)
             .exclude(status=PecaCampanha.Status.PRONTA)
-            .select_related("campanha").order_by("data")[:20])
+            .select_related("campanha").order_by("data", "pk"))
+    if canal:
+        consulta = consulta.filter(canal__iexact=canal)
+    return consulta[:20]
 
 
 # ── Verba mensal (Passo 3): teto por mês; travada e gasta = soma das campanhas ──
@@ -959,15 +965,15 @@ def motivos_meus(user) -> dict:
     return motivos
 
 
-def meus_resumo(user) -> tuple:
+def meus_resumo(user, *, motivos=None) -> tuple:
     """(total, rótulo) do botão 'Só os meus' — ex.: (4, '4 campanhas · 1 a aprovar')."""
     from .models import EtapaCampanha
-    mot = motivos_meus(user)
+    mot = motivos_meus(user) if motivos is None else motivos
     total = len(mot)
     if not total:
         return 0, "nada atribuído a você"
     aprovar = sum(1 for ms in mot.values() if "espera sua aprovação" in ms)
-    tarefas = EtapaCampanha.objects.filter(dono=user, feito=False).count()
+    tarefas = EtapaCampanha.objects.filter(dono=user, feito=False, campanha_id__in=mot).count()
     rot = f"{total} campanha{'s' if total != 1 else ''}"
     if aprovar:
         rot += f" · {aprovar} a aprovar"
@@ -1029,42 +1035,45 @@ def _resp_de(campanha) -> str:
     return (u.get_full_name() or u.username) if u else "sem responsável"
 
 
-def banda_proximos(dias: int = 7) -> list[dict]:
+def banda_proximos(dias: int = 7, *, canal="") -> list[dict]:
     """Peças de hoje até domingo (7 dias), não prontas — a agenda da semana."""
     hoje = timezone.localdate()
     out = []
-    for p in pecas_proximos_dias(dias):
+    consulta = pecas_proximos_dias(dias, canal=canal)
+    for p in consulta:
         hoje_flag = p.data == hoje
         out.append({
             "id": p.campanha_id, "nome": p.nome, "campanha": p.campanha.nome,
             "canal": p.canal or "—", "responsavel": _resp_de(p.campanha),
-            "quando": "sai hoje" if hoje_flag else p.data.strftime("%d/%m"),
+            "quando": "prazo hoje" if hoje_flag else p.data.strftime("%d/%m"),
             "hoje": hoje_flag,
         })
     return out
 
 
-def resumo_proximos(dias: int = 7) -> str:
+def resumo_proximos(dias: int = 7, *, canal="") -> str:
     """'N hoje · M até domingo' (ou 'nada hoje')."""
     hoje = timezone.localdate()
-    itens = list(pecas_proximos_dias(dias))
+    consulta = pecas_proximos_dias(dias, canal=canal)
+    itens = list(consulta)
     h = sum(1 for p in itens if p.data == hoje)
     a2 = len(itens) - h
     txt = f"{h} hoje" if h else "nada hoje"
     if a2:
-        txt += f" · {a2} até domingo"
+        txt += f" · {a2} nos próximos {dias} dias"
     return txt
 
 
-def banda_atrasados() -> list[dict]:
+def banda_atrasados(*, canal="") -> list[dict]:
     """Peças vencidas e não prontas — o painel de atrasos (selo PEÇA)."""
     hoje = timezone.localdate()
     out = []
-    for p in pecas_atrasadas():
+    consulta = pecas_atrasadas(canal=canal)
+    for p in consulta:
         d = (hoje - p.data).days
         out.append({
             "id": p.campanha_id, "texto": p.nome, "canal": p.canal or "—",
-            "campanha": p.campanha.nome, "dono": _resp_de(p.campanha), "tipo": "PEÇA",
+            "campanha": p.campanha.nome, "dono": _resp_de(p.campanha), "tipo": "ENTREGA",
             "desde": f"há {d} dia{'s' if d != 1 else ''}" if d else "agora",
         })
     return out

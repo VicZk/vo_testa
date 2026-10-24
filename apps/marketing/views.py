@@ -25,15 +25,18 @@ def quadro(request):
     teto = float(pos["teto"]) or 0
     gasta = float(pos["gasta"])
     travada = float(pos["travada"])
-    atrasados = services.banda_atrasados()
+    atrasados = services.banda_atrasados(canal=canal)
     # Contador e filtro do "Só os meus" SAEM DA MESMA FUNÇÃO (senão divergem).
     minhas = services.motivos_meus(user)
-    meus_count, meus_label = services.meus_resumo(user)
+    if canal:
+        ids = set(services_agenda.campanhas_no_canal(Campanha.objects.filter(pk__in=minhas), canal).values_list("pk", flat=True))
+        minhas = {pk: motivos for pk, motivos in minhas.items() if pk in ids}
+    meus_count, meus_label = services.meus_resumo(user, motivos=minhas)
     return render(request, "marketing/quadro.html", {
         "colunas": services.quadro_colunas(minhas if so_meus else None, canal=canal),
         "canal": canal, "canais": canais,
-        "proximos": services.banda_proximos(),
-        "proximos_resumo": services.resumo_proximos(),
+        "proximos": services.banda_proximos(canal=canal),
+        "proximos_resumo": services.resumo_proximos(canal=canal),
         "atrasados": atrasados,
         "atrasos_resumo": f"{len(atrasados)} pendência{'s' if len(atrasados) != 1 else ''} atrasada{'s' if len(atrasados) != 1 else ''}",
         "verba": pos,
@@ -156,7 +159,7 @@ def _ficha_ctx(request, campanha, dados_invalidos=None):
 
     from django.urls import reverse
 
-    from .views_entregas import preparar_referencias
+    from .views_entregas import _voltar, preparar_referencias
 
     formularios = {}
     for secao, campos in SECOES.items():
@@ -174,7 +177,7 @@ def _ficha_ctx(request, campanha, dados_invalidos=None):
         "etapas": list(campanha.etapas.select_related("dono").all()),
         "entregas": preparar_referencias(list(campanha.pecas.select_related(
             "campanha", "material_checklist").order_by("tipo", "data", "id")), request.user),
-        "voltar_entrega": reverse("marketing:detalhe", args=[campanha.pk]),
+        "voltar_entrega": _voltar(request, padrao=reverse("marketing:detalhe", args=[campanha.pk]), considerar_origem=True),
         "materiais": [
             {"id": item.pk, "nome": PurePosixPath(item.arquivo.name).name}
             for item in campanha.checks.exclude(arquivo="").exclude(arquivo__isnull=True)
@@ -388,8 +391,10 @@ def calendario(request):
     from datetime import timedelta
 
     from django.utils import timezone
+
+    from .views_entregas import preparar_referencias
     hoje = timezone.localdate()
-    escala = request.GET.get("vista", "semana")
+    escala = request.GET.get("vista") or ("mes" if "ano" in request.GET or "mes" in request.GET else "semana")
     if escala not in ("semana", "mes", "ano"):
         escala = "semana"
     canal, canais = services_agenda.filtros_canais(request)
@@ -423,20 +428,27 @@ def calendario(request):
         prev, nxt = {"ano": p.year, "mes": p.month}, {"ano": x.year, "mes": x.month}
         inicio, fim = _date(ano, mes, 1), _date(ano, mes, calendar.monthrange(ano, mes)[1])
     if escala != "semana":
+        referencia = inicio
         tl = services.calendario_timeline(ano, mes, escala, canal=canal)
 
     def endereco(**parametros):
+        ano_destino = (_date.fromisoformat(parametros["data"]).year if parametros.get("vista") == "semana"
+                       else parametros["ano"])
+        if not 2 <= ano_destino <= 9998:
+            return None
         query = request.GET.copy()
         for chave in ("vista", "data", "ano", "mes"):
             query.pop(chave, None)
         query.update(parametros)
         return "?" + query.urlencode()
 
+    agenda = services_agenda.agenda_periodo(inicio, fim, canal=canal, semana=escala == "semana")
+    preparar_referencias([entrega for dia in agenda["dias"] for entrega in dia["entregas"]], request.user)
     return render(request, "marketing/calendario.html", {
-        "tl": tl, "agenda": services_agenda.agenda_periodo(inicio, fim, canal=canal, semana=escala == "semana"),
+        "tl": tl, "agenda": agenda,
         "voltar_entrega": request.get_full_path(), "canal": canal, "canais": canais,
         "anterior_url": endereco(vista=escala, **prev), "proximo_url": endereco(vista=escala, **nxt),
-        "vistas": [{"nome": nome, "valor": valor, "url": endereco(vista=valor, ano=ano, mes=mes, data=inicio.isoformat())}
+        "vistas": [{"nome": nome, "valor": valor, "url": endereco(vista=valor, ano=ano, mes=mes, data=referencia.isoformat())}
                    for valor, nome in (("semana", "Semana"), ("mes", "Mês"), ("ano", "Ano"))],
         "escala": escala, "ano": ano, "mes": mes, "prev": prev, "next": nxt,
         "atual": "marketing", "aba": "calendario",
