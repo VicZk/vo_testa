@@ -6929,7 +6929,10 @@ body.escala-dragging .escala-drop { cursor: copy; }
   .est-posicao .est-kpis .kpi:first-child .kpi-nota { grid-column: 1 / -1; }
   .est-posicao .est-kpis .kpi:not(:first-child) { padding-inline: .35rem; }
   .est-posicao .est-kpis .kpi:not(:first-child) .kpi-rotulo { letter-spacing: 0; overflow-wrap: normal; }
-  .est-posicao .est-kpis .kpi:not(:first-child) .kpi-topo { min-height: calc(var(--rotulo-min) * 4.5); }
+  /* A linha da grade já iguala os cartões. O valor fica na base e o rótulo
+     ocupa só as linhas necessárias, sem reservar uma terceira linha vazia. */
+  .est-posicao .est-kpis .kpi:not(:first-child) .kpi-topo { min-height: 0; }
+  .est-posicao .est-kpis .kpi:not(:first-child) .kpi-valor { margin-top: auto; }
   .est-posicao .est-kpis .kpi:not(:first-child) .kpi-nota { display: none; }
   .est-posicao .est-filtros { gap: 0 .6rem; margin-bottom: .5rem; }
   .est-posicao .est-busca-linha { flex-basis: 100%; }
