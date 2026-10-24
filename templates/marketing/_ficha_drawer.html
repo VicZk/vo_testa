@@ -1,4 +1,4 @@
-{% load nucleo_extras moeda %}
+{% load nucleo_extras moeda canais_marketing %}
 <aside class="fx-gaveta" data-mkt-ficha data-mkt-campanha="{{ c.pk }}" data-voltar="{% url 'marketing:quadro' %}">
   <div class="modal-cabecalho fx-cab">
     <div class="mk-elastico"><span class="fx-cod">{{ c.codigo }} · {{ c.get_fase_display }}</span><h2 id="ficha-campanha-titulo">{{ c.nome }}</h2></div>
@@ -20,13 +20,13 @@
         {% for canal in canais_padrao %}
         <form method="post" action="{% url 'marketing:alternar_canal' c.pk %}" hx-post="{% url 'marketing:alternar_canal' c.pk %}" hx-target="#ficha-slot" hx-swap="innerHTML">
           {% csrf_token %}<input type="hidden" name="canal" value="{{ canal }}">
-          <button type="submit" class="fx-chip {% if canal in c.canais %}on{% endif %}">{{ canal }}</button>
+          <button type="submit" class="fx-chip {% if canal in c.canais %}on{% endif %}">{% icone_canal canal %}{{ canal }}</button>
         </form>
         {% endfor %}
         {% for canal in c.canais %}{% if canal not in canais_padrao %}
         <form method="post" action="{% url 'marketing:alternar_canal' c.pk %}" hx-post="{% url 'marketing:alternar_canal' c.pk %}" hx-target="#ficha-slot" hx-swap="innerHTML">
           {% csrf_token %}<input type="hidden" name="canal" value="{{ canal }}">
-          <button type="submit" class="fx-chip on">{{ canal }}</button>
+          <button type="submit" class="fx-chip on">{% icone_canal canal %}{{ canal }}</button>
         </form>
         {% endif %}{% endfor %}
       </div>

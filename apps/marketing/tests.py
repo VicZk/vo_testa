@@ -953,3 +953,37 @@ class VerbaGuardTests(TestCase):
         self.c.refresh_from_db()
         self.assertEqual(self.c.verba_prevista, Decimal("100.00"))   # congelada
         self.assertNotEqual(str(self.c.inicio), "2030-01-01")        # congelado
+
+
+class IconesDeCanalEVerbaTests(TestCase):
+    """Quadro: canal vira ícone (nome no aria-label e na dica) e o teto do mês é um
+    valor na linha de Reservado e Gasto, com o campo escondido em "Alterar"."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        U = get_user_model()
+        self.user = U.objects.create_user(username="mkt-icones", password="x123456789")
+        self.user.is_superuser = True
+        self.user.is_staff = True
+        self.user.save()
+        self.client.force_login(self.user)
+        Campanha.objects.create(nome="Primavera", solicitante=self.user,
+                                canais=["Instagram", "Google", "Mídia Offline"])
+
+    def test_quadro_mostra_icones_de_canal_e_teto_como_valor(self):
+        r = self.client.get("/crm/marketing/")
+        self.assertEqual(r.status_code, 200)
+        html = r.content.decode()
+        self.assertIn('class="mk-canal" role="img" aria-label="Instagram" data-dica="Instagram"', html)
+        self.assertIn("ico-canal--marca", html)   # Instagram e Google: traçado da marca
+        self.assertIn("ico-canal--traco", html)   # Mídia Offline: ícone genérico
+        self.assertNotIn('<span class="rotulo-dado">Instagram</span>', html)
+        self.assertIn("GASTO", html)
+        self.assertNotIn("GASTA<", html)
+        self.assertIn('<details class="mk-teto"', html)
+        self.assertIn('name="valor"', html)
+
+    def test_filtro_de_canal_leva_icone(self):
+        html = self.client.get("/crm/marketing/").content.decode()
+        self.assertIn('value="Instagram" class="filtro-chip" aria-pressed="false"><svg class="ico-canal ico-canal--marca"', html)
+        self.assertIn('value="" class="filtro-chip ativo" aria-pressed="true">Todos os canais', html)

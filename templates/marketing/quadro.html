@@ -3,7 +3,7 @@
 {% block titulo %}Marketing | CRM Vô Testa{% endblock %}
 
 {% block conteudo %}
-{% load moeda %}
+{% load moeda canais_marketing %}
 <div id="marketing-quadro">
 {% include "marketing/_cabecalho.html" with titulo="Quadro de campanhas" descricao="Acompanhe as campanhas em cinco grupos. Abra o próximo passo para conferir os requisitos e avançar." %}
 {% include "marketing/_canais.html" %}
@@ -80,24 +80,29 @@
       </div>
     </div>
     <div class="mk-verba-nums">
-      <span class="mk-verba-num">
+      <div class="mk-verba-num">
         <span class="mk-rotulo bloco">RESERVADO</span>
-        <span class="num mk-verba-n mk-tom-alerta">{{ verba.travada|intcomma_brl }}</span></span>
-      <span class="mk-verba-num">
-        <span class="mk-rotulo bloco">GASTA</span>
-        <span class="num mk-verba-n mk-tom-perigo">{{ verba.gasta|intcomma_brl }}</span></span>
-      <span class="mk-verba-num">
+        <span class="num mk-verba-n mk-tom-alerta">{{ verba.travada|intcomma_brl }}</span></div>
+      <div class="mk-verba-num">
+        <span class="mk-rotulo bloco">GASTO</span>
+        <span class="num mk-verba-n mk-tom-perigo">{{ verba.gasta|intcomma_brl }}</span></div>
+      <div class="mk-verba-num">
         <span class="mk-rotulo bloco">TETO DO MÊS</span>
         {% if eh_gerente %}
-        <form data-preservar-erros method="post" action="{% url 'marketing:editar_teto' %}" class="mk-teto-form">
-          {% csrf_token %}<input type="hidden" name="mes" value="{{ verba.mes }}">
-          <input type="text" name="valor" class="js-moeda mk-teto-campo" value="{{ verba.teto|intcomma_brl }}">
-          <button type="submit" class="mk-teto-salvar">Salvar</button>
-        </form>
+        {% comment %}O valor fica na linha dos outros dois; o campo só aparece em
+        "Alterar" (e o foco já vai para ele).{% endcomment %}
+        <details class="mk-teto" ontoggle="if (this.open) this.querySelector('input[name=valor]').select()">
+          <summary class="mk-teto-resumo"><span class="num mk-verba-n">{{ verba.teto|intcomma_brl }}</span><span class="mk-teto-alterar"><span class="mk-teto-abrir">Alterar</span><span class="mk-teto-fechar">Cancelar</span></span></summary>
+          <form data-preservar-erros method="post" action="{% url 'marketing:editar_teto' %}" class="mk-teto-form">
+            {% csrf_token %}<input type="hidden" name="mes" value="{{ verba.mes }}">
+            <input type="text" name="valor" class="js-moeda mk-teto-campo" value="{{ verba.teto|intcomma_brl }}" aria-label="Novo teto do mês">
+            <button type="submit" class="mk-teto-salvar">Salvar</button>
+          </form>
+        </details>
         {% else %}
         <span class="num mk-verba-n">{{ verba.teto|intcomma_brl }}</span>
         {% endif %}
-      </span>
+      </div>
     </div>
   </div>
   <div class="mk-verba-trilho">
@@ -150,7 +155,7 @@
         {% endif %}
         {% if c.canais %}
         <div class="mk-card-canais">
-          {% for ch in c.canais %}<span class="rotulo-dado">{{ ch }}</span>{% endfor %}
+          {% for ch in c.canais %}<span class="mk-canal" role="img" aria-label="{{ ch }}" data-dica="{{ ch }}">{% icone_canal ch %}</span>{% endfor %}
         </div>
         {% endif %}
         <div class="mk-card-dono">

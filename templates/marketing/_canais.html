@@ -1,4 +1,5 @@
+{% load canais_marketing %}
 <form method="get" class="filtros-chips mkt-canais" aria-label="Filtrar por canal">
   {% for chave, valor in request.GET.items %}{% if chave != 'canal' and chave != 'pagina' %}<input type="hidden" name="{{ chave }}" value="{{ valor }}">{% endif %}{% endfor %}
-  {% for item in canais %}<button type="submit" name="canal" value="{{ item.valor }}" class="filtro-chip{% if item.ativo %} ativo{% endif %}" aria-pressed="{{ item.ativo|yesno:'true,false' }}">{{ item.nome }}</button>{% endfor %}
+  {% for item in canais %}<button type="submit" name="canal" value="{{ item.valor }}" class="filtro-chip{% if item.ativo %} ativo{% endif %}" aria-pressed="{{ item.ativo|yesno:'true,false' }}">{% if item.valor %}{% icone_canal item.nome %}{% endif %}{{ item.nome }}</button>{% endfor %}
 </form>

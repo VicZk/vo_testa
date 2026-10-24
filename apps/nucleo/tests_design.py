@@ -1628,3 +1628,30 @@ class IniciaisNaBolinhaTests(TestCase):
         bloco = re.search(r"\n\.lb-avatar, \.lb-av, \.fx-av, \.avatar \{([^}]*)\}", css)
         self.assertIsNotNone(bloco, "as bolinhas de iniciais precisam recortar o conteúdo")
         self.assertIn("overflow: hidden", bloco.group(1))
+
+
+class CantosDasCaixasTests(TestCase):
+    """O quadrado branco no cantinho das caixas arredondadas: o invólucro rolante
+    pintava cortinas atrás da tabela e as células de canto (cabeçalho, coluna fixa,
+    linha em hover) não seguiam o raio da moldura."""
+
+    def setUp(self):
+        self.css = CSS.read_text(encoding="utf-8").replace("\r\n", "\n")
+
+    def test_involucro_rolante_nao_pinta_fundo(self):
+        for bloco in re.finditer(r"\n\s*\.tabela-rol \{([^}]*)\}", self.css):
+            self.assertNotIn("gradient", bloco.group(1),
+                             "cortina atrás da tabela aparece fora dos cantos arredondados")
+
+    def test_celulas_de_canto_seguem_o_raio_da_tabela(self):
+        self.assertIn("--raio-celula: max(0px, calc(var(--raio-tabela) - 1px))", self.css)
+        for canto in ("border-start-start-radius", "border-start-end-radius",
+                      "border-end-start-radius", "border-end-end-radius"):
+            self.assertIn(f"{canto}: var(--raio-celula)", self.css, canto)
+        self.assertRegex(self.css, r"\n\.quadro \.tabela \{[^}]*--raio-tabela: 0px")
+        self.assertRegex(self.css, r"\n\.tabela\.escala-grade \{[^}]*--raio-tabela: 0px")
+
+    def test_hover_da_linha_mora_na_celula(self):
+        self.assertNotRegex(self.css, r"\n\.tabela tbody tr:hover \{",
+                            "fundo de <tr> ignora o raio das células de canto")
+        self.assertIn("\n.tabela tbody tr:hover > td { background: var(--superficie-2); }", self.css)

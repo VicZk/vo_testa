@@ -9,6 +9,30 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 23/10/2026: cantos das caixas, canais com ícone e verba alinhada
+
+- O quadrado branco no cantinho das tabelas arredondadas (Pessoas, Reservas, Estoque e
+  todo módulo com listagem) sumiu. Eram duas coisas: o invólucro de rolagem pintava
+  "cortinas" da cor da superfície atrás da tabela, visíveis só fora dos cantos; e o
+  cabeçalho, a coluna fixa e a linha em hover não seguiam o raio da moldura. Correção
+  nas classes-base (`.tabela`/`.tabela-rol`), vale para o sistema inteiro — inclusive a
+  grade da Escala em modo cartão e a tabela vazia (a célula única leva os quatro cantos
+  e não realça no hover). Varredura por pixel em 29 telas, com os menus suspensos
+  abertos e hover na primeira e na última linha: nenhum canto vazando.
+- Marketing: os canais aparecem como ícone (Instagram, Meta, Google, WhatsApp, E-mail…)
+  no filtro, nos cartões do quadro, na ficha e nas entregas, em vez de nomes em caixa
+  alta — o cartão que quebrava cinco canais em três linhas mostra uma fileira.
+  Monocromático, na cor do texto. O nome segue no `aria-label` e na dica.
+- Marketing: Reservado, Gasto e Teto do mês na mesma linha de base; o teto passou a ser
+  um valor como os outros, com "Alterar" para a gerência abrir o campo. "Gasta" virou
+  "Gasto", concordando com "Reservado".
+- **Modificado:** `static/css/app.css` (cantos da tabela por `--raio-tabela`/`--raio-celula`,
+  hover na célula, invólucro sem fundo, `.ico-canal`, `.mk-canal`, `.mk-teto`),
+  `apps/marketing/templatetags/canais_marketing.py` (novo, `{% icone_canal %}`; traçados
+  do Simple Icons, CC0, e do Lucide, ISC), `templates/marketing/quadro.html`,
+  `_canais.html`, `_ficha_drawer.html`, `_entrega_linha.html`,
+  `apps/nucleo/tests_design.py` (`CantosDasCaixasTests`) e `apps/marketing/tests.py`.
+
 ## 23/10/2026: topo do trilho em coluna
 
 - Com o menu recolhido, o topo deixou de ser um símbolo pequeno com o botão colado ao

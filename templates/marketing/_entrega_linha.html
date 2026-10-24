@@ -1,8 +1,9 @@
+{% load canais_marketing %}
 <article class="mkt-entrega" data-entrega="{{ p.pk }}">
   <div class="mkt-entrega-principal">
     <h3>{{ p.nome }}</h3>
     {% if not na_ficha %}{% if p.campanha_id %}<a href="{% url 'marketing:detalhe' p.campanha_id %}" hx-get="{% url 'marketing:ficha' p.campanha_id %}" hx-target="#modal-conteudo">{{ p.campanha.nome }}</a>{% else %}<span class="mkt-meta">Sem campanha</span>{% endif %}{% endif %}
-    <span class="rotulo-dado">{{ p.canal|default:"Canal não informado" }}</span>
+    <span class="rotulo-dado">{% if p.canal %}{% icone_canal p.canal %}{% endif %}{{ p.canal|default:"Canal não informado" }}</span>
   </div>
   <div class="mkt-entrega-situacao">
     <span class="selo{% if p.status == 'pronta' %} selo-ok{% endif %}">{{ p.get_status_display }}</span>

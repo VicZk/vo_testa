@@ -1431,6 +1431,22 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
   padding-bottom: 3px;   /* respira a sombra hairline da tabela (senão fica cortada) */
 }
 .tabela-rol > .tabela { margin: 0; overflow: visible; }
+/* CANTOS DA TABELA. Dentro do invólucro a tabela fica com `overflow: visible` (a coluna
+   fixa precisa rolar com o invólucro, não com a tabela), então o fundo das células —
+   cabeçalho, linha em hover, coluna fixa — não é recortado pelo raio da moldura e saía
+   quadrado nos quatro cantos. As células de canto levam o raio INTERNO da própria
+   tabela (raio − 1px de borda); no `.quadro` e na grade da Escala a moldura é de quem
+   embrulha, a tabela é quadrada e o raio vai a zero. O realce de hover mora na célula
+   (mais abaixo), porque fundo de <tr> ignora o raio da célula. */
+table.tabela { --raio-tabela: var(--raio); --raio-celula: max(0px, calc(var(--raio-tabela) - 1px)); }
+.tabela > thead > tr:first-child > :first-child,
+.tabela:not(:has(> thead)) > tbody:first-of-type > tr:first-child > :first-child { border-start-start-radius: var(--raio-celula); }
+.tabela > thead > tr:first-child > :last-child,
+.tabela:not(:has(> thead)) > tbody:first-of-type > tr:first-child > :last-child { border-start-end-radius: var(--raio-celula); }
+.tabela > tfoot > tr:last-child > :first-child,
+.tabela:not(:has(> tfoot)) > tbody:last-of-type > tr:last-child > :first-child { border-end-start-radius: var(--raio-celula); }
+.tabela > tfoot > tr:last-child > :last-child,
+.tabela:not(:has(> tfoot)) > tbody:last-of-type > tr:last-child > :last-child { border-end-end-radius: var(--raio-celula); }
 /* Célula que não quebra (o tipo "Sistema" partia no meio; o nº da cobrança + método). */
 .tabela .nao-quebra { white-space: nowrap; overflow-wrap: normal; }
 /* Detalhe da reserva → painel Financeiro (total previsto, recebido, saldo e as cobranças). */
@@ -1463,8 +1479,8 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
    dentro da `.tabela-rol`, que é o que a casa já faz. */
 .tabela td { padding: .68rem .85rem; border-bottom: 1px solid var(--fio); vertical-align: middle; overflow-wrap: break-word; }
 .tabela tbody tr:last-child td { border-bottom: none; }
-.tabela tbody tr { transition: background .12s; }
-.tabela tbody tr:hover { background: var(--superficie-2); }
+.tabela tbody td { transition: background .12s; }
+.tabela tbody tr:hover > td { background: var(--superficie-2); }
 .tabela a { color: var(--madeira); font-weight: 600; text-decoration: none; }
 .tabela a:hover { text-decoration: underline; }
 .vazio { color: var(--tinta-suave); text-align: center; padding: 2rem 1.4rem !important; }
@@ -1598,6 +1614,14 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 .filtro-chip .ponto-perigo { background: var(--perigo); }
 .filtro-chip .n { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 0.76rem; color: var(--tinta-suave); }
 .filtro-chip[aria-pressed="true"] .n, .filtro-chip[aria-current="page"] .n { color: var(--madeira); }
+/* ÍCONE DE CANAL (Marketing, `{% icone_canal %}`): a marca no lugar da palavra em caixa
+   alta. Monocromático, na cor do texto ao redor — nunca a cor da marca. Tamanho em em
+   para acompanhar o chip ou o rótulo onde está. */
+.ico-canal { width: 1.1em; height: 1.1em; flex: none; vertical-align: -.2em; }
+.ico-canal--marca { fill: currentColor; stroke: none; }
+.ico-canal--traco { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.filtro-chip .ico-canal, .fx-chip .ico-canal { width: 16px; height: 16px; }
+.rotulo-dado .ico-canal { margin-right: .3em; }
 @media (prefers-reduced-motion: reduce) {
   .filtro-chip { transition: none; }
   .filtro-chip:active { transform: none; }
@@ -2027,7 +2051,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
     background: var(--superficie); border: 1px solid var(--fio);
     border-radius: var(--raio); box-shadow: var(--sombra-1);
   }
-  .tabela.tabela-cartoes tbody tr:hover { background: var(--superficie); }
+  .tabela.tabela-cartoes tbody tr:hover > td { background: var(--superficie); }
   .tabela.tabela-cartoes td {
     display: flex; align-items: center; justify-content: space-between; gap: .8rem;
     padding: .3rem 0; border-bottom: none;
@@ -4515,6 +4539,11 @@ form.filtros:not(.subnav) :is(input:not([type=checkbox]):not([type=radio]):not([
 #escala-conteudo { container: escala / inline-size; }
 .escala-grade-wrap { overflow-x: auto; border-radius: var(--raio-g); border: 1px solid var(--fio); box-shadow: var(--sombra-1); }
 .escala-grade { margin: 0; border: none; box-shadow: none; min-width: 0; width: 100%; table-layout: fixed; overflow: visible; }
+.tabela.escala-grade { border-radius: 0; --raio-tabela: 0px; }   /* a moldura é da .escala-grade-wrap */
+/* As células fixas (sticky) do cabeçalho escapam do recorte do raio da moldura no
+   Chrome: elas mesmas levam o raio interno da .escala-grade-wrap. */
+.escala-grade > thead > tr:first-child > :first-child { border-start-start-radius: calc(var(--raio-g) - 1px); }
+.escala-grade > thead > tr:first-child > :last-child { border-start-end-radius: calc(var(--raio-g) - 1px); }
 .escala-grade thead th {
   background: var(--superficie-2); color: var(--tinta-suave);
   font-size: var(--rotulo-min); font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
@@ -4841,7 +4870,25 @@ form.filtros:not(.subnav) :is(input:not([type=checkbox]):not([type=radio]):not([
 .mk-rotulo { font-size: var(--rotulo-min); letter-spacing: .06em; color: var(--tinta-suave); font-weight: 700; }
 .mk-rotulo.bloco { display: block; }
 .mk-verba-n { display: block; margin-top: 3px; font-size: 0.9375rem; font-weight: 700; color: var(--tinta); }
-.mk-teto-form { display: flex; align-items: center; gap: 5px; margin-top: 3px; }
+/* Teto do mês na mesma linha de base de Reservado e Gasto (antes era um campo de texto
+   de 34px ao lado de dois números — a linha parecia desalinhada). Quem pode editar abre
+   o campo em "Alterar"; o <details> dispensa JS. */
+.mk-teto { margin-top: 3px; }
+/* Valor e "Alterar" alinhados pela linha de base; o valor, blocificado pelo flex, tem a
+   mesma caixa de linha dos vizinhos (que são blocos com a mesma fonte). Sem a seta
+   geral dos <details> (ela, com 1.1em, empurrava a linha 2px para baixo). */
+.mk-teto-resumo { display: flex; align-items: baseline; gap: 8px; cursor: pointer; list-style: none; }
+.mk-teto-resumo::-webkit-details-marker, .mk-teto-resumo::marker { display: none; content: none; }
+.conteudo .mk-teto > summary::before { content: none; }   /* sem a seta geral dos <details> do conteúdo */
+.mk-teto-resumo .mk-verba-n { display: inline; margin-top: 0; }
+.mk-teto-alterar { font-size: var(--rotulo-min); font-weight: 700; color: var(--madeira); }
+.mk-teto[open] .mk-teto-abrir, .mk-teto:not([open]) .mk-teto-fechar { display: none; }
+/* Aberto, o campo toma o lugar do valor na MESMA linha ("[campo] Salvar  Cancelar"): o
+   bloco cresce só o que o campo pede, e o resto do cartão quase não se move. */
+.mk-teto[open] { display: flex; flex-direction: row-reverse; align-items: baseline; gap: 10px; }
+.mk-teto[open] .mk-teto-resumo .mk-verba-n { display: none; }
+.mk-teto-form { display: flex; align-items: center; gap: 5px; margin-top: 6px; }
+.mk-teto[open] .mk-teto-form { margin-top: 0; }
 .mk-teto-campo {
   width: 128px; padding: 5px 9px; border: 1px solid var(--fio); border-radius: var(--raio);
   font-weight: 700; font-size: 0.8125rem; color: var(--tinta);
@@ -4935,7 +4982,11 @@ form.filtros:not(.subnav) :is(input:not([type=checkbox]):not([type=radio]):not([
 .mk-card-passo > span { color: var(--tinta-suave); }
 .mk-card-passo:hover strong { text-decoration: underline; }
 .mk-card-etapa { margin-top: 7px; }
-.mk-card-canais { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
+/* Canais do cartão: uma fileira de ícones (antes, até cinco nomes em caixa alta
+   quebrando em três linhas). O nome fica na dica e no aria-label. */
+.mk-card-canais { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.mk-canal { display: inline-flex; width: 18px; height: 18px; color: var(--tinta-suave); }
+.mk-canal .ico-canal { width: 100%; height: 100%; }
 .mk-card-dono { display: flex; align-items: center; gap: 8px; margin-top: 9px; }
 .mk-av {
   flex: none; width: 24px; height: 24px; border-radius: 50%;
@@ -5512,17 +5563,11 @@ form.filtros:not(.subnav) :is(input:not([type=checkbox]):not([type=radio]):not([
    rola: o dedo que queria rolar o menu rolava o conteúdo de baixo. */
 body.sem-rolagem { overflow: hidden; }
 
-/* Pistas de rolagem em qualquer largura: o espaço útil não é a janela. */
-  .tabela-rol {
-    background:
-      linear-gradient(to right, var(--superficie) 30%, transparent) 0 0,
-      linear-gradient(to left, var(--superficie) 30%, transparent) 100% 0,
-      radial-gradient(farthest-side at 0 50%, color-mix(in srgb, var(--sombra-tinta) 16%, transparent), transparent) 0 0,
-      radial-gradient(farthest-side at 100% 50%, color-mix(in srgb, var(--sombra-tinta) 16%, transparent), transparent) 100% 0;
-    background-repeat: no-repeat;
-    background-size: 36px 100%, 36px 100%, 14px 100%, 14px 100%;
-    background-attachment: local, local, scroll, scroll;
-  }
+/* Pista de rolagem é o texto `.rolagem-indicador` (tabela-rol.js), não um fundo. O
+   invólucro tinha "cortinas" de 36px da cor da superfície nas duas laterais
+   (gradientes com background-attachment: local) atrás da tabela. Como a tabela é
+   opaca, elas só apareciam onde ela não cobre: fora dos quatro cantos arredondados e
+   nos 3px abaixo dela — o quadrado branco no cantinho de toda tabela do sistema. */
   .tabela-rol > .tabela th { white-space: nowrap; }
 @media screen {
 @container tabela (max-width: 48rem) {
@@ -6454,7 +6499,7 @@ body.escala-dragging .escala-drop { cursor: copy; }
 /* Tabelas largas rolam no invólucro; nenhuma largura mínima força cartões
    responsivos para fora da tela. A moldura pertence ao quadro, não à tabela. */
 .quadro > .tabela-rol { margin: 0; padding-bottom: 0; }
-.quadro .tabela { border: 0; border-radius: 0; box-shadow: none; min-width: 0; }
+.quadro .tabela { border: 0; border-radius: 0; box-shadow: none; min-width: 0; --raio-tabela: 0px; }
 @media (prefers-reduced-motion: reduce) {
   .eleg tbody tr.clic, .quadro tbody tr.clic { transition: none; }
 }
@@ -6761,7 +6806,7 @@ body.escala-dragging .escala-drop { cursor: copy; }
   /* Cabeçalho repetido em cada página nova; linha nunca cortada ao meio. */
   .tabela thead { display: table-header-group; }
   .tabela tr, .tabela td, .tabela th { break-inside: avoid; page-break-inside: avoid; }
-  .tabela tbody tr:hover { background: none !important; }
+  .tabela tbody tr:hover > td { background: none !important; }
   /* Título de seção não fica órfão no pé da página. */
   .kit-titulo, .kit-sub-secao { break-after: avoid; page-break-after: avoid; }
   /* A quebra cai ENTRE seções: a seção curta não parte: a longa (hospedados, 24
@@ -7637,6 +7682,11 @@ body.escala-dragging .escala-drop { cursor: copy; }
   display:block; width:100%; min-width:0; max-width:100%; position:static;
   white-space:normal; overflow-wrap:anywhere;
 }
+/* A célula única do estado vazio é a caixa inteira (o cabeçalho sumiu): leva os quatro
+   cantos da tabela e não realça no hover — não há linha para escolher. Sem isto o
+   hover pintava os cantos de cima quadrados. */
+:is(.tabela, .quadro > table):has(> tbody > tr:only-child > :is(.vazio, .vazio-el)[colspan]:only-child) > tbody > tr > td { border-radius: var(--raio-celula); }
+:is(.tabela, .quadro > table):has(> tbody > tr:only-child > :is(.vazio, .vazio-el)[colspan]:only-child) > tbody > tr:hover > td { background: none; }
 .busca-reservas { flex-wrap:wrap; }
 .busca-reservas input[type=search] { flex:1 1 260px; min-width:0; }
 .busca-reservas select { flex:1 1 180px; min-width:0; }
@@ -8320,7 +8370,9 @@ html.com-js [data-precos-filtros][hidden] { display: block; visibility: hidden; 
 @media screen {
   @container escala (max-width: 100rem) {
     .escala-grade-wrap { border: 0; border-radius: 0; box-shadow: none; }
-    .escala-grade, .escala-grade tbody { display: block; width: 100%; }
+    /* Em cartões, a tabela vira bloco e não pode seguir pintando o fundo da superfície:
+       ele aparecia como quadrado branco fora dos cantos arredondados de cada cartão. */
+    .escala-grade, .escala-grade tbody { display: block; width: 100%; background: none; }
     .escala-grade thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
     .escala-grade tbody tr {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));

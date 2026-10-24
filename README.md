@@ -866,7 +866,9 @@ Toda tela do CRM nasce no design system; nada de estilo paralelo nem cor fixa no
   janela; por isso o que divide espaço decide pelo espaço: painel lateral em
   `flex-wrap` (`.colunas-2-1`), grades em `minmax(min(Npx, 100%), 1fr)`, e o corredor de
   quartos e a tabela de Pessoas por container query. Tabela larga rola dentro do próprio invólucro
-  (`.tabela-rol`, criado pelo `static/js/tabela-rol.js`). Alvo de toque ≥ 44 px no
+  (`.tabela-rol`, criado pelo `static/js/tabela-rol.js`); o invólucro não pinta fundo e as
+  células de canto herdam o raio da tabela (`--raio-celula`), sem quadrado branco no
+  cantinho das caixas arredondadas. Alvo de toque ≥ 44 px no
   ponteiro grosso, inclusive no portal, no pagamento, no login e dentro dos modais.
   Controle pequeno que mora dentro de outra coisa (chip, célula, linha) segue a seção
   "Polimento mobile" do `app.css`: a caixa de toque cresce, o desenho fica onde está.
