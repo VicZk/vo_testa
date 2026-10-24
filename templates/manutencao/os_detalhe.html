@@ -22,7 +22,7 @@
       <div><dt>Alvo</dt><dd>{{ os.alvo }}{% if os.bloqueio_ativo_hoje %} <span class="selo prioridade-urgente">bloqueado por esta OS hoje</span>{% endif %}</dd></div>
       {% if os.bloqueia_uh %}<div><dt>Período do bloqueio</dt><dd>{{ os.bloqueio_inicio|date:'d/m/Y' }}{% if os.bloqueio_fim %} a {{ os.bloqueio_fim|date:'d/m/Y' }}{% else %} até a conclusão{% endif %}{% if not os.aberta_ou_andamento %} · encerrado{% endif %}</dd></div>{% endif %}
       <div><dt>Tipo</dt><dd>{{ os.get_tipo_display }}</dd></div>
-      <div><dt>Prioridade</dt><dd><span class="manutencao-prioridade prioridade-{{ os.prioridade }}">{{ os.get_prioridade_display }}</span></dd></div>
+      <div><dt>Prioridade</dt><dd><span class="rotulo-dado">{{ os.get_prioridade_display }}</span></dd></div>
       <div><dt>Responsável</dt><dd>{% if os.responsavel %}{{ os.responsavel.get_short_name|default:os.responsavel.username }}{% else %}A definir{% endif %}</dd></div>
       {% if os.prestador %}<div><dt>Prestador</dt><dd>{{ os.prestador.nome }} <small>(externo)</small></dd></div>{% endif %}
       <div><dt>Aberta em</dt><dd>{{ os.aberta_em|date:"d/m/Y H:i" }} por {{ os.criado_por.get_short_name|default:os.criado_por.username }}</dd></div>

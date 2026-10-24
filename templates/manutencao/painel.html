@@ -35,7 +35,7 @@
               <span class="manutencao-ordem-local">OS #{{ os.pk }} · {{ os.alvo }}</span>
               <h3><a href="{% url 'manutencao:detalhe' os.pk %}">{{ os.titulo }}</a></h3>
               <div class="manutencao-ordem-estados">
-                <span class="rotulo-dado manutencao-prioridade">Prioridade {{ os.get_prioridade_display|lower }}</span>
+                <span class="rotulo-dado">Prioridade {{ os.get_prioridade_display|lower }}</span>
                 <span class="selo manutencao-status">{{ os.get_status_display }}</span>
                 {% if os.bloqueio_ativo_hoje %}<strong class="manutencao-bloqueio">Quarto bloqueado hoje</strong>{% elif os.bloqueia_uh and os.aberta_ou_andamento %}<span class="ajuda">Bloqueio: {{ os.bloqueio_inicio|date:'d/m/Y' }}{% if os.bloqueio_fim %} a {{ os.bloqueio_fim|date:'d/m/Y' }}{% else %} até a conclusão{% endif %}</span>{% endif %}
               </div>
