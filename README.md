@@ -849,8 +849,11 @@ Toda tela do CRM nasce no design system; nada de estilo paralelo nem cor fixa no
   tudo o que é do trilho mora num `@media (width > 820px)`. O trilho é o menu aberto
   recortado: ícones, "Nova reserva", símbolo e avatar ficam no mesmo x
   (`--trilho-centro`) e na mesma altura nos dois estados; rótulos e títulos de grupo só
-  esmaecem; a borda direita anda e recorta. O que muda de lugar (botão de recolher,
-  Sair) desliza com os tokens de movimento. Regra do trilho só pode mexer em opacidade,
+  esmaecem; a borda direita anda e recorta. O que muda de lugar (o Sair) desliza com
+  os tokens de movimento; o botão de recolher é a exceção: do canto (menu aberto) ao
+  centro do trilho, embaixo do símbolo, a reta seria uma diagonal, então ele some e
+  surge no destino (`.menu-alternando`). No trilho o topo é uma coluna centrada:
+  símbolo de 44 px, botão de expandir, fio. Regra do trilho só pode mexer em opacidade,
   cor, giro e posição — o contrato está nos testes de design. Os grupos do menu são
   categorias fixas (título + itens), nunca colapsáveis: colapsar grupo dentro de um
   menu que já recolhe é colapso dentro de colapso, e no trilho esconderia os ícones.

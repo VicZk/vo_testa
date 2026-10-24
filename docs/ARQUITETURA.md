@@ -1418,7 +1418,7 @@ criar estilo paralelo nem hard-codear cor, raio ou sombra.
 | Elevação | `--sombra-1` (elementos pequenos), `--sombra-2`, `--sombra-3`, `--glow`, `--sombra-cartao` (float suave de cartão) |
 | Raio | `--raio-p` 10px, `--raio` 14px, `--raio-g` 20px |
 | Tipografia | `--fonte-titulo` (Fraunces), `--fonte-ui` (Hanken Grotesk), `--fonte-marca` (Rosaline, `@font-face` local), `--fonte-mono` (IBM Plex Mono) |
-| Layout | `--sidebar-w` (vale agora: `--sidebar-w-aberta` 258px ou `--trilho-w` 72px), `--trilho-centro` (35,5px, o x de todo ícone do menu nos dois estados) e `--sidebar-ico-x`, `--alvo` (30px no mouse, 44px no dedo — botão de recolher e Sair), `--sidebar-topo-h` 116px (o topo do menu tem a mesma altura aberto e recolhido), `--topbar-h` 60px, `--vao-2-1` (vão do `.colunas-2-1`) |
+| Layout | `--sidebar-w` (vale agora: `--sidebar-w-aberta` 258px ou `--trilho-w` 128px), `--trilho-centro` (63,5px, o x de todo ícone do menu nos dois estados) e `--sidebar-ico-x`, `--alvo` (30px no mouse, 44px no dedo — botão de recolher e Sair), `--sidebar-topo-h` 116px (o topo do menu tem a mesma altura aberto e recolhido), `--topbar-h` 60px, `--vao-2-1` (vão do `.colunas-2-1`) |
 
 **Para mudar o “look” global, mexa nos tokens** — propaga para tudo.
 
@@ -1512,8 +1512,11 @@ curva da casa é `cubic-bezier(.2,.8,.2,1)`).
   estados, rótulos e títulos de grupo no fluxo só com opacidade (seguem na árvore de
   acessibilidade; nunca `display:none`), a `.sidebar` com `overflow: hidden` como
   cortina, janelas próprias para o logotipo (`.marca-janela`) e para nome + cápsula
-  (`.usuario-texto`), e o botão de recolher e o Sair deslizando com os tokens de
-  movimento. Cada item traz `title` no template (vale sem JS); o `rotularSidebar()` o
+  (`.usuario-texto`), e o Sair deslizando com os tokens de movimento. O botão de
+  recolher fica no canto do topo (aberto) e embaixo do símbolo, centrado (trilho): como
+  a reta entre os dois é diagonal, ele não desliza — `alternarSidebar()` põe
+  `.menu-alternando` no `.app` e o botão some e surge no destino, pelos mesmos tokens.
+  Cada item traz `title` no template (vale sem JS); o `rotularSidebar()` o
   troca pela dica da casa, que só aparece no trilho.
   Toda regra `.app.recolhida …` mora num único `@media (width > 820px)` e só mexe em
   opacidade, cor, giro e posição — `test_trilho_so_existe_no_desktop` e

@@ -778,12 +778,13 @@ class MenuLateralTests(TestCase):
     def test_marca_continua_clicavel_no_trilho(self):
         """Os dois logotipos saíram do fluxo para o topo não saltar; sem tamanho
         explícito, a <a> da marca fica com 0px — o símbolo aparece e o link para
-        a Visão geral some. No trilho o link é a área acima do botão de recolher,
-        e o símbolo mora DENTRO dele."""
+        a Visão geral some. No trilho o link é a área acima do botão de expandir
+        (altura pelos tokens: topo menos o recuo e o alvo do botão), e o símbolo
+        mora DENTRO dele."""
         bloco = re.search(r"\n\s*\.app\.recolhida \.marca \{([^}]*)\}", self.css)
         self.assertIsNotNone(bloco)
         self.assertIn("width: 100%", bloco.group(1))
-        self.assertRegex(bloco.group(1), r"height: \d+px")
+        self.assertIn("height: calc(var(--sidebar-topo-h) - .7rem - var(--alvo) - .5rem)", bloco.group(1))
         self.assertRegex(self.base, r'class="marca">[\s\S]{0,400}class="marca-icone"[\s\S]{0,40}</a>')
 
     def test_trilho_so_existe_no_desktop(self):
@@ -867,11 +868,13 @@ class MenuLateralTests(TestCase):
         self.assertIn("{% url 'mfa_config' %}", rodape)
 
     def test_o_que_muda_de_lugar_desliza_com_os_tokens(self):
-        """O botão de recolher e o Sair mudam de lugar entre os estados, e o
-        rodapé muda de altura: os três deslizam junto com a largura (mesmo
-        token e curva), em vez de pular no primeiro quadro."""
+        """O Sair muda de lugar entre os estados e o rodapé muda de altura: os
+        dois deslizam junto com a largura (mesmo token e curva), em vez de pular
+        no primeiro quadro. O botão de recolher é a exceção deliberada: do canto
+        (menu aberto) ao centro do trilho, embaixo do símbolo, a reta é uma
+        diagonal — ele não desliza, some e surge no destino pelos mesmos tokens
+        (`.menu-alternando`, posta por `alternarSidebar()`)."""
         casos = {
-            r"\n\.sidebar-toggle \{": ("top var(--mov-padrao)", "right var(--mov-padrao)"),
             r"\n\.sidebar-rodape \{": ("height var(--mov-padrao)",),
             r"\n\.sidebar-rodape button\.link \{": ("right var(--mov-padrao)",
                                                      "bottom var(--mov-padrao)"),
@@ -882,6 +885,17 @@ class MenuLateralTests(TestCase):
             self.assertIsNotNone(bloco, seletor)
             for trecho in trechos:
                 self.assertIn(trecho, bloco.group(1), seletor)
+        botao = re.search(r"\n\.sidebar-toggle \{([^}]*)\}", self.css)
+        self.assertIsNotNone(botao)
+        for trecho in ("top var(", "right var("):
+            self.assertNotIn(trecho, botao.group(1),
+                             "o botão de recolher não desliza: do canto ao centro do trilho a reta é diagonal")
+        self.assertIn("top: .7rem; right: .7rem;", botao.group(1))
+        self.assertIn("\n.menu-alternando .sidebar-toggle { animation: botao-recolher-surge "
+                      "var(--mov-padrao) var(--curva) both; }", self.css)
+        self.assertRegex(self.css, r"\n@keyframes botao-recolher-surge \{ 0%, \d+% \{ opacity: 0; \} "
+                                   r"100% \{ opacity: 1; \} \}")
+        self.assertIn("APP.classList.add('menu-alternando')", self.base)
 
     def test_icones_moram_no_x_do_trilho(self):
         """Aberto, o ícone ficava a 30px; no trilho, a 35,5px — 5px de pulo a

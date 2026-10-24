@@ -646,29 +646,40 @@ a:hover { color: var(--lampiao-tinta); }
   top: 59px;
   transition: opacity var(--mov-rapido) var(--curva) var(--mov-toque);
 }
+/* No trilho o símbolo é a peça principal do topo: 44px, centrado na faixa que
+   sobra acima do botão de expandir (que mora a .7rem do pé do topo). No toque o
+   botão tem 44px, a faixa encurta e o símbolo encolhe junto (40,8px) para manter
+   10px de respiro até ele. Aberto, ele fica no mesmo lugar, só invisível. */
 .marca-icone {
-  height: 34px;
-  left: var(--trilho-centro); top: 38px;
+  height: min(44px, calc(var(--sidebar-topo-h) - .7rem - var(--alvo) - 1.25rem));
+  left: var(--trilho-centro);
+  top: calc((var(--sidebar-topo-h) - .7rem - var(--alvo)) / 2);
   opacity: 0;
   transition: opacity var(--mov-toque) var(--curva);
 }
 
-/* Aberta: à direita do logotipo. No trilho: centrado abaixo do símbolo. Ele
-   desliza entre os dois junto com a largura (mesma duração e curva). */
+/* Aberta: no canto superior direito do topo (.7rem das bordas). No trilho:
+   centrado abaixo do símbolo, a .7rem do pé do topo (ver SIDEBAR RECOLHIDA).
+   Ele NÃO desliza entre os dois lugares — a reta do canto ao centro do trilho é
+   uma diagonal. `alternarSidebar()` põe `.menu-alternando` no .app por um
+   instante: o botão some de onde está, troca de lugar invisível e surge já no
+   destino, quando a largura está quase no fim (keyframes abaixo). Antes `top` e
+   `right` transitavam, e ele cruzava o topo em diagonal. */
 .sidebar-toggle {
   position: absolute; z-index: 1;
-  top: calc(59px - var(--alvo) / 2); right: 1rem;
+  top: .7rem; right: .7rem;
   display: grid; place-items: center;
   width: var(--alvo); height: var(--alvo);
   color: color-mix(in srgb, var(--pergaminho) 70%, transparent);
   background: color-mix(in srgb, var(--superficie) 4%, transparent);
   border: 1px solid color-mix(in srgb, var(--pergaminho) 12%, transparent);
   border-radius: var(--raio-p); cursor: pointer;
-  transition: background .15s, color .15s,
-              top var(--mov-padrao) var(--curva), right var(--mov-padrao) var(--curva);
+  transition: background .15s, color .15s;
 }
 .sidebar-toggle .ico { transition: transform var(--mov-padrao) var(--curva); }
 .sidebar-toggle:hover { color: var(--pergaminho); background: color-mix(in srgb, var(--lampiao) 14%, transparent); }
+.menu-alternando .sidebar-toggle { animation: botao-recolher-surge var(--mov-padrao) var(--curva) both; }
+@keyframes botao-recolher-surge { 0%, 60% { opacity: 0; } 100% { opacity: 1; } }
 
 /* O ícone fica no x do trilho (margem + padding = `--sidebar-ico-x`). O rótulo
    que não cabe é recortado pelo próprio botão, nunca desenhado fora dele. */
@@ -887,7 +898,7 @@ button.link:hover { color: var(--lampiao); background: color-mix(in srgb, var(--
   /* Topo: o logotipo grande esmaece (a janela dele o recorta antes do botão),
      o símbolo surge no centro do trilho, o botão desliza para baixo dele e a
      seta gira. O link da marca vira a área acima do botão. */
-  .app.recolhida .marca { width: 100%; height: 66px; }
+  .app.recolhida .marca { width: 100%; height: calc(var(--sidebar-topo-h) - .7rem - var(--alvo) - .5rem); }
   .app.recolhida .marca-janela { right: calc(var(--trilho-centro) + var(--alvo) / 2 + .5rem); }
   .app.recolhida .marca-full { opacity: 0; transition: opacity var(--mov-toque) var(--curva); }
   .app.recolhida .marca-icone {
@@ -896,11 +907,15 @@ button.link:hover { color: var(--lampiao); background: color-mix(in srgb, var(--
   }
 
   .app.recolhida .sidebar-toggle .ico { transform: rotate(180deg); }
-  /* No toque o botão tem 44px e o trilho segue com 128px: a .7rem da borda ele
-     encostaria no símbolo (29px, centrado no trilho). O recuo sai da própria conta
-     (trilho − centro − alvo − meio símbolo), limitado a .7rem: com o mouse (30px) dá
-     .7rem e nada muda; no toque, 4px. Só o eixo x anda; o topo é o mesmo nos dois estados. */
-  .app.recolhida .sidebar-toggle { right: min(.7rem, calc(var(--trilho-w) - var(--trilho-centro) - var(--alvo) - 16.5px)); }
+  /* O botão de expandir fica embaixo do símbolo, centrado no trilho e a .7rem do pé
+     do topo — o mesmo recuo que ele tem do canto com o menu aberto. O topo vira uma
+     coluna: símbolo, botão, fio. (No canto, ao lado do símbolo, sobravam 60px vazios
+     abaixo dos dois e o conjunto pendia para a direita.) A troca de lugar não
+     desliza: ver `.menu-alternando` junto do `.sidebar-toggle`. */
+  .app.recolhida .sidebar-toggle {
+    top: calc(var(--sidebar-topo-h) - .7rem - var(--alvo));
+    right: calc(var(--trilho-centro) - var(--alvo) / 2);
+  }
 
   /* Recolhendo, os rótulos SAEM antes de a largura fechar (sem espera). */
   .app.recolhida .acao-topo .rotulo,
@@ -8352,8 +8367,3 @@ html.com-js [data-precos-filtros][hidden] { display: block; visibility: hidden; 
    subtítulo ou não. O título passa a ser o da seção aberta. */
 .pagina-eyebrow + .abas-secao { margin: .35rem 0 1rem; }
 .abas-secao + .pagina-cabecalho { margin-top: .2rem; margin-bottom: 1.1rem; }
-
-/* BOTÃO DE RECOLHER NO CANTO: mesma posição nos dois estados (canto superior direito do
-   topo). Ao recolher, ele só acompanha a borda direita — anda em linha reta, não em
-   diagonal — e a seta gira. O símbolo do trilho continua centrado abaixo. */
-.sidebar-toggle { top: .7rem; right: .7rem; }

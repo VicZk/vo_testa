@@ -9,6 +9,23 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 23/10/2026: topo do trilho em coluna
+
+- Com o menu recolhido, o topo deixou de ser um símbolo pequeno com o botão colado ao
+  lado e uns 60 px vazios até o fio. Agora é uma coluna centrada: símbolo maior (44 px),
+  botão de expandir embaixo dele e o fio. No tablet (alvo de 44 px) o símbolo encolhe
+  um pouco para manter o respiro até o botão.
+- O botão de recolher não desliza mais entre o canto (menu aberto) e o centro do trilho:
+  some de onde está e surge já no destino, quando a largura terminou de andar — sem
+  diagonal nos dois sentidos. Sob `prefers-reduced-motion` a troca é imediata.
+- **Modificado:** `static/css/app.css` (símbolo e botão do topo medidos pelos tokens
+  `--sidebar-topo-h`/`--alvo`, `.menu-alternando`, keyframes `botao-recolher-surge`; o
+  bloco "botão no canto" do fim do arquivo foi absorvido pela regra base),
+  `templates/base.html` (`alternarSidebar()` marca a troca por 400 ms),
+  `apps/nucleo/tests_design.py` (o botão não transita `top`/`right`; a animação e a altura do link da marca usam os
+  tokens) e `apps/site/tests_sidebar_e2e.py` (quadro a quadro, o botão só é visto nas
+  duas alturas de repouso; no trilho, símbolo e botão centrados e com respiro).
+
 ## 23/10/2026: tabelas, agenda de Marketing e operação da comanda
 
 - Listagens e relatórios adaptam os campos à largura disponível, inclusive no

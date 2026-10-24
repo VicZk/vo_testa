@@ -545,8 +545,19 @@
   rotularSidebar();
   GAVETA.addEventListener('change', rotularSidebar);
 
+  // O botão de recolher mora no canto com o menu aberto e embaixo do símbolo no
+  // trilho. `.menu-alternando` o esconde enquanto a largura anda e o faz surgir já
+  // no destino (CSS: `.menu-alternando .sidebar-toggle`), em vez de deslizar na
+  // diagonal. Tirar e repor a classe (com o reflow do `offsetWidth` no meio)
+  // reinicia a animação se clicarem de novo antes de ela acabar.
+  let fimDaAlternancia = 0;
   function alternarSidebar() {
     APP.classList.toggle('recolhida');
+    APP.classList.remove('menu-alternando');
+    void APP.offsetWidth;
+    APP.classList.add('menu-alternando');
+    clearTimeout(fimDaAlternancia);
+    fimDaAlternancia = setTimeout(() => APP.classList.remove('menu-alternando'), 400);
     try { localStorage.setItem('sidebar', APP.classList.contains('recolhida') ? 'recolhida' : 'aberta'); } catch (_) { /* Preferência opcional. */ }
     rotularSidebar();
   }

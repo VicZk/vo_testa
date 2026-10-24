@@ -224,6 +224,7 @@ class SidebarOperacaoE2ETests(_BaseE2E):
           const itens = [...sb.querySelectorAll('.nav-item')];
           const origemY = itens.map(el => el.querySelector('.ico').getBoundingClientRect().top);
           const falhas = new Set(), detalhes = {}, larguras = [], inicio = performance.now();
+          const botao = sb.querySelector('.sidebar-toggle'), alturasBotao = new Set();
           let quadros = 0, maiorDy = 0, proxima = 0;
           const alternancias = [0, 90, 180, 520];
           function visivel(el) {
@@ -261,6 +262,8 @@ class SidebarOperacaoE2ETests(_BaseE2E):
                 document.querySelector('#btn-recolher').click(); proxima++;
               }
               quadros++; larguras.push(sb.getBoundingClientRect().width);
+              const vb = visivel(botao);
+              if (vb) alturasBotao.add(Math.round(vb.top));
               itens.forEach((el, i) => {
                 maiorDy = Math.max(maiorDy, Math.abs(el.querySelector('.ico').getBoundingClientRect().top-origemY[i]));
                 const badge = el.querySelector('.nav-badge');
@@ -275,14 +278,50 @@ class SidebarOperacaoE2ETests(_BaseE2E):
             }
             requestAnimationFrame(quadro);
           });
-          return {quadros, maiorDy, falhas:[...falhas], detalhes,
+          return {quadros, maiorDy, falhas:[...falhas], detalhes, alturasBotao:[...alturasBotao],
             variacao:Math.max(...larguras)-Math.min(...larguras)};
         }""")
         self.assertGreaterEqual(resultado["quadros"], 6, resultado)
         self.assertGreater(resultado["variacao"], 30, "o teste precisa observar a transição real")
         self.assertLessEqual(resultado["maiorDy"], 1, resultado)
         self.assertEqual(resultado["falhas"], [], resultado)
+        # O botão de recolher não desliza: só é visto nas duas alturas de repouso
+        # (canto, com o menu aberto; embaixo do símbolo, no trilho). Uma terceira
+        # altura é o botão cruzando o topo em diagonal.
+        self.assertLessEqual(len(resultado["alturasBotao"]), 2, resultado)
         self._foto("apos-transicoes-" + ponteiro)
+
+    def test_topo_do_trilho_e_uma_coluna_centrada(self):
+        """No trilho o topo é símbolo, botão de expandir e fio, todos no centro
+        do trilho e com respiro entre si — não um símbolo pequeno com o botão
+        colado ao lado e um vão vazio até o fio. Aberto, o botão fica no canto."""
+        for toque in (False, True):
+            with self.subTest(ponteiro="toque" if toque else "mouse"), self._ponteiro(toque):
+                self._estado(False)
+                aberto = self._medir_topo()
+                self.assertLessEqual(abs(aberto["botao"]["top"] - aberto["topo"]["top"] - 11.2), 1, aberto)
+                self.assertLessEqual(abs(aberto["topo"]["right"] - aberto["botao"]["right"] - 11.2), 1, aberto)
+                self.assertLess(aberto["simboloOpacidade"], .05, aberto)
+                self._estado(True)
+                m = self._medir_topo()
+                centro = m["topo"]["left"] + m["topo"]["width"] / 2
+                for peca in ("simbolo", "botao"):
+                    cx = m[peca]["left"] + m[peca]["width"] / 2
+                    self.assertLessEqual(abs(cx - centro), 1, (peca, m))
+                self.assertGreater(m["simboloOpacidade"], .95, m)
+                self.assertGreaterEqual(m["simbolo"]["height"], 40, m)
+                self.assertGreaterEqual(m["simbolo"]["top"] - m["topo"]["top"], 8, m)
+                self.assertGreaterEqual(m["botao"]["top"] - m["simbolo"]["bottom"], 8, m)
+                self.assertGreaterEqual(m["topo"]["bottom"] - m["botao"]["bottom"], 8, m)
+                self._estado(False)
+
+    def _medir_topo(self):
+        return self.page.evaluate("""() => {
+          const r = s => { const b = document.querySelector(s).getBoundingClientRect();
+            return {left:b.left, right:b.right, top:b.top, bottom:b.bottom, width:b.width, height:b.height}; };
+          return {topo:r('.sidebar-topo'), simbolo:r('.marca-icone'), botao:r('.sidebar-toggle'),
+            simboloOpacidade:Number(getComputedStyle(document.querySelector('.marca-icone')).opacity)};
+        }""")
 
     def _posicao_restaurante(self):
         return self.page.locator("#menu-principal").evaluate("""(nav, href) => ({
