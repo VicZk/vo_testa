@@ -2,9 +2,16 @@ from django import template
 
 from ..estrutura import capacidade as _capacidade
 from ..estrutura import descricao_camas as _descricao_camas
+from ..formatos import qtd_br as _qtd_br
 from ..models import modulo_ativo as _modulo_ativo
 
 register = template.Library()
+
+
+@register.filter
+def quantidade_br(valor):
+    """Quantidades de estoque sem zeros decimais desnecessários: 5.000 → 5."""
+    return "" if valor is None or valor == "" else _qtd_br(valor)
 
 
 @register.filter

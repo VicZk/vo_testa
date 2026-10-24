@@ -54,6 +54,7 @@ def pdv(request):
                 "preco": float(p.preco_venda),
                 "saldo": float(saldos[p.pk]),
                 "unidade": p.get_unidade_display(),
+                "unidade_sigla": p.unidade,
                 "ilustracao": p.ilustracao_catalogo,
             })
 

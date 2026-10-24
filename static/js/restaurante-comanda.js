@@ -74,7 +74,8 @@
       if (!Number.isFinite(saldo)) return;
       botao.disabled = saldo <= 0;
       botao.classList.toggle('esgotado', saldo <= 0);
-      botao.querySelector('.pdv-saldo').textContent = saldo > 0 ? 'Saldo ' + quantidade.format(saldo) : 'Esgotado';
+      botao.querySelector('.pdv-saldo').textContent = saldo > 0
+        ? 'Saldo ' + quantidade.format(saldo) + (botao.dataset.unidade ? ' ' + botao.dataset.unidade : '') : 'Esgotado';
     });
     preparar();
   });

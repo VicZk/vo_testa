@@ -31,14 +31,14 @@
       <div class="pdv-lista">
         {% for p in cardapio %}
           <button type="button" class="pdv-produto {% if p.saldo <= 0 %}esgotado{% endif %}"
-                  data-restaurante-produto="{{ p.id }}" data-categoria="{{ p.categoria_id }}"
+                  data-restaurante-produto="{{ p.id }}" data-categoria="{{ p.categoria_id }}" data-unidade="{{ p.unidade }}"
                   hx-get="{% url 'restaurante:pedir_item' comanda.pk p.id %}"
                   hx-target="#modal-conteudo"{% if p.saldo <= 0 %} disabled{% endif %}>
             {% include "componentes/icone_catalogo.html" with ilustracao=p.ilustracao %}
             <span class="pdv-produto-nome">{{ p.nome }}</span>
             <span class="pdv-produto-meta">
               <span class="pdv-preco">{{ p.preco|intcomma_brl }}</span>
-              <small class="pdv-saldo">{% if p.saldo > 0 %}Saldo {{ p.saldo|floatformat:"-3" }}{% else %}Esgotado{% endif %}</small>
+              <small class="pdv-saldo">{% if p.saldo > 0 %}Saldo {{ p.saldo|quantidade_br }} {{ p.unidade }}{% else %}Esgotado{% endif %}</small>
             </span>
             <span class="pdv-add" aria-hidden="true">+</span>
           </button>

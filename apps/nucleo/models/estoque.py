@@ -19,6 +19,7 @@ from django.db import IntegrityError, models, transaction
 from django.db.models import Sum
 
 from apps.nucleo.catalogo import ESCOLHAS_ICONES, ilustracao_produto
+from apps.nucleo.formatos import qtd_br
 from apps.nucleo.validadores import decimal_valido
 
 from .financeiro import NaturezaFiscal, centro_choices, registrar_auditoria
@@ -534,7 +535,7 @@ def _registrar_saida(produto, local, quantidade, usuario, tipo, documento,
     if saldo(produto, local) < quantidade:
         raise ValidationError(
             f"Saldo insuficiente de {produto} em {local} "
-            f"(disponível: {saldo(produto, local)})."
+            f"(disponível: {qtd_br(saldo(produto, local))} {produto.unidade})."
         )
     plano = planejar_lotes(produto, local, quantidade, lote=lote,
                            permite_vencido=tipo == MovimentoEstoque.Tipo.PERDA)
@@ -588,7 +589,7 @@ def _transferir(produto, origem, destino, quantidade, usuario, observacao, chave
         raise ValidationError("Transfira os ingredientes do prato.")
     if saldo(produto, origem) < quantidade:
         raise ValidationError(
-            f"Saldo insuficiente em {origem} (disponível: {saldo(produto, origem)})."
+            f"Saldo insuficiente em {origem} (disponível: {qtd_br(saldo(produto, origem))} {produto.unidade})."
         )
     custo = produto.custo_medio
     plano = planejar_lotes(produto, origem, quantidade, permite_vencido=True)

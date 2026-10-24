@@ -19,6 +19,7 @@ from apps.nucleo.models import (
     Usuario,
     estornar_movimento,
     registrar_entrada,
+    registrar_saida,
     saldo,
 )
 from apps.nucleo.modulos import Modulo
@@ -96,6 +97,37 @@ class RestauranteFluxoE2ETests(_BaseE2E):
         expect(self.page.locator("#comanda-itens")).to_contain_text("14,00")
         self.assertEqual(self.comanda.itens.get().quantidade, Decimal("2"))
         self.assertEqual(saldo(self.produto, self.local), Decimal("18"))
+
+    def test_quantidades_na_comanda_sem_zeros_artificiais_e_com_unidade(self):
+        self.produto.nome = "Barra de chocolate QA"
+        self.produto.save(update_fields=["nome"])
+        registrar_saida(self.produto, self.local, 15, self.op)
+        fracionado = Produto.objects.create(
+            nome="Queijo fracionado QA", categoria=self.categoria,
+            preco_venda=Decimal("40.00"), unidade="kg")
+        registrar_entrada(fracionado, self.local, Decimal("0.500"), Decimal("10.00"), self.op)
+        self.abrir()
+        produto = self.produto_botao()
+        expect(produto.locator(".pdv-saldo")).to_have_text("Saldo 5 un")
+        expect(self.page.locator(".pdv-produto").filter(has_text=fracionado.nome)
+               .locator(".pdv-saldo")).to_have_text("Saldo 0,5 kg")
+        produto.click()
+        dialogo = self.page.get_by_role("dialog")
+        dialogo.get_by_label("Quantidade", exact=False).fill("6")
+        dialogo.get_by_role("button", name="Adicionar à comanda", exact=True).click()
+        expect(dialogo).to_contain_text("disponível: 5 un")
+        self.assertEqual(saldo(self.produto, self.local), Decimal("5"))
+        self.assertFalse(self.comanda.itens.exists())
+        dialogo.get_by_label("Quantidade", exact=False).fill("1")
+        dialogo.get_by_role("button", name="Adicionar à comanda", exact=True).click()
+        expect(dialogo).to_be_hidden()
+        expect(self.produto_botao().locator(".pdv-saldo")).to_have_text("Saldo 4 un")
+        self.assertEqual(saldo(self.produto, self.local), Decimal("4"))
+        # A edição também mostra o inteiro como o operador o digitou.
+        if self.page.locator('[data-comanda-abrir="conta"]:visible').count():
+            self.page.locator('[data-comanda-abrir="conta"]:visible').first.click()
+        self.page.get_by_role("button", name=f"Editar {self.produto.nome}", exact=True).click()
+        expect(self.page.get_by_role("dialog").get_by_label("Quantidade", exact=False)).to_have_value("1")
 
     def test_pedido_nao_salvo_pede_confirmacao_e_preserva_observacao(self):
         self.abrir()

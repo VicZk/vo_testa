@@ -23,7 +23,8 @@ class PedidoItemForm(forms.Form):
     def __init__(self, *args, produto, item=None, **kwargs):
         initial = kwargs.setdefault("initial", {})
         if item:
-            initial.update(quantidade=item.quantidade, observacoes=item.observacoes, versao=item.versao)
+            initial.update(quantidade=format(item.quantidade.normalize(), "f"),
+                           observacoes=item.observacoes, versao=item.versao)
         super().__init__(*args, **kwargs)
         if item:
             self.fields.pop("chave_pedido")

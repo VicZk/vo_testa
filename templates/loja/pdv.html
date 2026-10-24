@@ -76,7 +76,7 @@
           <span class="pdv-produto-nome" x-text="p.nome"></span>
           <span class="pdv-produto-meta">
             <span class="pdv-preco" x-text="reais(p.preco)"></span>
-            <small class="pdv-saldo" x-text="restante(p) >= 1 ? ('Disponível: ' + restante(p)) : (p.saldo > 0 ? 'Limite do estoque' : 'Esgotado')"></small>
+            <small class="pdv-saldo" x-text="restante(p) >= 1 ? ('Disponível: ' + numeroQuantidade(restante(p)) + ' ' + p.unidade_sigla) : (p.saldo > 0 ? 'Limite do estoque' : 'Esgotado')"></small>
           </span>
           <span class="pdv-selecionado" x-show="noCarrinho(p.id)" x-text="noCarrinho(p.id) + ' no carrinho'"></span>
         </button>
@@ -178,6 +178,7 @@
       chave: (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
         : 'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g, () => (Math.random() * 16 | 0).toString(16)),
       reais(v) { return 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 }); },
+      numeroQuantidade(v) { return Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 3 }); },
       normalizar(v) { return String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR'); },
       categorias() {
         const grupos = new Map();

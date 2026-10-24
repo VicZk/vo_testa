@@ -1,11 +1,11 @@
-{% load moeda l10n %}
+{% load moeda l10n nucleo_extras %}
 <div id="comanda-itens" class="comanda-itens" data-subtotal="{{ comanda.subtotal|unlocalize }}" data-tem-itens="{% if comanda.itens.all %}1{% else %}0{% endif %}">
   {% if erro %}<div class="mensagem error">{{ erro }}</div>{% endif %}
   {% if comanda.itens.all %}
     <div class="comanda-lista">
       {% for i in comanda.itens.all %}
         <div class="pdv-item">
-          <span class="comanda-qtd">{{ i.quantidade|floatformat:"-3" }}×</span>
+          <span class="comanda-qtd">{{ i.quantidade|quantidade_br }}×</span>
           <div class="pdv-item-nome">
             <strong>{{ i.descricao }}</strong>
             {% for opcao in i.opcoes %}<small class="pedido-detalhe">{{ opcao.grupo }}: {{ opcao.nome }}{% if opcao.adicional != '0.00' and opcao.adicional != '0' %} (+ {{ opcao.adicional|intcomma_brl }}){% endif %}</small>{% endfor %}

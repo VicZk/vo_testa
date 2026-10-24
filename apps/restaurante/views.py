@@ -98,7 +98,7 @@ def _contexto_comanda(request, comanda):
     produtos = Produto.objects.filter(ativo=True, preco_venda__gt=0).select_related("categoria")
     saldos = disponibilidade_produtos(produtos, local)
     cardapio = [
-        {"id": p.pk, "nome": p.nome, "preco": p.preco_venda, "saldo": saldos[p.pk],
+        {"id": p.pk, "nome": p.nome, "preco": p.preco_venda, "saldo": saldos[p.pk], "unidade": p.unidade,
          "ilustracao": p.ilustracao_catalogo, "categoria_id": p.categoria_id, "categoria": p.categoria.nome}
         for p in produtos
     ]

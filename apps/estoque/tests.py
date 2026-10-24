@@ -65,6 +65,29 @@ class CustoMedioTests(EstoqueBase):
         self.assertEqual(self.produto.natureza, "consumo")
 
 
+class QuantidadeLegivelTests(EstoqueBase):
+    def test_erros_de_saldo_distinguem_inteiros_e_fracoes_com_unidade(self):
+        for quantidade, unidade, esperado in (
+            ("5.000", "un", "5 un"),
+            ("0.500", "kg", "0,5 kg"),
+            ("5000.000", "un", "5000 un"),
+        ):
+            with self.subTest(quantidade=quantidade):
+                self.produto.unidade = unidade
+                self.produto.save(update_fields=["unidade"])
+                ajustar(self.produto, self.almox, Decimal(quantidade), self.user, motivo="Contagem QA")
+                antes = MovimentoEstoque.objects.count()
+                for operacao in (
+                    lambda: registrar_saida(self.produto, self.almox, Decimal(quantidade) + 1, self.user),
+                    lambda: transferir(self.produto, self.almox, self.loja, Decimal(quantidade) + 1, self.user),
+                ):
+                    with self.assertRaises(ValidationError) as erro:
+                        operacao()
+                    self.assertIn(f"disponível: {esperado}", str(erro.exception))
+                self.assertEqual(saldo(self.produto, self.almox), Decimal(quantidade))
+                self.assertEqual(MovimentoEstoque.objects.count(), antes)
+
+
 class ImutabilidadeTests(EstoqueBase):
     def test_movimento_imutavel(self):
         mov = registrar_entrada(self.produto, self.almox, 3, Decimal("1.00"), self.user)
