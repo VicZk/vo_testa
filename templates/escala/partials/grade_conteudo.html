@@ -41,12 +41,12 @@ contradizia a si mesma.{% endcomment %}
 
 {% if grade.linhas %}
 <div class="escala-grade-wrap">
-<table class="tabela escala-grade">
+<table class="tabela escala-grade" aria-label="Escala da semana por turno e dia">
   <thead>
     <tr>
-      <th class="escala-col-turno">Turno</th>
+      <th scope="col" class="escala-col-turno">Turno</th>
       {% for d in grade.dias %}
-        <th class="{% if d == hoje %}col-hoje{% endif %}">
+        <th scope="col" class="{% if d == hoje %}col-hoje{% endif %}">
           <span class="escala-dia-sem">{{ d|date:"D" }}</span>
           <span class="escala-dia-num">{{ d|date:"d/m" }}</span>
         </th>
@@ -56,13 +56,14 @@ contradizia a si mesma.{% endcomment %}
   <tbody>
     {% for linha in grade.linhas %}
       <tr>
-        <td class="escala-turno">
+        <th scope="row" class="escala-turno">
           <strong>{{ linha.turno.nome }}</strong>
           <small>{{ linha.turno.get_setor_display }} · {{ linha.turno.inicio|time:"H:i" }}–{{ linha.turno.fim|time:"H:i" }}</small>
-        </td>
+        </th>
         {% for c in linha.celulas %}
           <td class="escala-celula escala-drop {% if c.data == hoje %}col-hoje{% endif %} {% if c.eh_feriado %}eh-feriado{% endif %}"
               data-turno="{{ linha.turno.pk }}" data-data="{{ c.data|date:'Y-m-d' }}" data-dia="{{ c.data|date:'D, d/m' }}">
+            <span class="escala-dia-celula" aria-hidden="true">{{ c.data|date:"l, d/m" }}{% if c.data == hoje %} · Hoje{% endif %}</span>
             {% if c.eh_feriado %}<span class="feriado-tag">Feriado</span>{% endif %}
             {% for a in c.atribs %}
               <span class="escala-chip {% if a.violacoes %}tem-viol viol-{{ a.violacoes.0.nivel }}{% endif %}"
@@ -89,6 +90,8 @@ contradizia a si mesma.{% endcomment %}
                   <button type="button" class="fc {% if a.compensacao_efetiva == 'dobro' %}on{% endif %}" data-valor="dobro">dobro</button>
                 </span>
               {% endif %}
+            {% empty %}
+              <span class="escala-dia-vazio">Sem atribuições</span>
             {% endfor %}
           </td>
         {% endfor %}

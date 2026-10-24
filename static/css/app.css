@@ -4485,19 +4485,22 @@ form.filtros:not(.subnav) :is(input:not([type=checkbox]):not([type=radio]):not([
 }
 
 /* Grade */
+#escala-conteudo { container: escala / inline-size; }
 .escala-grade-wrap { overflow-x: auto; border-radius: var(--raio-g); border: 1px solid var(--fio); box-shadow: var(--sombra-1); }
-.escala-grade { margin: 0; border: none; box-shadow: none; min-width: 900px; overflow: visible; }
+.escala-grade { margin: 0; border: none; box-shadow: none; min-width: 0; width: 100%; table-layout: fixed; overflow: visible; }
 .escala-grade thead th {
   background: var(--superficie-2); color: var(--tinta-suave);
   font-size: var(--rotulo-min); font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
   padding: .7rem .6rem; text-align: left; vertical-align: middle; border-bottom: 1px solid var(--fio);
 }
-.escala-grade thead th.escala-col-turno { width: 168px; }
+.escala-grade thead th.escala-col-turno { width: 10.5rem; }
 .escala-dia-sem { display: block; color: var(--tinta); }
 .escala-dia-num { display: block; font-weight: 500; opacity: .7; }
-.escala-grade td { vertical-align: top; padding: .55rem .6rem; border-bottom: 1px solid var(--fio); }
+.escala-grade :is(td, tbody th) { vertical-align: top; padding: .55rem .6rem; border-bottom: 1px solid var(--fio); }
 .escala-grade tbody tr:last-child td { border-bottom: none; }
-.escala-turno { background: var(--superficie-2); }
+.escala-turno { background: var(--superficie-2); text-align: left; font-weight: 400; white-space: normal; overflow-wrap: anywhere; }
+.escala-dia-celula { display: none; }
+.escala-dia-vazio { color: var(--tinta-suave); font-size: .8rem; }
 .escala-turno strong { font-size: 0.9rem; }
 .escala-turno small { display: block; color: var(--tinta-suave); font-size: max(var(--rotulo-min), 0.72rem); margin-top: .1rem; }
 .escala-celula { min-height: 54px; }
@@ -7965,7 +7968,7 @@ html.com-js [data-precos-filtros][hidden] { display: block; visibility: hidden; 
 .rolagem-indicador { margin: .5rem 0; font-size: .8rem; color: var(--tinta-suave); text-align: right; }
 .rolagem-indicador[hidden] { display: none; }
 .rolagem-ampla { scrollbar-color: var(--fio-forte) var(--superficie-2); scrollbar-width: auto; }
-.escala-grade :is(th.escala-col-turno,td.escala-turno) { position: sticky; left: 0; z-index: 2; background: var(--superficie-2); }
+.escala-grade :is(th.escala-col-turno,th.escala-turno) { position: sticky; left: 0; z-index: 2; background: var(--superficie-2); }
 .escala-grade th.escala-col-turno { z-index: 3; }
 .mk-cal-rotulos, .mk-cal-nome, .mk-cal-pe-vao { position: sticky; left: 0; z-index: 2; background: var(--superficie-2); }
 .mk-cal-nome { background: var(--superficie); }
@@ -8139,7 +8142,7 @@ html.com-js [data-precos-filtros][hidden] { display: block; visibility: hidden; 
   column-gap: .5rem; row-gap: .05rem; width: 100%; max-width: 18rem; margin: 0 0 .35rem;
   padding: .35rem .3rem .35rem .65rem;
   background: var(--superficie); color: var(--tinta); border: 1px solid var(--fio); border-radius: var(--raio-p);
-  box-shadow: inset 3px 0 0 var(--faixa); font-size: 0.74rem; font-weight: 500;
+  box-shadow: inset 3px 0 0 var(--faixa); font-size: max(var(--rotulo-min), .74rem); font-weight: 500;
 }
 .he-card.banco { --faixa: var(--info); background: var(--superficie); color: var(--tinta); border-color: var(--fio); }
 .he-card.extra { --faixa: var(--alerta); background: var(--superficie); color: var(--tinta); border-color: var(--fio); }
@@ -8156,6 +8159,51 @@ html.com-js [data-precos-filtros][hidden] { display: block; visibility: hidden; 
 .escala-he-resumo { display: flex; flex-direction: row; flex-wrap: wrap; align-items: start; gap: .8rem 2.2rem; padding: .85rem 1.1rem; margin: 0 0 1rem; }
 .escala-he-item { display: grid; gap: .1rem; }
 .escala-he-item strong { font-family: var(--fonte-titulo); font-size: 1.35rem; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+
+/* A mesma célula mantém seus eventos e dados nas duas apresentações. A semana
+   só usa sete colunas quando cabe; nas demais larguras cada turno lista seus dias. */
+.escala-grade .escala-chip { max-width: 100%; min-width: 0; }
+.escala-grade .escala-chip-nome { min-width: 0; flex: 1 1 auto; }
+.escala-grade .escala-chip :is(.he-add, .chip-x) { flex-shrink: 0; }
+.escala-grade .he-card { min-width: 0; grid-template-columns: minmax(0, 1fr) auto auto; }
+.escala-grade .he-card-tipo { white-space: normal; }
+.escala-grade .he-form { width: 100%; min-width: 0; max-width: 100%; }
+.escala-grade .he-form .lin, .escala-grade .he-form .tipo, .escala-grade .he-form .acoes { flex-wrap: wrap; }
+.escala-grade .he-form .lin > div { flex: 1 1 6rem; min-width: 0; }
+.escala-grade .he-form input[type=time] { width: 100%; max-width: 100%; }
+.escala-grade .he-form .acoes button { flex: 1 1 5rem; min-height: 44px; }
+@media (pointer: coarse), (max-width: 820px) {
+  .escala-grade .escala-chip :is(.he-add, .chip-x), .escala-grade .he-card .he-x {
+    min-width: 44px; min-height: 44px; width: 44px; height: 44px;
+  }
+}
+@media screen {
+  @container escala (max-width: 100rem) {
+    .escala-grade-wrap { border: 0; border-radius: 0; box-shadow: none; }
+    .escala-grade, .escala-grade tbody { display: block; width: 100%; }
+    .escala-grade thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+    .escala-grade tbody tr {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
+      gap: .65rem; padding: .9rem; margin-bottom: 1rem;
+      border: 1px solid var(--fio); border-radius: var(--raio-g); background: var(--superficie);
+      box-shadow: var(--sombra-1);
+    }
+    .escala-grade tbody th.escala-turno {
+      position: static; grid-column: 1 / -1; display: block; width: auto;
+      padding: 0 0 .65rem; background: none; border-bottom: 1px solid var(--fio);
+    }
+    .escala-grade tbody td.escala-celula {
+      position: static; display: block; width: auto; min-width: 0; white-space: normal;
+      padding: .75rem; border: 1px solid var(--fio); border-radius: var(--raio-p);
+      background-color: var(--superficie-2);
+    }
+    .escala-grade tbody td.escala-celula.col-hoje { background-color: color-mix(in srgb, var(--lampiao) 8%, var(--superficie)); }
+    .escala-dia-celula {
+      display: block; margin-bottom: .55rem; font-size: .85rem; font-weight: 700;
+      color: var(--tinta); text-transform: capitalize;
+    }
+  }
+}
 
 /* RODAPÉ EM LINHA:
    com o menu aberto (e na gaveta) avatar, nome e Sair ficam na mesma linha — só o trilho
