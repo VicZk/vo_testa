@@ -928,7 +928,22 @@ class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
         abas = p.locator('.est-abas .est-aba')
         self.assertGreaterEqual(abas.count(), 4)
         self.assertEqual(p.locator('.est-abas [aria-current="page"]').count(), 1)
-        self.assertEqual(p.locator('.est-abas [aria-current="page"]').evaluate("e=>getComputedStyle(e).borderBottomWidth"), "2px")
+        # Cada aba conserva o próprio fio; a seleção usa sombra interna de 2px
+        # na mesma cor de destaque do ícone, sem acrescentar altura à borda.
+        estilos = abas.evaluate_all("""els => els.map(el => {
+            const css = getComputedStyle(el);
+            return {atual:el.getAttribute('aria-current') === 'page',
+                borda:css.borderBottomWidth, sombra:css.boxShadow,
+                destaque:getComputedStyle(el.querySelector('.ico')).color};
+        })""")
+        for estilo in estilos:
+            self.assertEqual(estilo["borda"], "1px", estilo)
+            if estilo["atual"]:
+                self.assertIn("inset", estilo["sombra"], estilo)
+                self.assertIn("0px -2px 0px 0px", estilo["sombra"], estilo)
+                self.assertIn(estilo["destaque"], estilo["sombra"], estilo)
+            else:
+                self.assertEqual(estilo["sombra"], "none", estilo)
 
     def test_arrastar_reserva_entre_linhas_muda_quarto_e_preserva_conta(self):
         from apps.nucleo.models import UH
