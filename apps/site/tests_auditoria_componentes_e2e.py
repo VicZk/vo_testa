@@ -48,9 +48,9 @@ class AuditoriaComponentesE2ETests(_BaseE2E):
         self.page.emulate_media(reduced_motion="reduce")
         self.page.set_viewport_size({"width": 1440, "height": 900})
 
-    def _abrir(self, rota, *, largura=1440, trilho=False, altura=900):
+    def _abrir(self, rota, *, largura=1440, trilho=False, altura=900, query=""):
         self.page.set_viewport_size({"width": largura, "height": altura})
-        self.page.goto(self.url(reverse(rota)), wait_until="load")
+        self.page.goto(self.url(reverse(rota) + query), wait_until="load")
         expect(self.page.locator("#conteudo")).to_be_visible()
         self.page.evaluate("document.fonts.ready")
         recolhida = self.page.locator(".app").evaluate("el => el.classList.contains('recolhida')")
@@ -237,8 +237,18 @@ class AuditoriaComponentesE2ETests(_BaseE2E):
         ):
             for largura, trilho in self.ESTADOS:
                 with self.subTest(rota=rota, largura=largura, trilho=trilho):
-                    self._abrir(rota, largura=largura, trilho=trilho)
+                    self._abrir(rota, largura=largura, trilho=trilho,
+                                query="?vista=mes" if rota == "marketing:calendario" else "")
                     caixa = self.page.locator(regiao)
+                    if rota == "marketing:calendario" and not caixa.is_visible():
+                        # O calendário estreito virou agenda vertical; a campanha
+                        # continua identificada e alcançável, sem matriz escondida.
+                        campanha = self.page.locator(".mkt-agenda-campanha").filter(
+                            has_text="Campanha de conferência")
+                        expect(campanha).to_be_visible()
+                        self._conferir_dentro(campanha, self.page.locator("#conteudo"))
+                        self._foto(f"matriz-marketing-calendario-{largura}-{'trilho' if trilho else 'aberta'}")
+                        continue
                     identidade = caixa.locator(coluna).first
                     expect(identidade).to_be_visible()
                     sobra = caixa.evaluate("el => el.scrollWidth - el.clientWidth")
@@ -250,7 +260,7 @@ class AuditoriaComponentesE2ETests(_BaseE2E):
                         caixa.evaluate("el => el.scrollLeft = el.scrollWidth")
                         expect(dica).to_contain_text("primeiras colunas")
                         self.assertAlmostEqual(identidade.bounding_box()["x"], esquerda, delta=1)
-                    else:
+                    elif rota != "marketing:calendario":
                         expect(dica).to_be_hidden()
                     self._foto(f"matriz-{rota.replace(':','-')}-{largura}-{'trilho' if trilho else 'aberta'}")
 
