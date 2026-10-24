@@ -1,8 +1,10 @@
 """Posição de estoque no navegador: leitura, filtros e ações em telas estreitas."""
 
+import json
 import os
 import time
 import unittest
+import uuid
 from decimal import Decimal
 from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlsplit
@@ -10,6 +12,7 @@ from urllib.parse import parse_qs, urlencode, urlsplit
 from django.conf import settings
 from django.core.cache import cache
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.nucleo.models import (
     CategoriaProduto,
@@ -203,6 +206,136 @@ class EstoqueMobileE2ETests(_BaseE2E):
                 self.foto(str(largura))
                 self.conferir_geometria(primeira_tela=True)
                 self.page.evaluate("window.scrollTo(0,0)")
+
+    def test_quinze_paginas_preservam_abas_antes_do_titulo_em_cinco_estados(self):
+        from apps.nucleo.models import Fornecedor, Inventario, ItemInventario, Pessoa
+        from apps.nucleo.notas_entrada import cadastrar_nota_entrada
+
+        inventario = Inventario.objects.create(local=self.local, criado_por=self.usuario)
+        ItemInventario.objects.create(
+            inventario=inventario, produto=self.grande,
+            saldo_sistema=Decimal("12345.678"), quantidade_contada=Decimal("12345.678"))
+        fornecedor = Pessoa.objects.create(nome="Fornecedor sintético da conferência", tipo=Pessoa.Tipo.JURIDICA)
+        Fornecedor.objects.create(pessoa=fornecedor)
+        nota = cadastrar_nota_entrada(
+            fornecedor=fornecedor, tipo="nfe", numero="90002", serie="1",
+            emissao=timezone.localdate(), usuario=self.usuario, chave=uuid.uuid4(),
+            observacao="Documento fictício exclusivo do teste de navegação.",
+            itens=[{"produto": self.grande, "embalagem": None,
+                    "fator_conferido": Decimal("1"), "quantidade": Decimal("5"),
+                    "custo_unidade_compra": Decimal("8")}])
+        # Uma rota GET canônica por cada um dos 15 templates com a navegação.
+        # Novo/editar produto e as quatro movimentações compartilham templates;
+        # ações POST, downloads e formulários de modal não são páginas de seção.
+        paginas = (
+            ("posicao", (), "posicao.html"),
+            ("produtos", (), "produtos.html"),
+            ("produto_editar", (self.grande.pk,), "produto_form.html"),
+            ("produto_suprimentos", (self.grande.pk,), "produto_suprimentos.html"),
+            ("entrada", (), "movimentar.html"),
+            ("inventarios", (), "inventarios.html"),
+            ("inventario", (inventario.pk,), "inventario.html"),
+            ("kardex", (self.grande.pk,), "kardex.html"),
+            ("cadastros", (), "cadastros.html"),
+            ("compras", (), "compras.html"),
+            ("lotes", (), "lotes.html"),
+            ("notas", (), "notas_lista.html"),
+            ("nota_nova", (), "nota_cadastro.html"),
+            ("nota", (nota.pk,), "nota_detalhe.html"),
+            ("nota_receber", (nota.pk,), "nota_receber.html"),
+        )
+        destinos = [reverse(f"estoque:{nome}") for nome in (
+            "posicao", "produtos", "entrada", "inventarios", "notas", "compras", "lotes", "cadastros")]
+        evidencias = []
+        for largura, trilho in ((320, False), (390, False), (821, False), (1440, False), (1440, True)):
+            eixo_y = None
+            for nome, argumentos, template in paginas:
+                with self.subTest(pagina=nome, largura=largura, trilho=trilho):
+                    self.page.set_viewport_size({"width": largura, "height": 900})
+                    caminho = reverse(f"estoque:{nome}", args=argumentos)
+                    resposta = self.page.goto(self.url(caminho), wait_until="load")
+                    self.assertEqual(resposta.status, 200)
+                    self.assertEqual(urlsplit(self.page.url).path, caminho)
+                    self.esperar_layout()
+                    app = self.page.locator(".app")
+                    if largura > 820 and app.evaluate("el => el.classList.contains('recolhida')") != trilho:
+                        self.page.locator(".sidebar-toggle").click()
+                    if largura > 820:
+                        self.page.wait_for_function("""trilho => {
+                            const app = document.querySelector('.app'), css = getComputedStyle(app);
+                            const alvo = parseFloat(css.getPropertyValue(trilho ? '--trilho-w' : '--sidebar-w-aberta'));
+                            return app.classList.contains('recolhida') === trilho &&
+                                Math.abs(parseFloat(css.gridTemplateColumns) - alvo) < .1 &&
+                                Math.abs(document.querySelector('.sidebar').getBoundingClientRect().width - alvo) < .1;
+                        }""", arg=trilho)
+                    self.page.evaluate("window.scrollTo(0,0)")
+                    abas = self.page.get_by_role("navigation", name="Seções do Estoque", exact=True)
+                    expect(abas).to_be_visible()
+                    expect(abas.locator("a").first).to_have_text("Posição")
+                    self.assertEqual(abas.locator("a").evaluate_all("els => els.map(el => el.getAttribute('href'))"), destinos)
+                    medidas = abas.evaluate("""nav => {
+                        const caixa = el => {const r=el.getBoundingClientRect(); return {
+                            x:r.x, y:r.y+scrollY, right:r.right, bottom:r.bottom+scrollY,
+                            width:r.width, height:r.height};};
+                        const titulo = document.querySelector('#conteudo h1');
+                        return {nav:caixa(nav), titulo:caixa(titulo),
+                            antesDoTitulo:!!(nav.compareDocumentPosition(titulo) & Node.DOCUMENT_POSITION_FOLLOWING),
+                            viewport:document.documentElement.clientWidth, documento:document.documentElement.scrollWidth,
+                            excessoNav:nav.scrollWidth-nav.clientWidth,
+                            foraDaLargura:[...document.querySelectorAll('#conteudo *')].filter(el =>
+                                el.getBoundingClientRect().right > document.documentElement.clientWidth + 1
+                            ).map(el => ({tag:el.tagName, classe:el.className, ...caixa(el)})).slice(0, 20),
+                            links:[...nav.querySelectorAll('a')].map(el => ({...caixa(el),
+                                texto:el.textContent.trim(), excesso:el.scrollWidth-el.clientWidth}))};
+                    }""")
+                    evidencias.append({"pagina": nome, "caminho": caminho, "template": template,
+                                       "largura": largura, "trilho": trilho, **medidas})
+                    if medidas["documento"] > medidas["viewport"] + 1:
+                        self.foto(f"t63-overflow-{nome}-{largura}")
+                    self.assertTrue(medidas["antesDoTitulo"], medidas)
+                    self.assertLessEqual(medidas["nav"]["bottom"], medidas["titulo"]["y"] + 1, medidas)
+                    if eixo_y is None:
+                        eixo_y = medidas["nav"]["y"]
+                    self.assertAlmostEqual(medidas["nav"]["y"], eixo_y, delta=1, msg=medidas)
+                    self.assertLessEqual(medidas["documento"], medidas["viewport"] + 1, medidas)
+                    self.assertLessEqual(medidas["excessoNav"], 1, medidas)
+                    if nome in ("produtos", "inventario", "kardex"):
+                        categorias = self.page.locator(
+                            ".est-produto-meta .rotulo-dado, .est-kardex-meta .rotulo-dado"
+                        ).filter(has_text=self.alimentos.nome)
+                        self.assertGreater(categorias.count(), 0)
+                        for categoria in categorias.all():
+                            expect(categoria).to_have_text(self.alimentos.nome)
+                            texto = categoria.evaluate("""el => {
+                                const limite = el.closest('.est-produto-meta,.est-kardex-meta').getBoundingClientRect();
+                                const range = document.createRange(); range.selectNodeContents(el);
+                                return {left:limite.left, right:limite.right, partes:[...range.getClientRects()].map(
+                                    r => ({left:r.left, right:r.right}))};
+                            }""")
+                            for parte in texto["partes"]:
+                                self.assertGreaterEqual(parte["left"], texto["left"] - 1, texto)
+                                self.assertLessEqual(parte["right"], texto["right"] + 1, texto)
+                    for link, caixa in zip(abas.locator("a").all(), medidas["links"], strict=True):
+                        self.assertGreaterEqual(caixa["x"], medidas["nav"]["x"] - 1, caixa)
+                        self.assertLessEqual(caixa["right"], medidas["nav"]["right"] + 1, caixa)
+                        self.assertGreaterEqual(caixa["height"], 44, caixa)
+                        self.assertLessEqual(caixa["excesso"], 1, caixa)
+                        # Ensaio real de ponteiro e foco: nenhum destino depende
+                        # de rolagem lateral ou elemento coberto.
+                        link.click(trial=True, timeout=5000)
+                        link.focus()
+                        expect(link).to_be_focused()
+                        self.assertEqual(self.page.evaluate("window.scrollX"), 0)
+                        self.assertEqual(abas.evaluate("el => el.scrollLeft"), 0)
+                    if largura == 320 or nome == "posicao":
+                        self.page.evaluate("window.scrollTo(0,0)")
+                        self.foto(f"t63-{nome}-{largura}-{'trilho' if trilho else 'aberta'}")
+        self.assertEqual(len(evidencias), 75)
+        destino = os.environ.get("EVIDENCIAS_DIR") or os.environ.get("E2E_EVIDENCIAS")
+        if destino:
+            Path(destino).mkdir(parents=True, exist_ok=True)
+            (Path(destino) / "estoque-t63-15-paginas-5-estados.json").write_text(
+                json.dumps(evidencias, ensure_ascii=False, indent=2), encoding="utf-8")
 
     def test_busca_categoria_situacao_e_limpar_preservam_deposito(self):
         self.page.set_viewport_size({"width": 390, "height": 900})

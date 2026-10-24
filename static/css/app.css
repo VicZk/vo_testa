@@ -6900,6 +6900,10 @@ body.escala-dragging .escala-drop { cursor: copy; }
 
 /* ---------- Indicadores e títulos de seção ---------- */
 .est-kpis { margin: 1.3rem 0 1.6rem; }
+/* Categoria e demais metadados acompanham a largura disponível também no
+   catálogo, na contagem e no kardex, conservando o texto completo. */
+.est-produto-meta .rotulo-dado,
+.est-kardex-meta .rotulo-dado { white-space: normal; overflow-wrap: anywhere; }
 .est-titulo-secao {
   margin: 0 0 .7rem;
   font-family: var(--fonte-ui); font-size: var(--rotulo-min); color: var(--tinta-suave);
