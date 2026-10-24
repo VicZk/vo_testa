@@ -39,12 +39,12 @@
   /* ---- hero ---- */
   .hero{text-align:center;padding:70px 0 44px}
   .hero .logo{height:160px;margin:0 auto 22px;display:block;filter:drop-shadow(0 6px 18px rgba(0,0,0,.4))}
-  .hero h1{font-weight:900;font-size:clamp(32px,8.5vw,92px);line-height:1;letter-spacing:-.03em;color:var(--pergaminho)}
+  .hero h1{font-weight:900;font-size:clamp(2rem,8.5vw,5.75rem);line-height:1;letter-spacing:-.03em;color:var(--pergaminho)}
   .hero h1 em{font-style:normal;color:var(--brass)}
   .rule{height:1px;background:linear-gradient(90deg,transparent,var(--brass-soft),transparent);margin:28px auto;max-width:360px}
-  .sub{color:rgba(239,219,178,.66);font-size:16px;max-width:520px;margin:0 auto}
+  .sub{color:rgba(239,219,178,.66);font-size:1rem;max-width:520px;margin:0 auto}
   .sub .local{color:var(--brass)}
-  .cue{margin-top:16px;color:var(--brass);font-size:11px;letter-spacing:.28em;text-transform:uppercase;opacity:.8}
+  .cue{margin-top:16px;color:var(--brass);font-size:var(--rotulo-min, .75rem);letter-spacing:.28em;text-transform:uppercase;opacity:.8}
 
   /* ---- estações (serpentina) ---- */
   .estacoes{padding:16px 0 10px}
@@ -53,12 +53,12 @@
   .estacao .txt{order:2;text-align:left}
   .estacao.flip .fone-col{order:2}
   .estacao.flip .txt{order:1;text-align:right}
-  .txt .comp{color:var(--brass);font-size:12px;letter-spacing:.22em;text-transform:uppercase;font-weight:700;display:flex;align-items:center;gap:12px}
+  .txt .comp{color:var(--brass);font-size:0.75rem;letter-spacing:.22em;text-transform:uppercase;font-weight:700;display:flex;align-items:center;gap:12px}
   .estacao.flip .txt .comp{justify-content:flex-end}
-  .dial{width:52px;height:52px;border-radius:50%;border:2px solid var(--brass);display:inline-flex;align-items:center;justify-content:center;font-weight:900;font-size:20px;color:var(--brass);position:relative;flex:none}
+  .dial{width:52px;height:52px;border-radius:50%;border:2px solid var(--brass);display:inline-flex;align-items:center;justify-content:center;font-weight:900;font-size:1.25rem;color:var(--brass);position:relative;flex:none}
   .dial::before{content:'';position:absolute;inset:5px;border-radius:50%;border:1px dashed rgba(215,160,72,.4)}
-  .txt h2{font-weight:900;font-size:clamp(26px,3.6vw,40px);line-height:1.05;letter-spacing:-.02em;margin:14px 0 8px;color:var(--pergaminho)}
-  .txt p{color:rgba(239,219,178,.72);font-size:16px;max-width:400px}
+  .txt h2{font-weight:900;font-size:clamp(1.625rem,3.6vw,2.5rem);line-height:1.05;letter-spacing:-.02em;margin:14px 0 8px;color:var(--pergaminho)}
+  .txt p{color:rgba(239,219,178,.72);font-size:1rem;max-width:400px}
   .estacao.flip .txt p{margin-left:auto}
 
   /* reveal no scroll (apple-design: transform+opacity, interrompível por natureza) */
@@ -85,7 +85,7 @@
   .fecho{text-align:center;padding:72px 0 92px}
   .fecho .rule{max-width:620px;margin-bottom:30px}
   .seal{width:56px;height:56px;margin:0 auto 24px;display:block;opacity:.9}
-  .fecho h3{font-weight:900;font-size:clamp(30px,5.2vw,58px);line-height:1.08;letter-spacing:-.02em;color:var(--pergaminho)}
+  .fecho h3{font-weight:900;font-size:clamp(1.875rem,5.2vw,3.625rem);line-height:1.08;letter-spacing:-.02em;color:var(--pergaminho)}
   .fecho h3 em{font-style:normal;color:var(--brass)}
 
   @media(max-width:760px){

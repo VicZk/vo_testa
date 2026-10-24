@@ -10,13 +10,13 @@
 
   .em-topo{ display:flex; align-items:flex-end; justify-content:space-between;
     gap:1rem; padding:1.4rem 1.6rem .9rem; }
-  .em-topo .eyebrow{ font-size:11.5px; letter-spacing:.16em; text-transform:uppercase;
+  .em-topo .eyebrow{ font-size:max(var(--rotulo-min, .75rem), 0.71875rem); letter-spacing:.16em; text-transform:uppercase;
     color:var(--tinta-suave); margin:0 0 .35rem; font-weight:600; }
-  .em-topo h1{ margin:0; font-size:30px; letter-spacing:-.02em; line-height:1.05; }
+  .em-topo h1{ margin:0; font-size:1.875rem; letter-spacing:-.02em; line-height:1.05; }
   .em-topo .lead-chip{ display:inline-flex; align-items:center; gap:.5rem; margin-top:.55rem;
-    font-size:13px; color:var(--tinta-suave); }
+    font-size:0.8125rem; color:var(--tinta-suave); }
   .em-topo .lead-av{ width:26px; height:26px; border-radius:50%; background:var(--lampiao);
-    color:var(--noturno); display:inline-grid; place-items:center; font-weight:800; font-size:12px; }
+    color:var(--noturno); display:inline-grid; place-items:center; font-weight:800; font-size:0.75rem; }
 
   .em-grid{ display:grid; grid-template-columns:minmax(380px,460px) 1fr; gap:0;
     min-height:calc(100dvh - 168px); align-items:stretch; }
@@ -32,12 +32,12 @@
   .em-tpl-nome{ flex:1 1 auto; min-width:0; padding:.5rem .6rem; border:1px solid var(--fio);
     border-radius:var(--raio-p); font:inherit; background:var(--superficie); color:var(--tinta); }
   .em-tpl .botao-fantasma{ padding:.5rem .8rem; white-space:nowrap; }
-  .em-tpl-link{ font-size:12.5px; font-weight:600; color:var(--tinta-suave); text-decoration:none;
+  .em-tpl-link{ font-size:0.78125rem; font-weight:600; color:var(--tinta-suave); text-decoration:none;
     white-space:nowrap; padding:0 .3rem; }
   .em-tpl-link:hover{ color:var(--lampiao); }
 
   .em-campo{ margin-bottom:1.05rem; }
-  .em-campo > label{ display:block; font-size:11px; text-transform:uppercase; letter-spacing:.08em;
+  .em-campo > label{ display:block; font-size:var(--rotulo-min, .75rem); text-transform:uppercase; letter-spacing:.08em;
     color:var(--tinta-suave); margin-bottom:.45rem; font-weight:700; }
   .em-campo input, .em-campo textarea{ width:100%; padding:.75rem .85rem; border:1px solid var(--fio);
     border-radius:var(--raio); font:inherit; background:var(--superficie); color:var(--tinta);
@@ -45,7 +45,7 @@
   .em-campo input:focus, .em-campo textarea:focus{ border-color:var(--lampiao);
     box-shadow:0 0 0 4px color-mix(in srgb, var(--lampiao) 18%, transparent); }
   .em-campo textarea{ min-height:150px; resize:vertical; line-height:1.6; }
-  .em-hint{ font-size:11.5px; color:var(--tinta-suave); margin:.4rem 0 0; font-weight:400;
+  .em-hint{ font-size:max(var(--rotulo-min, .75rem), 0.71875rem); color:var(--tinta-suave); margin:.4rem 0 0; font-weight:400;
     text-transform:none; letter-spacing:0; }
 
   .em-acoes{ display:flex; flex-wrap:wrap; gap:.55rem; margin:.2rem 0 .2rem; }
@@ -62,22 +62,22 @@
     .botao-fantasma, .em-tpl-link{
       min-height:44px; display:inline-flex; align-items:center; justify-content:center; }
   }
-  .em-enviar{ width:100%; margin-top:.15rem; padding:.85rem 1rem; font-size:15px; }
+  .em-enviar{ width:100%; margin-top:.15rem; padding:.85rem 1rem; font-size:0.9375rem; }
   .em-enviar[disabled]{ opacity:.45; cursor:not-allowed; filter:grayscale(.3); }
 
   /* Resumo da conversa */
   .em-resumo{ margin-top:1.6rem; }
   .em-resumo .cab{ display:flex; align-items:center; justify-content:space-between; margin-bottom:.5rem; }
-  .em-resumo .cab p{ margin:0; font-size:11px; text-transform:uppercase; letter-spacing:.08em;
+  .em-resumo .cab p{ margin:0; font-size:var(--rotulo-min, .75rem); text-transform:uppercase; letter-spacing:.08em;
     color:var(--tinta-suave); font-weight:700; }
   .em-msg{ display:flex; gap:.6rem; align-items:flex-start; padding:.55rem .3rem;
     border-bottom:1px solid var(--fio); }
   .em-msg:last-child{ border-bottom:0; }
   .em-msg .add{ flex:0 0 auto; width:24px; height:24px; border-radius:50%; border:1px solid var(--fio);
-    background:var(--superficie); color:var(--tinta-suave); font-size:15px; line-height:1; cursor:pointer;
+    background:var(--superficie); color:var(--tinta-suave); font-size:0.9375rem; line-height:1; cursor:pointer;
     display:grid; place-items:center; transition:background var(--mov-rapido), color var(--mov-rapido); }
   .em-msg .add:hover{ background:var(--lampiao); color:var(--noturno); border-color:var(--lampiao); }
-  .em-msg .txt{ font-size:13px; color:var(--tinta); line-height:1.45; min-width:0; }
+  .em-msg .txt{ font-size:0.8125rem; color:var(--tinta); line-height:1.45; min-width:0; }
   .em-msg .txt b{ color:var(--tinta-suave); font-weight:700; margin-right:.25rem; }
   .em-msg .txt .corpo{ display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
     overflow:hidden; }
@@ -88,7 +88,7 @@
     border-left:1px solid var(--fio); padding:1.6rem; position:sticky; top:0;
     display:flex; flex-direction:column; }
   @media (max-width:1000px){ .em-palco{ position:static; border-left:0; border-top:1px solid var(--fio); } }
-  .em-palco .rot{ font-size:11px; text-transform:uppercase; letter-spacing:.08em;
+  .em-palco .rot{ font-size:var(--rotulo-min, .75rem); text-transform:uppercase; letter-spacing:.08em;
     color:var(--tinta-suave); font-weight:700; margin:0 0 .9rem; text-align:center; }
 
   /* Moldura tipo cliente de e-mail */
@@ -102,9 +102,9 @@
   .em-device .dots i:nth-child(1){ background:var(--perigo); }
   .em-device .dots i:nth-child(2){ background:var(--alerta); }
   .em-device .dots i:nth-child(3){ background:var(--sucesso); }
-  .em-device .barra .tag{ margin-left:auto; font-size:10.5px; letter-spacing:.1em;
+  .em-device .barra .tag{ margin-left:auto; font-size:var(--rotulo-min, .75rem); letter-spacing:.1em;
     text-transform:uppercase; color:var(--tinta-suave); font-weight:700; }
-  .em-meta{ padding:.85rem 1.1rem; border-bottom:1px solid var(--fio); font-size:12.5px; }
+  .em-meta{ padding:.85rem 1.1rem; border-bottom:1px solid var(--fio); font-size:0.78125rem; }
   .em-meta .linha{ display:flex; gap:.5rem; margin:.15rem 0; }
   .em-meta .k{ color:var(--tinta-suave); width:56px; flex:0 0 auto; }
   .em-meta .v{ color:var(--tinta); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }

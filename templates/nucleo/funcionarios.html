@@ -10,12 +10,12 @@
 </div>
 <p class="subtitulo">Dados dos funcionários, jornada de trabalho e acesso ao sistema.</p>
 
-<nav class="est-abas abas-secao" aria-label="Setores da equipe">
-  <a href="{% url 'funcionarios' %}" class="est-aba"{% if not setor %} aria-current="page"{% endif %}>Todos <b>{{ total }}</b></a>
+<form method="get" action="{% url 'funcionarios' %}" class="filtros" aria-label="Filtrar funcionários por setor">
+  <button type="submit" name="setor" value="" class="filtro-chip" aria-pressed="{% if not setor %}true{% else %}false{% endif %}">Todos <span class="num">{{ total }}</span></button>
   {% for s in setores %}
-    <a href="?setor={{ s|urlencode }}" class="est-aba"{% if setor == s %} aria-current="page"{% endif %}>{{ s }}</a>
+    <button type="submit" name="setor" value="{{ s }}" class="filtro-chip" aria-pressed="{% if setor == s %}true{% else %}false{% endif %}">{{ s }}</button>
   {% endfor %}
-</nav>
+</form>
 
 <table class="tabela func-lista">
   <thead>
