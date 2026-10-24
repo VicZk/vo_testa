@@ -34,7 +34,9 @@ A entrada mais nova fica no topo. As datas são as do push.
   A precisão do estoque e dos valores monetários permanece preservada.
 - A revisão dos temas do relatório corrigiu resíduos na prioridade e nos
   formulários da Manutenção, no texto do Inventário e na altura dos indicadores
-  de Estoque. Os testes incluem listas preenchidas, ações persistidas, impressão,
+  de Estoque. Categorias longas cabem nos cartões, e os indicadores do Kardex
+  mantêm cifras completas. As abas foram conferidas nas 15 páginas do módulo,
+  em cinco estados de largura/menu. Os testes incluem listas preenchidas, ações persistidas, impressão,
   mudança de fonte, concorrência e os cinco estados de largura/menu.
 
 ## 23/10/2026: revisão da rodada de interface (trilho, abas, avisos)
