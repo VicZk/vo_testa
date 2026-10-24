@@ -9,6 +9,34 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 23/10/2026: tabelas, agenda de Marketing e operação da comanda
+
+- Listagens e relatórios adaptam os campos à largura disponível, inclusive no
+  tablet com menu aberto. Valores monetários permanecem juntos na tela e na
+  impressão; relatórios amplos mantêm cabeçalho repetido e exportação CSV.
+- Escala apresenta os dias por turno quando a matriz não cabe, preservando
+  atribuições, horas extras, banco de horas e ações de toque. Os rótulos e as
+  136 declarações de fonte em pixels examinadas passam a acompanhar a fonte do
+  usuário; Funcionários filtra setores por chips com estado e teclado.
+- Marketing mostra cinco grupos: Planejamento, Aprovação, Produção, No ar e
+  Encerradas. As sete etapas internas, condições de avanço e aprovações continuam
+  preservadas. Cada cartão informa a subetapa e o próximo passo.
+- Entregas podem ser avulsas ou vinculadas explicitamente a uma campanha. Filtros
+  de vínculo e canal, agenda semanal e ações de produção mantêm o contexto após
+  editar. Mês e ano continuam disponíveis. A migração aditiva `0011` torna a
+  campanha opcional; versões e travas protegem edições e vínculos concorrentes.
+- Comanda no celular organiza Pedidos e Cardápio em painéis, reúne os dados de
+  cada pedido e mantém total e fechamento alcançáveis. Não há rolagem interna
+  escondendo pedidos. Vínculo com estadia, transferência, cancelamento, descontos
+  e permissões fiscais continuam fazendo parte dos fluxos existentes.
+- Quantidades deixam de expor zeros decimais artificiais: cinco unidades aparecem
+  como `5 un`, e meio quilo como `0,5 kg`, também nas mensagens de saldo insuficiente.
+  A precisão do estoque e dos valores monetários permanece preservada.
+- A revisão dos temas do relatório corrigiu resíduos na prioridade e nos
+  formulários da Manutenção, no texto do Inventário e na altura dos indicadores
+  de Estoque. Os testes incluem listas preenchidas, ações persistidas, impressão,
+  mudança de fonte, concorrência e os cinco estados de largura/menu.
+
 ## 23/10/2026: revisão da rodada de interface (trilho, abas, avisos)
 
 - Os grupos do menu deixaram de ser colapsáveis: são categorias fixas (título + itens)
