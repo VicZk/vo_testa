@@ -4827,9 +4827,9 @@ form.filtros:not(.subnav) :is(input:not([type=checkbox]):not([type=radio]):not([
 }
 
 /* ── Quadro: colunas e cartões de campanha ── */
-.mk-colunas { display: flex; gap: 13px; overflow-x: auto; padding: 2px 2px 16px; align-items: flex-start; }
+.mk-colunas { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 13px; padding: 2px 2px 16px; align-items: start; }
 .mk-coluna {
-  flex: none; width: 268px; background: var(--superficie-2);
+  min-width: 0; background: var(--superficie-2);
   border: 1px solid var(--fio); border-radius: var(--raio);
 }
 .mk-coluna-cab {
@@ -4840,7 +4840,7 @@ form.filtros:not(.subnav) :is(input:not([type=checkbox]):not([type=radio]):not([
 .mk-coluna-linha { display: flex; align-items: center; gap: 8px; }
 .mk-coluna-linha svg { width: 16px; height: 16px; }
 .mk-coluna-nome {
-  flex: 1; min-width: 0; font-family: var(--fonte-titulo); font-size: 0.875rem;
+  flex: 1; min-width: 0; margin: 0; font-family: var(--fonte-titulo); font-size: 0.875rem;
   font-weight: 700; color: var(--tinta);
 }
 .mk-coluna-sub { margin-top: 3px; font-size: max(var(--rotulo-min), 0.71875rem); line-height: 1.35; color: var(--tinta-suave); }
@@ -4858,14 +4858,23 @@ form.filtros:not(.subnav) :is(input:not([type=checkbox]):not([type=radio]):not([
 }
 .mk-card {
   background: var(--superficie); border: 1px solid var(--fio); border-radius: var(--raio);
-  padding: 12px; box-shadow: var(--sombra-1); cursor: grab;
+  min-width: 0; padding: 12px; box-shadow: var(--sombra-1); cursor: pointer;
 }
-.mk-card-topo { display: flex; align-items: flex-start; gap: 8px; }
+.mk-card-topo { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; }
 .mk-card-nome {
   flex: 1; min-width: 0; font-family: var(--fonte-titulo); font-size: 0.84375rem;
   font-weight: 700; line-height: 1.3; color: var(--tinta);
 }
 .mk-card-cod { flex: none; font-family: var(--fonte-mono); font-size: var(--rotulo-min); color: var(--tinta-suave); }
+.mk-card-subetapa { margin-top: .5rem; font-size: var(--rotulo-min); color: var(--tinta-suave); }
+.mk-card-subetapa strong { color: var(--tinta); font-weight: 600; }
+.mk-card-passo {
+  display: flex; flex-direction: column; justify-content: center; gap: .15rem; min-height: 44px;
+  margin-top: .75rem; padding-top: .5rem; border-top: 1px solid var(--fio);
+  color: var(--lampiao-tinta); font-size: var(--rotulo-min); line-height: 1.4; text-decoration: none;
+}
+.mk-card-passo > span { color: var(--tinta-suave); }
+.mk-card-passo:hover strong { text-decoration: underline; }
 .mk-card-etapa { margin-top: 7px; }
 .mk-card-canais { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
 .mk-card-dono { display: flex; align-items: center; gap: 8px; margin-top: 9px; }
@@ -4894,17 +4903,17 @@ form.filtros:not(.subnav) :is(input:not([type=checkbox]):not([type=radio]):not([
   font-size: var(--rotulo-min); font-weight: 700; color: var(--alerta);
 }
 .mk-card-meu svg { width: 13px; height: 13px; flex: none; }
-.mk-card-acoes { display: flex; gap: 6px; margin-top: 10px; }
-.mk-card-acoes > form { flex: none; }
+.mk-card-acoes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.mk-card-acoes > form { flex: 1 1 5rem; }
 .mk-card-acoes > form:first-child { flex: 1; }
 .mk-btn-aprovar {
-  width: 100%; height: 32px; border-radius: var(--raio-p); border: none;
+  width: 100%; min-height: 44px; border-radius: var(--raio-p); border: none;
   /* mesma razão da barra de verba: gradiente de uma cor só, como no protótipo */
   background: linear-gradient(180deg, var(--musgo), var(--musgo));
   color: var(--superficie); font-size: 0.75rem; font-weight: 700; cursor: pointer;
 }
 .mk-btn-reprovar {
-  height: 32px; padding: 0 12px; border-radius: var(--raio-p); border: 1px solid var(--fio);
+  width: 100%; min-height: 44px; padding: 0 12px; border-radius: var(--raio-p); border: 1px solid var(--fio);
   background: var(--superficie); color: var(--perigo);
   font-size: 0.75rem; font-weight: 700; cursor: pointer;
 }
@@ -8121,10 +8130,10 @@ html.com-js [data-precos-filtros][hidden] { display: block; visibility: hidden; 
   .tabela.rel-tabela :is(th, td) { padding: .45rem .4rem; }
 }
 
-/* Marketing no celular: o quadro vira lista por fase (uma coluna embaixo da outra),
-   em vez de sete colunas rolando de lado. */
-@container conteudo (max-width: 48rem) {
-  .mk-colunas { flex-direction: column; overflow: visible; scroll-snap-type: none; gap: 1rem; }
+/* Os cinco grupos ficam lado a lado quando cabem; nas demais larguras seguem
+   a mesma ordem em uma lista, sem arraste nem rolagem horizontal. */
+@container conteudo (max-width: 64rem) {
+  .mk-colunas { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
   .mk-coluna { width: 100%; max-width: none; }
 }
 

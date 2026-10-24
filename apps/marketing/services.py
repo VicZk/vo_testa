@@ -921,15 +921,25 @@ def duplicar(campanha, usuario):
     return nova
 
 
-# ── Quadro rico (visual do protótipo) ────────────────────────────────────────
-SUBTITULO_FASE = {
-    Campanha.Fase.IDEIA: "pauta bruta, sem compromisso",
-    Campanha.Fase.PROPOSTA: "objetivo, público, estimativa",
-    Campanha.Fase.APROVACAO: "na mesa do gestor",
-    Campanha.Fase.ESTRUTURACAO: "montando as peças",
-    Campanha.Fase.PRODUCAO: "criativos em produção",
-    Campanha.Fase.NOAR: "campanha rodando",
-    Campanha.Fase.ENCERRADA: "com retrospectiva",
+# O quadro agrupa a operação sem alterar os estados, portões ou histórico.
+GRUPOS_QUADRO = (
+    ("planejamento", "Planejamento", "Ideia e proposta",
+     (Campanha.Fase.IDEIA, Campanha.Fase.PROPOSTA)),
+    ("aprovacao", "Aprovação", "Decisão da gerência",
+     (Campanha.Fase.APROVACAO,)),
+    ("producao", "Produção", "Estruturação e criação",
+     (Campanha.Fase.ESTRUTURACAO, Campanha.Fase.PRODUCAO)),
+    ("noar", "No ar", "Campanhas em veiculação", (Campanha.Fase.NOAR,)),
+    ("encerradas", "Encerradas", "Resultados e retrospectiva", (Campanha.Fase.ENCERRADA,)),
+)
+PROXIMO_PASSO_QUADRO = {
+    Campanha.Fase.IDEIA: "Preparar proposta",
+    Campanha.Fase.PROPOSTA: "Solicitar aprovação",
+    Campanha.Fase.APROVACAO: "Revisar aprovação",
+    Campanha.Fase.ESTRUTURACAO: "Planejar entregas",
+    Campanha.Fase.PRODUCAO: "Conferir publicação",
+    Campanha.Fase.NOAR: "Preencher retrospectiva",
+    Campanha.Fase.ENCERRADA: "Ver retrospectiva",
 }
 
 
@@ -983,13 +993,15 @@ def meus_resumo(user, *, motivos=None) -> tuple:
 
 
 def quadro_colunas(minhas=None, *, canal="") -> list[dict]:
-    """As 7 colunas com cards ricos. `minhas` (dict id→motivos) liga o filtro 'Só os meus':
+    """Cinco grupos de apresentação, preservando os sete estados e seus portões.
+
+    `minhas` (dict id→motivos) liga o filtro 'Só os meus':
     mostra só as minhas, anexa o motivo (âmbar) e conta as escondidas por coluna."""
     so_meus = minhas is not None
     from .services_agenda import campanhas_no_canal
     cols = []
-    for fase, label in Campanha.Fase.choices:
-        qs = (Campanha.objects.filter(fase=fase).select_related("responsavel")
+    for grupo, label, sub, fases in GRUPOS_QUADRO:
+        qs = (Campanha.objects.filter(fase__in=fases).select_related("responsavel")
               .prefetch_related("checks", "etapas", "pecas"))
         qs = campanhas_no_canal(qs, canal)
         todas = list(qs)
@@ -1005,6 +1017,8 @@ def quadro_colunas(minhas=None, *, canal="") -> list[dict]:
             prontas = sum(1 for p in pecas if p.status == PecaCampanha.Status.PRONTA)
             cards.append({
                 "obj": c, "codigo": c.codigo, "iniciais": c.iniciais,
+                "subetapa": c.get_fase_display() if len(fases) > 1 else "",
+                "proximo_passo": PROXIMO_PASSO_QUADRO[c.fase],
                 "responsavel": (c.responsavel.get_full_name() or c.responsavel.username)
                 if c.responsavel else "sem responsável",
                 "canais": c.canais or [],
@@ -1020,11 +1034,11 @@ def quadro_colunas(minhas=None, *, canal="") -> list[dict]:
         if so_meus and escondidas:
             vazio = f"Nada seu aqui · {escondidas} campanha{'s' if escondidas != 1 else ''} de outra{'s' if escondidas != 1 else ''} pessoa{'s' if escondidas != 1 else ''}"
         else:
-            vazio = "Nada nesta fase."
+            vazio = "Nenhuma campanha neste grupo."
         cols.append({
-            "fase": fase, "label": label, "sub": SUBTITULO_FASE.get(fase, ""),
+            "grupo": grupo, "fases": fases, "label": label, "sub": sub,
             "total": total, "conta": len(cards),
-            "portao": fase in (Campanha.Fase.APROVACAO, Campanha.Fase.ENCERRADA),
+            "portao": grupo == "aprovacao",
             "cards": cards, "vazio_texto": vazio,
         })
     return cols

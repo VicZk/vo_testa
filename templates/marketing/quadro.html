@@ -5,7 +5,7 @@
 {% block conteudo %}
 {% load moeda %}
 <div id="marketing-quadro">
-{% include "marketing/_cabecalho.html" with titulo="Quadro de campanhas" descricao="Organize as campanhas por fase. Abra uma campanha para ver o próximo passo." %}
+{% include "marketing/_cabecalho.html" with titulo="Quadro de campanhas" descricao="Acompanhe as campanhas em cinco grupos. Abra o próximo passo para conferir os requisitos e avançar." %}
 {% include "marketing/_canais.html" %}
 <div class="mkt-barra">
   <form method="get">
@@ -29,7 +29,7 @@
     </div>
     <div class="mk-urg-lista">
       {% for p in proximos %}
-      <a href="{% url 'marketing:detalhe' p.id %}" hx-get="{% url 'marketing:ficha' p.id %}" hx-target="#modal-conteudo" hx-swap="innerHTML"
+      <a {% if p.id %}href="{% url 'marketing:detalhe' p.id %}" hx-get="{% url 'marketing:ficha' p.id %}" hx-target="#modal-conteudo" hx-swap="innerHTML"{% else %}href="{% url 'marketing:editar_entrega' p.entrega_id %}?voltar={{ request.get_full_path|urlencode }}"{% endif %}
          class="mk-urg-item">
         <span class="mk-elastico">
           <span class="mk-item-nome">{{ p.nome }}</span>
@@ -53,7 +53,7 @@
     </div>
     <div class="mk-urg-lista">
       {% for a in atrasados %}
-      <a href="{% url 'marketing:detalhe' a.id %}" hx-get="{% url 'marketing:ficha' a.id %}" hx-target="#modal-conteudo" hx-swap="innerHTML"
+      <a {% if a.id %}href="{% url 'marketing:detalhe' a.id %}" hx-get="{% url 'marketing:ficha' a.id %}" hx-target="#modal-conteudo" hx-swap="innerHTML"{% else %}href="{% url 'marketing:editar_entrega' a.entrega_id %}?voltar={{ request.get_full_path|urlencode }}"{% endif %}
          class="mk-urg-item">
         {# O bloco inteiro já é o alerta (moldura vermelha): o tipo é rótulo. #}
         <span class="rotulo-dado mkt-tipo">{{ a.tipo }}</span>
@@ -121,11 +121,10 @@
 {# ── Colunas ── #}
 <div class="mk-colunas">
   {% for col in colunas %}
-  <div data-fase="{{ col.fase }}" class="mk-coluna"
-       ondragover="colDragOver(event)" ondragleave="colDragLeave(event)" ondrop="soltarMkt(event, '{{ col.fase }}')">
+  <section data-grupo="{{ col.grupo }}" class="mk-coluna" aria-labelledby="grupo-{{ col.grupo }}">
     <div class="mk-coluna-cab">
       <div class="mk-coluna-linha">
-        <span class="mk-coluna-nome">{{ col.label }}</span>
+        <h2 class="mk-coluna-nome" id="grupo-{{ col.grupo }}">{{ col.label }}</h2>
         {% if col.portao %}<svg viewBox="0 0 24 24" fill="none" stroke="var(--madeira)" stroke-width="2" aria-label="Aprovação pela gerência"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V8a5 5 0 0 1 10 0v3"/></svg>{% endif %}
         <span class="mkt-conta num">{{ col.conta }}</span>
       </div>
@@ -135,14 +134,14 @@
 
     <div class="mk-coluna-cards">
       {% for c in col.cards %}
-      <article draggable="true" data-camp="{{ c.obj.id }}"
+      <article data-camp="{{ c.obj.id }}" data-fase="{{ c.obj.fase }}"
                onclick="if(!event.target.closest('a, button, form')) this.querySelector('.mk-card-nome').click()"
-               ondragstart="cardMktStart(event, '{{ c.obj.id }}')" ondragend="cardMktEnd(event)"
                class="mk-card">
         <div class="mk-card-topo">
           <a class="mk-card-nome" href="{% url 'marketing:detalhe' c.obj.id %}" hx-get="{% url 'marketing:ficha' c.obj.id %}" hx-target="#modal-conteudo" hx-swap="innerHTML">{{ c.obj.nome }}</a>
           <span class="mk-card-cod">{{ c.codigo }}</span>
         </div>
+        {% if c.subetapa %}<div class="mk-card-subetapa">Subetapa: <strong>{{ c.subetapa }}</strong></div>{% endif %}
         {% if c.obj.etapa_funil %}
         <div class="mk-card-etapa">
           {# Etapa do funil é estado informativo: bolinha + texto, como no resto da casa. #}
@@ -177,14 +176,19 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>{{ c.motivo_meu }}
         </div>
         {% endif %}
-        {% if eh_gerente and col.fase == 'aprovacao' %}
+        <a class="mk-card-passo" href="{% url 'marketing:detalhe' c.obj.id %}" hx-get="{% url 'marketing:ficha' c.obj.id %}" hx-target="#modal-conteudo" hx-swap="innerHTML">
+          {% if col.grupo != 'encerradas' %}<span>Próximo passo</span>{% endif %}<strong>{{ c.proximo_passo }}</strong>
+        </a>
+        {% if eh_gerente and col.grupo == 'aprovacao' %}
         <div class="mk-card-acoes">
           <form method="post" action="{% url 'marketing:mover_fase' c.obj.id %}" onclick="event.stopPropagation()">
             {% csrf_token %}<input type="hidden" name="fase" value="estruturacao">
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
             <button type="submit" class="mk-btn-aprovar">Aprovar</button>
           </form>
           <form method="post" action="{% url 'marketing:mover_fase' c.obj.id %}" onclick="event.stopPropagation()">
             {% csrf_token %}<input type="hidden" name="fase" value="proposta">
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
             <button type="submit" class="mk-btn-reprovar">Reprovar</button>
           </form>
         </div>
@@ -193,38 +197,17 @@
       {% empty %}
       <div class="mk-coluna-vazio">{{ col.vazio_texto }}</div>
       {% endfor %}
-      {% if col.fase == 'ideia' %}
+      {% if col.grupo == 'planejamento' %}
       <a href="{% url 'marketing:nova_campanha' %}" hx-get="{% url 'marketing:nova_campanha' %}" hx-target="#modal-conteudo" class="mk-nova-ideia">+ Nova ideia</a>
       {% endif %}
     </div>
-  </div>
+  </section>
   {% endfor %}
 </div>
 
 {# A gaveta da ficha entra aqui (HTMX carrega marketing:ficha) #}
 {% include "marketing/_moeda_js.html" %}
 
-<form id="form-mover-mkt" method="post" class="mk-form-oculto">{% csrf_token %}
-  <input type="hidden" name="fase" id="mover-mkt-fase">
-</form>
-<script>
-(function () {
-  let arrastado = null;
-  window.cardMktStart = (ev, id) => { arrastado = id; ev.dataTransfer.effectAllowed = 'move'; ev.currentTarget.style.opacity = '.5'; };
-  window.cardMktEnd = (ev) => { ev.currentTarget.style.opacity = '1'; };
-  window.colDragOver = (ev) => { ev.preventDefault(); ev.currentTarget.style.background = 'var(--superficie)'; };
-  window.colDragLeave = (ev) => { ev.currentTarget.style.background = 'var(--superficie-2)'; };
-  window.soltarMkt = (ev, fase) => {
-    ev.preventDefault();
-    ev.currentTarget.style.background = 'var(--superficie-2)';
-    if (!arrastado) return;
-    const form = document.getElementById('form-mover-mkt');
-    form.action = '{% url "marketing:mover_fase" 0 %}'.replace('/0/', '/' + arrastado + '/');
-    document.getElementById('mover-mkt-fase').value = fase;
-    form.submit();
-  };
-})();
-</script>
 </div>
 <div hidden hx-get="{{ request.get_full_path }}" hx-trigger="marketing:atualizar from:body" hx-target="#marketing-quadro" hx-select="#marketing-quadro" hx-swap="outerHTML"></div>
 {% endblock %}

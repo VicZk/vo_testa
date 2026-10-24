@@ -55,11 +55,11 @@ class QuadroTests(TestCase):
         self.user.save()
         self.client.force_login(self.user)
 
-    def test_quadro_renderiza_as_7_fases(self):
+    def test_quadro_renderiza_os_cinco_grupos(self):
         r = self.client.get("/crm/marketing/")
         self.assertEqual(r.status_code, 200)
-        self.assertContains(r, "Ideia")
-        self.assertContains(r, "Encerrada")
+        self.assertEqual([c["label"] for c in r.context["colunas"]],
+                         ["Planejamento", "Aprovação", "Produção", "No ar", "Encerradas"])
         self.assertContains(r, "Quadro")
 
     def test_nova_campanha_nasce_em_ideia(self):
