@@ -299,6 +299,27 @@ class EstoqueMobileE2ETests(_BaseE2E):
                     self.assertAlmostEqual(medidas["nav"]["y"], eixo_y, delta=1, msg=medidas)
                     self.assertLessEqual(medidas["documento"], medidas["viewport"] + 1, medidas)
                     self.assertLessEqual(medidas["excessoNav"], 1, medidas)
+                    if nome == "kardex":
+                        indicadores = self.page.locator(".est-kardex-kpis .kpi-valor")
+                        expect(indicadores).to_have_text([
+                            "12.345,678 kg", "R$ 1.234,57", "R$ 15.241.576,53", "R$ 0,00"])
+                        medidas["indicadores"] = indicadores.evaluate_all("""els => els.map(el => {
+                            const caixa=el.getBoundingClientRect(), range=document.createRange();
+                            range.selectNodeContents(el);
+                            return {texto:el.textContent.trim(), left:caixa.left, right:caixa.right,
+                                fonte:parseFloat(getComputedStyle(el).fontSize),
+                                partes:[...range.getClientRects()].map(r => ({left:r.left,right:r.right,y:r.y}))};
+                        })""")
+                        evidencias[-1]["indicadores"] = medidas["indicadores"]
+                        # Moeda, dígitos, separadores e unidade conservam a mesma
+                        # linha e a fonte de leitura; não basta esconder excesso.
+                        for indicador in medidas["indicadores"]:
+                            self.assertGreaterEqual(indicador["fonte"], 18, indicador)
+                            ys = [parte["y"] for parte in indicador["partes"]]
+                            self.assertLessEqual(max(ys) - min(ys), 1, indicador)
+                            for parte in indicador["partes"]:
+                                self.assertGreaterEqual(parte["left"], indicador["left"] - 1, indicador)
+                                self.assertLessEqual(parte["right"], indicador["right"] + 1, indicador)
                     if nome in ("produtos", "inventario", "kardex"):
                         categorias = self.page.locator(
                             ".est-produto-meta .rotulo-dado, .est-kardex-meta .rotulo-dado"

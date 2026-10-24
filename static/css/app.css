@@ -6900,6 +6900,10 @@ body.escala-dragging .escala-drop { cursor: copy; }
 
 /* ---------- Indicadores e títulos de seção ---------- */
 .est-kpis { margin: 1.3rem 0 1.6rem; }
+/* O kardex exibe valores monetários grandes. A grade abre uma coluna quando
+   necessário, sem separar moeda, dígitos ou unidade nem reduzir a fonte. */
+.kpis.est-kardex-kpis { grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr)); }
+.est-kardex-kpis .kpi-valor { white-space: nowrap; overflow-wrap: normal; }
 /* Categoria e demais metadados acompanham a largura disponível também no
    catálogo, na contagem e no kardex, conservando o texto completo. */
 .est-produto-meta .rotulo-dado,
