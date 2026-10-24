@@ -1914,8 +1914,24 @@ class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
         expect(p.get_by_label("Segunda", exact=True)).to_be_checked()
         self._foto("temporada-dias-320.png")
         p.goto(self.url(reverse("marketing:calendario")))
-        caixa = p.locator(".mk-cal-vazio").bounding_box()
-        self.assertLessEqual(caixa["x"] + caixa["width"], 320)
+        expect(p.get_by_role("link", name="Semana", exact=True)).to_have_attribute("aria-current", "page")
+        agenda = p.locator(".mkt-agenda")
+        dias = agenda.locator(".mkt-agenda-dia").filter(has=p.locator("h2 time"))
+        expect(dias).to_have_count(7)
+        expect(agenda.locator(".mkt-entrega")).to_have_count(0)
+        inicio_semana = self.today - timedelta(days=self.today.weekday())
+        for indice in range(7):
+            dia = dias.nth(indice)
+            expect(dia.locator("h2 time")).to_have_attribute(
+                "datetime", (inicio_semana + timedelta(days=indice)).isoformat())
+            expect(dia.get_by_text("Sem entregas neste dia.", exact=True)).to_be_visible()
+        expect(agenda.get_by_role("heading", name="Campanhas no período", exact=True)).to_be_visible()
+        expect(agenda.get_by_text("Nenhuma campanha com período definido.", exact=True)).to_be_visible()
+        for bloco in agenda.locator(".mkt-agenda-dia").all():
+            caixa = bloco.bounding_box()
+            self.assertGreaterEqual(caixa["x"], 0)
+            self.assertLessEqual(caixa["x"] + caixa["width"], 320)
+        self.assertLessEqual(p.evaluate("document.documentElement.scrollWidth"), 320)
         self._foto("calendario-vazio-320.png")
 
     def test_email_captacao_e_paginas_publicas_cabem_nas_quatro_larguras(self):
