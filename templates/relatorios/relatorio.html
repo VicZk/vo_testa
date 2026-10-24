@@ -8,6 +8,7 @@
 `.conteudo`. Resultado: imprimir um relatório saía com o menu e a barra de
 busca na folha.{% endcomment %}
 <style media="print">
+  {% if dados.colunas|length > 6 %}@page { size: A4 landscape; }{% endif %}
   .sidebar, .topbar, .toasts, .barra-progresso,
   .rel-controles, .botao-primario, .botao-neutro, .botao-mini { display: none !important; }
   .app { display: block !important; }
@@ -17,18 +18,18 @@ busca na folha.{% endcomment %}
   .tabela tr { page-break-inside: avoid; }
 </style>
 
-<div class="rel-controles">
+<div>
   <p class="pagina-eyebrow letreiro">Relatórios · {{ grupo }}</p>
   <div class="pagina-cabecalho">
     <h1>{{ titulo }}</h1>
-    <div class="pagina-acoes">
+    <div class="pagina-acoes rel-controles">
       <a href="?{% if f.de %}de={{ f.de }}&ate={{ f.ate }}{% else %}mes={{ mes_sel }}&ano={{ ano_sel }}{% endif %}{% for c in controles %}&{{ c.nome }}={{ c.valor }}{% endfor %}&export=csv" class="botao-neutro">Exportar CSV</a>
       <button type="button" class="botao-neutro" onclick="window.print()">Imprimir / PDF</button>
       <a href="{% url 'relatorios:index' %}" class="botao-mini">Voltar</a>
     </div>
   </div>
 
-  <form method="get" class="filtro-barra rel-filtro">
+  <form method="get" class="filtro-barra rel-filtro rel-controles">
     <div class="filtro-campo">
       <label>Mês</label>
       <select name="mes" aria-label="Mês" onchange="this.form.submit()">
@@ -80,10 +81,10 @@ busca na folha.{% endcomment %}
   {% endfor %}
 </div>
 
-<div class="tabela-rol bloco-respiro-largo"{% if dados.colunas|length > 6 %} data-tabela-ampla{% endif %}>
-<table class="tabela rel-tabela{% if dados.colunas|length <= 6 %} tabela-cartoes{% endif %}">
+<div class="tabela-rol bloco-respiro-largo">
+<table class="tabela rel-tabela tabela-cartoes">
   <thead>
-    <tr>{% for c in dados.colunas %}<th {% if not forloop.first %}class="num col-numero"{% endif %}>{{ c }}</th>{% endfor %}</tr>
+    <tr>{% for c in dados.colunas %}<th scope="col" {% if not forloop.first %}class="num col-numero"{% endif %}>{{ c }}</th>{% endfor %}</tr>
   </thead>
   <tbody>
     {% for linha in linhas_rotuladas %}

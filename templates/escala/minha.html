@@ -14,17 +14,19 @@
     <p class="bloco-vazio sem-recuo">Seu login não está vinculado a um cadastro de funcionário. Peça à gerência para vincular.</p>
   </div>
 {% else %}
-<table class="tabela">
-  <thead><tr><th>Data</th><th>Turno</th><th>Setor</th><th class="num">Horário</th></tr></thead>
+<div class="tabela-rol">
+<table class="tabela tabela-cartoes">
+  <thead><tr><th scope="col">Data</th><th scope="col">Turno</th><th scope="col">Setor</th><th scope="col" class="num">Horário</th></tr></thead>
   <tbody>
     {% for a in atribs %}
-      <tr><td>{{ a.data|date:"D, d/m/Y" }}</td><td>{{ a.turno.nome }}</td>
-          <td>{{ a.turno.get_setor_display }}</td>
-          <td class="num">{{ a.turno.inicio|time:"H:i" }}–{{ a.turno.fim|time:"H:i" }}</td></tr>
+      <tr><td data-rotulo="Data"><div class="tabela-valor">{{ a.data|date:"D, d/m/Y" }}</div></td><td data-rotulo="Turno"><div class="tabela-valor">{{ a.turno.nome }}</div></td>
+          <td data-rotulo="Setor"><div class="tabela-valor">{{ a.turno.get_setor_display }}</div></td>
+          <td data-rotulo="Horário" class="num"><div class="tabela-valor">{{ a.turno.inicio|time:"H:i" }}–{{ a.turno.fim|time:"H:i" }}</div></td></tr>
     {% empty %}
       <tr><td colspan="4" class="vazio">Você não tem turnos escalados nos próximos 30 dias.</td></tr>
     {% endfor %}
   </tbody>
 </table>
+</div>
 {% endif %}
 {% endblock %}

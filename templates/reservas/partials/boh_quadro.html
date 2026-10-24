@@ -1,14 +1,16 @@
 {# Um quadro do BOH: título + tabela nome→hóspedes. #}
 <div class="boh-quadro">
   <h2>{{ titulo }}</h2>
-  <table class="tabela">
-    <thead><tr><th>Item</th><th class="num">Hóspedes</th></tr></thead>
+  <div class="tabela-rol">
+<table class="tabela tabela-cartoes">
+    <thead><tr><th scope="col">Item</th><th scope="col" class="num">Hóspedes</th></tr></thead>
     <tbody>
       {% for nome, n in itens %}
-        <tr><td>{{ nome }}</td><td class="num">{{ n }}</td></tr>
+        <tr><td data-rotulo="Item"><div class="tabela-valor">{{ nome }}</div></td><td data-rotulo="Hóspedes" class="num"><div class="tabela-valor">{{ n }}</div></td></tr>
       {% empty %}
         <tr><td colspan="2" class="vazio">Sem dados no período.</td></tr>
       {% endfor %}
     </tbody>
   </table>
+</div>
 </div>

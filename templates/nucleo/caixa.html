@@ -86,24 +86,26 @@
 
   <section class="caixa-historico" aria-labelledby="caixa-movimentos-titulo">
   <h2 id="caixa-movimentos-titulo">Movimentos da sessão</h2>
-  <table class="tabela">
+  <div class="tabela-rol">
+<table class="tabela tabela-cartoes">
     <thead>
-      <tr><th>Hora</th><th>Tipo</th><th>Forma</th><th class="num">Valor</th><th>Descrição</th></tr>
+      <tr><th scope="col">Hora</th><th scope="col">Tipo</th><th scope="col">Forma</th><th scope="col" class="num">Valor</th><th scope="col">Descrição</th></tr>
     </thead>
     <tbody>
       {% for m in sessao.movimentos.all %}
         <tr>
-          <td>{{ m.criado_em|date:"H:i" }}</td>
-          <td><span class="dica" data-dica="{{ m.tipo_ajuda }}">{{ m.get_tipo_display }}</span></td>
-          <td>{{ m.forma_pagamento|default:"Dinheiro" }}</td>
-          <td class="num">{{ m.valor|intcomma_brl }}</td>
-          <td>{{ m.descricao }}</td>
+          <td data-rotulo="Hora"><div class="tabela-valor">{{ m.criado_em|date:"H:i" }}</div></td>
+          <td data-rotulo="Tipo"><div class="tabela-valor"><span class="dica" data-dica="{{ m.tipo_ajuda }}">{{ m.get_tipo_display }}</span></div></td>
+          <td data-rotulo="Forma"><div class="tabela-valor">{{ m.forma_pagamento|default:"Dinheiro" }}</div></td>
+          <td data-rotulo="Valor" class="num"><div class="tabela-valor">{{ m.valor|intcomma_brl }}</div></td>
+          <td data-rotulo="Descrição"><div class="tabela-valor">{{ m.descricao }}</div></td>
         </tr>
       {% empty %}
         <tr><td colspan="5" class="vazio">Nenhum movimento ainda nesta sessão.</td></tr>
       {% endfor %}
     </tbody>
   </table>
+</div>
   </section>
 {% endif %}
 {% endblock %}

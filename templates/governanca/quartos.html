@@ -40,27 +40,29 @@ o filtro escolhido continua valendo — e volta igual na próxima vez (localStor
   <h2>Montagem de camas para as chegadas de hoje</h2>
   <p class="subtitulo">Como preparar as camas de cada quarto que recebe hóspede hoje.
     Colchão extra sai do estoque compartilhado; sofá-cama é aberto quando indicado.</p>
-  <table class="tabela">
+  <div class="tabela-rol">
+<table class="tabela tabela-cartoes">
     <thead>
       <tr>
-        <th>Quarto</th><th>Hóspede</th>
-        <th class="num">Casais</th><th class="num">Solteiros</th>
-        <th>Sofá-cama</th><th class="num">Colchões extra</th>
+        <th scope="col">Quarto</th><th scope="col">Hóspede</th>
+        <th scope="col" class="num">Casais</th><th scope="col" class="num">Solteiros</th>
+        <th scope="col">Sofá-cama</th><th scope="col" class="num">Colchões extra</th>
       </tr>
     </thead>
     <tbody>
       {% for m in montagem %}
         <tr>
-          <td><strong>{{ m.uh }}</strong></td>
-          <td>{{ m.hospede }}</td>
-          <td class="num">{{ m.casais }}</td>
-          <td class="num">{{ m.solteiros }}</td>
-          <td>{% if m.sofa %}<span class="selo selo-ok">Abrir</span>{% else %}<span class="celula-vazia">—</span>{% endif %}</td>
-          <td class="num">{% if m.extra %}<span class="selo selo-pendente">{{ m.extra }}</span>{% else %}0{% endif %}</td>
+          <td data-rotulo="Quarto"><div class="tabela-valor"><strong>{{ m.uh }}</strong></div></td>
+          <td data-rotulo="Hóspede"><div class="tabela-valor">{{ m.hospede }}</div></td>
+          <td data-rotulo="Casais" class="num"><div class="tabela-valor">{{ m.casais }}</div></td>
+          <td data-rotulo="Solteiros" class="num"><div class="tabela-valor">{{ m.solteiros }}</div></td>
+          <td data-rotulo="Sofá-cama"><div class="tabela-valor">{% if m.sofa %}<span class="selo selo-ok">Abrir</span>{% else %}<span class="celula-vazia">—</span>{% endif %}</div></td>
+          <td data-rotulo="Colchões extra" class="num"><div class="tabela-valor">{% if m.extra %}<span class="selo selo-pendente">{{ m.extra }}</span>{% else %}0{% endif %}</div></td>
         </tr>
       {% endfor %}
     </tbody>
   </table>
+</div>
 </section>
 {% endif %}
 </div>

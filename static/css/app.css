@@ -1991,6 +1991,14 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 
 /* Listas operacionais viram cartões pelo espaço disponível, inclusive com menu
    aberto no tablet e quando embutidas em uma coluna de uma página larga. */
+.resumo-valores { margin: 0; }
+.resumo-valores > div {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .75rem;
+  align-items: baseline; padding: .75rem 1rem; border-bottom: 1px solid var(--fio);
+}
+.resumo-valores > div:last-child { border-bottom: 0; }
+.resumo-valores dt, .resumo-valores dd { margin: 0; }
+.resumo-valores dd { text-align: right; white-space: nowrap; }
 @media screen {
 @container tabela (max-width: 48rem) {
   .tabela.tabela-cartoes { width: 100%; min-width: 0; border: none; background: none; box-shadow: none; white-space: normal; }
@@ -2018,6 +2026,10 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
     text-transform: uppercase; text-align: left; color: var(--tinta-suave);
   }
   .tabela.tabela-cartoes .tabela-valor { flex: 1 1 0; min-width: 0; text-align: left; }
+  .tabela.tabela-cartoes .tabela-valor :is(input, select, form) { min-width: 0; max-width: 100%; }
+  .tabela.tabela-cartoes .tabela-valor .form-inline-largo { display: flex; }
+  .tabela.tabela-cartoes .tabela-valor .form-inline-largo select { flex: 1 1 100%; width: 100%; }
+  .tabela.tabela-cartoes .tabela-valor > form + form { margin-top: .4rem; }
   .tabela.tabela-cartoes td.num .tabela-valor { text-align: right; }
   .tabela.tabela-cartoes td[colspan] { display: block; text-align: center; }
   .tabela.tabela-cartoes tfoot, .tabela.tabela-cartoes tfoot tr { display: block; }
@@ -6673,7 +6685,9 @@ body.escala-dragging .escala-drop { cursor: copy; }
   }
   .tabela { border-collapse: collapse !important; }
   /* O invólucro rolante (tabela-rol.js) cortaria a tabela na largura da tela. */
-  .tabela-rol { overflow: visible !important; }
+  .tabela-rol { overflow: visible !important; background: none !important; }
+  .conteudo, .tabela-rol { container-type: normal; }
+  .rolagem-indicador { display: none !important; }
   /* Cabeçalho repetido em cada página nova; linha nunca cortada ao meio. */
   .tabela thead { display: table-header-group; }
   .tabela tr, .tabela td, .tabela th { break-inside: avoid; page-break-inside: avoid; }
@@ -8059,6 +8073,8 @@ html.com-js [data-precos-filtros][hidden] { display: block; visibility: hidden; 
 }
 /* Relatórios: coluna numérica com largura natural (width:1% jogava toda a sobra na primeira). */
 .rel-tabela .col-numero { width: auto; min-width: 7ch; }
+.tabela-rol > .rel-tabela th { white-space: normal; }
+.rel-tabela.tabela td.col-numero { white-space: normal; }
 
 /* Marketing no celular: o quadro vira lista por fase (uma coluna embaixo da outra),
    em vez de sete colunas rolando de lado. */

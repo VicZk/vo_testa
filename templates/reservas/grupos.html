@@ -13,24 +13,26 @@
 <p class="subtitulo">Blocos de quartos com um titular e um folio das diárias. O consumo fica na conta de cada quarto.</p>
 {% include "reservas/partials/nav.html" %}
 
-<table class="tabela">
+<div class="tabela-rol">
+<table class="tabela tabela-cartoes">
   <thead>
-    <tr><th>#</th><th>Grupo</th><th>Titular</th><th>Período</th><th>Quartos</th><th>Situação</th></tr>
+    <tr><th scope="col">#</th><th scope="col">Grupo</th><th scope="col">Titular</th><th scope="col">Período</th><th scope="col">Quartos</th><th scope="col">Situação</th></tr>
   </thead>
   <tbody>
     {% for g in grupos %}
       <tr>
-        <td><a href="{% url 'reservas:grupo_detalhe' g.pk %}">#{{ g.pk }}</a></td>
-        <td><a href="{% url 'reservas:grupo_detalhe' g.pk %}">{{ g.rotulo }}</a></td>
-        <td>{{ g.titular.nome }}</td>
-        <td>{{ g.checkin|date:"d/m/Y" }} → {{ g.checkout|date:"d/m/Y" }}</td>
-        <td>{{ g.filhas_ativas.count }}</td>
-        <td><span class="selo">{{ g.situacao_display }}</span></td>
+        <td data-rotulo="Código"><div class="tabela-valor"><a href="{% url 'reservas:grupo_detalhe' g.pk %}">#{{ g.pk }}</a></div></td>
+        <td data-rotulo="Grupo"><div class="tabela-valor"><a href="{% url 'reservas:grupo_detalhe' g.pk %}">{{ g.rotulo }}</a></div></td>
+        <td data-rotulo="Titular"><div class="tabela-valor">{{ g.titular.nome }}</div></td>
+        <td data-rotulo="Período"><div class="tabela-valor">{{ g.checkin|date:"d/m/Y" }} → {{ g.checkout|date:"d/m/Y" }}</div></td>
+        <td data-rotulo="Quartos"><div class="tabela-valor">{{ g.filhas_ativas.count }}</div></td>
+        <td data-rotulo="Situação"><div class="tabela-valor"><span class="selo">{{ g.situacao_display }}</span></div></td>
       </tr>
     {% empty %}
       <tr><td colspan="6" class="vazio">Nenhum grupo ainda. Crie o primeiro bloco de quartos.</td></tr>
     {% endfor %}
   </tbody>
 </table>
+</div>
 {% include "componentes/paginacao.html" with pagina=pagina %}
 {% endblock %}

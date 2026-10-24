@@ -28,22 +28,23 @@
 </form>
 
 <div class="quadro">
-  <table class="tabela">
+  <div class="tabela-rol">
+<table class="tabela tabela-cartoes">
     <thead>
       <tr>
-        <th>Noite</th>
-        <th class="num">Usados</th>
-        <th class="num">Livres</th>
-        <th>Situação</th>
+        <th scope="col">Noite</th>
+        <th scope="col" class="num">Usados</th>
+        <th scope="col" class="num">Livres</th>
+        <th scope="col">Situação</th>
       </tr>
     </thead>
     <tbody>
       {% for linha in painel.linhas %}
         <tr>
-          <td>{{ linha.noite|date:"D, d/m" }}</td>
-          <td class="num">{{ linha.usados }}</td>
-          <td class="num">{{ linha.livres }}</td>
-          <td>
+          <td data-rotulo="Noite"><div class="tabela-valor">{{ linha.noite|date:"D, d/m" }}</div></td>
+          <td data-rotulo="Usados" class="num"><div class="tabela-valor">{{ linha.usados }}</div></td>
+          <td data-rotulo="Livres" class="num"><div class="tabela-valor">{{ linha.livres }}</div></td>
+          <td data-rotulo="Situação"><div class="tabela-valor">
             {% if linha.status == "esgotado" %}
               <span class="selo selo-alerta">Esgotado</span>
             {% elif linha.status == "aviso" %}
@@ -51,12 +52,13 @@
             {% else %}
               <span class="selo selo-ok">Folgado</span>
             {% endif %}
-          </td>
+          </div></td>
         </tr>
       {% empty %}
         <tr><td colspan="4" class="vazio">Sem noites no período.</td></tr>
       {% endfor %}
     </tbody>
   </table>
+</div>
 </div>
 {% endblock %}

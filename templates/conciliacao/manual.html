@@ -17,20 +17,21 @@
   {# ── Extrato pendente ── #}
   <h2 class="secao-titulo letreiro respiro-curto">Pendências do extrato</h2>
   <div class="quadro">
-    <table class="tabela">
+    <div class="tabela-rol">
+<table class="tabela tabela-cartoes">
       <thead>
-        <tr><th>Data</th><th>Descrição</th><th class="num">Valor</th><th>Casar com…</th></tr>
+        <tr><th scope="col">Data</th><th scope="col">Descrição</th><th scope="col" class="num">Valor</th><th scope="col">Casar com…</th></tr>
       </thead>
       <tbody>
         {% for l, cands in linhas_ext %}
         <tr>
-          <td>{{ l.data|date:"d/m/Y" }}</td>
-          <td>{{ l.descricao|default:"—" }}</td>
-          <td class="num">
+          <td data-rotulo="Data"><div class="tabela-valor">{{ l.data|date:"d/m/Y" }}</div></td>
+          <td data-rotulo="Descrição"><div class="tabela-valor">{{ l.descricao|default:"—" }}</div></td>
+          <td data-rotulo="Valor" class="num"><div class="tabela-valor">
             {% if l.credito %}<span class="selo selo-sucesso">+ {{ l.valor }}</span>
             {% else %}<span class="selo selo-perigo">{{ l.valor }}</span>{% endif %}
-          </td>
-          <td>
+          </div></td>
+          <td data-rotulo="Casar com…"><div class="tabela-valor">
             <form data-preservar-erros method="post" action="{% url 'conciliacao:casar_extrato' %}"
                   class="form-inline-largo">
               {% csrf_token %}
@@ -48,29 +49,31 @@
               <button class="botao-mini" type="submit"
                       title="Tarifa, transferência entre contas próprias, etc.">Ignorar</button>
             </form>
-          </td>
+          </div></td>
         </tr>
         {% empty %}
         <tr><td colspan="4" class="vazio">Nada pendente no extrato.</td></tr>
         {% endfor %}
       </tbody>
     </table>
+</div>
   </div>
 
   {# ── Cartão pendente ── #}
   <h2 class="secao-titulo letreiro">Pendências do cartão (SafraPay)</h2>
   <div class="quadro">
-    <table class="tabela">
+    <div class="tabela-rol">
+<table class="tabela tabela-cartoes">
       <thead>
-        <tr><th>Venda</th><th>NSU</th><th class="num">Bruto</th><th>Casar com recebimento de caixa…</th></tr>
+        <tr><th scope="col">Venda</th><th scope="col">NSU</th><th scope="col" class="num">Bruto</th><th scope="col">Casar com recebimento de caixa…</th></tr>
       </thead>
       <tbody>
         {% for t, cands in linhas_cartao %}
         <tr>
-          <td>{{ t.data_venda|date:"d/m/Y" }}</td>
-          <td class="num">{{ t.nsu }}</td>
-          <td class="num">{{ t.bruto }}</td>
-          <td>
+          <td data-rotulo="Venda"><div class="tabela-valor">{{ t.data_venda|date:"d/m/Y" }}</div></td>
+          <td data-rotulo="NSU" class="num"><div class="tabela-valor">{{ t.nsu }}</div></td>
+          <td data-rotulo="Bruto" class="num"><div class="tabela-valor">{{ t.bruto }}</div></td>
+          <td data-rotulo="Casar com recebimento de caixa…"><div class="tabela-valor">
             <form data-preservar-erros method="post" action="{% url 'conciliacao:casar_cartao' %}"
                   class="form-inline-largo">
               {% csrf_token %}<input type="hidden" name="transacao" value="{{ t.id }}">
@@ -86,54 +89,57 @@
               {% csrf_token %}<input type="hidden" name="transacao" value="{{ t.id }}">
               <button class="botao-mini" type="submit">Sem venda</button>
             </form>
-          </td>
+          </div></td>
         </tr>
         {% empty %}
         <tr><td colspan="4" class="vazio">Nada pendente no cartão.</td></tr>
         {% endfor %}
       </tbody>
     </table>
+</div>
   </div>
 
   {# ── Conciliados recentes (desfazer) ── #}
   {% if conciliados_ext or conciliados_cartao %}
   <h2 class="secao-titulo letreiro">Conciliados recentes</h2>
   <div class="quadro">
-    <table class="tabela">
+    <div class="tabela-rol">
+<table class="tabela tabela-cartoes">
       <thead>
-        <tr><th>Tipo</th><th>Referência</th><th class="num">Valor</th><th>Como</th><th class="num">Ação</th></tr>
+        <tr><th scope="col">Tipo</th><th scope="col">Referência</th><th scope="col" class="num">Valor</th><th scope="col">Como</th><th scope="col" class="num">Ação</th></tr>
       </thead>
       <tbody>
         {% for l in conciliados_ext %}
         <tr>
-          <td>Extrato</td>
-          <td>{{ l.data|date:"d/m" }} · {{ l.descricao|default:"—"|truncatechars:40 }}</td>
-          <td class="num">{{ l.valor }}</td>
-          <td><span class="selo">{{ l.confianca|default:"auto" }}</span></td>
-          <td class="num">
+          <td data-rotulo="Tipo"><div class="tabela-valor">Extrato</div></td>
+          <td data-rotulo="Referência"><div class="tabela-valor">{{ l.data|date:"d/m" }} · {{ l.descricao|default:"—" }}</div></td>
+          <td data-rotulo="Valor" class="num"><div class="tabela-valor">{{ l.valor }}</div></td>
+          <td data-rotulo="Como"><div class="tabela-valor"><span class="selo">{{ l.confianca|default:"auto" }}</span></div></td>
+          <td data-rotulo="Ação" class="num"><div class="tabela-valor">
             <form method="post" action="{% url 'conciliacao:desfazer_extrato' %}" class="form-embutido">
               {% csrf_token %}<input type="hidden" name="lancamento" value="{{ l.id }}">
               <button class="botao-mini" type="submit">Desfazer</button>
             </form>
-          </td>
+          </div></td>
         </tr>
         {% endfor %}
         {% for t in conciliados_cartao %}
         <tr>
-          <td>Cartão</td>
-          <td>NSU {{ t.nsu }}{% if t.divergencia_valor %} <span class="selo selo-alerta" title="Divergência bruto × caixa">Δ {{ t.divergencia_valor }}</span>{% endif %}</td>
-          <td class="num">{{ t.bruto }}</td>
-          <td><span class="selo">NSU</span></td>
-          <td class="num">
+          <td data-rotulo="Tipo"><div class="tabela-valor">Cartão</div></td>
+          <td data-rotulo="Referência"><div class="tabela-valor">NSU {{ t.nsu }}{% if t.divergencia_valor %} <span class="selo selo-alerta" title="Divergência bruto × caixa">Δ {{ t.divergencia_valor }}</span>{% endif %}</div></td>
+          <td data-rotulo="Valor" class="num"><div class="tabela-valor">{{ t.bruto }}</div></td>
+          <td data-rotulo="Como"><div class="tabela-valor"><span class="selo">NSU</span></div></td>
+          <td data-rotulo="Ação" class="num"><div class="tabela-valor">
             <form method="post" action="{% url 'conciliacao:desfazer_cartao' %}" class="form-embutido">
               {% csrf_token %}<input type="hidden" name="transacao" value="{{ t.id }}">
               <button class="botao-mini" type="submit">Desfazer</button>
             </form>
-          </td>
+          </div></td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
+</div>
   </div>
   {% endif %}
 </div>

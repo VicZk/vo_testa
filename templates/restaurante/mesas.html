@@ -14,16 +14,18 @@
 <div class="colunas">
   <section>
     <h2>Pontos cadastrados</h2>
-    <table class="tabela">
-      <thead><tr><th>Nome/número</th><th>Situação</th></tr></thead>
+    <div class="tabela-rol">
+<table class="tabela tabela-cartoes">
+      <thead><tr><th scope="col">Nome/número</th><th scope="col">Situação</th></tr></thead>
       <tbody>
         {% for m in mesas %}
-          <tr><td>{{ m.nome }}</td><td>{% if m.ativa %}<span class="selo selo-limpa">Ativa</span>{% else %}<span class="selo selo-neutro">Inativa</span>{% endif %}</td></tr>
+          <tr><td data-rotulo="Nome/número"><div class="tabela-valor">{{ m.nome }}</div></td><td data-rotulo="Situação"><div class="tabela-valor">{% if m.ativa %}<span class="selo selo-limpa">Ativa</span>{% else %}<span class="selo selo-neutro">Inativa</span>{% endif %}</div></td></tr>
         {% empty %}
           <tr><td colspan="2" class="vazio">Nenhum ponto ainda.</td></tr>
         {% endfor %}
       </tbody>
     </table>
+</div>
   </section>
   <section>
     <h2>Novo ponto</h2>

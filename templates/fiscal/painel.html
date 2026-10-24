@@ -20,26 +20,28 @@
   {% else %}<span class="selo">Integração: {{ gateway }}</span>{% endif %}
 </p>
 
-<table class="tabela">
+<div class="tabela-rol">
+<table class="tabela tabela-cartoes">
   <thead>
-    <tr><th>#</th><th>Tipo</th><th>Natureza</th><th>Descrição</th><th class="num">Valor</th><th>Situação</th><th>Nº</th></tr>
+    <tr><th scope="col">#</th><th scope="col">Tipo</th><th scope="col">Natureza</th><th scope="col">Descrição</th><th scope="col" class="num">Valor</th><th scope="col">Situação</th><th scope="col">Nº</th></tr>
   </thead>
   <tbody>
     {% for d in documentos %}
       <tr class="linha-clique" onclick="location.href='{% url 'fiscal:detalhe' d.pk %}'">
-        <td>{{ d.pk }}</td>
-        <td>{{ d.get_tipo_display }}</td>
-        <td>{{ d.get_natureza_display }}</td>
-        <td>{{ d.descricao }}</td>
-        <td class="num">{{ d.valor|intcomma_brl }}</td>
-        <td><span class="selo {% if d.status == 'autorizada' %}selo-limpa{% elif d.status == 'rejeitada' or d.status == 'cancelada' %}selo-alerta{% else %}selo-em_andamento{% endif %}">{{ d.get_status_display }}</span></td>
-        <td>{{ d.numero|default:"—" }}</td>
+        <td data-rotulo="Código"><div class="tabela-valor"><a href="{% url 'fiscal:detalhe' d.pk %}" aria-label="Consultar documento {{ d.pk }}">{{ d.pk }}</a></div></td>
+        <td data-rotulo="Tipo"><div class="tabela-valor">{{ d.get_tipo_display }}</div></td>
+        <td data-rotulo="Natureza"><div class="tabela-valor">{{ d.get_natureza_display }}</div></td>
+        <td data-rotulo="Descrição"><div class="tabela-valor">{{ d.descricao }}</div></td>
+        <td data-rotulo="Valor" class="num"><div class="tabela-valor">{{ d.valor|intcomma_brl }}</div></td>
+        <td data-rotulo="Situação"><div class="tabela-valor"><span class="selo {% if d.status == 'autorizada' %}selo-limpa{% elif d.status == 'rejeitada' or d.status == 'cancelada' %}selo-alerta{% else %}selo-em_andamento{% endif %}">{{ d.get_status_display }}</span></div></td>
+        <td data-rotulo="Nº"><div class="tabela-valor">{{ d.numero|default:"—" }}</div></td>
       </tr>
     {% empty %}
       <tr><td colspan="7" class="vazio">Nenhum documento fiscal registrado.</td></tr>
     {% endfor %}
   </tbody>
 </table>
+</div>
 
 <div class="ficha-texto opcional">
   {{ configuracao.mensagem }}

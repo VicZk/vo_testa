@@ -13,21 +13,23 @@
   <a href="?todas=1" class="est-aba" {% if not minhas %}aria-current="page"{% endif %}>Da equipe</a>
 </nav>
 
-<table class="tabela">
-  <thead><tr><th>Quando</th><th>Oportunidade</th><th>Lead</th><th>Tarefa</th><th>Responsável</th><th></th></tr></thead>
+<div class="tabela-rol">
+<table class="tabela tabela-cartoes">
+  <thead><tr><th scope="col">Quando</th><th scope="col">Oportunidade</th><th scope="col">Lead</th><th scope="col">Tarefa</th><th scope="col">Responsável</th><th scope="col"></th></tr></thead>
   <tbody>
     {% for at in tarefas %}
       <tr class="linha-pendente">
-        <td>{{ at.quando|date:"d/m H:i" }}</td>
-        <td><a href="{% url 'comercial:oportunidade' at.oportunidade_id %}">{{ at.oportunidade.titulo }}</a></td>
-        <td>{{ at.oportunidade.pessoa.nome }}</td>
-        <td>{{ at.get_tipo_display }} — {{ at.descricao }}</td>
-        <td>{% if at.responsavel %}{{ at.responsavel.get_full_name|default:at.responsavel.username }}{% else %}—{% endif %}</td>
-        <td class="num"><form method="post" action="{% url 'comercial:concluir_tarefa' at.pk %}">{% csrf_token %}<button class="botao-mini">Concluir</button></form></td>
+        <td data-rotulo="Quando"><div class="tabela-valor">{{ at.quando|date:"d/m H:i" }}</div></td>
+        <td data-rotulo="Oportunidade"><div class="tabela-valor"><a href="{% url 'comercial:oportunidade' at.oportunidade_id %}">{{ at.oportunidade.titulo }}</a></div></td>
+        <td data-rotulo="Lead"><div class="tabela-valor">{{ at.oportunidade.pessoa.nome }}</div></td>
+        <td data-rotulo="Tarefa"><div class="tabela-valor">{{ at.get_tipo_display }} — {{ at.descricao }}</div></td>
+        <td data-rotulo="Responsável"><div class="tabela-valor">{% if at.responsavel %}{{ at.responsavel.get_full_name|default:at.responsavel.username }}{% else %}—{% endif %}</div></td>
+        <td data-rotulo="Ação" class="num"><div class="tabela-valor"><form method="post" action="{% url 'comercial:concluir_tarefa' at.pk %}">{% csrf_token %}<button class="botao-mini">Concluir</button></form></div></td>
       </tr>
     {% empty %}
       <tr><td colspan="6" class="vazio">Nenhuma tarefa pendente.</td></tr>
     {% endfor %}
   </tbody>
 </table>
+</div>
 {% endblock %}

@@ -87,21 +87,22 @@
 <div class="pagina-cabecalho bloco-respiro-secao">
   <h2>Quartos do bloco</h2>
 </div>
-<table class="tabela">
+<div class="tabela-rol">
+<table class="tabela tabela-cartoes">
   <thead>
-    <tr><th>Quarto</th><th>Hóspede</th><th>Lotação</th><th>Status</th><th class="num">Consumo</th><th class="num">Saldo quarto</th><th></th></tr>
+    <tr><th scope="col">Quarto</th><th scope="col">Hóspede</th><th scope="col">Lotação</th><th scope="col">Status</th><th scope="col" class="num">Consumo</th><th scope="col" class="num">Saldo quarto</th><th scope="col"></th></tr>
   </thead>
   <tbody>
     {% for q in resumo.quartos %}
       <tr>
-        <td><a href="{% url 'reservas:detalhe' q.reserva.pk %}">{{ q.uh.numero }}</a>
-            <small class="ajuda">{{ q.uh.tipo.nome }}</small></td>
-        <td>{{ q.reserva.hospede.nome }}</td>
-        <td>{{ q.reserva.adultos }}A{% if q.reserva.criancas %} + {{ q.reserva.criancas }}C{% endif %}</td>
-        <td><span class="selo mapa-cor-{{ q.reserva.status }}">{{ q.reserva.get_status_display }}</span></td>
-        <td class="num">{{ q.consumo|intcomma_brl }}</td>
-        <td class="num">{{ q.saldo|intcomma_brl }}</td>
-        <td>
+        <td data-rotulo="Quarto"><div class="tabela-valor"><a href="{% url 'reservas:detalhe' q.reserva.pk %}">{{ q.uh.numero }}</a>
+            <small class="ajuda">{{ q.uh.tipo.nome }}</small></div></td>
+        <td data-rotulo="Hóspede"><div class="tabela-valor">{{ q.reserva.hospede.nome }}</div></td>
+        <td data-rotulo="Lotação"><div class="tabela-valor">{{ q.reserva.adultos }}A{% if q.reserva.criancas %} + {{ q.reserva.criancas }}C{% endif %}</div></td>
+        <td data-rotulo="Status"><div class="tabela-valor"><span class="selo mapa-cor-{{ q.reserva.status }}">{{ q.reserva.get_status_display }}</span></div></td>
+        <td data-rotulo="Consumo" class="num"><div class="tabela-valor">{{ q.consumo|intcomma_brl }}</div></td>
+        <td data-rotulo="Saldo quarto" class="num"><div class="tabela-valor">{{ q.saldo|intcomma_brl }}</div></td>
+        <td data-rotulo="Ação"><div class="tabela-valor">
           {% if not grupo.encerrado_em %}{% if q.reserva.status == 'pre_reserva' or q.reserva.status == 'confirmada' %}
           <form data-preservar-erros method="post" action="{% url 'reservas:grupo_remover_quarto' grupo.pk q.reserva.pk %}"
                 onsubmit="return confirm('Remover {{ q.uh.numero }} do grupo?')">
@@ -110,13 +111,14 @@
             <button class="botao-neutro">Remover</button>
           </form>
           {% endif %}{% endif %}
-        </td>
+        </div></td>
       </tr>
     {% empty %}
       <tr><td colspan="7" class="vazio">Adicione os quartos do grupo pelo formulário abaixo.</td></tr>
     {% endfor %}
   </tbody>
 </table>
+</div>
 
 {% if not grupo.encerrado_em %}
 <div class="cartao bloco-respiro">

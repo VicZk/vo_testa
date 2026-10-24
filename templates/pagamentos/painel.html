@@ -48,16 +48,18 @@
     </table>
 
     <h2 class="secao-titulo respiro-medio">Conciliação</h2>
-    <table class="tabela">
-      <thead><tr><th>Situação</th><th class="num">Qtd</th><th class="num">Total</th></tr></thead>
+    <div class="tabela-rol">
+<table class="tabela tabela-cartoes">
+      <thead><tr><th scope="col">Situação</th><th scope="col" class="num">Qtd</th><th scope="col" class="num">Total</th></tr></thead>
       <tbody>
         {% for r in conciliacao %}
-          <tr><td>{{ r.rotulo }}</td><td class="num">{{ r.qtd }}</td><td class="num">{{ r.total|intcomma_brl }}</td></tr>
+          <tr><td data-rotulo="Situação"><div class="tabela-valor">{{ r.rotulo }}</div></td><td data-rotulo="Qtd" class="num"><div class="tabela-valor">{{ r.qtd }}</div></td><td data-rotulo="Total" class="num"><div class="tabela-valor">{{ r.total|intcomma_brl }}</div></td></tr>
         {% empty %}
           <tr><td colspan="3" class="vazio">Sem movimento.</td></tr>
         {% endfor %}
       </tbody>
     </table>
+</div>
   </section>
 
   {% comment %}`pre` vem de `?reserva=<id>` (botão «Gerar cobrança» no detalhe da reserva):

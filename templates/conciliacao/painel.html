@@ -87,49 +87,53 @@
   {# Fila do extrato #}
   <h2 class="secao-titulo letreiro">Extrato pendente de conciliação</h2>
   <div class="quadro">
-    <table class="tabela">
+    <div class="tabela-rol">
+<table class="tabela tabela-cartoes">
       <thead>
-        <tr><th>Data</th><th>Descrição</th><th>Banco</th><th class="num">Valor (R$)</th></tr>
+        <tr><th scope="col">Data</th><th scope="col">Descrição</th><th scope="col">Banco</th><th scope="col" class="num">Valor (R$)</th></tr>
       </thead>
       <tbody>
         {% for l in pendentes_ext %}
         <tr>
-          <td>{{ l.data|date:"d/m/Y" }}</td>
-          <td>{{ l.descricao|default:"—" }}</td>
-          <td class="tinta-suave">{{ l.extrato.banco }}</td>
-          <td class="num">
+          <td data-rotulo="Data"><div class="tabela-valor">{{ l.data|date:"d/m/Y" }}</div></td>
+          <td data-rotulo="Descrição"><div class="tabela-valor">{{ l.descricao|default:"—" }}</div></td>
+          <td data-rotulo="Banco" class="tinta-suave"><div class="tabela-valor">{{ l.extrato.banco }}</div></td>
+          <td data-rotulo="Valor (R$)" class="num"><div class="tabela-valor">
             {% if l.credito %}<span class="selo selo-sucesso">+ {{ l.valor }}</span>
             {% else %}<span class="selo selo-perigo">{{ l.valor }}</span>{% endif %}
-          </td>
+          </div></td>
         </tr>
         {% empty %}
         <tr><td colspan="4" class="vazio">Nada pendente no extrato. Importe um OFX para começar.</td></tr>
         {% endfor %}
       </tbody>
     </table>
+</div>
   </div>
 
   {# Fila do cartão #}
   <h2 class="secao-titulo letreiro">Cartão (SafraPay): pendências por NSU</h2>
   <div class="quadro">
-    <table class="tabela">
+    <div class="tabela-rol">
+<table class="tabela tabela-cartoes">
       <thead>
-        <tr><th>Venda</th><th>NSU</th><th>Bandeira</th><th class="num">Bruto</th><th class="num">Líquido</th></tr>
+        <tr><th scope="col">Venda</th><th scope="col">NSU</th><th scope="col">Bandeira</th><th scope="col" class="num">Bruto</th><th scope="col" class="num">Líquido</th></tr>
       </thead>
       <tbody>
         {% for t in pendentes_cartao %}
         <tr>
-          <td>{{ t.data_venda|date:"d/m/Y" }}</td>
-          <td class="num">{{ t.nsu }}</td>
-          <td>{{ t.bandeira|default:"—" }}</td>
-          <td class="num">{{ t.bruto }}</td>
-          <td class="num">{{ t.liquido }}</td>
+          <td data-rotulo="Venda"><div class="tabela-valor">{{ t.data_venda|date:"d/m/Y" }}</div></td>
+          <td data-rotulo="NSU" class="num"><div class="tabela-valor">{{ t.nsu }}</div></td>
+          <td data-rotulo="Bandeira"><div class="tabela-valor">{{ t.bandeira|default:"—" }}</div></td>
+          <td data-rotulo="Bruto" class="num"><div class="tabela-valor">{{ t.bruto }}</div></td>
+          <td data-rotulo="Líquido" class="num"><div class="tabela-valor">{{ t.liquido }}</div></td>
         </tr>
         {% empty %}
         <tr><td colspan="5" class="vazio">Nada pendente no cartão. Importe o CSV de vendas da SafraPay.</td></tr>
         {% endfor %}
       </tbody>
     </table>
+</div>
   </div>
 </div>
 {% endblock %}

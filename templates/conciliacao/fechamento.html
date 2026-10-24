@@ -60,32 +60,28 @@
 
   <h2 class="secao-titulo letreiro respiro-medio">Extrato bancário</h2>
   <div class="quadro">
-    <table class="tabela">
-      <tbody>
-        <tr><td>Linhas no período</td><td class="num">{{ dados.extrato.total }}</td></tr>
-        <tr><td>Conciliadas</td><td class="num">{{ dados.extrato.conciliado }}</td></tr>
-        <tr><td>Pendentes</td><td class="num">{{ dados.extrato.pendente }}</td></tr>
-        <tr><td>Ignoradas</td><td class="num">{{ dados.extrato.ignorado }}</td></tr>
-        <tr><td>Créditos conciliados (R$)</td><td class="num">{{ dados.extrato.creditos|intcomma_brl }}</td></tr>
-        <tr><td>Débitos conciliados (R$)</td><td class="num">{{ dados.extrato.debitos|intcomma_brl }}</td></tr>
-      </tbody>
-    </table>
+    <dl class="resumo-valores">
+      <div><dt>Linhas no período</dt><dd class="num">{{ dados.extrato.total }}</dd></div>
+      <div><dt>Conciliadas</dt><dd class="num">{{ dados.extrato.conciliado }}</dd></div>
+      <div><dt>Pendentes</dt><dd class="num">{{ dados.extrato.pendente }}</dd></div>
+      <div><dt>Ignoradas</dt><dd class="num">{{ dados.extrato.ignorado }}</dd></div>
+      <div><dt>Créditos conciliados (R$)</dt><dd class="num">{{ dados.extrato.creditos|intcomma_brl }}</dd></div>
+      <div><dt>Débitos conciliados (R$)</dt><dd class="num">{{ dados.extrato.debitos|intcomma_brl }}</dd></div>
+    </dl>
   </div>
 
   <h2 class="secao-titulo letreiro respiro-medio">Cartão (SafraPay)</h2>
   <div class="quadro">
-    <table class="tabela">
-      <tbody>
-        <tr><td>Transações no período</td><td class="num">{{ dados.cartao.total }}</td></tr>
-        <tr><td>Conciliadas</td><td class="num">{{ dados.cartao.conciliado }}</td></tr>
-        <tr><td>Pendentes</td><td class="num">{{ dados.cartao.pendente }}</td></tr>
-        <tr><td>Sem venda no caixa</td><td class="num">{{ dados.cartao.sem_venda }}</td></tr>
-        <tr><td>Bruto (R$)</td><td class="num">{{ dados.cartao.bruto|intcomma_brl }}</td></tr>
-        <tr><td>Líquido (R$)</td><td class="num">{{ dados.cartao.liquido|intcomma_brl }}</td></tr>
-        <tr><td>Taxa total (R$)</td><td class="num">{{ dados.cartao.taxa|intcomma_brl }}</td></tr>
-        <tr><td>Divergências de valor</td><td class="num">{{ dados.cartao.divergencias }}</td></tr>
-      </tbody>
-    </table>
+    <dl class="resumo-valores">
+      <div><dt>Transações no período</dt><dd class="num">{{ dados.cartao.total }}</dd></div>
+      <div><dt>Conciliadas</dt><dd class="num">{{ dados.cartao.conciliado }}</dd></div>
+      <div><dt>Pendentes</dt><dd class="num">{{ dados.cartao.pendente }}</dd></div>
+      <div><dt>Sem venda no caixa</dt><dd class="num">{{ dados.cartao.sem_venda }}</dd></div>
+      <div><dt>Bruto (R$)</dt><dd class="num">{{ dados.cartao.bruto|intcomma_brl }}</dd></div>
+      <div><dt>Líquido (R$)</dt><dd class="num">{{ dados.cartao.liquido|intcomma_brl }}</dd></div>
+      <div><dt>Taxa total (R$)</dt><dd class="num">{{ dados.cartao.taxa|intcomma_brl }}</dd></div>
+      <div><dt>Divergências de valor</dt><dd class="num">{{ dados.cartao.divergencias }}</dd></div>
+    </dl>
   </div>
 </div>
 

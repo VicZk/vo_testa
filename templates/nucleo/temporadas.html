@@ -28,21 +28,23 @@
   </label>
 </form>
 
-<table class="tabela">
+<div class="tabela-rol">
+<table class="tabela tabela-cartoes">
   <thead>
-    <tr><th>Nome</th><th>Classificação</th><th>Início</th><th>Fim</th></tr>
+    <tr><th scope="col">Nome</th><th scope="col">Classificação</th><th scope="col">Início</th><th scope="col">Fim</th></tr>
   </thead>
   <tbody>
     {% for t in temporadas %}
       <tr>
-        <td><a href="{% url 'temporada_editar' t.pk %}">{{ t.nome }}</a></td>
-        <td>{{ t.get_classificacao_display }}</td>
-        <td>{{ t.inicio|date:"d/m/Y" }}</td>
-        <td>{{ t.fim|date:"d/m/Y" }}</td>
+        <td data-rotulo="Nome"><div class="tabela-valor"><a href="{% url 'temporada_editar' t.pk %}">{{ t.nome }}</a></div></td>
+        <td data-rotulo="Classificação"><div class="tabela-valor">{{ t.get_classificacao_display }}</div></td>
+        <td data-rotulo="Início"><div class="tabela-valor">{{ t.inicio|date:"d/m/Y" }}</div></td>
+        <td data-rotulo="Fim"><div class="tabela-valor">{{ t.fim|date:"d/m/Y" }}</div></td>
       </tr>
     {% empty %}
       <tr><td colspan="4" class="vazio">Nenhuma temporada cadastrada. As tarifas por período dependem delas.</td></tr>
     {% endfor %}
   </tbody>
 </table>
+</div>
 {% endblock %}

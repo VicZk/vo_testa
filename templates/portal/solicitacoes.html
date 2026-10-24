@@ -7,20 +7,22 @@
 <h1>Portal do Hóspede</h1>
 <p class="subtitulo">Pedidos e solicitações que chegaram pelo app do hóspede (QR Code). Cada um já virou comanda/tarefa no módulo dono.</p>
 
-<table class="tabela">
-  <thead><tr><th>Quando</th><th>Quarto</th><th>Tipo</th><th>Detalhe</th></tr></thead>
+<div class="tabela-rol">
+<table class="tabela tabela-cartoes">
+  <thead><tr><th scope="col">Quando</th><th scope="col">Quarto</th><th scope="col">Tipo</th><th scope="col">Detalhe</th></tr></thead>
   <tbody>
     {% for s in solicitacoes %}
       <tr>
-        <td>{{ s.criado_em|date:"d/m H:i" }}</td>
-        <td>{{ s.uh_numero }}</td>
-        <td><span class="selo">{{ s.get_tipo_display }}</span></td>
-        <td>{{ s.detalhe }}</td>
+        <td data-rotulo="Quando"><div class="tabela-valor">{{ s.criado_em|date:"d/m H:i" }}</div></td>
+        <td data-rotulo="Quarto"><div class="tabela-valor">{{ s.uh_numero }}</div></td>
+        <td data-rotulo="Tipo"><div class="tabela-valor"><span class="selo">{{ s.get_tipo_display }}</span></div></td>
+        <td data-rotulo="Detalhe"><div class="tabela-valor">{{ s.detalhe }}</div></td>
       </tr>
     {% empty %}
       <tr><td colspan="4" class="vazio">Nenhuma solicitação ainda.</td></tr>
     {% endfor %}
   </tbody>
 </table>
+</div>
 {% include "componentes/paginacao.html" with pagina=pagina %}
 {% endblock %}
