@@ -7690,6 +7690,11 @@ body.escala-dragging .escala-drop { cursor: copy; }
 .manutencao-nova, #acoes-os { scroll-margin-top:6rem; }
 .manutencao-nova > .form-cartao { padding:0; border:0; background:none; box-shadow:none; }
 .manutencao-detalhe .selo::before { display:none; }
+/* As ações já ficam em um cartão; o disclosure não cria uma segunda moldura. */
+.manutencao-detalhe :is(.acao-bloco,.acao-sensivel) > .form-cartao {
+  margin: .75rem 0 0; padding: 0; max-width: none;
+  border: 0; border-radius: 0; box-shadow: none; background: none;
+}
 @container (max-width:42rem) {
   .manutencao-ordem { grid-template-columns:minmax(0,1fr) auto; gap:.7rem 1rem; }
   .manutencao-ordem-identidade { grid-column:1/-1; }
