@@ -15,7 +15,7 @@
   document.addEventListener('htmx:beforeRequest', ev => {
     if (ev.detail.target.id !== 'modal-conteudo') return;
     const entrega = ev.detail.elt.closest('[data-entrega]');
-    if (entrega) focoNaEntrega = entrega.dataset.entrega;
+    focoNaEntrega = entrega ? entrega.dataset.entrega : null;
   });
   document.addEventListener('htmx:beforeSwap', ev => {
     if (ev.detail.target.id === 'modal-conteudo') {
