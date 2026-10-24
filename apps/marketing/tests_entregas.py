@@ -236,6 +236,7 @@ class LegadoEntregasMigrationTests(TransactionTestCase):
         anterior = [("marketing", "0008_revisar_textos_da_interface")]
         atual = [("marketing", "0010_versao_entregas")]
         executor = MigrationExecutor(connection)
+        restaurar = executor.loader.graph.leaf_nodes()
         executor.migrate(anterior)
         try:
             antigas = executor.loader.project_state(anterior).apps
@@ -261,5 +262,5 @@ class LegadoEntregasMigrationTests(TransactionTestCase):
             self.assertEqual(novas.get_model("marketing", "ItemChecklist").objects.get(pk=anexo.pk).arquivo.name,
                              "marketing/checklist/existente.pdf")
         finally:
-            MigrationExecutor(connection).migrate(atual)
+            MigrationExecutor(connection).migrate(restaurar)
             cache.clear()

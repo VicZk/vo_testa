@@ -9,6 +9,10 @@
   </div>
   {% include "marketing/_tabs.html" %}
   {% include "marketing/_canais.html" %}
+  <form method="get" class="filtros-chips mkt-canais" aria-label="Filtrar vínculo da entrega">
+    {% for chave, valor in request.GET.items %}{% if chave != 'vinculo' and chave != 'campanha' and chave != 'pagina' %}<input type="hidden" name="{{ chave }}" value="{{ valor }}">{% endif %}{% endfor %}
+    {% for item in vinculos %}<button type="submit" name="vinculo" value="{{ item.valor }}" class="filtro-chip{% if item.ativo %} ativo{% endif %}" aria-pressed="{{ item.ativo|yesno:'true,false' }}">{{ item.nome }}</button>{% endfor %}
+  </form>
   <section class="kpis mkt-entregas-resumo" aria-label="Entregas por tipo">
     {% for tipo in resumo_tipos %}
     <div class="kpi" data-tipo="{{ tipo.tipo }}">
@@ -24,10 +28,12 @@
   <form method="get" class="filtros mkt-entregas-filtros" aria-label="Filtrar entregas">
     {% if canal %}<input type="hidden" name="canal" value="{{ canal }}">{% endif %}
     {% for field in filtros %}
+    {% if field.is_hidden %}{{ field }}{% else %}
     <div class="filtro-campo{% if field.errors %} campo-erro{% endif %}">
       <label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
       {% for erro in field.errors %}<small class="erro">{{ erro }}</small>{% endfor %}
     </div>
+    {% endif %}
     {% endfor %}
     <button type="submit" class="botao-primario">Filtrar</button>
     <a href="{% url 'marketing:entregas' %}" class="botao-neutro">Limpar</a>
@@ -41,7 +47,7 @@
       {% for p in grupo.list %}{% include "marketing/_entrega_linha.html" %}{% endfor %}
     </section>
     {% empty %}
-    <div class="painel-bloco"><h2>Nenhuma entrega encontrada</h2><p class="subtitulo">Ajuste os filtros ou registre uma entrega dentro de uma campanha.</p></div>
+    <div class="painel-bloco"><h2>Nenhuma entrega encontrada</h2><p class="subtitulo">Ajuste os filtros ou registre uma entrega avulsa ou vinculada a uma campanha.</p></div>
     {% endfor %}
   </div>
   {% include "componentes/paginacao.html" with pagina=pagina %}

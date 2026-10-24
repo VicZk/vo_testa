@@ -13,6 +13,8 @@ from .models import Campanha, ItemChecklist, PecaCampanha
 
 
 class FiltroEntregasForm(forms.Form):
+    vinculo = forms.ChoiceField(label="Vínculo", required=False, choices=[
+        ("", "Todas"), ("sem", "Sem campanha"), ("com", "Por campanha")], widget=forms.HiddenInput)
     q = forms.CharField(label="Buscar entrega", max_length=140, required=False,
                         widget=forms.TextInput(attrs={"type": "search", "placeholder": "Material ou campanha"}))
     tipo = forms.ChoiceField(label="Tipo", required=False,
@@ -23,10 +25,19 @@ class FiltroEntregasForm(forms.Form):
                                       queryset=Campanha.objects.order_by("nome", "id"),
                                       empty_label="Todas as campanhas")
 
+    def clean(self):
+        dados = super().clean()
+        if dados.get("campanha"):
+            dados["vinculo"] = "com"
+        return dados
+
 
 class EntregaForm(forms.Form):
     versao = forms.IntegerField(widget=forms.HiddenInput, min_value=1, initial=1)
-    campanha = forms.ModelChoiceField(label="Campanha", queryset=Campanha.objects.order_by("nome", "id"))
+    campanha = forms.ModelChoiceField(
+        label="Campanha", queryset=Campanha.objects.order_by("nome", "id"), required=False,
+        empty_label="Sem campanha (avulsa)",
+        help_text="Opcional. Deixe sem campanha para produzir um material avulso.")
     nome = forms.CharField(label="Nome da entrega", max_length=140)
     tipo = forms.ChoiceField(label="Tipo", choices=PecaCampanha.Tipo.choices)
     canal = forms.CharField(label="Canal", max_length=40, required=False,
@@ -57,9 +68,12 @@ class EntregaForm(forms.Form):
         elif campanha:
             initial["campanha"] = campanha
         super().__init__(*args, initial=initial, **kwargs)
-        if peca:
+        if peca and peca.campanha_id:
             self.fields["campanha"].disabled = True
-        if not peca:
+            self.fields["campanha"].help_text = "Esta entrega já está vinculada; o vínculo é preservado."
+        elif peca:
+            self.fields["campanha"].help_text = "Avulsa. Escolha uma campanha apenas se quiser vinculá-la; o vínculo será preservado."
+        if not peca or not peca.campanha_id:
             self.fields["campanha"].widget.attrs.update({
                 "hx-get": reverse("marketing:anexos_da_entrega"), "hx-trigger": "change",
                 "hx-target": "#entrega-anexo", "hx-include": "this", "hx-swap": "innerHTML"})
@@ -67,7 +81,7 @@ class EntregaForm(forms.Form):
             self.fields["tipo"].choices = [("", "Selecione o tipo"), *(
                 escolha for escolha in PecaCampanha.Tipo.choices
                 if escolha[0] != PecaCampanha.Tipo.NAO_CLASSIFICADO)]
-        escolhido = campanha if peca else (self.data.get("campanha") if self.is_bound else campanha)
+        escolhido = campanha if peca and peca.campanha_id else (self.data.get("campanha") if self.is_bound else campanha)
         try:
             campanha_id = int(escolhido)
         except (TypeError, ValueError):
@@ -92,7 +106,7 @@ class EntregaForm(forms.Form):
         dados = super().clean()
         anexo = dados.get("material_checklist")
         campanha = dados.get("campanha")
-        if anexo and campanha and anexo.campanha_id != campanha.pk:
+        if anexo and (not campanha or anexo.campanha_id != campanha.pk):
             self.add_error("material_checklist", "Escolha um anexo desta campanha.")
         if dados.get("pagina_captacao") and dados.get("tipo") != PecaCampanha.Tipo.LP:
             self.add_error("pagina_captacao", "Escolha o tipo Landing page para vincular uma LP.")

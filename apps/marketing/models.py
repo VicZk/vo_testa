@@ -207,7 +207,7 @@ class Campanha(models.Model):
 
 
 class PecaCampanha(models.Model):
-    """Entrega da campanha; tipo, produção e material não alteram sua publicação."""
+    """Entrega avulsa ou vinculada; produção não altera a publicação da campanha."""
 
     class Tipo(models.TextChoices):
         IMPRESSO = "impresso", "Impresso"
@@ -223,7 +223,8 @@ class PecaCampanha(models.Model):
         PRONTA = "pronta", "Pronta"
 
     campanha = models.ForeignKey(
-        Campanha, on_delete=models.CASCADE, related_name="pecas", verbose_name="campanha")
+        Campanha, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="pecas", verbose_name="campanha")
     nome = models.CharField("nome", max_length=140)
     tipo = models.CharField(
         "tipo", max_length=20, choices=Tipo.choices, default=Tipo.NAO_CLASSIFICADO,

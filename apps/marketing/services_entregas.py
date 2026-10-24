@@ -30,25 +30,53 @@ def _concluir(peca, anterior, usuario):
         peca.concluida_por = None
 
 
+def _travar_campanhas(ids):
+    ids = {pk for pk in ids if pk is not None}
+    encontradas = set(Campanha.objects.select_for_update().filter(pk__in=ids).order_by("pk").values_list("pk", flat=True))
+    if encontradas != ids:
+        raise ValidationError({"campanha": "Campanha indisponível. Atualize a tela."})
+
+
+def _travar_entrega(peca, *, campanha_destino=None):
+    """Campanhas em ordem de PK, depois a peça; nunca inverter a ordem dos portões.
+
+    O vínculo é conferido novamente sob lock. Se uma avulsa foi vinculada enquanto
+    aguardávamos, rejeitamos a gravação em vez de operar sem o lock da campanha.
+    """
+    try:
+        campanha_id = PecaCampanha.objects.values_list("campanha_id", flat=True).get(pk=peca.pk)
+        _travar_campanhas([campanha_id, campanha_destino])
+        atual = PecaCampanha.objects.select_for_update().get(pk=peca.pk)
+    except PecaCampanha.DoesNotExist:
+        raise ValidationError("Entrega indisponível. Atualize a tela.") from None
+    if atual.campanha_id != campanha_id:
+        raise ValidationError("O vínculo desta entrega mudou em outra tela. Reabra a entrega antes de salvar.")
+    return atual
+
+
+def _conferir_versao(peca, versao):
+    if str(versao) != str(peca.versao):
+        raise ValidationError("Esta entrega mudou em outra tela. Reabra a entrega antes de salvar.")
+
+
 @transaction.atomic
 def salvar_entrega(*, dados, usuario, peca=None):
     _exigir_acesso(usuario)
-    campanha = dados["campanha"]
-    if peca and peca.campanha_id != campanha.pk:
-        raise ValidationError({"campanha": "A entrega pertence a outra campanha."})
-    Campanha.objects.select_for_update().get(pk=campanha.pk)
+    campanha = dados.get("campanha")
+    campanha_id = campanha.pk if campanha else None
     if peca is not None:
-        peca = PecaCampanha.objects.select_for_update().get(pk=peca.pk)
+        peca = _travar_entrega(peca, campanha_destino=campanha_id)
+        _conferir_versao(peca, dados.get("versao"))
+        if peca.campanha_id is not None and peca.campanha_id != campanha_id:
+            raise ValidationError({"campanha": "O vínculo existente não pode ser removido ou trocado."})
     else:
+        _travar_campanhas([campanha_id])
         peca = PecaCampanha()
+    campanha_anterior = peca.campanha_id
     anterior = peca.status if peca.pk else None
-    if peca.pk and dados.get("versao") != peca.versao:
-        raise ValidationError("Esta entrega mudou em outra tela. Reabra a entrega antes de salvar.")
     if dados.get("tipo") == PecaCampanha.Tipo.NAO_CLASSIFICADO and (
             not peca.pk or peca.tipo != PecaCampanha.Tipo.NAO_CLASSIFICADO):
         raise ValidationError({"tipo": "Escolha o tipo da entrega."})
-    if peca.pk and peca.campanha_id != campanha.pk:
-        raise ValidationError({"campanha": "A entrega pertence a outra campanha."})
     # A campanha é a mesma linha travada pelos portões; evita validar a produção
     # enquanto outro atendente adiciona ou altera uma entrega.
     pagina_id = dados.get("pagina_captacao")
@@ -63,6 +91,8 @@ def salvar_entrega(*, dados, usuario, peca=None):
         peca.versao += 1
     peca.full_clean()
     peca.save()
+    if campanha_anterior is None and campanha_id is not None:
+        registrar_auditoria(usuario, "vinculo_entrega", peca, {"de": None, "para": campanha_id})
     if anterior != peca.status:
         registrar_auditoria(usuario, "estado_entrega", peca, {"de": anterior, "para": peca.status})
     return peca
@@ -71,10 +101,9 @@ def salvar_entrega(*, dados, usuario, peca=None):
 @transaction.atomic
 def alterar_estado(peca, estado, usuario, *, versao=None):
     _exigir_acesso(usuario)
-    Campanha.objects.select_for_update().get(pk=peca.campanha_id)
-    peca = PecaCampanha.objects.select_for_update().get(pk=peca.pk)
-    if versao is not None and str(versao) != str(peca.versao):
-        raise ValidationError("Esta entrega mudou em outra tela. Reabra a entrega antes de salvar.")
+    peca = _travar_entrega(peca)
+    if versao is not None:
+        _conferir_versao(peca, versao)
     if estado not in PecaCampanha.Status.values:
         raise ValidationError("Escolha uma situação válida.")
     anterior = peca.status
@@ -88,7 +117,18 @@ def alterar_estado(peca, estado, usuario, *, versao=None):
     return peca
 
 
-def consultar_entregas(*, busca="", campanha=None, tipo="", situacao="", canal=""):
+@transaction.atomic
+def remover_entrega(peca, usuario, *, versao):
+    _exigir_acesso(usuario)
+    peca = _travar_entrega(peca)
+    _conferir_versao(peca, versao)
+    campanha = peca.campanha
+    registrar_auditoria(usuario, "remover_entrega", peca, {"campanha": peca.campanha_id})
+    peca.delete()
+    return campanha
+
+
+def consultar_entregas(*, busca="", campanha=None, tipo="", situacao="", canal="", vinculo=""):
     consulta = PecaCampanha.objects.select_related(
         "campanha", "material_checklist", "concluida_por")
     if busca:
@@ -96,6 +136,10 @@ def consultar_entregas(*, busca="", campanha=None, tipo="", situacao="", canal="
                                    | Q(campanha__nome__icontains=busca))
     if campanha:
         consulta = consulta.filter(campanha=campanha)
+    elif vinculo == "sem":
+        consulta = consulta.filter(campanha__isnull=True)
+    elif vinculo == "com":
+        consulta = consulta.filter(campanha__isnull=False)
     if canal:
         consulta = consulta.filter(canal__iexact=canal)
     contagens = {

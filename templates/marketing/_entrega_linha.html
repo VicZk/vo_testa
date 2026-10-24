@@ -1,7 +1,7 @@
 <article class="mkt-entrega" data-entrega="{{ p.pk }}">
   <div class="mkt-entrega-principal">
     <h3>{{ p.nome }}</h3>
-    {% if not na_ficha %}<a href="{% url 'marketing:detalhe' p.campanha_id %}" hx-get="{% url 'marketing:ficha' p.campanha_id %}" hx-target="#modal-conteudo">{{ p.campanha.nome }}</a>{% endif %}
+    {% if not na_ficha %}{% if p.campanha_id %}<a href="{% url 'marketing:detalhe' p.campanha_id %}" hx-get="{% url 'marketing:ficha' p.campanha_id %}" hx-target="#modal-conteudo">{{ p.campanha.nome }}</a>{% else %}<span class="mkt-meta">Sem campanha</span>{% endif %}{% endif %}
     <span class="rotulo-dado">{{ p.canal|default:"Canal não informado" }}</span>
   </div>
   <div class="mkt-entrega-situacao">
@@ -20,6 +20,6 @@
     {% if p.material_checklist_id and p.material_checklist.arquivo %}<a href="{% url 'marketing:abrir_material' p.material_checklist_id %}" class="botao-mini">Baixar anexo</a>{% endif %}
     {% if p.lp_disponivel %}<a href="{% url 'marketing:abrir_lp' p.pk %}" class="botao-mini" target="_blank" rel="noopener noreferrer">Abrir LP</a>{% endif %}
     <a href="{% url 'marketing:editar_entrega' p.pk %}?voltar={{ voltar_entrega|urlencode }}" class="botao-mini mkt-entrega-editar">Editar entrega</a>
-    {% if na_ficha %}<form method="post" action="{% url 'marketing:remover_peca' p.pk %}" hx-post="{% url 'marketing:remover_peca' p.pk %}" hx-target="#ficha-slot" hx-confirm="Remover esta entrega da campanha?">{% csrf_token %}<button type="submit" class="botao-mini">Remover</button></form>{% endif %}
+    {% if na_ficha %}<form method="post" action="{% url 'marketing:remover_peca' p.pk %}" hx-post="{% url 'marketing:remover_peca' p.pk %}" hx-target="#ficha-slot" hx-confirm="Remover esta entrega da campanha?">{% csrf_token %}<input type="hidden" name="versao" value="{{ p.versao }}"><button type="submit" class="botao-mini">Remover</button></form>{% endif %}
   </div>
 </article>

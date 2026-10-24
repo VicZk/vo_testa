@@ -51,7 +51,8 @@ def entregas(request):
     dados = form.cleaned_data if form.is_valid() else {}
     consulta, resumo = services_entregas.consultar_entregas(
         busca=dados.get("q", ""), campanha=dados.get("campanha"),
-        tipo=dados.get("tipo", ""), situacao=dados.get("situacao", ""), canal=canal)
+        tipo=dados.get("tipo", ""), situacao=dados.get("situacao", ""), canal=canal,
+        vinculo=dados.get("vinculo", ""))
     if form.errors:
         consulta = consulta.none()
     pagina = paginar(request, consulta, por_pagina=30)
@@ -67,6 +68,8 @@ def entregas(request):
         "filtros": form, "pagina": pagina, "resumo_tipos": resumo,
         "voltar_entrega": request.get_full_path(),
         "canal": canal, "canais": canais,
+        "vinculos": [{"valor": valor, "nome": nome, "ativo": valor == dados.get("vinculo", "")}
+                     for valor, nome in form.fields["vinculo"].choices],
         "atual": "marketing", "aba": "entregas",
     })
 

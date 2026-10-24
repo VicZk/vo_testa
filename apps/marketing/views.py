@@ -485,17 +485,22 @@ def marcar_peca(request, pk):
         alterar_estado(p, novo, request.user, versao=request.POST.get("versao", ""))
     except ValidationError as erro:
         messages.error(request, "; ".join(erro.messages))
-    return _pos_ficha(request, p.campanha)
+    return _pos_ficha(request, p.campanha) if p.campanha_id else redirect("marketing:entregas")
 
 
 @never_cache
 @requer_modulo(Modulo.MARKETING)
 @require_POST
 def remover_peca(request, pk):
+    from .services_entregas import remover_entrega
+
     p = get_object_or_404(PecaCampanha, pk=pk)
-    camp = p.campanha
-    p.delete()
-    return _pos_ficha(request, camp)
+    try:
+        camp = remover_entrega(p, request.user, versao=request.POST.get("versao", ""))
+    except ValidationError as erro:
+        messages.error(request, "; ".join(erro.messages))
+        camp = p.campanha
+    return _pos_ficha(request, camp) if camp else redirect("marketing:entregas")
 
 
 # ── Passo 6: relatório (mês/ano) + lançar gasto ──────────────────────────────

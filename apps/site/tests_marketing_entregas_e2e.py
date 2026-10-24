@@ -116,7 +116,8 @@ class MarketingEntregasE2ETests(_BaseE2E):
         self.preparar(self.page)
         self.abrir(self.page)
         self.page.get_by_role("link", name="Nova entrega", exact=True).click()
-        self.page.get_by_label("Campanha *", exact=True).select_option(str(self.campanha.pk))
+        expect(self.page.get_by_role("heading", name="Nova entrega", exact=True)).to_be_visible()
+        self.page.get_by_label("Campanha", exact=True).select_option(str(self.campanha.pk))
         expect(self.page.get_by_label("Anexo já salvo na campanha").locator("option")).to_have_count(2)
         nome = 'Convite <img src=x onerror="window.injetado=1">'
         self.page.get_by_label("Nome da entrega").fill(nome)

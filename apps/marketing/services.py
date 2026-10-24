@@ -1045,7 +1045,7 @@ def quadro_colunas(minhas=None, *, canal="") -> list[dict]:
 
 
 def _resp_de(campanha) -> str:
-    u = campanha.responsavel
+    u = campanha.responsavel if campanha else None
     return (u.get_full_name() or u.username) if u else "sem responsável"
 
 
@@ -1057,7 +1057,8 @@ def banda_proximos(dias: int = 7, *, canal="") -> list[dict]:
     for p in consulta:
         hoje_flag = p.data == hoje
         out.append({
-            "id": p.campanha_id, "nome": p.nome, "campanha": p.campanha.nome,
+            "id": p.campanha_id, "entrega_id": p.pk, "nome": p.nome,
+            "campanha": p.campanha.nome if p.campanha_id else "Sem campanha",
             "canal": p.canal or "—", "responsavel": _resp_de(p.campanha),
             "quando": "prazo hoje" if hoje_flag else p.data.strftime("%d/%m"),
             "hoje": hoje_flag,
@@ -1086,8 +1087,9 @@ def banda_atrasados(*, canal="") -> list[dict]:
     for p in consulta:
         d = (hoje - p.data).days
         out.append({
-            "id": p.campanha_id, "texto": p.nome, "canal": p.canal or "—",
-            "campanha": p.campanha.nome, "dono": _resp_de(p.campanha), "tipo": "ENTREGA",
+            "id": p.campanha_id, "entrega_id": p.pk, "texto": p.nome, "canal": p.canal or "—",
+            "campanha": p.campanha.nome if p.campanha_id else "Sem campanha",
+            "dono": _resp_de(p.campanha), "tipo": "ENTREGA",
             "desde": f"há {d} dia{'s' if d != 1 else ''}" if d else "agora",
         })
     return out
