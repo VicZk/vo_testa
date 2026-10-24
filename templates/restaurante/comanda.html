@@ -5,24 +5,31 @@
 
 {% block conteudo %}
 {% load nucleo_extras %}{% if eh_gerente %}{% aviso_nfce %}{% endif %}
-<a href="#" class="voltar" onclick="history.back(); return false;">
-  <svg viewBox="0 0 24 24" class="ico"><path d="M15 6l-6 6 6 6"/></svg> Voltar
+<a href="{% url 'restaurante:comandas' %}" class="voltar">
+  <svg viewBox="0 0 24 24" class="ico"><path d="M15 6l-6 6 6 6"/></svg> Comandas
 </a>
-<p class="pagina-eyebrow letreiro">Restaurante Piscina</p>
-<div class="pagina-cabecalho">
-  <h1>Comanda #{{ comanda.pk }}: {{ comanda.titulo }}</h1>
-  <span class="selo {% if comanda.status == 'cancelada' %}selo-alerta{% elif comanda.aberta %}selo-em_andamento{% else %}selo-limpa{% endif %}">{{ comanda.get_status_display }}</span>
+<header class="comanda-cabecalho">
+  <div>
+    <p class="pagina-eyebrow letreiro">Restaurante · Comanda #{{ comanda.pk }}</p>
+    <h1>{{ comanda.titulo }}</h1>
+    <p class="comanda-contexto"><span class="selo {% if comanda.status == 'cancelada' %}selo-alerta{% elif comanda.aberta %}selo-em_andamento{% else %}selo-limpa{% endif %}">{{ comanda.get_status_display }}</span><span>Aberta às {{ comanda.aberta_em|date:"H:i" }}</span></p>
+  </div>
+  <div class="comanda-cabecalho-acoes">
   <a href="{% url 'restaurante:cupom' comanda.pk %}?imprimir=1" target="_blank" rel="noopener" class="botao-neutro">{% if comanda.aberta %}Imprimir conferência{% else %}Imprimir cupom{% endif %}</a>
   <a href="{% url 'restaurante:cozinha' %}" class="botao-neutro">Cozinha</a>
-</div>
+  </div>
+</header>
 
 <div class="restaurante-shell">
-<nav class="restaurante-atalhos" aria-label="Nesta comanda"><a href="#restaurante-cardapio" class="botao-neutro">Cardápio</a><a href="#restaurante-conta" class="botao-neutro">Ver comanda e fechar</a></nav>
-<div class="pdv pdv-restaurante" data-restaurante-comanda="{{ comanda.pk }}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+<div class="pdv pdv-restaurante" data-restaurante-comanda="{{ comanda.pk }}" data-comanda-painel="{% if comanda.itens.all %}conta{% else %}cardapio{% endif %}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+  {% if comanda.aberta %}<nav class="restaurante-atalhos" aria-label="Nesta comanda">
+    <a href="#restaurante-cardapio" data-comanda-abrir="cardapio">Fazer pedido</a>
+    <a href="#restaurante-conta" data-comanda-abrir="conta">Itens e fechamento</a>
+  </nav>{% endif %}
   <section class="pdv-produtos" id="restaurante-cardapio">
     {% include "fiscal/partials/emitir_consumo.html" with origem="comanda" registro=comanda %}
     {% if comanda.aberta %}
-      <p class="subtitulo">Adicione os pedidos à comanda. Eles entram na fila da cozinha; acompanhe o preparo antes de entregar.</p>
+      <div class="comanda-secao-topo"><h2>Fazer pedido</h2><p>Escolha um produto para informar a quantidade e as observações.</p></div>
       <div class="restaurante-filtros">
         <label class="campo">Buscar no cardápio<input type="search" placeholder="Nome do produto…" data-restaurante-busca></label>
         <div class="campo"><label for="restaurante-categoria">Categoria do cardápio</label><select id="restaurante-categoria" data-restaurante-categoria><option value="">Todas as categorias</option>{% for c in categorias %}<option value="{{ c.id }}">{{ c.nome }}</option>{% endfor %}</select></div>
@@ -62,13 +69,12 @@
     {% endif %}
   </section>
 
-  {% if comanda.aberta %}<a href="#restaurante-conta" class="comanda-barra-toque" aria-label="Ir para a comanda">
+  {% if comanda.aberta %}<a href="#restaurante-conta" class="comanda-barra-toque" data-comanda-abrir="conta" aria-label="Ir para a comanda">
     <span class="letreiro">Comanda</span><strong data-barra-total>{{ comanda.total|intcomma_brl }}</strong><span>Ver e fechar →</span>
   </a>{% endif %}
   <aside class="pdv-painel" id="restaurante-conta">
     <div class="pdv-painel-topo">
-      <h2>Comanda</h2>
-      <span class="pdv-contador">{{ comanda.titulo }}</span>
+      <h2>Itens da comanda</h2>
     </div>
     <div class="pdv-carrinho">
       {% include "restaurante/partials/itens.html" %}
@@ -79,6 +85,7 @@
         {% csrf_token %}
         <input type="hidden" name="destino" :value="destino">
         <div class="pdv-resumo">
+          <h2>Fechamento</h2>
           <div class="pdv-linha-desc">
             <label for="comanda-desconto">Desconto</label>
             <div class="input-reais"><span>R$</span><input id="comanda-desconto" type="number" name="desconto" min="0" step="0.01" value="0"></div>
@@ -86,48 +93,58 @@
           <div class="pdv-total"><span class="letreiro">Total a fechar</span><strong data-restaurante-total aria-live="polite">{{ comanda.total|intcomma_brl }}</strong></div>
           <p class="ajuda" data-restaurante-sem-cobranca hidden>Sem valor a receber. O fechamento registra o consumo sem cobrança.</p>
         </div>
-        <div class="pdv-seg pdv-seg-lateral">
+        <div class="comanda-recebimento">
+        {% if contas %}
+        <span class="comanda-campo-rotulo">Como receber</span>
+        <div class="pdv-seg pdv-seg-lateral" role="group" aria-label="Destino do pagamento">
           <button type="button" :class="{ativo: destino === 'caixa'}" @click="destino = 'caixa'">Pagar agora</button>
-          {% if contas %}<button type="button" :class="{ativo: destino === 'conta'}" @click="destino = 'conta'">Conta do quarto</button>{% endif %}
+          <button type="button" :class="{ativo: destino === 'conta'}" @click="destino = 'conta'">Conta do quarto</button>
         </div>
+        {% endif %}
         <label class="select-wrap pdv-destino" x-show="destino === 'caixa'" x-cloak>
+          <span class="comanda-campo-rotulo">Forma de pagamento</span>
           <select name="forma" aria-label="Forma de pagamento"><option value="">Forma de pagamento…</option>
             {% for f in formas %}<option value="{{ f.pk }}">{{ f.nome }}</option>{% endfor %}
           </select>
         </label>
         {% if contas %}
         <label class="select-wrap pdv-destino" x-show="destino === 'conta'" x-cloak>
+          <span class="comanda-campo-rotulo">Quarto / hóspede</span>
           <select name="conta_id" aria-label="Quarto / hóspede"><option value="">Quarto / hóspede…</option>
             {% for c in contas %}<option value="{{ c.id }}"{% if c.id == comanda.conta_id %} selected{% endif %}>{{ c.rotulo }}</option>{% endfor %}
           </select>
         </label>
         {% endif %}
+        </div>
         <button type="submit" class="botao-primario pdv-finalizar">Fechar comanda</button>
       </form>
 
       <details class="mais-opcoes comanda-extras">
-        <summary>Mais ações <small>estadia, transferência, cancelamento</small></summary>
-        <div>
-        {% if contas %}<form data-preservar-erros method="post" action="{% url 'restaurante:vincular' comanda.pk %}" class="campo">
+        <summary>Mais ações</summary>
+        <div class="comanda-extras-conteudo">
+        {% if contas %}<form data-preservar-erros method="post" action="{% url 'restaurante:vincular' comanda.pk %}" class="comanda-extra-bloco">
+          <h3>Vincular à estadia</h3>
           {% csrf_token %}<label for="comanda-estadia">Estadia vinculada</label>
           <select id="comanda-estadia" name="conta_id" required><option value="">Selecione o quarto / hóspede…</option>
             {% for conta in contas %}<option value="{{ conta.id }}"{% if conta.id == comanda.conta_id %} selected{% endif %}>{{ conta.rotulo }}</option>{% endfor %}
           </select><button class="botao-neutro" type="submit">Vincular à estadia</button>
           <small class="ajuda">O check-out avisa sobre esta comanda enquanto ela estiver aberta.</small>
         </form>{% endif %}
-        <form data-preservar-erros method="post" action="{% url 'restaurante:transferir' comanda.pk %}" class="form-inline">
+        <form data-preservar-erros method="post" action="{% url 'restaurante:transferir' comanda.pk %}" class="comanda-extra-bloco">
           {% csrf_token %}
-          <select name="mesa"><option value="">Transferir para ponto…</option>
+          <h3>Transferir de ponto</h3>
+          <label for="comanda-mesa">Mesa, guarda-sol ou bar</label>
+          <select id="comanda-mesa" name="mesa"><option value="">Transferir para ponto…</option>
             {% for m in mesas %}<option value="{{ m.pk }}" {% if comanda.mesa_id == m.pk %}selected{% endif %}>{{ m.nome }}</option>{% endfor %}
           </select>
           <button type="submit" class="botao-neutro">Transferir</button>
         </form>
         {% if eh_gerente %}
-          <details class="acao-sensivel">
+          <details class="acao-sensivel comanda-extra-bloco">
             <summary>Cancelar comanda</summary>
-            <form data-preservar-erros method="post" action="{% url 'restaurante:cancelar' comanda.pk %}" class="form-cartao">
+            <form data-preservar-erros method="post" action="{% url 'restaurante:cancelar' comanda.pk %}">
               {% csrf_token %}
-              <div class="campo"><label>Motivo</label><input type="text" name="motivo" required></div>
+              <div class="campo"><label for="comanda-motivo-cancelamento">Motivo</label><input id="comanda-motivo-cancelamento" type="text" name="motivo" required></div>
               <div class="acoes"><button type="submit" class="botao-perigo">Confirmar cancelamento</button></div>
             </form>
           </details>
@@ -136,18 +153,6 @@
       </details>
     {% endif %}
   </aside>
-<script>
-  // A barra do pé (toque) repete o total da comanda; ela acompanha cada troca do HTMX.
-  (() => {
-    const sincronizar = () => {
-      const barra = document.querySelector('[data-barra-total]');
-      const total = document.querySelector('#comanda-itens .comanda-total-linha strong');
-      if (barra && total) barra.textContent = total.textContent;
-    };
-    document.addEventListener('htmx:afterSwap', (e) => { if (e.detail.target && e.detail.target.id === 'comanda-itens') sincronizar(); });
-    document.addEventListener('htmx:afterSettle', sincronizar);
-  })();
-</script>
 </div>
 </div>
 <script src="{% static 'js/restaurante-comanda.js' %}" defer></script>

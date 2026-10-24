@@ -4599,9 +4599,19 @@ form.filtros:not(.subnav) :is(input:not([type=checkbox]):not([type=radio]):not([
 .comanda-fechar { display: flex; flex-direction: column; }
 
 /* Restaurante: filtros, conferência e pagamento respondem à largura útil. */
+.comanda-cabecalho { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 1rem; margin-bottom: 1.3rem; }
+.comanda-cabecalho > div { min-width: 0; }
+.comanda-cabecalho h1 { margin: 0; font-size: clamp(1.5rem, 3vw, 2rem); hyphens: none; overflow-wrap: anywhere; }
+.comanda-cabecalho .pagina-eyebrow { margin-bottom: .35rem; }
+.comanda-contexto { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem 1rem; margin: .55rem 0 0; font-size: .85rem; color: var(--tinta-suave); }
+.comanda-cabecalho-acoes { display: flex; flex-wrap: wrap; gap: .5rem; }
+.comanda-cabecalho-acoes > a { min-height: 44px; }
 .restaurante-shell { container: restaurante / inline-size; min-width: 0; }
 .pdv-restaurante { grid-template-columns: minmax(0, 1.35fr) minmax(min(330px, 100%), 1fr); }
 .pdv-restaurante > *, .restaurante-filtros > *, .pdv-restaurante .pdv-item > * { min-width: 0; }
+.comanda-secao-topo { margin-bottom: 1rem; }
+.comanda-secao-topo h2 { margin: 0 0 .3rem; font-size: 1.25rem; }
+.comanda-secao-topo p { margin: 0; color: var(--tinta-suave); font-size: .9rem; }
 .restaurante-filtros { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr)); gap: .7rem; margin-bottom: 1rem; }
 .restaurante-filtros .campo { margin: 0; }
 .restaurante-filtros :is(input[type=search], select) { width: 100%; min-width: 0; min-height: 44px; font: inherit; color: var(--tinta); background: var(--superficie); border: 1px solid var(--fio-forte); border-radius: var(--raio-p); padding: .6rem .8rem; }
@@ -4609,24 +4619,56 @@ form.filtros:not(.subnav) :is(input:not([type=checkbox]):not([type=radio]):not([
 .pdv-restaurante .pdv-lista { grid-template-columns: repeat(auto-fill, minmax(min(155px, 100%), 1fr)); }
 .pdv-restaurante .pdv-produto-meta { flex-wrap: wrap; gap: .25rem .5rem; }
 .pdv-restaurante .pdv-produto-nome { overflow-wrap: anywhere; }
-.pdv-restaurante .pdv-painel-topo { flex-wrap: wrap; gap: .5rem; }
-.pdv-restaurante .pdv-contador { overflow-wrap: anywhere; }
-.pdv-restaurante .pdv-item { grid-template-columns: auto minmax(0, 1fr) auto; }
-.pdv-restaurante .pdv-item-nome { white-space: normal; overflow-wrap: anywhere; }
-.pdv-restaurante .pedido-etapa { display: block; margin-top: .25rem; }
+.pdv-restaurante .pdv-painel { position: static; }
+.pdv-restaurante .pdv-painel-topo { flex-wrap: wrap; align-items: center; gap: .3rem .6rem; padding: .8rem 1rem; }
+.pdv-restaurante .pdv-item { display: block; padding: 1rem 0; border-radius: 0; border-bottom: 1px solid var(--fio); }
+.pdv-restaurante .pdv-item:last-child { border-bottom: 0; }
+.pdv-restaurante .pdv-item:hover { background: none; }
+.comanda-item-titulo { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: .5rem; align-items: baseline; }
+.pdv-restaurante .pdv-item-nome { white-space: normal; overflow-wrap: anywhere; font-size: .95rem; line-height: 1.4; }
+.comanda-item-situacao { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .3rem .8rem; margin-top: .45rem; }
+.pdv-restaurante .pedido-etapa { display: block; color: var(--tinta-suave); font-size: .85rem; }
+.comanda-item-detalhes { margin-top: .5rem; }
+.comanda-item-detalhes:empty { display: none; }
+.comanda-item-detalhes .pedido-detalhe { font-size: .85rem; }
+.pdv-restaurante .pedido-observacao { margin-bottom: 0; }
+.comanda-item-acoes { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin-top: .35rem; }
+.comanda-item-acoes > button { min-height: 44px; }
+.comanda-remover { color: var(--tinta-suave); }
+.comanda-item-cancelar { margin-top: .4rem; }
+.comanda-item-cancelar > summary { display: flex; align-items: center; min-height: 44px; }
+.comanda-item-cancelar form { display: grid; gap: .65rem; padding: .5rem 0; }
+.comanda-item-cancelar input { width: 100%; min-width: 0; }
 .pdv-restaurante [data-restaurante-sem-cobranca][hidden] { display: none; }
-.pdv-restaurante .pdv-item-nome > .botao-texto { min-height: 44px; }
-.pdv-restaurante .pdv-sub { grid-column: 2; font-size: 0.88rem; }
-.pdv-restaurante .pdv-x { grid-column: 3; grid-row: 1 / span 2; min-width: 44px; min-height: 44px; }
-.pdv-restaurante .pdv-carrinho { max-height: min(55vh, 620px); }
-.pdv-restaurante .pdv-destino { margin: .75rem 1.3rem 0; }
+.pdv-restaurante .pdv-sub { font-size: .95rem; }
+.pdv-restaurante .pdv-carrinho { max-height: none; overflow: visible; padding: 0 1rem .8rem; }
+.pdv-restaurante .comanda-total-linha { padding-inline: 0; }
+.pdv-restaurante .comanda-total-linha strong { font-size: 1.2rem; }
+.pdv-restaurante .pdv-resumo { padding: 1rem; }
+.pdv-restaurante .pdv-resumo h2 { margin: 0 0 1rem; font-size: 1.15rem; }
+.comanda-recebimento { display: grid; gap: .6rem; padding: 1rem 1rem 0; }
+.comanda-campo-rotulo { display: block; margin-bottom: .3rem; font-size: .85rem; font-weight: 600; color: var(--tinta-suave); }
+.pdv-restaurante .pdv-destino { display: block; margin: 0; }
+.pdv-restaurante .pdv-destino::after { bottom: 1.1rem; top: auto; }
+.pdv-restaurante .pdv-seg { margin: 0 !important; }
 .pdv-restaurante .pdv-seg { border-radius: var(--raio); }
 .pdv-restaurante .pdv-seg button { min-height: 44px; border-radius: var(--raio-p); white-space: normal; }
 .pdv-restaurante .pdv-total { flex-wrap: wrap; gap: .4rem; }
 .pdv-restaurante .pdv-total strong { font-size: clamp(1.2rem, 3cqi, 1.8rem); }
 .pdv-restaurante .texto-perigo { color: var(--perigo); }
-.restaurante-atalhos { display: none; gap: .5rem; flex-wrap: wrap; margin-bottom: 1rem; }
-.restaurante-atalhos a { flex: 1; min-height: 44px; text-align: center; }
+.pdv-restaurante .pdv-finalizar { margin: 1rem !important; }
+.pdv-restaurante .comanda-extras { display: block; padding: 0; margin: 0 1rem 1rem; }
+.pdv-restaurante .comanda-extras > summary { min-height: 48px; }
+.comanda-extras-conteudo { padding: 0 .8rem .8rem; }
+.comanda-extra-bloco { display: grid; gap: .6rem; margin: 0; padding: .9rem 0; border-top: 1px solid var(--fio); }
+.comanda-extra-bloco h3 { margin: 0; font-size: .95rem; }
+.comanda-extra-bloco label { font-size: .85rem; font-weight: 600; }
+.comanda-extra-bloco > button { justify-self: start; }
+.comanda-extra-bloco > form { margin-top: .6rem; }
+.comanda-extra-bloco .acoes { margin-bottom: 0; }
+.restaurante-atalhos { display: none; grid-column: 1 / -1; gap: .3rem; padding: .3rem; border: 1px solid var(--fio); border-radius: var(--raio); background: var(--superficie); }
+.restaurante-atalhos a { display: flex; flex: 1; align-items: center; justify-content: center; min-height: 48px; padding: .5rem; border-radius: var(--raio-p); color: var(--tinta-suave); text-align: center; text-decoration: none; font-size: .9rem; font-weight: 600; }
+.restaurante-atalhos a[aria-current="true"] { background: var(--lampiao-claro); color: var(--noturno); }
 .pdv-restaurante :is(#restaurante-cardapio, #restaurante-conta) { scroll-margin-top: calc(var(--topbar-h) + 1rem); }
 .restaurante-financeiro { padding: 1rem; }
 .restaurante-financeiro h2 { font-size: 1.15rem; }
@@ -4634,9 +4676,11 @@ form.filtros:not(.subnav) :is(input:not([type=checkbox]):not([type=radio]):not([
 .restaurante-financeiro dd { margin: 0; font-variant-numeric: tabular-nums; }
 .restaurante-historico td { white-space: normal; overflow-wrap: anywhere; }
 @container restaurante (max-width: 850px) {
-  .pdv-restaurante { grid-template-columns: minmax(0, 1fr); }
-  .pdv-restaurante .pdv-painel { position: static; }
-  .restaurante-atalhos { display: flex; }
+  .pdv-restaurante { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+  .restaurante-atalhos { display: flex; position: sticky; top: calc(var(--topbar-h) + .35rem); z-index: 8; }
+  .pdv-restaurante :is(#restaurante-cardapio, #restaurante-conta) { scroll-margin-top: calc(var(--topbar-h) + 5.5rem); }
+  .pdv-restaurante.comanda-navegavel[data-comanda-painel="conta"]:has(.restaurante-atalhos) .pdv-produtos,
+  .pdv-restaurante.comanda-navegavel[data-comanda-painel="cardapio"]:has(.restaurante-atalhos) .pdv-painel { display: none; }
 }
 
 /* Entregas de Marketing: reusa cartões e campos da casa. */

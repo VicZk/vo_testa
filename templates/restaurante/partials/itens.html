@@ -5,21 +5,22 @@
     <div class="comanda-lista">
       {% for i in comanda.itens.all %}
         <div class="pdv-item">
-          <span class="comanda-qtd">{{ i.quantidade|quantidade_br }}×</span>
-          <div class="pdv-item-nome">
-            <strong>{{ i.descricao }}</strong>
+          <div class="comanda-item-titulo"><span class="comanda-qtd">{{ i.quantidade|quantidade_br }}×</span><strong class="pdv-item-nome">{{ i.descricao }}</strong></div>
+          <div class="comanda-item-situacao"><small class="pedido-etapa">{{ i.get_preparo_display }}</small><span class="pdv-sub">{{ i.subtotal|intcomma_brl }}</span></div>
+          <div class="comanda-item-detalhes">
             {% for opcao in i.opcoes %}<small class="pedido-detalhe">{{ opcao.grupo }}: {{ opcao.nome }}{% if opcao.adicional != '0.00' and opcao.adicional != '0' %} (+ {{ opcao.adicional|intcomma_brl }}){% endif %}</small>{% endfor %}
             {% if i.observacoes %}<p class="pedido-observacao">{{ i.observacoes }}</p>{% endif %}
-            <small class="pedido-etapa">{{ i.get_preparo_display }}</small>
-            {% if comanda.aberta and i.preparo == 'aguardando' %}<button type="button" class="botao-texto" hx-get="{% url 'restaurante:editar_item' comanda.pk i.pk %}" hx-target="#modal-conteudo" aria-label="Editar {{ i.descricao }}">Editar pedido</button>{% endif %}
-            {% if comanda.aberta and i.preparo != 'aguardando' %}<details class="acao-sensivel"><summary>Cancelar este item</summary><form hx-post="{% url 'restaurante:remover_item' comanda.pk i.pk %}" hx-target="#comanda-itens" hx-swap="outerHTML">{% csrf_token %}<label class="campo">Motivo<input name="motivo" required maxlength="300"></label><small>Exige gerência. O consumo será registrado como perda.</small><button type="submit" class="botao-perigo">Cancelar item</button></form></details>{% endif %}
           </div>
-          <span class="pdv-sub">{{ i.subtotal|intcomma_brl }}</span>
           {% if comanda.aberta and i.preparo == 'aguardando' %}
-            <button type="button" class="pdv-x" title="Remover" aria-label="Remover {{ i.descricao }}"
+          <div class="comanda-item-acoes">
+            <button type="button" class="botao-texto" hx-get="{% url 'restaurante:editar_item' comanda.pk i.pk %}" hx-target="#modal-conteudo" aria-label="Editar {{ i.descricao }}">Editar pedido</button>
+            <button type="button" class="botao-texto comanda-remover" aria-label="Remover {{ i.descricao }}"
                     hx-post="{% url 'restaurante:remover_item' comanda.pk i.pk %}"
-                    hx-target="#comanda-itens" hx-swap="outerHTML">&times;</button>
-          {% else %}<span></span>{% endif %}
+                    hx-target="#comanda-itens" hx-swap="outerHTML">Remover</button>
+          </div>
+          {% elif comanda.aberta %}
+            {% if request.user.is_staff or request.user.is_superuser %}<details class="acao-sensivel comanda-item-cancelar"><summary>Cancelar este item</summary><form hx-post="{% url 'restaurante:remover_item' comanda.pk i.pk %}" hx-target="#comanda-itens" hx-swap="outerHTML">{% csrf_token %}<label class="campo">Motivo<input name="motivo" required maxlength="300"></label><small>O consumo será registrado como perda.</small><button type="submit" class="botao-perigo">Cancelar item</button></form></details>{% else %}<p class="ajuda">Para cancelar após o preparo, solicite à gerência.</p>{% endif %}
+          {% endif %}
         </div>
       {% endfor %}
     </div>

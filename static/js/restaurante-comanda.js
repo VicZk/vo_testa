@@ -26,6 +26,8 @@
     const valido = subtotal !== null && desconto !== null && desconto <= subtotal;
     total.textContent = valido ? moeda.format((subtotal - desconto) / 100) : 'Confira o desconto';
     total.classList.toggle('texto-perigo', !valido);
+    const barra = tela.querySelector('[data-barra-total]');
+    if (barra) barra.textContent = valido ? total.textContent : '—';
     const semCobranca = tela.querySelector('[data-restaurante-sem-cobranca]');
     if (semCobranca) semCobranca.hidden = !valido || subtotal !== desconto || itens.dataset.temItens !== '1';
     const botao = tela.querySelector('.pdv-finalizar');
@@ -50,7 +52,30 @@
     if (vazio) vazio.hidden = encontrados !== 0;
   }
 
-  function preparar() { filtrar(); totalizar(); }
+  function navegar(tela, painel, rolar = false) {
+    if (!['cardapio', 'conta'].includes(painel)) return;
+    tela.dataset.comandaPainel = painel;
+    tela.classList.add('comanda-navegavel');
+    tela.querySelectorAll('.restaurante-atalhos [data-comanda-abrir]').forEach(link => {
+      if (link.dataset.comandaAbrir === painel) link.setAttribute('aria-current', 'true');
+      else link.removeAttribute('aria-current');
+    });
+    if (rolar) tela.querySelector('#restaurante-' + painel)?.scrollIntoView({block: 'start', behavior: 'auto'});
+  }
+
+  function preparar() {
+    const tela = raiz();
+    if (!tela) return;
+    navegar(tela, tela.dataset.comandaPainel);
+    filtrar(); totalizar();
+  }
+  document.addEventListener('click', ev => {
+    const link = ev.target.closest('[data-comanda-abrir]');
+    const tela = raiz();
+    if (!link || !tela || !tela.contains(link) || ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.altKey) return;
+    ev.preventDefault();
+    navegar(tela, link.dataset.comandaAbrir, true);
+  });
   document.addEventListener('input', ev => {
     if (ev.target.matches('[data-restaurante-busca]')) filtrar();
     if (ev.target.matches('[data-restaurante-comanda] [name="desconto"]')) totalizar();

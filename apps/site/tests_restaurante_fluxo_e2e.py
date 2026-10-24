@@ -63,12 +63,19 @@ class RestauranteFluxoE2ETests(_BaseE2E):
     def produto_botao(self):
         return self.page.locator(".pdv-produto").filter(has_text=self.produto.nome)
 
+    def painel(self, nome):
+        atalho = self.page.locator(f'.restaurante-atalhos [data-comanda-abrir="{nome}"]')
+        if atalho.is_visible():
+            atalho.click()
+
     def adicionar(self, quantidade):
+        self.painel("cardapio")
         self.produto_botao().click()
         dialogo = self.page.get_by_role("dialog")
         dialogo.get_by_label("Quantidade", exact=False).fill(str(quantidade))
         dialogo.get_by_role("button", name="Adicionar à comanda", exact=True).click()
         expect(dialogo).to_be_hidden()
+        self.painel("conta")
 
     def foto(self, nome):
         if pasta := os.environ.get("EVIDENCIAS_DIR"):
@@ -160,6 +167,7 @@ class RestauranteFluxoE2ETests(_BaseE2E):
         self.page.locator('[name="desconto"]').fill("2.50")
         expect(self.page.locator("[data-restaurante-total]")).to_contain_text("11,50")
         expect(self.page.locator('[data-restaurante-sem-cobranca]')).to_be_hidden()
+        self.painel("cardapio")
         self.page.get_by_label("Categoria do cardápio", exact=True).select_option(str(categoria.pk))
         expect(self.produto_botao()).to_be_hidden()
         expect(self.page.locator(".pdv-produto").filter(has_text="Prato indisponível")).to_be_visible()
@@ -171,11 +179,14 @@ class RestauranteFluxoE2ETests(_BaseE2E):
             self.page.set_viewport_size({"width": largura, "height": 900})
             self.page.evaluate("document.querySelector('.app').classList.remove('recolhida')")
             self.assertLessEqual(self.page.evaluate("document.documentElement.scrollWidth"), largura + 1)
-            for seletor in (".pdv-painel", ".pdv-produtos", ".pdv-finalizar", "[data-restaurante-total]"):
-                caixa = self.page.locator(seletor).bounding_box()
-                self.assertGreaterEqual(caixa["x"], -1)
-                self.assertLessEqual(caixa["x"] + caixa["width"], largura + 1)
-            self.foto(f"restaurante-comanda-{largura}")
+            for painel, seletores in (("cardapio", (".pdv-produtos",)),
+                                      ("conta", (".pdv-painel", ".pdv-finalizar", "[data-restaurante-total]"))):
+                self.painel(painel)
+                for seletor in seletores:
+                    caixa = self.page.locator(seletor).bounding_box()
+                    self.assertGreaterEqual(caixa["x"], -1)
+                    self.assertLessEqual(caixa["x"] + caixa["width"], largura + 1)
+                self.foto(f"restaurante-comanda-{largura}-{painel}")
 
     def test_estorno_aparece_na_comanda_historico_e_cupom(self):
         adicionar_item(self.comanda, self.produto, 2, self.op)
