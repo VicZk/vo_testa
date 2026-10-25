@@ -653,6 +653,8 @@ class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
 
         p = self.page
         p.goto(self.url(reverse("escala:turnos")))
+        # O formulário mora num <details> que nasce fechado quando já há turnos.
+        p.locator('details:has(> summary:text-is("Novo turno"))').evaluate("bloco => { bloco.open = true; }")
         nome = "Nome de turno que excede o limite de quarenta caracteres QA"
         p.locator('[name="nome"]').evaluate("campo => campo.removeAttribute('maxlength')")
         p.locator('[name="nome"]').fill(nome)

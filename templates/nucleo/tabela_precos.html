@@ -143,7 +143,9 @@
   .precos-filtros { max-width:100%; margin:1rem 0; }
   .precos-filtros-campos { display:flex; flex-wrap:wrap; align-items:end; gap:.65rem; }
   .precos-filtros-campos > label { display:grid; gap:.3rem; min-width:0; flex:1 1 13rem; font-size:.84rem; font-weight:600; }
-  .precos-filtros-campos select { width:100%; min-width:0; min-height:44px; padding:.6rem .75rem; font:inherit; color:var(--tinta); background:var(--superficie); border:1px solid var(--fio-forte); border-radius:var(--raio-p); }
+  /* `background-color` e `padding-right` de 2.1rem: o atalho `background` apagava a
+     seta do `<select>` da casa e o `padding` curto a deixava sobre o texto. */
+  .precos-filtros-campos select { width:100%; min-width:0; min-height:44px; padding:.6rem 2.1rem .6rem .75rem; font:inherit; color:var(--tinta); background-color:var(--superficie); border:1px solid var(--fio-forte); border-radius:var(--raio-p); }
   .precos-filtros-campos > button { min-height:44px; }
   .precos-filtros > .ajuda { margin:.5rem 0 0; }
   .precos-tabela tr[hidden] { display:none !important; }

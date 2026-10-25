@@ -585,6 +585,8 @@ na disponibilidade e liberação com faxina automática.
 
 **Escala.** Turnos por setor, grade semanal, ausências que impedem escalar, trocas
 aprovadas pela gerência e "minha escala" para o funcionário.
+Turnos, Ausências e Trocas mantêm a lista na largura disponível; os formulários
+ficam em blocos expansíveis acima dela, abertos quando a lista está vazia.
 
 **Estoque.** Telas sobre o motor do núcleo, em cinco abas (Posição, Produtos,
 Movimentar, Inventário, Cadastros). A posição mostra o valor parado em mercadoria, o que
@@ -898,6 +900,9 @@ Toda tela do CRM nasce no design system; nada de estilo paralelo nem cor fixa no
   a lista do que entra está em `apps/nucleo/css_publico.txt`, e o teste
   `CssDasTelasPublicasTests` avisa quando o recorte ficou para trás ou quando uma
   tela pública ganhou classe que falta nele.
+- **Campos e cartões:** selects preservam a seta e o espaço à direita mesmo nos
+  formulários especializados; cartões com `hidden` só aparecem quando há dados para
+  mostrar. O recebimento de compras revela a prévia após escolher uma embalagem.
 - **Site público:** Tailwind em build estático, com paleta própria e as mesmas cores
   de aviso do CRM. O CRM não usa Tailwind e o site não usa o `app.css`.
 

@@ -17,36 +17,38 @@
   </form>{% endif %}
 </details>
 
-<div class="colunas">
-  <section>
-    <table class="tabela tabela-cartoes tabela-registros">
-      <thead><tr><th>Nome</th><th>Setor</th><th class="num">Horário</th><th>Situação</th></tr></thead>
-      <tbody>
-        {% for t in turnos %}
-          <tr><td class="registro-principal" data-rotulo="Nome">{{ t.nome }}</td><td data-rotulo="Setor">{{ t.get_setor_display }}</td>
-              <td class="num" data-rotulo="Horário">{{ t.inicio|time:"H:i" }}–{{ t.fim|time:"H:i" }}</td>
-              <td class="registro-status" data-rotulo="Situação">{% if t.ativo %}<span class="selo selo-limpa">Ativo</span>{% else %}<span class="selo selo-neutro">Inativo</span>{% endif %}</td></tr>
-        {% empty %}
-          <tr><td colspan="4" class="vazio">Nenhum turno ainda.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </section>
-  <section class="painel-bloco">
-    <h2 class="titulo-topo">Novo turno</h2>
-    <form data-preservar-erros method="post" class="form-cartao">
-      {% csrf_token %}
-      <div class="campo"><label for="turno-nome">Nome</label><input id="turno-nome" type="text" name="nome" maxlength="40" placeholder="Ex.: Manhã" required></div>
-      <div class="campo"><label for="turno-setor">Setor</label>
-        <select id="turno-setor" name="setor">{% for v, r in setores %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select>
-      </div>
-      <div class="form-grade">
-        <div class="campo"><label for="turno-inicio">Início</label><input id="turno-inicio" type="time" name="inicio" required></div>
-        <div class="campo"><label for="turno-fim">Fim</label><input id="turno-fim" type="time" name="fim" required></div>
-      </div>
-      <p class="ajuda">Para turnos noturnos, informe o horário de saída do dia seguinte.</p>
-      <div class="acoes"><button type="submit" class="botao-primario">Salvar turno</button></div>
-    </form>
-  </section>
-</div>
+{% comment %}O formulário fica recolhido acima da lista, e não numa coluna ao lado:
+dividindo a tela a tabela ficava com menos de 48rem e desmontava em cartões mesmo
+num computador. Nasce aberto enquanto não há nenhum turno cadastrado.{% endcomment %}
+<details class="painel-bloco"{% if not turnos %} open{% endif %}>
+  <summary>Novo turno</summary>
+  <form data-preservar-erros method="post" class="form-cartao">
+    {% csrf_token %}
+    <div class="campo"><label for="turno-nome">Nome</label><input id="turno-nome" type="text" name="nome" maxlength="40" placeholder="Ex.: Manhã" required></div>
+    <div class="campo"><label for="turno-setor">Setor</label>
+      <select id="turno-setor" name="setor">{% for v, r in setores %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select>
+    </div>
+    <div class="form-grade">
+      <div class="campo"><label for="turno-inicio">Início</label><input id="turno-inicio" type="time" name="inicio" required></div>
+      <div class="campo"><label for="turno-fim">Fim</label><input id="turno-fim" type="time" name="fim" required></div>
+    </div>
+    <p class="ajuda">Para turnos noturnos, informe o horário de saída do dia seguinte.</p>
+    <div class="acoes"><button type="submit" class="botao-primario">Salvar turno</button></div>
+  </form>
+</details>
+
+<section>
+  <table class="tabela tabela-cartoes tabela-registros">
+    <thead><tr><th>Nome</th><th>Setor</th><th class="num">Horário</th><th>Situação</th></tr></thead>
+    <tbody>
+      {% for t in turnos %}
+        <tr><td class="registro-principal" data-rotulo="Nome">{{ t.nome }}</td><td data-rotulo="Setor">{{ t.get_setor_display }}</td>
+            <td class="num" data-rotulo="Horário">{{ t.inicio|time:"H:i" }}–{{ t.fim|time:"H:i" }}</td>
+            <td class="registro-status" data-rotulo="Situação">{% if t.ativo %}<span class="selo selo-limpa">Ativo</span>{% else %}<span class="selo selo-neutro">Inativo</span>{% endif %}</td></tr>
+      {% empty %}
+        <tr><td colspan="4" class="vazio">Nenhum turno ainda.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
 {% endblock %}

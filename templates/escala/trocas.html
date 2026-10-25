@@ -8,8 +8,28 @@
 <p class="subtitulo">Solicitação de substituição com aprovação da gerência.</p>
 {% include "escala/partials/nav.html" %}
 
-<div class="colunas colunas-2-1">
-  <section>
+{% comment %}O formulário fica recolhido acima da lista, e não numa coluna ao lado:
+dividindo a tela a tabela ficava com menos de 48rem e desmontava em cartões mesmo
+num computador. Nasce aberto enquanto não há troca pendente.{% endcomment %}
+<details class="painel-bloco"{% if not pendentes %} open{% endif %}>
+  <summary>Solicitar troca</summary>
+  <form data-preservar-erros method="post" class="form-cartao">
+    {% csrf_token %}
+    <div class="campo"><label for="troca-atribuicao">Turno a ceder</label>
+      <select id="troca-atribuicao" name="atribuicao" required>
+        <option value="">Escolha…</option>
+        {% for a in atribuicoes %}<option value="{{ a.pk }}">{{ a.data|date:"d/m" }} · {{ a.turno.nome }} · {{ a.funcionario.pessoa.nome }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="campo"><label for="troca-substituto">Substituto</label>
+      <select id="troca-substituto" name="substituto" required><option value="">Escolha…</option>{% for f in funcionarios %}<option value="{{ f.pk }}">{{ f.pessoa.nome }}</option>{% endfor %}</select>
+    </div>
+    <div class="campo"><label for="troca-motivo">Motivo <small class="opcional">(opcional)</small></label><input id="troca-motivo" type="text" name="motivo" maxlength="160"></div>
+    <div class="acoes"><button type="submit" class="botao-primario">Solicitar troca</button></div>
+  </form>
+</details>
+
+<section>
     <h2>Pendentes</h2>
     <table class="tabela tabela-cartoes tabela-registros" id="trocas-pendentes">
       <thead><tr><th>Turno</th><th>Sai</th><th>Entra</th><th>Motivo</th><th>Ações</th></tr></thead>
@@ -53,24 +73,5 @@
         </tbody>
       </table>
     {% endif %}
-  </section>
-
-  <section class="painel-bloco">
-    <h2 class="titulo-topo">Solicitar troca</h2>
-    <form data-preservar-erros method="post" class="form-cartao">
-      {% csrf_token %}
-      <div class="campo"><label for="troca-atribuicao">Turno a ceder</label>
-        <select id="troca-atribuicao" name="atribuicao" required>
-          <option value="">Escolha…</option>
-          {% for a in atribuicoes %}<option value="{{ a.pk }}">{{ a.data|date:"d/m" }} · {{ a.turno.nome }} · {{ a.funcionario.pessoa.nome }}</option>{% endfor %}
-        </select>
-      </div>
-      <div class="campo"><label for="troca-substituto">Substituto</label>
-        <select id="troca-substituto" name="substituto" required><option value="">Escolha…</option>{% for f in funcionarios %}<option value="{{ f.pk }}">{{ f.pessoa.nome }}</option>{% endfor %}</select>
-      </div>
-      <div class="campo"><label for="troca-motivo">Motivo <small class="opcional">(opcional)</small></label><input id="troca-motivo" type="text" name="motivo" maxlength="160"></div>
-      <div class="acoes"><button type="submit" class="botao-primario">Solicitar troca</button></div>
-    </form>
-  </section>
-</div>
+</section>
 {% endblock %}

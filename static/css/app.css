@@ -1113,6 +1113,11 @@ h2 {
   box-shadow: var(--sombra-cartao);
   transition: border-color .15s, box-shadow .15s, transform .15s;
 }
+/* `hidden` vence o componente: o `display: flex` acima é mais específico que o
+   `display: none` do `[hidden]` do navegador, e um cartão marcado como escondido
+   (ex.: a prévia da compra, que só aparece depois de escolher a embalagem)
+   aparecia vazio na tela. Vale para qualquer cartão, de agora em diante. */
+.cartao[hidden], .cartao-el[hidden] { display: none; }
 
 .cartao-topo {
   display: flex;
@@ -1302,6 +1307,9 @@ textarea { resize: vertical; }
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364717B' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right .7rem center;
+  /* Opção mais longa que o campo (ex.: "Particular (o hóspede paga)" numa coluna
+     de 194px) sai com reticências, nunca cortada no meio da letra. */
+  text-overflow: ellipsis;
 }
 input[type="checkbox"], input[type="radio"] { accent-color: var(--lampiao); }
 
@@ -2807,11 +2815,19 @@ table.tabela { --raio-tabela: var(--raio); --raio-celula: max(0px, calc(var(--ra
   font-size: 0.92rem;
   font-family: var(--fonte-ui);
   color: var(--tinta);
-  background: var(--superficie);
+  /* `background-color`, nunca o atalho `background`: o atalho zera o
+     `background-image` da seta do `<select>` (regra da seta acima, mesma
+     especificidade) e o campo lê como caixa somente-leitura. */
+  background-color: var(--superficie);
   border: 1px solid var(--fio-forte);
   border-radius: var(--raio-p);
   transition: border-color .15s, box-shadow .15s;
 }
+/* Respiro da seta: o `padding` acima vem depois da regra da seta e zerava os
+   2.1rem à direita do `<select>`, deixando a opção longa debaixo do chevron. */
+.modal-form select,
+.fnrh-ficha select,
+.boh-filtros select { padding-right: 2.1rem; }
 .modal-form input:focus,
 .modal-form select:focus,
 .modal-form textarea:focus,
@@ -3555,8 +3571,10 @@ form.htmx-request .botao-primario {
 .caixa-sessoes { display: flex; align-items: flex-end; gap: .6rem; margin: 1.25rem 0; max-width: 36rem; }
 .caixa-sessoes > .campo { flex: 1; min-width: 0; margin: 0; }
 .caixa-sessoes select, .mk-periodo-form select, .canais-seletor select {
-  width: 100%; min-height: 44px; padding: .6rem .75rem; border: 1px solid var(--fio-forte);
-  border-radius: var(--raio-p); color: var(--tinta); background: var(--superficie); font: inherit; font-size: 0.88rem;
+  width: 100%; min-height: 44px; padding: .6rem .75rem; padding-right: 2.1rem;
+  border: 1px solid var(--fio-forte);
+  /* `background-color` (não o atalho) para não apagar a seta da casa. */
+  border-radius: var(--raio-p); color: var(--tinta); background-color: var(--superficie); font: inherit; font-size: 0.88rem;
 }
 .caixa-sessoes > button { min-height: 44px; white-space: nowrap; }
 .caixa-indicadores { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr)); gap: 1rem; margin: 1.5rem 0; }
@@ -3800,7 +3818,7 @@ a.modulo-ativo:hover {
   /* Proporção de porta, mas com teto: em oito colunas a porta fica larga, e
      sem o teto a fileira passaria de 200px de altura. */
   aspect-ratio: 4 / 5;
-  min-height: 128px; max-height: 176px;
+  min-height: 9.25rem; max-height: 176px;
   /* `aspect-ratio` vale nos dois sentidos: com a coluna de 80px e o
      `min-height: 128px` mandando na altura, a LARGURA voltava pela proporção
      (128 × 4/5 = 102px) e cada porta vazava 21px da própria coluna — o
@@ -3875,24 +3893,39 @@ div.porta.dica[data-dica] { cursor: default; }
   overflow: hidden;
 }
 .porta-periodo {
+  flex-shrink: 0;
   font-family: var(--fonte-mono);
   font-size: var(--rotulo-min); font-weight: 500; color: var(--porta-ocupacao-texto);
   letter-spacing: -.02em; line-height: 1.25;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-/* Rodapé SEMPRE numa linha só — nada vaza para a fileira de baixo.
-   Papel fixo das duas pontas: à ESQUERDA o estado do quarto (limpeza, aviso),
+/* Papel fixo das duas pontas: à ESQUERDA o estado do quarto (limpeza, aviso),
    à DIREITA o dinheiro. Antes o quarto livre punha "LIMPO" exatamente onde o
    ocupado punha "R$ 2.649" — mesma posição, significados diferentes. */
 .porta-rodape {
   margin-top: auto;
-  display: flex; flex-wrap: nowrap; gap: 5px;
+  flex-shrink: 0;
+  display: flex; flex-wrap: wrap; gap: 5px;
   align-items: center;
   overflow: hidden; min-height: 16px;
   padding-top: 3px;
   border-top: 1px solid color-mix(in srgb, var(--superficie) 7%, transparent);
 }
 .porta-saldo { margin-left: auto; text-align: right; }
+/* O dinheiro NUNCA encolhe: antes as duas pontas encolhiam juntas e o saldo saía
+   reticenciado ("R$ 2.6…") justamente nos quartos com tarja ("SAÍDA HOJE"),
+   escondendo quanto o hóspede deve.
+   Quem decide se cabem na mesma fileira é o espaço, não a janela: a tarja entra
+   com a base no próprio texto (`flex-basis: min-content`), então, quando as duas
+   pontas não cabem lado a lado, ela toma a fileira de cima inteira e o dinheiro
+   desce para a de baixo, alinhado à direita e por extenso. A altura mínima da
+   porta reserva as duas fileiras sem espremer a data. Só se a tarja sozinha não
+   couber na porta é que ela reticencia (`min-width: 0`). */
+.porta-rodape > .porta-saldo { flex: 0 0 auto; }
+.porta-rodape > .porta-flag {
+  flex: 1 1 min-content; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal;
+}
 .porta-saldo {
   font-family: var(--fonte-mono);
   font-size: max(var(--rotulo-min), 0.74rem); font-weight: 700;
@@ -4688,7 +4721,12 @@ form.filtros:not(.subnav) :is(input:not([type=checkbox]):not([type=radio]):not([
 .comanda-secao-topo p { margin: 0; color: var(--tinta-suave); font-size: .9rem; }
 .restaurante-filtros { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr)); gap: .7rem; margin-bottom: 1rem; }
 .restaurante-filtros .campo { margin: 0; }
-.restaurante-filtros :is(input[type=search], select) { width: 100%; min-width: 0; min-height: 44px; font: inherit; color: var(--tinta); background: var(--superficie); border: 1px solid var(--fio-forte); border-radius: var(--raio-p); padding: .6rem .8rem; }
+/* `background-color` (não o atalho `background`) para a seta da casa sobreviver; o
+   `padding` sai do seletor conjunto porque o `:is()` carrega a especificidade do
+   argumento mais forte e vencia o `padding-right` da seta. */
+.restaurante-filtros :is(input[type=search], select) { width: 100%; min-width: 0; min-height: 44px; font: inherit; color: var(--tinta); background-color: var(--superficie); border: 1px solid var(--fio-forte); border-radius: var(--raio-p); }
+.restaurante-filtros input[type=search] { padding: .6rem .8rem; }
+.restaurante-filtros select { padding: .6rem 2.1rem .6rem .8rem; }
 .restaurante-disponiveis { display: flex; align-items: center; gap: .5rem; min-height: 44px; font-size: 0.85rem; }
 .pdv-restaurante .pdv-lista { grid-template-columns: repeat(auto-fill, minmax(min(155px, 100%), 1fr)); }
 .pdv-restaurante .pdv-produto-meta { flex-wrap: wrap; gap: .25rem .5rem; }
@@ -6316,7 +6354,7 @@ body.escala-dragging .escala-drop { cursor: copy; }
 .rc-toolbar { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
 .rc-campo { display: flex; flex-direction: column; gap: 4px; }
 .rc-campo label { font-size: var(--rotulo-min); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--tinta-suave); }
-.rc-campo select { border: 1px solid var(--fio); border-radius: var(--raio-p); background: var(--superficie); padding: 8px 10px; font: inherit; font-size: 0.8125rem; color: var(--tinta); }
+.rc-campo select { border: 1px solid var(--fio); border-radius: var(--raio-p); background-color: var(--superficie); padding: 8px 2.1rem 8px 10px; font: inherit; font-size: 0.8125rem; color: var(--tinta); }
 .rc-regua { height: 1px; background: var(--fio-forte); opacity: .6; margin: 18px 0 20px; }
 
 .rc-mescab { display: flex; align-items: baseline; gap: 12px; margin-bottom: 11px; flex-wrap: wrap; }
@@ -6551,6 +6589,9 @@ body.escala-dragging .escala-drop { cursor: copy; }
      regra vem depois), e o campo lia como caixa de texto em toda tela `.eleg`. */
   background-color: var(--superficie); color: var(--tinta); font: inherit; margin-top: .25rem;
 }
+/* Respiro da seta: o `padding` acima vem depois da regra da seta e zerava os
+   2.1rem à direita do `<select>`. */
+.eleg select, .cartao-el select { padding-right: 2.1rem; }
 .qr-el { width: 100%; max-width: 180px; border-radius: var(--raio); }
 /* QR do hóspede (recepção → Portal): bloco estreito e centrado, o código no meio.
    `.form-cartao.qr-hospede-form` vem depois de `.form-cartao:not(:has(.form-grade))`
@@ -7920,10 +7961,15 @@ body.escala-dragging .escala-drop { cursor: copy; }
 .pedido-produto > span, .pedido-etapa { color:var(--tinta-suave); font-size: 0.85rem; }
 .pedido-campo { margin-block:1rem; }
 .pedido-obrigatorio { display:inline; font-size: 0.75rem; font-weight:400; color:var(--tinta-suave); }
+/* `background-color` e `padding` fora do seletor conjunto: o atalho `background`
+   apagava a seta do `<select>` e o `:is()` (especificidade do argumento mais forte)
+   vencia o `padding-right` dela. */
 :is(.pedido-form, .cardapio-config, .comanda-extras, .pdv-produtos > .campo) :is(input:not([type=checkbox]):not([type=radio]):not([type=hidden]), select, textarea) {
-  width:100%; min-width:0; min-height:44px; padding:.6rem .75rem; font:inherit; color:var(--tinta);
-  background:var(--superficie); border:1px solid var(--fio-forte); border-radius:var(--raio-p);
+  width:100%; min-width:0; min-height:44px; font:inherit; color:var(--tinta);
+  background-color:var(--superficie); border:1px solid var(--fio-forte); border-radius:var(--raio-p);
 }
+:is(.pedido-form, .cardapio-config, .comanda-extras, .pdv-produtos > .campo) :is(input:not([type=checkbox]):not([type=radio]):not([type=hidden]), textarea) { padding:.6rem .75rem; }
+:is(.pedido-form, .cardapio-config, .comanda-extras, .pdv-produtos > .campo) select { padding:.6rem 2.1rem .6rem .75rem; }
 .pedido-form textarea { resize:vertical; }
 .pedido-campo:has(input[name=quantidade]) { max-width:220px; }
 .pedido-campo :is(input[type=radio], input[type=checkbox]) { width:18px; min-height:18px; margin:0 .5rem 0 0; flex:0 0 auto; }
@@ -8027,7 +8073,12 @@ body.escala-dragging .escala-drop { cursor: copy; }
 
 .daypass-filtro { display:flex; gap:1rem; align-items:end; flex-wrap:wrap; }
 .daypass-filtro .campo { margin:0; }
-.daypass-form :is(input:not([type="hidden"]),select), .daypass-filtro input { width:100%; min-height:44px; border:1px solid var(--fio-forte); border-radius:var(--raio-p); padding:.65rem .8rem; background:var(--superficie); color:var(--tinta); font:inherit; }
+/* `background-color` e `padding` fora do seletor conjunto: o atalho `background`
+   apagava a seta do `<select>` e o `:is()` (especificidade do argumento mais forte)
+   vencia o `padding-right` dela. */
+.daypass-form :is(input:not([type="hidden"]),select), .daypass-filtro input { width:100%; min-height:44px; border:1px solid var(--fio-forte); border-radius:var(--raio-p); background-color:var(--superficie); color:var(--tinta); font:inherit; }
+.daypass-form input:not([type="hidden"]), .daypass-filtro input { padding:.65rem .8rem; }
+.daypass-form select { padding:.65rem 2.1rem .65rem .8rem; }
 .daypass-form .campo { margin-bottom:1rem; }
 .daypass-form label { display:block; margin-bottom:.35rem; }
 .daypass-turnos summary, details.painel-bloco > summary { cursor:pointer; min-height:44px; align-content:center; }
@@ -8287,9 +8338,13 @@ html.com-js [data-precos-filtros][hidden] { display: block; visibility: hidden; 
 .tabela-rol > .rel-tabela th { white-space: normal; }
 .rel-tabela .rel-valor-monetario { white-space: nowrap; }
 /* Muitas colunas precisam de mais espaço que uma lista curta. Cada registro
-   vira um cartão com campos legíveis antes de apertar ou separar a moeda. */
+   vira um cartão com campos legíveis antes de apertar ou separar a moeda.
+   O limiar é 56rem e não 75rem (1200px): 1200 caía ENTRE a largura útil do menu
+   aberto (1090px) e a do trilho (1220px), então a mesma tela tinha dois desenhos
+   a 1440px — tabela com o menu recolhido, cartões com ele aberto. As sete colunas
+   destes relatórios somam ~513px: em 56rem (896px) a tabela cabe com folga. */
 @media screen {
-@container tabela (max-width: 75rem) {
+@container tabela (max-width: 56rem) {
   .tabela.rel-tabela--ampla {
     display: block; width: 100%; min-width: 0; border: 0;
     background: none; box-shadow: none; white-space: normal;
@@ -8457,6 +8512,13 @@ html.com-js [data-precos-filtros][hidden] { display: block; visibility: hidden; 
       gap: .65rem; padding: .9rem; margin-bottom: 1rem;
       border: 1px solid var(--fio); border-radius: var(--raio-g); background: var(--superficie);
       box-shadow: var(--sombra-1);
+    }
+    /* Com largura de computador a semana volta a ser semana: sete colunas na
+       ordem dos dias, uma por dia, mesmo no modo cartão (que é quem garante a
+       ausência de rolagem lateral). Sem isso o cartão fazia quatro colunas e a
+       segunda fileira recomeçava na segunda-feira. */
+    @container escala (min-width: 62rem) {
+      .escala-grade tbody tr { grid-template-columns: repeat(7, minmax(0, 1fr)); }
     }
     .escala-grade tbody th.escala-turno {
       position: static; grid-column: 1 / -1; display: block; width: auto;

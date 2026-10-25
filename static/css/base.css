@@ -479,6 +479,9 @@ textarea { resize: vertical; }
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364717B' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right .7rem center;
+  /* Opção mais longa que o campo (ex.: "Particular (o hóspede paga)" numa coluna
+     de 194px) sai com reticências, nunca cortada no meio da letra. */
+  text-overflow: ellipsis;
 }
 
 input[type="checkbox"],
@@ -608,11 +611,16 @@ input[type="radio"] { accent-color: var(--lampiao); }
   font-size: 0.92rem;
   font-family: var(--fonte-ui);
   color: var(--tinta);
-  background: var(--superficie);
+  /* `background-color`, nunca o atalho `background`: o atalho zera o
+     `background-image` da seta do `<select>` (regra da seta acima, mesma
+     especificidade) e o campo lê como caixa somente-leitura. */
+  background-color: var(--superficie);
   border: 1px solid var(--fio-forte);
   border-radius: var(--raio-p);
   transition: border-color .15s, box-shadow .15s;
 }
+
+.fnrh-ficha select { padding-right: 2.1rem; }
 
 .fnrh-ficha input:focus,
 .fnrh-ficha select:focus,

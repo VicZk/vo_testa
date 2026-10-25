@@ -8,38 +8,40 @@
 <p class="subtitulo">Registre as ausências. O sistema impede a escala de funcionários nesses períodos.</p>
 {% include "escala/partials/nav.html" %}
 
-<div class="colunas">
-  <section>
-    <table class="tabela tabela-cartoes tabela-registros">
-      <thead><tr><th>Funcionário</th><th>Tipo</th><th>Período</th><th>Observação</th></tr></thead>
-      <tbody>
-        {% for a in ausencias %}
-          <tr><td class="registro-principal" data-rotulo="Funcionário">{{ a.funcionario.pessoa.nome }}</td><td data-rotulo="Tipo">{{ a.get_tipo_display }}</td>
-              <td data-rotulo="Período">{{ a.inicio|date:"d/m/Y" }} – {{ a.fim|date:"d/m/Y" }}</td><td class="registro-texto" data-rotulo="Observação">{{ a.observacao|default:"Não informada" }}</td></tr>
-        {% empty %}
-          <tr><td colspan="4" class="vazio">Nenhuma ausência registrada.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% include "componentes/paginacao.html" with pagina=pagina %}
-  </section>
-  <section class="painel-bloco">
-    <h2 class="titulo-topo">Nova ausência</h2>
-    <form data-preservar-erros method="post" class="form-cartao">
-      {% csrf_token %}
-      <div class="campo"><label for="ausencia-funcionario">Funcionário</label>
-        <select id="ausencia-funcionario" name="funcionario" required><option value="">Escolha…</option>{% for f in funcionarios %}<option value="{{ f.pk }}">{{ f.pessoa.nome }}</option>{% endfor %}</select>
-      </div>
-      <div class="campo"><label for="ausencia-tipo">Tipo</label>
-        <select id="ausencia-tipo" name="tipo">{% for v, r in tipos %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select>
-      </div>
-      <div class="form-grade">
-        <div class="campo"><label for="ausencia-inicio">Início</label><input id="ausencia-inicio" type="date" name="inicio" required></div>
-        <div class="campo"><label for="ausencia-fim">Fim</label><input id="ausencia-fim" type="date" name="fim" required></div>
-      </div>
-      <div class="campo"><label for="ausencia-observacao">Observação <small class="opcional">(opcional)</small></label><input id="ausencia-observacao" type="text" name="observacao" maxlength="120"></div>
-      <div class="acoes"><button type="submit" class="botao-primario">Registrar ausência</button></div>
-    </form>
-  </section>
-</div>
+{% comment %}O formulário fica recolhido acima da lista, e não numa coluna ao lado:
+dividindo a tela a tabela ficava com menos de 48rem e desmontava em cartões mesmo
+num computador. Nasce aberto enquanto não há nenhuma ausência registrada.{% endcomment %}
+<details class="painel-bloco"{% if not ausencias %} open{% endif %}>
+  <summary>Nova ausência</summary>
+  <form data-preservar-erros method="post" class="form-cartao">
+    {% csrf_token %}
+    <div class="campo"><label for="ausencia-funcionario">Funcionário</label>
+      <select id="ausencia-funcionario" name="funcionario" required><option value="">Escolha…</option>{% for f in funcionarios %}<option value="{{ f.pk }}">{{ f.pessoa.nome }}</option>{% endfor %}</select>
+    </div>
+    <div class="campo"><label for="ausencia-tipo">Tipo</label>
+      <select id="ausencia-tipo" name="tipo">{% for v, r in tipos %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select>
+    </div>
+    <div class="form-grade">
+      <div class="campo"><label for="ausencia-inicio">Início</label><input id="ausencia-inicio" type="date" name="inicio" required></div>
+      <div class="campo"><label for="ausencia-fim">Fim</label><input id="ausencia-fim" type="date" name="fim" required></div>
+    </div>
+    <div class="campo"><label for="ausencia-observacao">Observação <small class="opcional">(opcional)</small></label><input id="ausencia-observacao" type="text" name="observacao" maxlength="120"></div>
+    <div class="acoes"><button type="submit" class="botao-primario">Registrar ausência</button></div>
+  </form>
+</details>
+
+<section>
+  <table class="tabela tabela-cartoes tabela-registros">
+    <thead><tr><th>Funcionário</th><th>Tipo</th><th>Período</th><th>Observação</th></tr></thead>
+    <tbody>
+      {% for a in ausencias %}
+        <tr><td class="registro-principal" data-rotulo="Funcionário">{{ a.funcionario.pessoa.nome }}</td><td data-rotulo="Tipo">{{ a.get_tipo_display }}</td>
+            <td data-rotulo="Período">{{ a.inicio|date:"d/m/Y" }} – {{ a.fim|date:"d/m/Y" }}</td><td class="registro-texto" data-rotulo="Observação">{{ a.observacao|default:"Não informada" }}</td></tr>
+      {% empty %}
+        <tr><td colspan="4" class="vazio">Nenhuma ausência registrada.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% include "componentes/paginacao.html" with pagina=pagina %}
+</section>
 {% endblock %}

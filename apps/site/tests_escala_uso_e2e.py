@@ -46,6 +46,15 @@ class EscalaUsoE2ETests(_BaseE2E):
             "url": self.live_server_url,
         }])
 
+    def abrir_formulario(self, resumo):
+        """O formulário de cadastro mora num <details> acima da lista: ele nasce
+        fechado quando já existem registros, para a tabela ficar com a largura toda."""
+        bloco = self.page.locator(f'details:has(> summary:text-is("{resumo}"))')
+        expect(bloco).to_have_count(1)
+        if not bloco.evaluate("bloco => bloco.open"):
+            bloco.locator("summary").click()
+        self.assertTrue(bloco.evaluate("bloco => bloco.open"))
+
     def enviar(self, nome):
         with self.page.expect_navigation():
             self.page.get_by_role("button", name=nome, exact=True).click()
@@ -79,6 +88,7 @@ class EscalaUsoE2ETests(_BaseE2E):
     def test_turno_de_duracao_zero_preserva_dados_e_permite_corrigir(self):
         p = self.page
         p.goto(self.url(reverse("escala:turnos")))
+        self.abrir_formulario("Novo turno")
         p.get_by_label("Nome", exact=True).fill("Turno noturno de recepção")
         p.get_by_label("Setor", exact=True).select_option("recepcao")
         p.get_by_label("Início", exact=True).fill("22:00")
@@ -101,6 +111,7 @@ class EscalaUsoE2ETests(_BaseE2E):
         func, substituto, controle = self.funcionarios
         observacao = "Ausência planejada para compromisso pessoal; registro fictício de conferência."
         p.goto(self.url(reverse("escala:ausencias")))
+        self.abrir_formulario("Nova ausência")
         p.get_by_label("Funcionário", exact=True).select_option(str(func.pk))
         p.get_by_label("Tipo", exact=True).select_option("folga")
         p.get_by_label("Início", exact=True).fill(self.dia.isoformat())
@@ -134,6 +145,7 @@ class EscalaUsoE2ETests(_BaseE2E):
 
         p.get_by_role("navigation", name="Seções da Escala").get_by_role("link", name="Trocas", exact=True).click()
         expect(p.get_by_role("heading", name="Trocas de turno", exact=True)).to_be_visible()
+        self.abrir_formulario("Solicitar troca")
         p.get_by_label("Turno a ceder", exact=True).select_option(str(atribuicao.pk))
         p.get_by_label("Substituto", exact=True).select_option(str(func.pk))
         motivo = "Substituição combinada entre os funcionários para conferência do fluxo."

@@ -8,7 +8,9 @@
 <p class="pagina-eyebrow letreiro">Núcleo</p>
 <h1>{{ titulo }}</h1>
 
-<form method="post" class="form-cartao" data-preservar-erros>
+{% comment %}`form-largo` como na Tabela de preços: sem ele o cartão trava em 620px
+e a tabela de 24 quartos desaba em 24 cartões empilhados.{% endcomment %}
+<form method="post" class="form-cartao form-largo" data-preservar-erros>
   {% csrf_token %}
   {% include "nucleo/partials/campos.html" %}
 

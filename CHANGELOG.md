@@ -9,6 +9,54 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 25/10/2026: varredura do front, parte 1 (selects, rodapé da porta, tabelas e `[hidden]`)
+
+- **A seta voltou em todo `<select>` do sistema.** Ficha do hóspede (FNRH), modal de Nova
+  reserva, Novo grupo, Caixa, Tabela de preços, filtro do cardápio do Restaurante,
+  Day pass e relatório do colaborador mostravam caixas lisas, que a recepção lia como
+  campo só de leitura. Eram telas que escreviam o fundo com o atalho `background`, e o
+  atalho apaga o desenho da seta junto — o mesmo valia para os campos do pedido e do
+  detalhe da comanda do Restaurante. De quebra, o `<select>` voltou a ter o respiro à
+  direita (a seta ficava em cima do texto) e, quando a opção é mais longa que a coluna,
+  termina em reticências em vez de partir no meio da letra: no modal de Novo grupo,
+  "Particular (o hósped…" no lugar de "Particular (o hóspede pag".
+- **No mapa de quartos, o dinheiro nunca mais encolhe.** Nos quartos com tarja ("SAÍDA
+  HOJE") o saldo saía reticenciado — justamente onde a recepção precisa saber quanto o
+  hóspede deve. Agora o rodapé da porta decide pelo espaço: quando as duas pontas não
+  cabem lado a lado, a tarja fica na fileira de cima e o valor desce para a de baixo,
+  por extenso e alinhado à direita. A altura mínima reserva as duas fileiras sem
+  comprimir a data nem cortar o saldo na vertical. Vale na Visão geral e no mapa de
+  Reservas, de 320 px ao monitor.
+- **Tabela volta a ser tabela onde há largura.** Pickup, Ritmo e os dois relatórios de
+  Governança desmontavam em cartões com o menu aberto e viravam tabela com o menu
+  recolhido — a mesma tela, dois desenhos, porque o limiar (1200 px) caía bem no meio
+  das duas larguras úteis. Com o limiar em 896 px os quatro relatórios ficam iguais nos
+  dois estados (a lista do Pickup cai de 3,5 m para 35 cm de altura) e no celular
+  continuam em cartão.
+- **A semana da Escala volta a ter sete colunas** em largura de computador, em vez de
+  quatro e a segunda fileira recomeçando na segunda-feira.
+- **Turnos, Ausências e Trocas:** o formulário saiu da coluna lateral e virou um bloco
+  "Novo turno" / "Nova ausência" / "Solicitar troca" recolhido acima da lista — aberto
+  enquanto não há nenhum registro. A lista fica com a largura toda e volta a ser tabela
+  no computador. A conciliação do painel de Pagamentos (três colunas curtas) também
+  deixou de virar cartões, e a tabela de preço por quarto da Temporada volta a caber na
+  tela: a página cai de 5,5 m para 2,9 m de altura.
+- **Cartão escondido some de verdade.** Um `<section class="cartao" hidden>` aparecia
+  vazio na tela, porque o componente trazia um `display` mais forte que o `[hidden]` do
+  navegador. Corrigido na base, não caso a caso: valia para a conferência da embalagem
+  no recebimento do Estoque e vale para qualquer cartão futuro.
+- **Modificado:** `static/css/app.css` (seta, respiro e reticências do `<select>` nos
+  blocos de modal/FNRH/BOH, Caixa, Restaurante (filtros e pedido/comanda), Day pass,
+  relatório do colaborador e cartão
+  elegante; rodapé da porta; `.cartao[hidden]`; limiar do modo cartão dos relatórios
+  largos; sete colunas da grade da Escala), `static/css/base.css` (recorte público
+  regerado), `templates/nucleo/tabela_precos.html`, `templates/nucleo/temporada_form.html`,
+  `templates/escala/turnos.html`, `templates/escala/ausencias.html`,
+  `templates/escala/trocas.html`, `templates/pagamentos/painel.html` e os testes de
+  navegador `apps/site/tests_escala_uso_e2e.py`, `apps/site/tests_operacao_e2e.py` e
+  `apps/site/tests_retomada_front_e2e.py` (setas, cálculo da embalagem e saldo completo
+  em cinco configurações de largura e menu).
+
 ## 24/10/2026: Lavanderia redesenhada e plurais em português
 
 - **Receber roupa virou um gesto.** Quem deixou, para quando fica pronta (chip "Hoje ·
