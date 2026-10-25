@@ -17,7 +17,7 @@ Dois cuidados que o Django não tem por padrão:
       <label class="check-inline">{{ campo }} <span>{{ campo.label }}</span></label>
     {% else %}
       {{ campo|rotulo }}
-      {{ campo }}
+      {% if campo.field.widget.prefixo %}<div class="tarifa-input"><span class="tarifa-rs">R$</span>{{ campo }}</div>{% else %}{{ campo }}{% endif %}
     {% endif %}
     {% if campo.help_text %}<small class="ajuda">{{ campo.help_text }}</small>{% endif %}
     {% for erro in campo.errors %}<small class="erro">{{ erro }}</small>{% endfor %}

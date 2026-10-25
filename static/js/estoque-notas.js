@@ -5,6 +5,14 @@
     const form = document.getElementById('nota-form');
     if (!form || form.dataset.itensProntos) return;
     form.dataset.itensProntos = '1';
+    const documentos = form.querySelector('[name="documentos"]');
+    const anexosStatus = document.getElementById('nota-anexos-status');
+    documentos.addEventListener('change', () => {
+      const quantidade = documentos.files.length;
+      anexosStatus.textContent = quantidade
+        ? quantidade + (quantidade === 1 ? ' arquivo selecionado' : ' arquivos selecionados')
+        : 'Nenhum arquivo selecionado';
+    });
     const lista = document.getElementById('nota-itens');
     const adicionar = document.getElementById('nota-adicionar-item');
     const total = form.querySelector('[name="itens-TOTAL_FORMS"]');

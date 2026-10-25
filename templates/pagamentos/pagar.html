@@ -20,8 +20,9 @@
            max-width: 460px; width: 100%; padding: 2rem; text-align: center; }
     .pay h1 { font-family: var(--fonte-titulo); margin: .2rem 0 .4rem; font-size: 1.2rem; letter-spacing: -.01em; }
     /* Valor em destaque: tracking negativo e leading curto p/ texto grande (§15). */
-    .pay .valor { font-family: var(--fonte-titulo); font-size: 2.6rem; line-height: 1; color: var(--musgo);
+    .pay .valor { font-family: var(--fonte-titulo); font-size: 2.6rem; line-height: 1; color: var(--tinta);
                   margin: 1rem 0; letter-spacing: -.025em; font-variant-numeric: tabular-nums; }
+    .pay[data-situacao="pago"] .valor { color: var(--musgo); }
     .pay .selo { display: inline-block; margin-bottom: 1rem; }
     .pay .marca-logo { width: 190px; max-width: 70%; height: auto; margin: 0 auto 1.4rem; display: block; }
     .pay .acoes { display: flex; flex-direction: column; gap: .6rem; margin-top: 1.4rem; }
@@ -91,14 +92,10 @@
   </style>
 </head>
 <body>
-  <div class="pay">
+  <div class="pay" data-situacao="{{ cobranca.situacao_exibida }}">
     <img src="{% static 'img/logotipo-noturno-limpo.png' %}" alt="Pousada Vô Testa" class="marca-logo">
     <h1>{{ cobranca.descricao }}</h1>
-    {% if cobranca.vencida %}
-      <span class="selo selo-pg-expirado">Expirado</span>
-    {% else %}
-      <span class="selo selo-pg-{{ cobranca.status }}">{{ cobranca.get_status_display }}</span>
-    {% endif %}
+    <span class="selo selo-pg-{{ cobranca.situacao_exibida }}{% if cobranca.situacao_exibida == 'expirado' %} selo--acao{% endif %}">{{ cobranca.rotulo_situacao_exibida }}</span>
     <div class="valor">{{ cobranca.valor|intcomma_brl }}</div>
     <p class="subtitulo">{{ cobranca.get_metodo_display }}{% if cobranca.metodo == 'cartao' and cobranca.parcelas > 1 %} · {{ cobranca.parcelas }}×{% endif %}</p>
 
@@ -229,7 +226,7 @@
     {% endif %}
   </div>
 
-  {% if antifraude_merchant and antifraude_sdk and cobranca.pagamento_cartao and cobranca.pendente %}
+  {% if antifraude_merchant and antifraude_sdk and cobranca.pagamento_cartao and cobranca.pagavel %}
   {{ antifraude_merchant|json_script:"antifraude-estabelecimento" }}
   <script>
     window.onSafrapayAntifraudReady = function (sdk) {

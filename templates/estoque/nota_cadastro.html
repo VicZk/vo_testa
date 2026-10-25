@@ -21,7 +21,7 @@
   <noscript><p class="ajuda">O cadastro em unidade base está disponível. Para adicionar vários itens ou escolher embalagens, ative o JavaScript no navegador.</p></noscript>
 </section>
 <section class="cartao respiro est-nota-secao"><h2>Documento e observação</h2>
-  <div class="campo">{{ form.documentos|rotulo }}{{ form.documentos }}<p class="ajuda">{{ form.documentos.help_text }} Os anexos ficam disponíveis somente para usuários com acesso ao Estoque.</p>{{ form.documentos.errors }}</div>
+  <div class="campo">{{ form.documentos|rotulo }}<div class="acoes"><label class="botao-neutro escolher-arquivo">Escolher arquivos{{ form.documentos }}</label><span class="ajuda" id="nota-anexos-status" role="status">Nenhum arquivo selecionado</span></div><p class="ajuda">{{ form.documentos.help_text }} Os anexos ficam disponíveis somente para usuários com acesso ao Estoque.</p>{{ form.documentos.errors }}</div>
   <div class="campo">{{ form.observacao|rotulo }}{{ form.observacao }}{{ form.observacao.errors }}</div>
   {% if request.FILES %}<p class="ajuda">Se o navegador recarregou esta página após um erro, selecione os anexos novamente antes de enviar.</p>{% endif %}
 </section>

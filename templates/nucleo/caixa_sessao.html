@@ -78,7 +78,7 @@
                 <summary>Estornar</summary>
                 <form data-preservar-erros method="post" action="{% url 'estorno' m.pk %}" class="form-inline">
                   {% csrf_token %}
-                  <input type="number" step="0.01" min="0.01" name="valor" value="{{ m.valor }}" required>
+                  <div class="tarifa-input"><span class="tarifa-rs">R$</span>{{ m.form_estorno.valor }}</div>
                   <input type="text" name="motivo" placeholder="Motivo (obrigatório)" required>
                   <button type="submit" class="botao-perigo">Confirmar</button>
                 </form>

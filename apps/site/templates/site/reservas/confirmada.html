@@ -46,7 +46,7 @@
         </div>
     </div>
 
-    {% if cobranca and cobranca.pendente %}
+    {% if cobranca and cobranca.pagavel %}
     <p class="text-madeira/50 text-sm mb-5">
         Pague online para confirmar a reserva ({{ reserva.get_metodo_pagamento_display }}). O quarto fica reservado até o prazo de retenção.
     </p>

@@ -111,7 +111,7 @@ quanto guarda e o que está no limite, em vez de um chip com o nome e mais nada.
     <input type="search" id="q-produto" name="q" value="{{ filtros.q }}"
            placeholder="Nome ou código de barras">
   </div>
-  <button type="submit" class="botao-primario filtro-aplicar">Buscar</button>
+  <button type="submit" class="botao-primario filtro-aplicar">Filtrar</button>
   </div>
   <details class="est-filtros-avancados"{% if filtros.categoria or filtros.situacao %} open{% endif %}>
   <summary>Filtros{% if filtros.categoria or filtros.situacao %} ativos{% endif %}</summary>
@@ -133,7 +133,7 @@ quanto guarda e o que está no limite, em vez de um chip com o nome e mais nada.
       {% endfor %}
     </select>
   </div>
-  <button type="submit" class="botao-primario filtro-aplicar">Aplicar</button>
+  <button type="submit" class="botao-primario filtro-aplicar">Filtrar</button>
   </div>
   </details>
   {% if tem_filtro %}

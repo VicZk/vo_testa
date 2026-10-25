@@ -99,6 +99,19 @@ class Cobranca(models.Model):
         return self.status == self.Status.PENDENTE
 
     @property
+    def pagavel(self) -> bool:
+        """Pode receber um novo pagamento pelo link, respeitando o prazo do provedor."""
+        return self.pendente and not self.vencida
+
+    @property
+    def situacao_exibida(self) -> str:
+        return self.Status.EXPIRADO if self.vencida else self.status
+
+    @property
+    def rotulo_situacao_exibida(self) -> str:
+        return dict(self.Status.choices).get(self.situacao_exibida, self.get_status_display())
+
+    @property
     def referencia_provedor(self):
         sufixo = f"-{self.tentativa_cartao}" if self.tentativa_cartao else ""
         return f"VT-{self.pk}{sufixo}"

@@ -6,6 +6,7 @@ from django import forms
 from django.forms import BaseFormSet, formset_factory
 
 from apps.nucleo.documentos_privados import preparar_documento
+from apps.nucleo.forms import rotular_selects_vazios
 from apps.nucleo.models import EmbalagemProduto, LocalEstoque, LoteEstoque, Produto
 
 from .forms import fornecedores
@@ -156,3 +157,6 @@ class AnexosNotaForm(forms.Form):
         if not documentos:
             raise forms.ValidationError("Escolha pelo menos um arquivo para anexar.")
         return documentos
+
+
+rotular_selects_vazios(globals())

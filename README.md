@@ -444,6 +444,12 @@ dicionário de gateways e documentar as variáveis no `.env.example`.
 4. Dinheiro na tela sempre pelo filtro `|intcomma_brl` (`R$ 1.600,00`).
 5. Leitura-modificação-escrita de saldo sob trava de linha (`apps.nucleo.sistema.travar`).
 
+Tarifas, valor contado e estornos usam `ReaisInput` com `ReaisField`: o servidor
+aceita `1.234,56` e o decimal `1234.56`. O estorno nasce com o valor do recebimento
+e cria o movimento inverso com motivo. Na cobrança, `pagavel` considera o prazo:
+uma pendente vencida aparece como Expirado e não oferece compartilhamento. A
+confirmação do provedor continua válida quando o dinheiro já chegou.
+
 ### 4.7 Trilha de auditoria automática
 
 `apps/nucleo/audit.py` liga sinais `pre_save`/`post_save`/`post_delete` em **todos** os
@@ -454,7 +460,9 @@ existe um usuário real no contexto (seeds, migrations e rotinas de sistema não
 nem pagam a leitura do estado anterior).
 Fluxos com motivo (estorno, cancelamento, troca de quarto, reabertura de caixa) também
 chamam `registrar_auditoria(...)` explicitamente. A leitura fica no módulo Auditoria,
-com frases legíveis e exportação CSV.
+com frases legíveis e exportação CSV. A apresentação humaniza campos, situações e
+datas no horário local; objetos técnicos ficam resumidos na frase, e o detalhe
+bruto continua disponível com a mesma redação de credenciais e dados sensíveis.
 
 ### 4.8 Camadas de segurança
 

@@ -531,6 +531,7 @@ input[type="radio"] { accent-color: var(--lampiao); }
   background: var(--selo-cor);
 }
 
+.selo--acao,
 .selo-alerta,
 .selo-pg-pendente,
 .selo-pg-estornado {
@@ -542,13 +543,13 @@ input[type="radio"] { accent-color: var(--lampiao); }
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--selo-cor) 26%, transparent);
 }
 
-.selo-pg-cancelado,
-.selo-pg-expirado { --selo-cor: var(--fio-forte); }
+.selo-pg-cancelado { --selo-cor: var(--fio-forte); }
 
 .selo-ok,
 .selo-pg-pago { --selo-cor: var(--sucesso); }
 
-.selo-pg-pendente { --selo-cor: var(--alerta); }
+.selo-pg-pendente,
+.selo-pg-expirado { --selo-cor: var(--alerta); }
 
 .selo-alerta,
 .selo-pg-estornado { --selo-cor: var(--perigo); }

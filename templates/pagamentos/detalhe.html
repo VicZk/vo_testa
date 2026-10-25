@@ -10,7 +10,7 @@
 <p class="pagina-eyebrow letreiro">Financeiro</p>
 <div class="pagina-cabecalho">
   <h1>Cobrança #{{ cobranca.pk }}</h1>
-  <span class="selo selo-pg-{{ cobranca.status }}">{{ cobranca.get_status_display }}</span>
+  <span class="selo selo-pg-{{ cobranca.situacao_exibida }}">{{ cobranca.rotulo_situacao_exibida }}</span>
 </div>
 
 <div class="colunas colunas-2-1">
@@ -26,11 +26,13 @@
       {% if cobranca.pago_em %}<div><dt>Paga em</dt><dd>{{ cobranca.pago_em|date:"d/m/Y H:i" }}</dd></div>{% endif %}
     </dl>
 
+    {% if cobranca.pagavel %}
     {% if cobranca.metodo == 'pix' and cobranca.pix_copia_cola %}
       {% copiar cobranca.pix_copia_cola rotulo="Pix copia-e-cola" telefone=telefone_destino recado="Olá! Segue o código Pix para o pagamento na Pousada Vô Testa. É só copiar e colar no app do seu banco:" %}
     {% endif %}
 
     {% copiar link_publico rotulo="Link de pagamento" telefone=telefone_destino recado="Olá! Aqui está o link para pagar a sua reserva na Pousada Vô Testa:" %}
+    {% endif %}
   </section>
 
   <section>

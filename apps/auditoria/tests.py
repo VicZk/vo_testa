@@ -140,7 +140,31 @@ class FormatacaoTrilhaTests(TestCase):
     def test_editar_mostra_diff(self):
         f = self._frase("editar", "Reserva", {"alteracoes": {"status": ["confirmada", "hospedada"]}})
         self.assertIn("Alterou reserva", f)
-        self.assertIn("status: confirmada → hospedada", f)
+        self.assertIn("Situação: Confirmada → Hospedada", f)
+
+    def test_valores_legiveis_preservam_o_detalhe_original(self):
+        from copy import deepcopy
+
+        from .formatacao import frase
+        detalhe = {"alteracoes": {
+            "atualizado_em": [None, "2026-10-21T02:31:14+00:00"],
+            "atualizado_por_id": [None, 12], "payload": [{"valor": "100.00"}, {"valor": "200.00"}],
+        }}
+        original = deepcopy(detalhe)
+        texto = frase(self._reg("editar", "StatusLimpeza", detalhe))
+        self.assertIn("Atualizado em: — → 20/10/2026 23:31", texto)
+        self.assertIn("Responsável: — → #12", texto)
+        self.assertIn("Dados do provedor: (detalhes técnicos) → (detalhes técnicos)", texto)
+        self.assertEqual(detalhe, original)
+
+    def test_data_booleano_uuid_lista_e_novo_model(self):
+        from .formatacao import _valor_legivel, rotulo_alvo
+        self.assertEqual(_valor_legivel("data", "2026-10-21"), "21/10/2026")
+        self.assertEqual(_valor_legivel("ativo", False), "Não")
+        self.assertEqual(_valor_legivel("itens", [1, 2]), "(detalhes técnicos)")
+        self.assertEqual(_valor_legivel("chave", "12345678-1234-1234-1234-123456789abc"), "12345678…")
+        self.assertEqual(rotulo_alvo("NovaConfiguracaoFNRH"), "Nova Configuracao FNRH")
+        self.assertEqual(rotulo_alvo("FichaFNRH"), "Ficha FNRH")
 
     def test_fallback_nunca_quebra(self):
         f = self._frase("acao_desconhecida", "Reserva", {"algo": "x"})
@@ -251,7 +275,7 @@ class RotulosDaTrilhaTests(TestCase):
         self.assertEqual(rotulo_acao("algo_novo_aqui"), "Algo novo aqui")   # sem molde
         self.assertEqual(rotulo_alvo("SessaoCaixa"), "Caixa")
         self.assertEqual(rotulo_alvo("OrdemServico"), "Ordem de serviço")
-        self.assertEqual(rotulo_alvo("ModeloQualquer"), "ModeloQualquer")
+        self.assertEqual(rotulo_alvo("ModeloQualquer"), "Modelo Qualquer")
         self.assertEqual(rotulo_gravidade("media"), "Média")
 
     def test_trilha_e_filtro_mostram_o_rotulo(self):

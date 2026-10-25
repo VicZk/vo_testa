@@ -128,7 +128,7 @@ tela prometer um conteúdo que não existe.{% endcomment %}
 
     {% if operacao == 'saida' %}
       <div class="campo est-passo">
-        <label id="rot-motivo">4. {{ form.tipo.label }}</label>
+        <label id="rot-motivo">{{ form.tipo.label }}</label>
         <div class="est-motivos" role="radiogroup" aria-labelledby="rot-motivo">
           {% for valor, texto in form.fields.tipo.choices %}
             <label class="est-motivo">
@@ -164,7 +164,7 @@ tela prometer um conteúdo que não existe.{% endcomment %}
       </div>
     {% elif operacao == 'ajuste' %}
       <div class="campo">
-        <label for="id_motivo">4. {{ form.motivo.label }}</label>
+        <label for="id_motivo">{{ form.motivo.label }}</label>
         <input type="text" id="id_motivo" name="motivo" value="{{ form.motivo.value|default_if_none:'' }}"
                placeholder="Ex.: contagem da prateleira, quebra não lançada" required>
         <small class="ajuda">{{ form.motivo.help_text }}</small>

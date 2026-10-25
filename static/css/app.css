@@ -1487,6 +1487,7 @@ table.tabela { --raio-tabela: var(--raio); --raio-celula: max(0px, calc(var(--ra
 /* Célula que não quebra (o tipo "Sistema" partia no meio; o nº da cobrança + método). */
 .tabela .nao-quebra { white-space: nowrap; overflow-wrap: normal; }
 /* Detalhe da reserva → painel Financeiro (total previsto, recebido, saldo e as cobranças). */
+.reserva-detalhe .reserva-saldo { color: var(--tinta); }
 .cartao.painel-financeiro { margin: 1.2rem 0 1.6rem; container: financeiro / inline-size; }
 .painel-financeiro .kpi-grade { margin: .6rem 0 0; }
 /* Teto por cartão: a 1760px os três KPIs viravam faixas de 540px, com o rótulo
@@ -1603,13 +1604,13 @@ table.tabela { --raio-tabela: var(--raio); --raio-celula: max(0px, calc(var(--ra
 
 /* Um estado = uma cor (a semântica da marca, nunca um hex solto). */
 .selo-neutro, .selo-enc, .selo-nao_conferido,
-.selo-pg-cancelado, .selo-pg-expirado,
+.selo-pg-cancelado,
 .selo.mapa-cor-checkout, .selo.mapa-cor-orcamento { --selo-cor: var(--fio-forte); }
 .selo-limpa, .selo-concluida, .selo-ok, .selo-sucesso, .selo-pub,
 .selo-pg-pago, .selo.mapa-cor-confirmada          { --selo-cor: var(--sucesso); }
 .selo-inspecionada, .selo-programada, .selo-sem_bagagem,
 .selo.prioridade-media                            { --selo-cor: var(--info); }
-.selo-suja, .selo-pendente, .selo-rasc, .selo-pg-pendente,
+.selo-suja, .selo-pendente, .selo-rasc, .selo-pg-pendente, .selo-pg-expirado,
 .selo-saida_nao_lancada,
 .selo.prioridade-alta, .selo.mapa-cor-pre_reserva { --selo-cor: var(--alerta); }
 .selo-em_limpeza, .selo-em_andamento              { --selo-cor: var(--andamento); }
@@ -7158,6 +7159,10 @@ form.filtros.manutencao-filtros:not(.subnav) { display: grid; grid-template-colu
 .est-posicao .est-busca-linha { display: flex; align-items: end; gap: .5rem; flex: 1 1 320px; }
 .est-posicao .est-filtro-busca { min-width: 0; max-width: none; }
 .est-posicao .est-filtros-avancados { flex: 1 1 360px; min-width: 0; }
+.est-posicao .est-filtros .botao-mini { min-height: var(--controle-h); }
+@container conteudo (width > 64rem) {
+  .est-posicao .est-filtros-avancados[open] { flex-basis: 100%; }
+}
 .est-posicao .est-filtros-campos { display: flex; flex-wrap: wrap; align-items: end; gap: .6rem; }
 .est-posicao .est-filtros-campos .filtro-campo { flex: 1 1 160px; min-width: 0; }
 .est-posicao .est-filtros-campos select { width: 100%; min-width: 0; }
@@ -7167,7 +7172,7 @@ form.filtros.manutencao-filtros:not(.subnav) { display: grid; grid-template-colu
 @container conteudo (max-width: 64rem) {
   .est-posicao .est-abas { margin-bottom: .8rem; }
   .est-posicao .est-kpis {
-    grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; margin: .8rem 0 .3rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr)); gap: .5rem; margin: .8rem 0 .3rem;
   }
   .est-posicao .est-kpis .kpi { min-width: 0; min-height: 0; padding: .65rem .7rem; gap: .2rem; }
   .est-posicao .est-kpis .kpi-topo { min-width: 0; }
@@ -7180,10 +7185,6 @@ form.filtros.manutencao-filtros:not(.subnav) { display: grid; grid-template-colu
   }
   .est-posicao .est-kpis .kpi:first-child .kpi-valor { max-width: 100%; font-size: 1.2rem; }
   .est-posicao .est-kpis .kpi:first-child .kpi-nota { grid-column: 1 / -1; }
-  /* Recuo maior do lado da faixa colorida (3px): com .35rem o rótulo e o número
-     encostavam nela ("Abaixo do mínimo" no celular). .6rem/.3rem mantém o rótulo em
-     duas linhas a 320px — mais que isso ele ia a três e empurrava a lista para baixo. */
-  .est-posicao .est-kpis .kpi:not(:first-child) { padding-inline: .6rem .3rem; }
   .est-posicao .est-kpis .kpi:not(:first-child) .kpi-rotulo { letter-spacing: 0; overflow-wrap: normal; }
   /* A linha da grade já iguala os cartões. O valor fica na base e o rótulo
      ocupa só as linhas necessárias, sem reservar uma terceira linha vazia. */

@@ -1,3 +1,4 @@
+import re
 from decimal import Decimal, InvalidOperation
 
 from django import forms
@@ -48,7 +49,8 @@ class ReaisInput(forms.TextInput):
     sai no formato da máscara: um "650.00" cru perdia o ponto no submit e chegava ao
     backend como 65000 — cem vezes o valor."""
 
-    def __init__(self, attrs=None):
+    def __init__(self, attrs=None, *, prefixo=False):
+        self.prefixo = prefixo
         base = {"class": "mascara-reais", "inputmode": "numeric", "placeholder": "0,00"}
         if attrs:
             base.update(attrs)
@@ -61,6 +63,19 @@ class ReaisInput(forms.TextInput):
             return _brl(value)
         except (InvalidOperation, ValueError):
             return super().format_value(value)  # o que a pessoa digitou, como veio
+
+
+class ReaisField(forms.DecimalField):
+    """Aceita o valor da máscara e o decimal enviado pelo formulário com JavaScript."""
+    widget = ReaisInput
+
+    def to_python(self, value):
+        if isinstance(value, str) and "," in value:
+            value = value.strip()
+            if not re.fullmatch(r"[+-]?(?:\d+|\d{1,3}(?:\.\d{3})+),\d*", value):
+                raise forms.ValidationError(self.error_messages["invalid"], code="invalid")
+            value = value.replace(".", "").replace(",", ".")
+        return super().to_python(value)
 
 
 # ---------- Cadastros ----------
@@ -208,7 +223,9 @@ class TipoUHForm(forms.ModelForm):
     class Meta:
         model = TipoUH
         fields = ["nome", "descricao", "capacidade", "tarifa_base", "ativo"]
-        widgets = {"descricao": forms.Textarea(attrs={"rows": 3})}
+        field_classes = {"tarifa_base": ReaisField}
+        widgets = {"descricao": forms.Textarea(attrs={"rows": 3}),
+                   "tarifa_base": ReaisInput(prefixo=True)}
 
 
 class UHForm(forms.ModelForm):
@@ -236,6 +253,8 @@ class ConfiguracaoUHForm(forms.ModelForm):
             "tem_sofa_cama", "sofa_adultos", "sofa_criancas",
             "sofa_idade_maxima", "max_colchoes_extras", "tarifa_colchao_extra",
         ]
+        field_classes = {"tarifa_colchao_extra": ReaisField}
+        widgets = {"tarifa_colchao_extra": ReaisInput(prefixo=True)}
 
 
 # Posições de cama do quarto: adicionar/remover e escolher a montagem padrão.
@@ -303,9 +322,10 @@ class MovimentoCaixaForm(forms.ModelForm):
 
 
 class FecharCaixaForm(forms.Form):
-    valor_contado = forms.DecimalField(
+    valor_contado = ReaisField(
         label="Dinheiro contado na gaveta (R$)",
         min_value=Decimal("0.00"), decimal_places=2,
+        widget=ReaisInput(prefixo=True),
         help_text="Conte o dinheiro sem consultar o saldo. O sistema mostrará a diferença após a conferência.",
     )
     observacoes = forms.CharField(
@@ -314,8 +334,9 @@ class FecharCaixaForm(forms.Form):
 
 
 class EstornoForm(forms.Form):
-    valor = forms.DecimalField(
-        label="Valor a estornar (R$)", min_value=Decimal("0.01"), decimal_places=2
+    valor = ReaisField(
+        label="Valor a estornar (R$)", min_value=Decimal("0.01"), decimal_places=2,
+        widget=ReaisInput(attrs={"aria-label": "Valor do estorno"}, prefixo=True),
     )
     motivo = forms.CharField(
         label="Motivo do estorno", widget=forms.Textarea(attrs={"rows": 2})

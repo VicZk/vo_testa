@@ -50,6 +50,7 @@ input[type="radio"]
 .selo
 .selo::before
 .selo-alerta
+.selo--acao
 /* erro
 cancelado
 .selo-pg-pendente

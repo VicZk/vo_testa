@@ -7,8 +7,20 @@ Reservas. Fundo: R$ 0,00" em vez do JSON cru. O detalhe bruto continua guardado
 razoável, nunca quebra.
 """
 
+import re
+
+from django.utils import timezone
+from django.utils.dateparse import parse_date, parse_datetime
+
 # Nomes de model → português amigável.
 ALVOS = {
+    "FichaFNRH": "ficha FNRH", "AcessoPortal": "acesso ao portal",
+    "StatusLimpeza": "situação de limpeza", "ConferenciaOcupacao": "conferência de ocupação",
+    "ConversaWhatsApp": "conversa no WhatsApp", "HoraExtra": "hora extra",
+    "Oportunidade": "oportunidade", "PermanenciaEtapa": "permanência na etapa",
+    "Cobranca": "cobrança", "TarefaGovernanca": "tarefa de governança",
+    "ConfiguracaoEscala": "configuração da escala", "ConfiguracaoGovernanca": "configuração da governança",
+    "ConfiguracaoReservas": "configuração de reservas",
     "EmbalagemProduto": "embalagem de compra", "IngredienteFicha": "ingrediente da ficha técnica",
     "LoteEstoque": "lote de estoque", "RegistroLote": "registro de lote",
     "ConfiguracaoCanais": "conexão de canais",
@@ -83,6 +95,23 @@ ACOES = {
 
 GRAVIDADES = {"alta": "Alta", "media": "Média", "baixa": "Baixa"}
 
+CAMPOS = {
+    "status": "Situação", "situacao": "Situação", "fnrh_status": "Situação da FNRH",
+    "atualizado_por_id": "Responsável", "criado_por_id": "Criado por", "uh_id": "Quarto",
+    "atualizado_em": "Atualizado em", "criado_em": "Criado em", "pago_em": "Pago em",
+    "expira_em": "Validade", "observacoes": "Observações", "descricao": "Descrição",
+    "payload": "Dados do provedor", "nao_perturbe_ate": "Não perturbe até",
+    "dispensa_dia": "Limpeza dispensada em", "restricao_observacao": "Observação de atendimento",
+}
+SITUACOES = {
+    "confirmada": "Confirmada", "hospedada": "Hospedada", "orcamento": "Orçamento",
+    "pre_reserva": "Pré-reserva", "no_show": "Não comparecimento", "checkout": "Check-out",
+    "limpa": "Limpo", "suja": "Sujo", "em_limpeza": "Em limpeza", "inspecionada": "Inspecionado",
+    "pendente": "Pendente", "em_andamento": "Em andamento", "concluida": "Concluída",
+    "pago": "Pago", "expirado": "Expirado", "estornado": "Estornado",
+    "cancelada": "Cancelada", "cancelado": "Cancelado",
+}
+
 
 def _frase_curta(codigo: str) -> str:
     """Código desconhecido vira texto legível: sublinhado → espaço, inicial maiúscula."""
@@ -97,7 +126,39 @@ def rotulo_acao(codigo: str) -> str:
 def rotulo_alvo(nome_model: str) -> str:
     """"SessaoCaixa" → "Caixa", "OrdemServico" → "Ordem de serviço"."""
     nome = ALVOS.get(nome_model)
-    return (nome[:1].upper() + nome[1:]) if nome else (nome_model or "")
+    if nome:
+        return nome[:1].upper() + nome[1:]
+    palavras = re.sub(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])", " ", nome_model or "")
+    return _frase_curta(palavras)
+
+
+def _valor_legivel(campo, valor):
+    """Apresentação somente: o detalhe bruto da trilha permanece intacto."""
+    if valor is None or valor == "":
+        return "—"
+    if isinstance(valor, bool):
+        return "Sim" if valor else "Não"
+    if isinstance(valor, (dict, list)):
+        return "(detalhes técnicos)"
+    texto = str(valor)
+    if campo.endswith("_id"):
+        return "#" + (texto[:8] + "…" if len(texto) > 16 else texto)
+    if re.fullmatch(r"[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}", texto):
+        return texto[:8] + "…"
+    if re.match(r"^\d{4}-\d{2}-\d{2}(?:T| |$)", texto):
+        try:
+            data_hora = parse_datetime(texto) if len(texto) > 10 else None
+            if data_hora:
+                if timezone.is_aware(data_hora):
+                    data_hora = timezone.localtime(data_hora)
+                return data_hora.strftime("%d/%m/%Y %H:%M")
+            if data := parse_date(texto):
+                return data.strftime("%d/%m/%Y")
+        except ValueError:
+            pass
+    if campo in ("status", "situacao", "estado", "fnrh_status"):
+        return SITUACOES.get(texto, _frase_curta(texto))
+    return texto
 
 
 def rotulo_gravidade(codigo: str) -> str:
@@ -124,7 +185,7 @@ def frase(registro) -> str:
 
     d = redigir_credenciais(registro.detalhe or {})
     valores = d.get("valores", {}) if isinstance(d, dict) else {}
-    nome = ALVOS.get(alvo, alvo)
+    nome = ALVOS.get(alvo) or rotulo_alvo(alvo)
 
     # Entrar / sair
     if acao == "login":
@@ -195,8 +256,8 @@ def frase(registro) -> str:
             partes = []
             for campo, par in list(alteracoes.items())[:3]:
                 antes, depois = (par + [None, None])[:2] if isinstance(par, list) else (None, par)
-                partes.append(f"{campo}: {antes if antes not in (None, '') else '—'} → "
-                              f"{depois if depois not in (None, '') else '—'}")
+                rotulo = CAMPOS.get(campo) or _frase_curta(campo.removesuffix("_id"))
+                partes.append(f"{rotulo}: {_valor_legivel(campo, antes)} → {_valor_legivel(campo, depois)}")
             reticencia = " …" if len(alteracoes) > 3 else ""
             return f"Alterou {nome}: " + "; ".join(partes) + reticencia
         return f"Alterou {nome} #{registro.alvo_id}"

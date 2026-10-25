@@ -2115,6 +2115,37 @@ class ReaisInputTests(TestCase):
         self.assertIsNone(w.format_value(""))
         self.assertIn('value="650,00"', w.render("valor", Decimal("650")))
 
+    def test_campos_monetarios_aceitam_mascara_e_decimal_sem_multiplicar(self):
+        from .forms import ConfiguracaoUHForm, EstornoForm, FecharCaixaForm, TipoUHForm
+        for classe, nome in ((EstornoForm, "valor"), (FecharCaixaForm, "valor_contado"),
+                              (TipoUHForm, "tarifa_base"), (ConfiguracaoUHForm, "tarifa_colchao_extra")):
+            campo = classe().fields[nome]
+            for entrada, esperado in (("650.00", "650.00"), ("650,00", "650.00"), ("1.234,56", "1234.56")):
+                with self.subTest(form=classe.__name__, entrada=entrada):
+                    self.assertEqual(campo.clean(entrada), Decimal(esperado))
+            for entrada in ("NaN", "Infinity", "12.34,56", "1,2,3"):
+                with self.subTest(form=classe.__name__, invalido=entrada), self.assertRaises(ValidationError):
+                    campo.clean(entrada)
+
+
+class EstornoLocalizadoTests(CaixaTestsBase):
+    def test_valor_inicial_e_post_localizado_preservam_movimento_e_trilha(self):
+        movimento = self.receber("37.80")
+        self.client.force_login(self.gerente)
+        resposta = self.client.get(reverse("caixa_sessao", args=[self.sessao.pk]))
+        self.assertContains(resposta, 'value="37,80"')
+        self.assertContains(resposta, 'aria-label="Valor do estorno"')
+        resposta = self.client.post(reverse("estorno", args=[movimento.pk]), {
+            "valor": "37,80", "motivo": "Conferência de valor localizado",
+        })
+        self.assertEqual(resposta.status_code, 302)
+        movimento.refresh_from_db()
+        self.assertEqual(movimento.valor, Decimal("37.80"))
+        inverso = movimento.estornos.get()
+        self.assertEqual(inverso.valor, Decimal("37.80"))
+        self.assertEqual(inverso.tipo, MovimentoCaixa.Tipo.ESTORNO)
+        self.assertTrue(TrilhaAuditoria.objects.filter(acao="estorno", usuario=self.gerente).exists())
+
 
 
 class PctBrTests(TestCase):

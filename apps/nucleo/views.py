@@ -1224,14 +1224,19 @@ def caixa_sessao(request, pk):
     sessao = get_object_or_404(SessaoCaixa.objects.select_related("operador"), pk=pk)
     if sessao.operador != request.user and not eh_gerente(request.user):
         raise PermissionDenied
+    movimentos = list(sessao.movimentos.select_related("forma_pagamento"))
+    if eh_gerente(request.user) and sessao.aberta:
+        for movimento in movimentos:
+            if movimento.tipo == MovimentoCaixa.Tipo.RECEBIMENTO:
+                movimento.form_estorno = EstornoForm(
+                    initial={"valor": movimento.valor}, auto_id=f"estorno-{movimento.pk}-%s")
     return render(
         request,
         "nucleo/caixa_sessao.html",
         {
             "sessao": sessao,
-            "movimentos": sessao.movimentos.select_related("forma_pagamento"),
+            "movimentos": movimentos,
             "eh_gerente": eh_gerente(request.user),
-            "form_estorno": EstornoForm(),
         },
     )
 

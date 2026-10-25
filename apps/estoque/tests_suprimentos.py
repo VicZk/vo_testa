@@ -75,6 +75,15 @@ class SuprimentosBase(TestCase):
         return prato
 
 
+class FiltroLotesInterfaceTests(SuprimentosBase):
+    def test_com_saldo_existe_no_select_e_exclui_lote_zerado(self):
+        self.entrada(lote=self.curto)
+        resposta = self.client.get(reverse("estoque:lotes"), {"situacao": "com_saldo"})
+        self.assertContains(resposta, '<option value="com_saldo" selected>Com saldo</option>', html=True)
+        self.assertEqual([lote.pk for lote in resposta.context["pagina"]], [self.curto.pk])
+        self.assertNotContains(resposta, self.longo.codigo)
+
+
 class LotesTests(SuprimentosBase):
     def test_recebimento_exige_lote_correto_e_nao_aceita_vencido(self):
         vencido = self.lote("VENCIDO", -1)

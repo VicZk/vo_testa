@@ -9,6 +9,22 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 25/10/2026: lotes, valores monetários, cobranças vencidas e auditoria
+
+- O filtro de lotes oferece novamente “Com saldo” e mantém a seleção após filtrar.
+  Recebimento, lotes e embalagens usam a navegação do Estoque. O cadastro de nota
+  mostra a quantidade de anexos; indicadores e filtros respeitam a largura disponível.
+- Estornos abrem com o valor preenchido em reais. Tarifas e dinheiro contado usam
+  o mesmo widget, aceitando vírgula e decimal sem multiplicar valores por cem.
+  O saldo a receber tem leitura neutra nos dois resumos da reserva.
+- Cobranças vencidas aparecem como “Expirado” e deixam de oferecer envio de link
+  ou Pix. O pagamento público destaca o vencimento; a confirmação de um pagamento
+  já recebido continua válida. Cobranças sem prazo continuam compartilháveis.
+- A trilha apresenta nomes, campos, datas e situações em português. Estruturas
+  técnicas são resumidas na frase, preservando o detalhe bruto da auditoria.
+- Modificados os forms/views do núcleo e Estoque, apresentação de Pagamentos e
+  Auditoria, templates correspondentes e regressões de dinheiro e navegador.
+
 ## 25/10/2026: filtros, abas e indicadores com espaço para leitura
 
 - As barras de filtro aproveitam a largura disponível, alinham campos e ações e

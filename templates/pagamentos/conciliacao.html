@@ -75,7 +75,7 @@
             <span class="selo selo-pg-pendente">A liquidar</span>
           {% else %}—{% endif %}
         </div></td>
-        <td data-rotulo="Situação"><div class="tabela-valor"><span class="selo selo-pg-{{ c.status }}">{{ c.get_status_display }}</span></div></td>
+        <td data-rotulo="Situação"><div class="tabela-valor"><span class="selo selo-pg-{{ c.situacao_exibida }}">{{ c.rotulo_situacao_exibida }}</span></div></td>
         {% if eh_gerente %}
           <td data-rotulo="Ação"><div class="tabela-valor">
             {% if c.status == 'pago' and not c.liquidado %}

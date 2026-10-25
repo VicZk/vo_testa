@@ -871,6 +871,28 @@ class LinkVencidoTests(PagamentosBase):
         c.refresh_from_db()
         return c
 
+    def test_recepcao_ve_expirado_sem_compartilhar_link_ou_pix(self):
+        c = self._vencer(self.cobranca(metodo="pix"))
+        self.client.force_login(self.op)
+        self.assertTrue(c.pendente)
+        self.assertFalse(c.pagavel)
+        self.assertEqual(c.situacao_exibida, Cobranca.Status.EXPIRADO)
+        for rota, args in (("pagamentos:painel", []), ("pagamentos:detalhe", [c.pk])):
+            resposta = self.client.get(reverse(rota, args=args))
+            self.assertContains(resposta, 'selo-pg-expirado')
+            self.assertContains(resposta, 'Expirado')
+            self.assertNotContains(resposta, 'data-copiar=')
+            self.assertNotContains(resposta, 'Enviar pelo WhatsApp')
+
+    def test_cobranca_sem_prazo_continua_pagavel_e_compartilhavel(self):
+        c = self.cobranca(metodo="pix")
+        c.expira_em = None
+        c.save(update_fields=["expira_em"])
+        self.assertTrue(c.pagavel)
+        self.client.force_login(self.op)
+        resposta = self.client.get(reverse("pagamentos:detalhe", args=[c.pk]))
+        self.assertContains(resposta, 'data-copiar=')
+
     def test_pagina_de_link_vencido_nao_mostra_o_pix(self):
         c = self._vencer(self.cobranca(metodo="pix"))
         html = self.client.get(reverse("pagamentos:pagar", args=[c.token])).content.decode()

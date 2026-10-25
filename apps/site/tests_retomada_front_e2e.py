@@ -2,11 +2,15 @@
 import os
 import unittest
 from datetime import timedelta
+from decimal import Decimal
 from pathlib import Path
 
 from django.conf import settings
 from django.urls import reverse
+from django.utils import timezone
 
+from apps.nucleo.models import MovimentoCaixa, TrilhaAuditoria
+from apps.pagamentos.models import Cobranca
 from apps.reservas.models import ContaHospedagem, Reserva
 
 from .auditoria_fixtures import criar_cenario_templates
@@ -221,3 +225,60 @@ class RetomadaFrontE2ETests(_BaseE2E):
             menu.evaluate("e => { e.scrollTop=e.scrollHeight; e.dispatchEvent(new Event('scroll')); }")
             expect(menu).not_to_have_attribute("data-mais-abaixo", "")
             self.assertEqual(menu.evaluate("e => getComputedStyle(e).maskImage"), "none")
+
+    def test_lotes_suprimentos_e_anexos_tem_controles_utilizaveis(self):
+        for largura, trilho in self.ESTADOS:
+            self.abrir("estoque:lotes", largura, trilho)
+            select = self.page.locator("#situacao-lote")
+            self.assertEqual(select.locator("option").evaluate_all("es => es.map(e => e.value)"),
+                             ["", "com_saldo", "vencidos"])
+            select.select_option("com_saldo")
+            self.page.get_by_role("button", name="Filtrar", exact=True).click()
+            expect(self.page.locator("#situacao-lote")).to_have_value("com_saldo")
+            self.abrir("estoque:compra_receber", largura, trilho)
+            expect(self.page.locator(".est-abas")).to_be_visible()
+            expect(self.page.locator(".pagina-acoes")).to_be_visible()
+            self.abrir("estoque:nota_nova", largura, trilho)
+            expect(self.page.locator("#id_fornecedor option").first).to_have_text("Selecione…")
+            arquivos = self.page.locator('input[name="documentos"]')
+            arquivos.set_input_files([{"name": "conferencia.txt", "mimeType": "text/plain", "buffer": b"QA"}])
+            expect(self.page.locator("#nota-anexos-status")).to_have_text("1 arquivo selecionado")
+            arquivos.set_input_files([])
+            expect(self.page.locator("#nota-anexos-status")).to_have_text("Nenhum arquivo selecionado")
+
+    def test_estorno_preenchido_grava_valor_exato_e_movimento_inverso(self):
+        movimento = self.c.sessao.movimentos.get(tipo=MovimentoCaixa.Tipo.RECEBIMENTO)
+        for largura, trilho in self.ESTADOS:
+            self.abrir("caixa_sessao", largura, trilho, (self.c.sessao.pk,))
+            self.page.locator(".acao-sensivel summary").click()
+            valor = self.page.get_by_role("textbox", name="Valor do estorno")
+            expect(valor).to_have_value("37,80")
+            self.assertTrue(valor.evaluate("e => e.validity.valid"))
+            self.assertEqual(valor.get_attribute("type"), "text")
+        self.page.locator('input[name="motivo"]').fill("Conferência visual do estorno")
+        self.page.get_by_role("button", name="Confirmar", exact=True).click()
+        expect(self.page.get_by_text("Estorno registrado no histórico de auditoria.")).to_be_visible()
+        movimento.refresh_from_db()
+        self.assertEqual(movimento.valor, Decimal("37.80"))
+        self.assertEqual(movimento.estornos.get().valor, Decimal("37.80"))
+        self.assertTrue(TrilhaAuditoria.objects.filter(acao="estorno", usuario=self.c.usuario).exists())
+
+    def test_cobranca_expirada_tem_alerta_e_nao_oferece_compartilhamento(self):
+        cobranca = Cobranca.objects.create(
+            valor="764.80", metodo="pix", descricao="Cobrança vencida da conferência",
+            expira_em=timezone.now() - timedelta(minutes=1), criado_por=self.c.usuario,
+            pix_copia_cola="PIX-FICTICIO-PARA-TESTE",
+        )
+        for largura, trilho in self.ESTADOS:
+            self.abrir("pagamentos:detalhe", largura, trilho, (cobranca.pk,))
+            expect(self.page.locator(".selo-pg-expirado")).to_have_text("Expirado")
+            self.assertEqual(self.page.locator("[data-copiar]").count(), 0)
+            self.page.goto(self.url(reverse("pagamentos:pagar", args=[cobranca.token])))
+            selo = self.page.locator(".pay .selo-pg-expirado")
+            expect(selo).to_have_text("Expirado")
+            self.assertNotEqual(selo.evaluate("e => getComputedStyle(e).backgroundColor"), "rgba(0, 0, 0, 0)")
+            cores = self.page.locator(".pay .valor").evaluate("""e => ({atual:getComputedStyle(e).color,
+                esperado:getComputedStyle(e.parentElement).color})""")
+            self.assertEqual(cores["atual"], cores["esperado"])
+            expect(self.page.get_by_text("Este link de pagamento expirou")).to_be_visible()
+            self.foto(f"retomada-pagamento-expirado-{largura}-{trilho}")
