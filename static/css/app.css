@@ -270,7 +270,7 @@
   /* Altura do topo da sidebar (marca + botão de recolher). É a MESMA aberta e
      recolhida: é ela que impede o menu inteiro de saltar quando o logotipo
      grande dá lugar ao símbolo. */
-  --sidebar-topo-h: 116px;
+  --sidebar-topo-h: 128px;
   /* Vão entre a coluna de conteúdo e o painel lateral (`.colunas-2-1`). Fica
      num token porque a base em porcentagem das duas colunas desconta ele. */
   --vao-2-1: 1.4rem;
@@ -638,20 +638,25 @@ a:hover { color: var(--lampiao-tinta); }
   transform: translate(-50%, -50%);
   width: auto; max-width: none; display: block;
 }
-/* Centro do logotipo = centro da janela com a sidebar ABERTA, em px fixos
-   (com % ele andaria junto com a janela durante a animação). */
+/* Logotipo no eixo da sidebar ABERTA (não da faixa à esquerda do botão de recolher,
+   que o deixava 18px fora do centro), em px fixos — com % ele andaria junto com a
+   janela durante a animação. Na vertical, o centro fica 3px abaixo do meio do topo:
+   24px de respiro em cima e 18px embaixo (antes 16/14, colado no alto). O `top`
+   sai do token da altura do topo, então a gaveta do celular (topo menor) também
+   centra — antes ela herdava os 59px do computador e cortava o "POUSADA". */
 .marca-full {
   height: 86px;
-  left: calc((var(--sidebar-w-aberta) - 1px - 1.15rem - var(--faixa-botao)) / 2);
-  top: 59px;
+  left: calc((var(--sidebar-w-aberta) - 1px) / 2 - 1.15rem);
+  top: calc(var(--sidebar-topo-h) / 2 + 3px);
   transition: opacity var(--mov-rapido) var(--curva) var(--mov-toque);
 }
-/* No trilho o símbolo é a peça principal do topo: 44px, centrado na faixa que
-   sobra acima do botão de expandir (que mora a .7rem do pé do topo). No toque o
-   botão tem 44px, a faixa encurta e o símbolo encolhe junto (40,8px) para manter
-   10px de respiro até ele. Aberto, ele fica no mesmo lugar, só invisível. */
+/* No trilho o símbolo é a peça principal do topo: 52px (o PNG tem ~21% de margem
+   transparente, o desenho visível fica com ~30px), centrado na faixa que sobra acima
+   do botão de expandir (que mora a .7rem do pé do topo). No toque o botão tem 44px e
+   a conta continua deixando ≥ 10px de respiro até ele. Aberto, fica no mesmo lugar,
+   só invisível. */
 .marca-icone {
-  height: min(44px, calc(var(--sidebar-topo-h) - .7rem - var(--alvo) - 1.25rem));
+  height: min(52px, calc(var(--sidebar-topo-h) - .7rem - var(--alvo) - 1.25rem));
   left: var(--trilho-centro);
   top: calc((var(--sidebar-topo-h) - .7rem - var(--alvo)) / 2);
   opacity: 0;
@@ -765,6 +770,28 @@ a:hover { color: var(--lampiao-tinta); }
 .pendencias-cabecalho { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; margin-block: 1rem; }
 .pendencias-cabecalho h2 { margin: 0; min-width: 0; }
 .pendencias-total { white-space: nowrap; color: var(--tinta-suave); font-variant-numeric: tabular-nums; }
+/* PENDÊNCIAS — UM FILTRO SÓ: origem num seletor (aplica ao escolher) e situação nas abas da
+   casa. A situação da linha é bolinha + texto; o urgente ganha a palavra (nunca só a cor) e
+   nenhuma linha leva cápsula — eram 18 cápsulas vermelhas iguais numa tela de 19 itens. */
+.pendencias-barra { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem .75rem; margin: .25rem 0 .9rem; }
+.pendencias-barra-rotulo { font-size: max(var(--rotulo-min), 0.74rem); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--tinta-suave); }
+.pendencias-barra .pendencias-origem { flex: 0 1 20rem; min-width: min(14rem, 100%); }
+/* O `.eleg select` (mais abaixo) tira o respiro da seta e põe margem em cima. */
+.pendencias-barra .select-wrap select { padding-right: 2.2rem; margin-top: 0; }
+.com-js .pendencias-barra-ir { display: none; }
+.pendencias-situacoes { margin-bottom: .25rem; }
+.pendencias-situacoes .pendencias-zero { color: var(--tinta-suave); }
+.pendencia-situacao { white-space: normal; }
+/* .selo.X: o `.selo` (mais abaixo no arquivo) redefine --selo-cor e ganharia empatado. */
+.selo.pendencia-pendente { --selo-cor: var(--alerta); }
+.selo.pendencia-em_andamento { --selo-cor: var(--andamento); }
+.selo.pendencia-inspecao { --selo-cor: var(--info); }
+.selo.pendencia-atencao { --selo-cor: var(--perigo); }
+.pendencia-urgente-rotulo {
+  display: inline-block; margin-left: .45rem;
+  font-size: max(var(--rotulo-min), 0.7rem); font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--perigo);
+}
 @media (max-width: 1024px) {
   .central-pendencias .tabela.tabela-registros .registro-status { grid-column: 1 / -1; }
   .central-pendencias .registro-status .selo { max-width: 100%; white-space: normal; }
@@ -4957,11 +4984,18 @@ form.filtros:not(.subnav) :is(input:not([type=checkbox]):not([type=radio]):not([
   border: 1px dashed var(--fio-forte);
   font-size: max(var(--rotulo-min), 0.71875rem); line-height: 1.45; color: var(--tinta-suave);
 }
+/* "+ Nova ideia" é um <a>: sem display próprio ele ficava inline (largura e altura
+   ignoradas), com o texto no canto e sublinhado dentro do tracejado. */
 .mk-nova-ideia {
-  width: 100%; height: 36px; border-radius: var(--raio); border: 1px dashed var(--fio-forte);
-  background: transparent; color: var(--tinta-suave);
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; min-height: 36px; border-radius: var(--raio); border: 1px dashed var(--fio-forte);
+  background: transparent; color: var(--tinta-suave); text-decoration: none;
   font-size: 0.78125rem; font-weight: 700; cursor: pointer;
+  transition: border-color var(--mov-rapido) var(--curva), color var(--mov-rapido) var(--curva),
+              background-color var(--mov-rapido) var(--curva), transform var(--mov-toque) var(--curva);
 }
+.mk-nova-ideia:hover { border-color: var(--lampiao); color: var(--madeira); background-color: color-mix(in srgb, var(--lampiao) 6%, transparent); text-decoration: none; }
+.mk-nova-ideia:active { transform: scale(.98); }
 .mk-card {
   background: var(--superficie); border: 1px solid var(--fio); border-radius: var(--raio);
   min-width: 0; padding: 12px; box-shadow: var(--sombra-1); cursor: pointer;
@@ -5064,6 +5098,11 @@ form.filtros:not(.subnav) :is(input:not([type=checkbox]):not([type=radio]):not([
 }
 .mk-periodo { font-size: 0.75rem; color: var(--tinta-suave); margin-left: 2px; }
 .mk-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); gap: 1px; background: var(--fio); }
+/* Relatório do Marketing: os indicadores também são `.kpis`/`.kpi` (cartão arredondado com
+   vão de 1rem). O truque da grade de 1px — fundo `--fio` aparecendo só nos vãos — virava
+   uma faixa bege mais escura atrás e em volta dos cartões, fora do resto da página. Aqui
+   os cartões ficam sobre a superfície da seção, com respiro próprio. */
+.mk-kpis.kpis { background: none; gap: 1rem; margin: 0; padding: 16px 20px; }
 .mk-kpi { padding: 16px 20px; background: var(--superficie); }
 .mk-kpi-valor {
   margin-top: 6px; font-family: var(--fonte-titulo); font-size: 1.375rem; font-weight: 700;
@@ -6647,6 +6686,7 @@ body.escala-dragging .escala-drop { cursor: copy; }
   .pq-editar, .pq-vertodos, .pdv-seg button, .mural-vazio, .cal-barra {
     min-height: 44px; display: inline-flex; align-items: center;
   }
+  .mk-nova-ideia { display: flex; justify-content: center; }
   /* <summary> é o botão que abre o painel (ação sensível, período
      personalizado) e media 20px. Cresce por dentro: mexer no `display` apagaria
      o triângulo de abrir. */
@@ -7064,7 +7104,9 @@ body.escala-dragging .escala-drop { cursor: copy; }
   }
   .est-posicao .est-kpis .kpi:first-child .kpi-valor { max-width: 100%; font-size: 1.2rem; }
   .est-posicao .est-kpis .kpi:first-child .kpi-nota { grid-column: 1 / -1; }
-  .est-posicao .est-kpis .kpi:not(:first-child) { padding-inline: .35rem; }
+  /* Recuo maior do lado da faixa colorida (inset de 3px): com .35rem o rótulo e o
+     número encostavam nela ("Abaixo do mínimo" no celular). */
+  .est-posicao .est-kpis .kpi:not(:first-child) { padding-inline: .75rem .45rem; }
   .est-posicao .est-kpis .kpi:not(:first-child) .kpi-rotulo { letter-spacing: 0; overflow-wrap: normal; }
   /* A linha da grade já iguala os cartões. O valor fica na base e o rótulo
      ocupa só as linhas necessárias, sem reservar uma terceira linha vazia. */
@@ -8060,7 +8102,7 @@ html.com-js [data-precos-filtros][hidden] { display: block; visibility: hidden; 
 .toasts { max-height: min(22rem, 40dvh); overflow-y: auto; overscroll-behavior: contain; }
 
 @media (max-width: 820px) {
-  .sidebar { --sidebar-topo-h: 82px; }
+  .sidebar { --sidebar-topo-h: 96px; }
   .sidebar .marca-full { max-height: 68px; width: auto; }
   .busca-global kbd { display: none; }
   .toasts { top: max(.5rem, env(safe-area-inset-top)); bottom: auto; max-height: 4.5rem; }
@@ -8198,11 +8240,16 @@ html.com-js [data-precos-filtros][hidden] { display: block; visibility: hidden; 
   .est-aba { padding: .5rem .55rem; gap: .3rem; font-size: .85rem; }
 }
 
-/* MFA desligada: ponto de alerta no avatar (sem cápsula), nos dois estados do menu. */
-.usuario-mini[data-mfa="desligada"] .avatar { position: relative; }
+/* MFA desligada: ponto de alerta no avatar (sem cápsula), nos dois estados do menu.
+   O avatar tem `overflow: hidden` (cinto de segurança para inicial longa), que
+   recortava em círculo o ponto preso no canto — saía uma meia-lua. Aqui o avatar
+   mostra uma letra só, então o recorte sai e o ponto fica inteiro, com um anel na
+   cor da sidebar separando-o do dourado. Coral sobre escuro: o âmbar escuro
+   (--alerta) sumia no azul. */
+.usuario-mini[data-mfa="desligada"] .avatar { position: relative; overflow: visible; }
 .usuario-mini[data-mfa="desligada"] .avatar::after {
-  content: ""; position: absolute; top: -2px; right: -2px; width: 10px; height: 10px;
-  border-radius: 50%; background: var(--alerta); border: 2px solid var(--noturno-2);
+  content: ""; position: absolute; top: -3px; right: -3px; width: 11px; height: 11px;
+  border-radius: 50%; background: var(--perigo-sobre-escuro); border: 2px solid var(--noturno-2);
 }
 /* Relatórios: coluna numérica com largura natural (width:1% jogava toda a sobra na primeira). */
 .rel-tabela .col-numero { width: auto; min-width: 7ch; }

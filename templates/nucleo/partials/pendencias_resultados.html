@@ -4,18 +4,27 @@
 </div>
 {% endif %}
 
-<nav class="filtros" aria-label="Pendências por situação">
-  <a class="filtro-chip" href="{{ url_sem_estado }}"{% if not estado %} aria-current="page"{% endif %}>Todas as situações</a>
-  {% for e in estados %}
-  <a class="filtro-chip" href="{{ e.url }}"{% if estado == e.codigo %} aria-current="page"{% endif %}>{{ e.rotulo }} <span class="num">{{ e.n }}</span></a>
-  {% endfor %}
-</nav>
+{% comment %}Um filtro só: a ORIGEM num seletor (a contagem de cada área vai na opção e a
+escolha aplica sozinha; sem JavaScript, o botão Filtrar aparece) e a SITUAÇÃO nas abas
+da casa. Antes eram dois <select> + "Aplicar filtros" e, embaixo, duas fileiras de
+pílulas fazendo a mesma coisa (14 pílulas).{% endcomment %}
+<form method="get" action="{% url 'pendencias' %}" class="pendencias-barra" aria-label="Filtrar pendências por origem">
+  {% if estado %}<input type="hidden" name="estado" value="{{ estado }}">{% endif %}
+  <label class="pendencias-barra-rotulo" for="pendencias-origem">Origem</label>
+  <span class="select-wrap pendencias-origem">
+    <select id="pendencias-origem" name="origem" data-pendencias-auto>
+      <option value="">Todas as minhas áreas · {{ total_geral }}</option>
+      {% for o in origens %}<option value="{{ o.codigo }}"{% if origem == o.codigo %} selected{% endif %}>{{ o.rotulo }} · {{ o.n }}</option>{% endfor %}
+    </select>
+  </span>
+  <button class="botao-neutro pendencias-barra-ir" type="submit">Filtrar</button>
+  {% if origem or estado %}<a href="{% url 'pendencias' %}" class="botao-mini">Limpar filtros</a>{% endif %}
+</form>
 
-{% if not origem and origens %}
-<nav class="filtros" aria-label="Pendências por origem">
-  {% for o in origens %}<a class="filtro-chip" href="{{ o.url }}">{{ o.rotulo }} <span class="num">{{ o.n }}</span></a>{% endfor %}
+<nav class="est-abas abas-secao pendencias-situacoes" aria-label="Pendências por situação">
+  <a class="est-aba" href="{{ url_sem_estado }}"{% if not estado %} aria-current="page"{% endif %}>Todas <span class="n">{{ total_origem }}</span></a>
+  {% for e in estados %}<a class="est-aba{% if not e.n %} pendencias-zero{% endif %}" href="{{ e.url }}"{% if estado == e.codigo %} aria-current="page"{% endif %}>{{ e.rotulo }}{% if e.n %} <span class="n">{{ e.n }}</span>{% endif %}</a>{% endfor %}
 </nav>
-{% endif %}
 
 <div class="pendencias-cabecalho">
   <h2>{{ origem_rotulo }}{% if estado %} · {{ estado_rotulo }}{% endif %}</h2>
@@ -31,7 +40,7 @@
       <tr data-pendencia-id="{{ item.id }}" data-pendencia-estado="{{ item.estado }}" data-pendencia-origem="{{ item.origem }}">
         <td data-rotulo="Origem"><span class="rotulo-dado">{{ item.origem_rotulo }}</span></td>
         <td class="registro-principal"><strong>{{ item.titulo }}</strong><small class="ajuda">{{ item.descricao }}</small></td>
-        <td class="registro-status" data-rotulo="Situação"><span class="selo{% if item.estado == 'pendente' %} selo--acao{% elif item.gravidade == 'alta' %} selo-alerta{% endif %}">{{ item.estado_rotulo }}</span></td>
+        <td class="registro-status" data-rotulo="Situação"><span class="selo pendencia-situacao pendencia-{{ item.estado }}{% if item.gravidade == 'alta' %} pendencia-urgente{% endif %}">{{ item.estado_rotulo }}</span>{% if item.gravidade == 'alta' %}<span class="pendencia-urgente-rotulo">Urgente</span>{% endif %}</td>
         <td class="registro-acoes">
           {% if item.url %}<a class="botao-neutro" href="{{ item.url_acao }}">{{ item.acao }}</a>{% else %}<span class="ajuda">{{ item.acao }}</span>{% endif %}
         </td>

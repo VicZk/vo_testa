@@ -43,10 +43,13 @@ def _contexto(request):
         "origens": [{"codigo": codigo, "rotulo": rotulo,
                      "n": sum(i["origem"] == codigo for i in dados["itens"]),
                      "url": url_pendencias(codigo)} for codigo, rotulo in permitidas.items()],
+        # "Precisa de atenção" vem logo depois de "Todas": é o que pede ação primeiro.
         "estados": [{"codigo": codigo, "rotulo": rotulo,
                      "n": sum(i["estado"] == codigo for i in itens_origem),
-                     "url": url_pendencias(origem, codigo)} for codigo, rotulo in ESTADOS.items()],
+                     "url": url_pendencias(origem, codigo)}
+                    for codigo, rotulo in sorted(ESTADOS.items(), key=lambda par: par[0] != "atencao")],
         "pagina": pagina, "itens": pagina.object_list, "total": len(itens),
+        "total_geral": len(dados["itens"]), "total_origem": len(itens_origem),
         "indisponiveis": [i for i in dados["indisponiveis"] if not origem or i["codigo"] == origem],
         "tem_governanca": "governanca" in permitidas,
         "url_sem_estado": url_pendencias(origem),

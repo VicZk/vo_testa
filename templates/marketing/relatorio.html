@@ -37,22 +37,22 @@
     <div class="mk-kpi kpi">
       <div class="mk-rotulo kpi-rotulo letreiro">TETO DO MÊS</div>
       <div class="valor-metrica mk-kpi-valor kpi-valor">{{ dados.teto|intcomma_brl }}</div>
-      <div class="mk-kpi-nota kpi-nota">definido pela gestão</div>
+      <div class="mk-kpi-nota kpi-nota">{% if dados.teto %}Definido pela gestão{% else %}Ainda sem teto para o mês{% endif %}</div>
     </div>
     <div class="mk-kpi kpi">
       <div class="mk-rotulo kpi-rotulo letreiro">GASTO REALIZADO</div>
       <div class="valor-metrica mk-kpi-valor kpi-valor mk-tom-perigo">{{ dados.gasto|intcomma_brl }}</div>
-      <div class="mk-kpi-nota kpi-nota">{% if dados.teto %}{% widthratio dados.gasto dados.teto 100 %}%{% else %}—{% endif %} do teto</div>
+      <div class="mk-kpi-nota kpi-nota">{% if dados.teto %}{% widthratio dados.gasto dados.teto 100 %}% do teto{% else %}Sem teto para comparar{% endif %}</div>
     </div>
     <div class="mk-kpi kpi">
       <div class="mk-rotulo kpi-rotulo letreiro">SOBRA</div>
       <div class="valor-metrica mk-kpi-valor kpi-valor {% if dados.sobra < 0 %}mk-tom-perigo{% else %}mk-tom-musgo{% endif %}">{{ dados.sobra|intcomma_brl }}</div>
-      <div class="mk-kpi-nota kpi-nota">não acumula para o mês seguinte</div>
+      <div class="mk-kpi-nota kpi-nota">Não acumula para o mês seguinte</div>
     </div>
     <div class="mk-kpi kpi">
       <div class="mk-rotulo kpi-rotulo letreiro">CAMPANHAS</div>
       <div class="valor-metrica mk-kpi-valor kpi-valor">{{ dados.campanhas }}</div>
-      <div class="mk-kpi-nota kpi-nota">com movimento no mês</div>
+      <div class="mk-kpi-nota kpi-nota">Com movimento no mês</div>
     </div>
   </div>
 
