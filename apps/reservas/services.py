@@ -560,7 +560,7 @@ def conferir_arranjo(uh, *, casais, solteiros, usa_sofa_cama, adultos, criancas,
         if faltam:
             txt = ", ".join(f"{n:%d/%m} (faltam {q})" for n, q in faltam)
             erros.append(
-                f"Sem colchão extra para este arranjo na(s) noite(s): {txt}. "
+                f"Sem colchão extra para este arranjo {'na noite' if len(faltam) == 1 else 'nas noites'}: {txt}. "
                 "Use menos pessoas, o sofá-cama, outro quarto ou outra data."
             )
         else:

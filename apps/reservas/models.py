@@ -25,6 +25,7 @@ from django.utils import timezone
 
 from apps.nucleo.formatos import pct_br
 from apps.nucleo.models import NaturezaFiscal, Temporada, TipoUH, registrar_auditoria
+from apps.nucleo.textos import plural
 
 
 def validar_periodo_day_use(tipo_uh, checkin, checkout):
@@ -1650,7 +1651,7 @@ class BercoEstoque(models.Model):
         verbose_name_plural = "estoque de berços"
 
     def __str__(self):
-        return f"{self.quantidade} berço(s)"
+        return f"{self.quantidade} {plural(self.quantidade, 'berço')}"
 
     @classmethod
     def atual(cls) -> BercoEstoque:

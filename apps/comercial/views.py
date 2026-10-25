@@ -25,6 +25,7 @@ from apps.nucleo.modulos import Modulo
 from apps.nucleo.periodos import periodo, selecao_periodo
 from apps.nucleo.permissoes import requer_area, requer_gerencia, requer_modulo
 from apps.nucleo.seletores import pessoas_agrupadas
+from apps.nucleo.textos import plural
 
 from . import quartos, services
 from .forms import (
@@ -1073,7 +1074,8 @@ def email_campanha_enviar(request, pk):
     if request.method == "POST":
         camp = services.enviar_campanha_email(camp, usuario=request.user)
         messages.success(
-            request, f"Campanha enviada: {camp.enviados} e-mail(s), {camp.erros} erro(s).")
+            request, f"Campanha enviada: {camp.enviados} {plural(camp.enviados, 'e-mail')}, "
+                     f"{camp.erros} {plural(camp.erros, 'erro')}.")
     return redirect("comercial:email_campanha_detalhe", pk=camp.pk)
 
 

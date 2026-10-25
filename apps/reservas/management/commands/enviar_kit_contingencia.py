@@ -18,6 +18,7 @@ from django.urls import reverse
 
 from apps.nucleo.models import modulo_ativo
 from apps.nucleo.modulos import Modulo
+from apps.nucleo.textos import plural
 from apps.reservas import services
 
 
@@ -51,9 +52,11 @@ class Command(BaseCommand):
             "gerado_por": "rotina automática",
             "url_kit": f"{base}{reverse('reservas:kit')}" if base else "",
         }
+        ocupados, chegadas, saidas = (kit['totais']['quartos_ocupados'],
+                                      len(kit['chegadas']), len(kit['saidas']))
         assunto = (f"Kit de contingência {kit['hoje']:%d/%m/%Y} — "
-                   f"{kit['totais']['quartos_ocupados']} quarto(s) ocupado(s), "
-                   f"{len(kit['chegadas'])} chegada(s), {len(kit['saidas'])} saída(s)")
+                   f"{ocupados} {plural(ocupados, 'quarto')} {plural(ocupados, 'ocupado')}, "
+                   f"{chegadas} {plural(chegadas, 'chegada')}, {saidas} {plural(saidas, 'saída')}")
         msg = EmailMultiAlternatives(
             assunto,
             render_to_string("reservas/email/kit_contingencia.txt", contexto),

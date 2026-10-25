@@ -9,6 +9,19 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 25/10/2026: plurais nas mensagens que saem para hóspede e equipe
+
+- As últimas frases com "(s)" que alguém lê viraram singular ou plural de verdade:
+  - o rascunho de resposta do Comercial ao hóspede: "Temos 1 quarto livre no período", "para 2 pessoas";
+  - o aviso de campanha de e-mail enviada;
+  - a solicitação do portal para o Restaurante ("Comanda #12 · 1 item");
+  - o assunto do e-mail do kit de contingência;
+  - o estoque de berços;
+  - o aviso de colchão extra em falta ("na noite" ou "nas noites").
+- **Modificado:** `apps/comercial/services.py`, `apps/comercial/views.py`, `apps/portal/services.py`,
+  `apps/reservas/models.py`, `apps/reservas/services.py` e
+  `apps/reservas/management/commands/enviar_kit_contingencia.py`, todos com `nucleo.textos.plural`.
+
 ## 25/10/2026: regressões da execução completa de navegador
 
 - Os indicadores do Estoque mantêm duas colunas em telas estreitas, com o total

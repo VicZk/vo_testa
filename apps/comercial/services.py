@@ -29,6 +29,7 @@ from django.utils import timezone
 
 from apps.nucleo.models import Hospede, Prospecto, modulo_ativo, registrar_auditoria
 from apps.nucleo.modulos import Modulo
+from apps.nucleo.textos import plural
 
 from .models import (
     AnaliseLead,
@@ -178,11 +179,11 @@ def _disponibilidade_snippet(op) -> str:
         if op.tipo_interesse == Oportunidade.TipoInteresse.DAY_USE:
             fim = co if co > ci else ci + timedelta(days=1)
             n = uhs_disponiveis(ci, fim).filter(tipo__modalidade="day_use").count()
-            return (f" Temos {n} vaga(s) de day-use na data." if n
+            return (f" Temos {n} {plural(n, 'vaga')} de day-use na data." if n
                     else " Não há vagas para o Dia na Pousada nessa data. Posso consultar outra data.")
         if op.tipo_interesse == Oportunidade.TipoInteresse.HOSPEDAGEM:
             n = uhs_disponiveis(ci, co).exclude(tipo__modalidade="day_use").count()
-            return (f" Temos {n} quarto(s) livre(s) no período." if n
+            return (f" Temos {n} {plural(n, 'quarto')} {plural(n, 'livre')} no período." if n
                     else " Não há quartos livres nesse período. Posso sugerir datas próximas.")
     except Exception:
         return ""
@@ -203,10 +204,10 @@ def _rascunho_lead(op, sinais) -> str:
         return (f"{saud} Sobre seu evento previsto para {ci}: vou verificar o espaço e "
                 "montar uma proposta com os valores. Podemos falar rapidinho por telefone/WhatsApp?")
     if op.tipo_interesse == Oportunidade.TipoInteresse.DAY_USE:
-        return (f"{saud} Sobre o Dia na Pousada em {ci} para {sinais['pax']} pessoa(s):"
+        return (f"{saud} Sobre o Dia na Pousada em {ci} para {sinais['pax']} {plural(sinais['pax'], 'pessoa')}:"
                 f"{_disponibilidade_snippet(op)} Quer que eu reserve e envie os valores?")
     return (f"{saud} Sobre seu interesse em {tipo_lbl} de {ci} a {co} para "
-            f"{sinais['pax']} pessoa(s):{_disponibilidade_snippet(op)} "
+            f"{sinais['pax']} {plural(sinais['pax'], 'pessoa')}:{_disponibilidade_snippet(op)} "
             "Quer que eu segure e já envie a proposta?")
 
 

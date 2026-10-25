@@ -11,6 +11,7 @@ from django.db import transaction
 
 from apps.nucleo.models import UH, LocalEstoque, Produto, disponibilidade_produtos, modulo_ativo
 from apps.nucleo.modulos import Modulo
+from apps.nucleo.textos import plural
 
 from .models import AcessoPortal, SolicitacaoPortal
 
@@ -132,7 +133,7 @@ def pedir_restaurante(estadia, pedidos, *, chave_pedido=None):
     SolicitacaoPortal.objects.create(
         reserva_id=estadia["reserva_id"], uh_numero=estadia["uh"],
         tipo=SolicitacaoPortal.Tipo.RESTAURANTE,
-        detalhe=f"Comanda #{comanda.pk} · {total_itens} item(ns)",
+        detalhe=f"Comanda #{comanda.pk} · {total_itens} {plural(total_itens, 'item', 'itens')}",
     )
     return comanda
 
