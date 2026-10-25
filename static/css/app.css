@@ -8779,16 +8779,20 @@ html.com-js [data-precos-filtros][hidden] { display: block; visibility: hidden; 
 .lav-legenda { display: flex; flex-wrap: wrap; gap: .25rem 1.1rem; margin: .9rem 0 0; }
 /* Cada número da linha começa um movimento: tocar no «4» de Suja propõe mandar 4
    para lavar. A CAIXA de toque cresce (bloco de toque, lá embaixo); o desenho fica. */
+/* O número da rouparia é um botão. A área de clique cresce só na VERTICAL (margem
+   negativa em cima/embaixo): na horizontal o excedente saía da célula e contava como
+   estouro (o teste de tabelas mede scrollWidth da célula). O realce do hover é uma
+   sombra espalhada, que não ocupa espaço. */
 .lav-cel-acao {
-  display: inline-block; padding: .25rem .4rem; margin: -.25rem -.4rem;
+  display: inline-block; padding: .25rem 0; margin: -.25rem 0;
   font: inherit; font-variant-numeric: tabular-nums; color: var(--madeira);
   background: none; border: 0; border-radius: var(--raio-p); cursor: pointer;
-  transition: background var(--mov-rapido) var(--curva), transform var(--mov-toque) var(--curva);
+  transition: background var(--mov-rapido) var(--curva), box-shadow var(--mov-rapido) var(--curva), transform var(--mov-toque) var(--curva);
 }
-.lav-cel-acao:hover { background: var(--lampiao-claro); color: var(--noturno); }
+.lav-cel-acao:hover { background: var(--lampiao-claro); box-shadow: 0 0 0 .35rem var(--lampiao-claro); color: var(--noturno); }
 .lav-cel-acao:active { transform: scale(.94); }
 .lav-cel-acao:disabled { color: var(--tinta-suave); cursor: default; }
-.lav-cel-acao:disabled:hover { background: none; }
+.lav-cel-acao:disabled:hover { background: none; box-shadow: none; }
 .lav-marca { width: 1%; }
 .lav-marca-alvo { display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
 .lav-marca-alvo input { width: 20px; height: 20px; margin: 0; }
@@ -8844,7 +8848,7 @@ html.com-js [data-precos-filtros][hidden] { display: block; visibility: hidden; 
      o olho precisa. Folga de 10 px entre chips vizinhos (44 colado em 44 ainda erra). */
   .filtros-chips, .lav-prazo, .lav-peso-chips, .lav-icones-fileira { gap: 10px; }
   .lav-ordem-link { display: flex; align-items: center; min-height: 44px; }
-  .lav-cel-acao { min-width: 44px; min-height: 44px; padding: .75rem .5rem; margin: -.75rem -.5rem; }
+  .lav-cel-acao { min-width: 44px; min-height: 44px; padding: .75rem 0; margin: -.75rem 0; }
   /* No toque não há hover: sem uma pista permanente, nada dizia que o número é um
      botão (e o subtítulo tinha de explicar a interação em palavras). */
   .lav-cel-acao:not(:disabled) { text-decoration: underline dotted; text-underline-offset: 4px; }
