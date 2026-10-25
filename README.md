@@ -876,6 +876,8 @@ Toda tela do CRM nasce no design system; nada de estilo paralelo nem cor fixa no
   cápsula. Abaixo de 820 px o menu é
   gaveta e abre sempre inteiro, como diálogo: foco preso, Esc e o véu fecham, a página
   não rola por baixo e o foco volta ao botão.
+  A base do menu indica quando há mais opções abaixo; a indicação desaparece ao
+  alcançar o fim e preserva a posição de rolagem entre telas.
 - **Contrato responsivo:** conferir ausência de rolagem lateral entre 320 e 1440 px, com o menu aberto,
   recolhido ou em gaveta. A largura que sobra depende do menu, e o `@media` só enxerga a
   janela; por isso o que divide espaço decide pelo espaço: painel lateral em
@@ -903,11 +905,13 @@ Toda tela do CRM nasce no design system; nada de estilo paralelo nem cor fixa no
 - **Campos e cartões:** selects preservam a seta e o espaço à direita mesmo nos
   formulários especializados; cartões com `hidden` só aparecem quando há dados para
   mostrar. O recebimento de compras revela a prévia após escolher uma embalagem.
+  Filtros ocupam a largura disponível e reservam espaço para datas completas.
+  Abas conservam a largura do texto; seleção múltipla usa botões com estado próprio.
 - **Site público:** Tailwind em build estático, com paleta própria e as mesmas cores
   de aviso do CRM. O CRM não usa Tailwind e o site não usa o `app.css`.
 
 Regras para uma tela nova: estender `base.html`; telas de painel ou lista usam
-`<div class="eleg">` com o kit `comercial/_estilo_elegante.html`; colunas de número com
+`<div class="eleg">` com os componentes de `app.css`; colunas de número com
 `.num` no `<th>` e no `<td>`; dinheiro com `|intcomma_brl`; mensagens por
 `django.contrib.messages`; nada de `style="…"` com medida ou cor fixa (vira classe;
 o atributo só fica quando o valor é dado, como uma largura em %). Campo de R$ usa o

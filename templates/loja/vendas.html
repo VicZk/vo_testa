@@ -18,7 +18,7 @@
     {% for v in vendas %}
       <tr class="linha-clique {% if v.status == 'cancelada' %}linha-alerta{% endif %}"
           onclick="location.href='{% url 'loja:venda' v.pk %}'">
-        <td data-rotulo="Venda"><div class="tabela-valor"><a href="{% url 'loja:venda' v.pk %}">#{{ v.pk }}</a></div></td>
+        <td data-rotulo="Venda"><div class="tabela-valor"><a href="{% url 'loja:venda' v.pk %}" class="botao-mini">#{{ v.pk }}</a></div></td>
         <td data-rotulo="Data"><div class="tabela-valor">{{ v.criado_em|date:"d/m/Y H:i" }}</div></td>
         <td data-rotulo="Destino"><div class="tabela-valor">{% if v.destino == 'conta' %}Conta: {{ v.conta_ref }}{% else %}{{ v.forma_pagamento.nome|default:"—" }}{% endif %}</div></td>
         <td data-rotulo="Cliente"><div class="tabela-valor">{{ v.cliente.nome|default:"Avulso" }}</div></td>

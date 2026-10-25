@@ -3,7 +3,7 @@
 {% block titulo %}Link da pesquisa | CRM Vô Testa{% endblock %}
 {% block conteudo_classe %}conteudo-compacto{% endblock %}
 {% block conteudo %}
-<a class="voltar" href="{% url 'nps:painel' %}">← Opinião dos hóspedes</a>
+<a class="voltar" href="{% url 'nps:painel' %}">Opinião dos hóspedes</a>
 <h1>Pesquisa da estadia #{{ reserva.pk }}</h1>
 <div class="cartao">
   <p>Compartilhe este link somente com {{ reserva.hospede.nome }}. A pesquisa permite uma resposta por estadia.</p>

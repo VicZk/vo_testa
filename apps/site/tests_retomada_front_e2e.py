@@ -118,3 +118,106 @@ class RetomadaFrontE2ETests(_BaseE2E):
                     self.assertLessEqual(medida["baixo"], 1, medida)
                     if largura in (320, 1440):
                         self.foto(f"retomada-saldo-{rota.replace(':', '-')}-{largura}-{trilho}")
+
+    def test_filtros_crescem_e_datas_preservam_o_ano(self):
+        for largura, trilho in self.ESTADOS:
+            for rota in ("estoque:compras", "estoque:lotes", "estoque:notas", "manutencao:painel",
+                         "pagamentos:conciliacao"):
+                with self.subTest(rota=rota, largura=largura, trilho=trilho):
+                    self.abrir(rota, largura, trilho)
+                    if rota == "manutencao:painel":
+                        expect(self.page.locator(".manutencao-filtros")).to_have_css("display", "grid")
+                    if rota == "pagamentos:conciliacao":
+                        for campo in self.page.locator('.filtro-periodo input[type="date"]').all():
+                            self.assertGreaterEqual(campo.bounding_box()["width"], 136)
+                            self.assertTrue(campo.input_value())
+                    if largura == 1440 and rota in ("estoque:compras", "estoque:lotes", "estoque:notas"):
+                        campos = self.page.locator('form.filtros > .campo input, form.filtros > .campo select')
+                        self.assertGreater(campos.count(), 0)
+                        for campo in campos.all():
+                            self.assertGreater(campo.bounding_box()["width"], 220)
+                        alturas = self.page.locator('form.filtros :is(button, a.botao-neutro)').evaluate_all(
+                            "es => es.map(e => e.getBoundingClientRect().height)")
+                        self.assertTrue(all(altura >= 44 for altura in alturas), alturas)
+                    if largura in (390, 1440):
+                        self.foto(f"retomada-filtro-{rota.replace(':', '-')}-{largura}-{trilho}")
+
+    def test_colunas_e_ciclo_da_limpeza_usam_a_largura_do_conteudo(self):
+        for largura in (821, 1024):
+            self.abrir("comercial:oportunidade", largura, args=(self.c.oportunidade.pk,))
+            colunas = self.page.locator(".op-layout").evaluate("e => getComputedStyle(e).gridTemplateColumns")
+            self.assertEqual(len(colunas.split()), 1, colunas)
+        self.abrir("governanca:quartos", 821)
+        setas = self.page.locator(".gov-ciclo-seta")
+        self.assertGreater(setas.count(), 0)
+        for seta in setas.all():
+            expect(seta).to_be_hidden()
+        self.abrir("reservas:detalhe", 821, args=(self.c.reserva.pk,))
+        colunas = self.page.locator(".painel-financeiro .kpi-grade").evaluate(
+            "e => getComputedStyle(e).gridTemplateColumns")
+        self.assertEqual(len(colunas.split()), 2, colunas)
+        self.foto("retomada-financeiro-821")
+
+    def test_abas_preservam_largura_dos_rotulos_e_indicadores_nao_partem_dinheiro(self):
+        for largura, trilho in self.ESTADOS:
+            self.abrir("pessoas", largura, trilho)
+            abas = self.page.locator(".abas-secao .est-aba")
+            self.assertGreater(abas.count(), 0)
+            for aba in abas.all():
+                medida = aba.evaluate("""e => ({cresce:getComputedStyle(e).flexGrow,
+                    excesso:e.scrollWidth-e.clientWidth, altura:e.getBoundingClientRect().height})""")
+                self.assertEqual(medida["cresce"], "0", medida)
+                self.assertLessEqual(medida["excesso"], 1, medida)
+                self.assertGreaterEqual(medida["altura"], 44, medida)
+            self.abrir("relatorios:relatorio", largura, trilho, args=("distribuicao",))
+            indicadores = self.page.locator(".cartoes-indicadores").first
+            if largura <= 390:
+                colunas = indicadores.evaluate("e => getComputedStyle(e).gridTemplateColumns")
+                self.assertEqual(len(colunas.split()), 2, colunas)
+            # Reproduz o valor monetário que quebrava entre o prefixo e os algarismos.
+            valor = indicadores.locator(".indicador-valor").first
+            valor.evaluate("e => { e.textContent='R$ 61.310,00'; }")
+            medida = valor.evaluate("""e => {
+                const r=document.createRange(); r.selectNodeContents(e);
+                return {linhas:r.getClientRects().length, excesso:e.scrollWidth-e.clientWidth};
+            }""")
+            self.assertEqual(medida["linhas"], 1, medida)
+            self.assertLessEqual(medida["excesso"], 1, medida)
+            self.foto(f"retomada-indicadores-{largura}-{trilho}")
+
+    def test_caixas_de_marcacao_e_campos_url_seguem_os_demais_formularios(self):
+        for largura, trilho in self.ESTADOS:
+            for rota, args in (("pessoa_nova", ()), ("funcionario_novo", ()),
+                               ("estoque:produto_editar", (self.c.produto.pk,))):
+                with self.subTest(rota=rota, largura=largura, trilho=trilho):
+                    self.abrir(rota, largura, trilho, args)
+                    caixas = self.page.locator('#conteudo input[type="checkbox"]:visible')
+                    self.assertGreater(caixas.count(), 0)
+                    for caixa in caixas.all():
+                        medida = caixa.bounding_box()
+                        self.assertAlmostEqual(medida["width"], 18, delta=1)
+                        self.assertAlmostEqual(medida["height"], 18, delta=1)
+                        if largura <= 820:
+                            alvo = caixa.evaluate("e => e.closest('label').getBoundingClientRect().height")
+                            self.assertGreaterEqual(alvo, 44)
+                    if rota == "estoque:produto_editar" and largura == 1440:
+                        self.foto(f"retomada-produto-{largura}-{trilho}")
+                        topos = self.page.locator(".est-produto-opcoes .check-inline").evaluate_all(
+                            "es => es.map(e => e.getBoundingClientRect().top)")
+                        self.assertLessEqual(max(topos) - min(topos), 1)
+            self.abrir("comercial:pagina_nova", largura, trilho)
+            for campo in self.page.locator('input[type="url"]:visible').all():
+                medida = campo.evaluate("""e => ({campo:e.getBoundingClientRect().width,
+                    pai:e.parentElement.getBoundingClientRect().width})""")
+                self.assertGreaterEqual(medida["campo"], medida["pai"] - 2, medida)
+
+    def test_menu_indica_mais_opcoes_e_remove_a_pista_ao_chegar_ao_fim(self):
+        for trilho in (False, True):
+            self.abrir("dashboard", 1440, trilho)
+            menu = self.page.locator("#menu-principal")
+            menu.evaluate("e => { e.scrollTop=0; e.dispatchEvent(new Event('scroll')); }")
+            expect(menu).to_have_attribute("data-mais-abaixo", "")
+            self.assertNotEqual(menu.evaluate("e => getComputedStyle(e).maskImage"), "none")
+            menu.evaluate("e => { e.scrollTop=e.scrollHeight; e.dispatchEvent(new Event('scroll')); }")
+            expect(menu).not_to_have_attribute("data-mais-abaixo", "")
+            self.assertEqual(menu.evaluate("e => getComputedStyle(e).maskImage"), "none")

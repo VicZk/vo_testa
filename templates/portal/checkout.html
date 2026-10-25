@@ -5,7 +5,7 @@
 
 {% block conteudo %}
 <div class="pt-card">
-  <a href="{% url 'portal:home' token %}" class="voltar">‹ Voltar</a>
+  <a href="{% url 'portal:home' token %}" class="voltar">Voltar</a>
   <h2>Sua conta: {{ e.uh }}</h2>
   {% for l in e.lancamentos %}
     <div class="pt-linha">

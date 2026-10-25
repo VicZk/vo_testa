@@ -31,6 +31,7 @@
   function atualizar(evento) {
     if (evento?.type === 'htmx:afterSwap' && evento.detail.target?.id !== 'conteudo') return;
     marcarAtivo();
+    atualizarPista();
   }
   function travarPagina() {
     if (trava) return;
@@ -47,7 +48,11 @@
     window.scrollTo({left: anterior.x, top: anterior.y, behavior: 'instant'});
   }
   window.votestaSidebar = {atualizar, marcarAtivo, travarPagina, soltarPagina};
+  function atualizarPista() {
+    menu.toggleAttribute("data-mais-abaixo", menu.scrollHeight - menu.clientHeight - menu.scrollTop > 2);
+  }
   function atualizarBarra() {
+    atualizarPista();
     const largura = Math.max(0, menu.offsetWidth - menu.clientWidth) + 'px';
     const sidebar = menu.closest('.sidebar');
     if (sidebar.style.getPropertyValue('--menu-scrollbar') !== largura) {
@@ -60,12 +65,13 @@
   else window.addEventListener('resize', atualizarBarra);
   // Só o bootstrap inline restaura scrollTop, antes da primeira pintura.
   // Nunca repetir no DOMContentLoaded, load ou ao trocar abas.
-  menu.addEventListener('scroll', salvar, {passive: true});
+  menu.addEventListener('scroll', () => { salvar(); atualizarPista(); }, {passive: true});
   window.addEventListener('pagehide', salvar);
   window.addEventListener('pageshow', evento => {
     if (!evento.persisted) return;
     // No BFCache o DOM já existe: a aba pode ter guardado outra posição.
     try { menu.scrollTop = Math.max(0, Number(sessionStorage.getItem(chave)) || 0); } catch (_) {}
+    atualizarPista();
   });
   document.addEventListener('htmx:beforeHistorySave', salvar);
   document.addEventListener('htmx:afterSwap', atualizar);

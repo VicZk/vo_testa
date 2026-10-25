@@ -9,6 +9,25 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 25/10/2026: filtros, abas e indicadores com espaço para leitura
+
+- As barras de filtro aproveitam a largura disponível, alinham campos e ações e
+  preservam o ano nas datas. A Manutenção recupera a grade de filtros.
+- O Comercial, o ciclo de limpeza e o resumo financeiro da reserva se reorganizam
+  pela largura do conteúdo. Painéis laterais param na altura dos próprios dados.
+- Abas deixam de esticar para preencher linhas vazias; indicadores mantêm duas
+  colunas no celular e valores completos. Os números das listas permanecem à direita.
+- Caixas de seleção ganham dimensão uniforme e se alinham à primeira linha do
+  texto, com o rótulo oferecendo pelo menos 44 px de altura no toque. As três opções
+  do produto ficam juntas, abaixo dos campos de preço.
+- Links de ação ganham área de toque; filtros de seleção múltipla recuperam a forma
+  de botão. Campos de URL usam o mesmo acabamento dos demais formulários.
+- O menu mostra uma indicação discreta de continuação, que desaparece ao chegar
+  ao fim. Voltar recebe seta consistente e títulos deixam de hifenizar palavras.
+- Modificados `app.css`, o recorte público, `sidebar.js`, os templates de Produto,
+  Movimentar, Vendas, convite NPS, checkout e pagamento, além das regressões de
+  navegador em `tests_retomada_front_e2e.py`.
+
 ## 25/10/2026: varredura do front, parte 1 (selects, rodapé da porta, tabelas e `[hidden]`)
 
 - **A seta voltou em todo `<select>` do sistema.** Ficha do hóspede (FNRH), modal de Nova

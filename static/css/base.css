@@ -445,6 +445,10 @@ a:hover { color: var(--lampiao-tinta); }
 
 .voltar:hover { color: var(--madeira); }
 
+.voltar::before { content: "‹"; font-size: 1.15em; line-height: 1; }
+
+.voltar:has(.ico)::before { content: none; }
+
 h1 {
   font-family: var(--fonte-titulo);
   font-size: 1.85rem; font-weight: 600; letter-spacing: -.01em;
@@ -641,6 +645,8 @@ input[type="radio"] { accent-color: var(--lampiao); }
 .form-grade .campo { margin-bottom: 0; }
 
 .form-grade .col-2 { grid-column: 1 / -1; }
+
+.ajuda code { font-size: max(var(--rotulo-min), .8rem); font-family: var(--fonte-mono); }
 
 @media (max-width: 520px) {
   .form-grade { grid-template-columns: 1fr; }
