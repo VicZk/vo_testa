@@ -9,6 +9,42 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 25/10/2026: Contábil do original integrado, sem contar nada duas vezes
+
+- **Chegou a camada Contábil do original** (DRE, fluxo de caixa, plano de contas,
+  fechamento mensal e export para o contador), com os ajustes que os fluxos deste fork
+  pedem:
+  - **o faturado não conta duas vezes:** quando a agência ou a empresa paga o título da
+    hospedagem faturada, a DRE não soma a diária de novo — ela já entrou pela
+    competência. O pagamento vai para uma conta fora da DRE ("recebimento de receita já
+    reconhecida");
+  - **a folha conta uma vez,** pelo fechamento do mês: a folha paga por conta recorrente
+    e a categoria "Salários" viram pagamento de algo já reconhecido;
+  - **a compra para o estoque não é custo:** "Insumos" vai para a conta do estoque, e o
+    custo entra quando a mercadoria sai — venda (CMV), consumo interno (amenities,
+    limpeza, cozinha) e perdas;
+  - **entram o day pass** (ingressos pela data do turno) **e os descontos dados na conta
+    do hóspede**, como abatimento da receita;
+  - **a conta a receber avulsa tem categoria:** "Outras receitas" (evento, parceria),
+    porque as receitas de hospedagem, loja, restaurante e lavanderia agora vêm sozinhas
+    dos módulos;
+  - **a DRE se atualiza sozinha pela rotina diária da casa** (`rotina_contabil`). Saiu o
+    agendamento do GitHub que chamava a produção do original;
+  - **os gráficos do painel aparecem também quando se chega pelo menu** (antes, só
+    recarregando a página).
+- **Modificado:**
+  - merge de `b28bec2` (original) com a migração `nucleo/0062_merge_contabil`;
+  - `apps/contabil/` (receivers, capturas, views, classificacao, models, migrações
+    0009–0010, `management/commands/rotina_contabil.py` e `tests_integracao.py`);
+  - `apps/nucleo/models/estoque.py` (`saidas_sem_venda_por_modulo`),
+    `apps/nucleo/models/financeiro.py` (`db_default` nas colunas novas, migração 0063) e
+    `apps/nucleo/management/commands/rotinas.py`;
+  - `apps/daypass/services.py` (`faturamento_periodo`) e `apps/reservas/services.py`
+    (`descontos_periodo`; "Hospedagem faturada" gerida pelo sistema);
+  - `static/js/graficos.js` e `templates/contabil/painel.html`;
+  - saiu `.github/workflows/cron-financeiro.yml`;
+  - README e CLAUDE.md.
+
 ## 25/10/2026: plurais nas mensagens que saem para hóspede e equipe
 
 - As últimas frases com "(s)" que alguém lê viraram singular ou plural de verdade:

@@ -13,6 +13,9 @@ CHAVES_RECEITA = [
     (("simples", "tribut", "imposto", "iss", "devolu", "abatimento"), "3.1.02.01"),
 ]
 CHAVES_DESPESA = [
+    # Compra que entra no estoque troca dinheiro por mercadoria: o custo vem pela saída
+    # (CMV, consumo interno, perdas), senão a DRE contaria a compra e o consumo.
+    (("insumo", "compra de estoque", "compras de estoque", "mercadoria para revenda"), "1.1.03.01"),
     (("honor", "contab", "advog"), "5.1.02.02"),
     (("propaganda", "publicid", "market", "comiss", "ota", "promo"), "5.1.01.02"),
     (("energia", "luz", "agua", "internet", "manuten", "telefone", "limpeza", "material", "utilidade"), "4.2.01.03"),

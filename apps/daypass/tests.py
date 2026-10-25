@@ -53,6 +53,18 @@ class DadosDayPass:
 
 
 class DayPassTests(DadosDayPass, TestCase):
+    def test_faturamento_do_periodo_pela_data_do_turno(self):
+        """Interface da camada Contábil: a reservada vale o que já pagou; a que aconteceu,
+        o ingresso inteiro; outro dia não entra."""
+        self.caixa()
+        visita = self.reservar()
+        services.receber(visita, self.op, self.forma, 20, uuid.uuid4())
+        self.assertEqual(services.faturamento_periodo(self.dia, self.dia)["ingressos"], Decimal("20.00"))
+        VisitaDayPass.objects.filter(pk=visita.pk).update(status=VisitaDayPass.Status.ENCERRADA)
+        self.assertEqual(services.faturamento_periodo(self.dia, self.dia)["ingressos"], Decimal("50.00"))
+        amanha = self.dia + timedelta(days=1)
+        self.assertEqual(services.faturamento_periodo(amanha, amanha)["ingressos"], Decimal("0.00"))
+
     def test_lotacao_por_pessoa_preco_e_idempotencia(self):
         chave = uuid.uuid4()
         visita = self.reservar(adultos=[self.pessoa.nome, "Acompanhante QA"], criancas=["Criança QA"], chave=chave)

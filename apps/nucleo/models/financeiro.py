@@ -431,8 +431,10 @@ class CategoriaFinanceira(models.Model):
     nome = models.CharField("nome", max_length=80)
     tipo = models.CharField("tipo", max_length=8, choices=Tipo.choices)
     ativo = models.BooleanField("ativa", default=True)
+    # `db_default` em todas as colunas novas da camada Contábil: o código da versão
+    # anterior (que não conhece a coluna) continua gravando durante o deploy.
     automatica = models.BooleanField(
-        "gerida pelo sistema", default=False,
+        "gerida pelo sistema", default=False, db_default=False,
         help_text="Categoria alimentada por captura automática (folio, estoque, "
                   "pagamentos, fechamento) — não aparece no lançamento manual, "
                   "para não haver dupla contagem.",
@@ -478,15 +480,15 @@ class LancamentoFinanceiro(models.Model):
     )
     criado_em = models.DateTimeField("registrado em", auto_now_add=True)
     conta_contabil = models.CharField(
-        "conta contábil", max_length=20, blank=True,
+        "conta contábil", max_length=20, blank=True, db_default="",
         help_text="Classificação no plano de contas (preenchida pela camada Contábil).",
     )
     origem = models.CharField(
-        "origem", max_length=20, default="manual",
+        "origem", max_length=20, default="manual", db_default="manual",
         help_text="manual, ou uma captura automática (taxa_cartao, comissao_ota, cmv).",
     )
     referencia = models.CharField(
-        "referência de origem", max_length=80, blank=True,
+        "referência de origem", max_length=80, blank=True, db_default="",
         help_text="Chave de idempotência das capturas automáticas.",
     )
 
@@ -559,14 +561,15 @@ class ContaPagarReceber(models.Model):
     )
     criado_em = models.DateTimeField("criada em", auto_now_add=True)
     conta_contabil = models.CharField(
-        "conta contábil", max_length=20, blank=True,
+        "conta contábil", max_length=20, blank=True, db_default="",
         help_text="Classificação no plano de contas (preenchida pela camada Contábil).",
     )
     recorrencia = models.ForeignKey(
         "nucleo.ContaRecorrente", on_delete=models.SET_NULL, null=True, blank=True,
         related_name="titulos", verbose_name="recorrência de origem",
     )
-    competencia = models.CharField("competência (AAAA-MM)", max_length=7, blank=True)
+    competencia = models.CharField("competência (AAAA-MM)", max_length=7, blank=True,
+                                   db_default="")
 
     class Meta:
         verbose_name = "conta a pagar/receber"

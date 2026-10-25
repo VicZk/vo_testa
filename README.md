@@ -90,6 +90,7 @@ consultadas nesta revisão. Esta é uma **fork de desenvolvimento**: publicar na
 | Site + motor de reservas, Portal do hóspede | Implementados |
 | Comercial (funil, WhatsApp, e-mail, landing pages) e Marketing (campanhas) | Implementados |
 | Relatórios, Auditoria (pendências, trilha e fechamentos), Conciliação (OFX e cartão) | Implementados |
+| Contábil / gerencial (DRE, fluxo de caixa, fechamento mensal, export para o contador) | Vindo do original (24/10) e integrado aos fluxos do fork em 25/10 |
 | Pagamentos online | Safrapay implementado; ativação em produção a confirmar. Pix direto tem baixa manual |
 | FNRH Digital (envio ao governo) | Integração Serpro escrita; credenciais e homologação precisam ser verificadas no ambiente |
 | Fiscal (NFS-e/NFC-e) | Focus NFe v2 implementado; cadastro, credenciais e homologação pendentes de configuração |
@@ -814,6 +815,7 @@ repositório, com as mesmas variáveis do serviço web e o arquivo de configura�
 | diarias | `purgar_trilha` | apaga da trilha o que passou de `TRILHA_RETENCAO_DIAS` (0 = guarda sempre) |
 | diarias | `gerar_arrumacoes` | uma arrumação para cada quarto em que o hóspede continua |
 | diarias | `enviar_kit_contingencia` | manda a folha do dia (kit de contingência) para `KIT_CONTINGENCIA_EMAILS`; vazio = não envia |
+| diarias | `rotina_contabil` | capturas da DRE do mês (receita, day pass, descontos, taxa de cartão, CMV, consumo e perdas do estoque; nos 5 primeiros dias, também o mês anterior) e os títulos das contas recorrentes; sem o módulo Contábil, só as recorrentes |
 
 **Monitor das rotinas.** Com `ROTINAS_MONITOR_FREQUENTES` e `ROTINAS_MONITOR_DIARIAS`
 (um check do [Healthchecks.io](https://healthchecks.io) para cada grupo), as rotinas

@@ -33,6 +33,10 @@ class ContaContabil(models.Model):
         RECEITA = "receita", "Receita"
         CUSTO = "custo", "Custo"
         DESPESA = "despesa", "Despesa"
+        # Fora da DRE: onde cai o dinheiro que só liquida o que a DRE já reconheceu
+        # por competência (faturado recebido, folha paga, compra que entra no estoque).
+        ATIVO = "ativo", "Ativo (fora da DRE)"
+        PASSIVO = "passivo", "Passivo (fora da DRE)"
 
     class Natureza(models.TextChoices):
         CREDORA = "credora", "Credora"

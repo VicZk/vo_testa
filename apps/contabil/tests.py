@@ -429,8 +429,8 @@ class CronCapturarTests(TestCase):
 
     @override_settings(CONTABIL_CRON_TOKEN="segredo123")
     def test_sem_login_funciona_por_token(self):
-        # autentica por token, não por sessão
-        resp = self.client.post(self.URL + "?token=segredo123")
+        # autentica por token (no cabeçalho), não por sessão
+        resp = self.client.post(self.URL, HTTP_X_CRON_TOKEN="segredo123")
         self.assertEqual(resp.status_code, 200)
 
     @override_settings(CONTABIL_CRON_TOKEN="segredo123")

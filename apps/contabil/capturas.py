@@ -7,6 +7,9 @@ Geram `LancamentoFinanceiro` por COMPETÊNCIA, classificados e idempotentes
 
 - Taxa de cartão (adquirente): Pagamentos → 5.1.03.02. Um lançamento por cobrança.
 - CMV: motor de Estoque → 4.5.01.01. Um lançamento por módulo/mês (recomputável).
+- Consumo interno e perdas do estoque → 4.2.01.02 / 4.2.01.03: com a compra no
+  estoque (conta patrimonial), é a saída que vira custo.
+- Descontos dados na conta do hóspede → 3.1.02.02 (abatimento da receita bruta).
 - Comissão de OTA: 5.1.01.02 — STUB: o sistema ainda NÃO registra comissão
   (virá com o módulo Canais/OTAs). Governado por `CONTABIL_COMISSAO_OTA_PCT`
   (default 0 = no-op).
@@ -15,12 +18,12 @@ Geram `LancamentoFinanceiro` por COMPETÊNCIA, classificados e idempotentes
 from __future__ import annotations
 
 import calendar
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.conf import settings
 
-from apps.nucleo.models.estoque import cmv_por_modulo
+from apps.nucleo.models.estoque import cmv_por_modulo, saidas_sem_venda_por_modulo
 from apps.nucleo.models.financeiro import (
     CENTRO_NUCLEO,
     CategoriaFinanceira,
@@ -36,6 +39,9 @@ CATEGORIAS = {
     "taxa_cartao": ("Taxa de cartão (adquirente)", "pagamento_taxa"),
     "cmv": ("Custo das mercadorias vendidas (CMV)", "cmv"),
     "comissao_ota": ("Comissão de canal (OTA)", "comissao_ota"),
+    "consumo_interno": ("Materiais consumidos do estoque", "consumo_estoque"),
+    "perda": ("Perdas de estoque", "perda_estoque"),
+    "desconto": ("Descontos concedidos na conta", "desconto_folio"),
 }
 
 
@@ -128,27 +134,34 @@ def capturar_receita(ano: int, mes: int) -> int:
 
     ini = date(ano, mes, 1)
     fim = _ultimo_dia(ano, mes)
-    itens = []  # (centro, nome_categoria, classificação, valor)
+    itens = []  # (chave, centro, nome_categoria, classificação, valor)
 
     if modulo_ativo(Modulo.RESERVAS):
+        from apps.daypass.services import faturamento_periodo as f_daypass
         from apps.reservas.services import diarias_periodo
-        itens.append((Modulo.RESERVAS, "Hospedagem", "3.1.01.03", diarias_periodo(ini, fim)))
+        itens.append((Modulo.RESERVAS, Modulo.RESERVAS, "Hospedagem", "3.1.01.03",
+                      diarias_periodo(ini, fim)))
+        # O day pass é do módulo Reservas (caixa da recepção), mas é outra receita.
+        itens.append(("daypass", Modulo.RESERVAS, "Day pass", "3.1.01.03",
+                      f_daypass(ini, fim)["ingressos"]))
     if modulo_ativo(Modulo.LOJA):
         from apps.loja.services import faturamento_periodo as f_loja
         f = f_loja(ini, fim)
-        itens.append((Modulo.LOJA, "Loja", "3.1.01.01", f["caixa"] + f["quarto"]))
+        itens.append((Modulo.LOJA, Modulo.LOJA, "Loja", "3.1.01.01", f["caixa"] + f["quarto"]))
     if modulo_ativo(Modulo.RESTAURANTE):
         from apps.restaurante.services import faturamento_periodo as f_rest
         f = f_rest(ini, fim)
-        itens.append((Modulo.RESTAURANTE, "Restaurante", "3.1.01.01", f["caixa"] + f["quarto"]))
+        itens.append((Modulo.RESTAURANTE, Modulo.RESTAURANTE, "Restaurante", "3.1.01.01",
+                      f["caixa"] + f["quarto"]))
     if modulo_ativo(Modulo.LAVANDERIA):
         from apps.lavanderia.services import faturamento_periodo as f_lav
         f = f_lav(ini, fim)
-        itens.append((Modulo.LAVANDERIA, "Lavanderia", "3.1.01.03", f["caixa"] + f["quarto"]))
+        itens.append((Modulo.LAVANDERIA, Modulo.LAVANDERIA, "Lavanderia", "3.1.01.03",
+                      f["caixa"] + f["quarto"]))
 
     tocados = 0
-    for centro, nome_cat, classif, valor in itens:
-        ref = f"receita:{centro}:{ano:04d}-{mes:02d}"
+    for chave, centro, nome_cat, classif, valor in itens:
+        ref = f"receita:{chave}:{ano:04d}-{mes:02d}"
         valor = valor or Decimal("0")
         if valor > 0:
             cat = categoria_automatica(nome_cat, CategoriaFinanceira.Tipo.RECEITA)
@@ -179,11 +192,93 @@ def capturar_comissoes_ota(ano: int, mes: int) -> int:
     return 0
 
 
+def capturar_descontos(ano: int, mes: int) -> int:
+    """Descontos da conta do hóspede no mês → abatimento da receita (recomputável)."""
+    from apps.nucleo.models import modulo_ativo
+
+    ref = f"desconto_folio:{ano:04d}-{mes:02d}"
+    valor = Decimal("0")
+    if modulo_ativo(Modulo.RESERVAS):
+        from apps.reservas.services import descontos_periodo
+        valor = descontos_periodo(date(ano, mes, 1), _ultimo_dia(ano, mes)) or Decimal("0")
+    if valor <= 0:
+        LancamentoFinanceiro.objects.filter(referencia=ref).delete()
+        return 0
+    LancamentoFinanceiro.objects.update_or_create(
+        referencia=ref,
+        defaults=dict(
+            tipo=CategoriaFinanceira.Tipo.DESPESA, categoria=_categoria("desconto"),
+            centro=Modulo.RESERVAS,
+            descricao=f"Descontos na conta do hóspede — {ano:04d}/{mes:02d}",
+            valor=valor, data=_ultimo_dia(ano, mes), criado_por=_robo(),
+            origem="desconto", conta_contabil=_conta_classif("desconto"),
+        ),
+    )
+    return 1
+
+
+def capturar_saidas_estoque(ano: int, mes: int) -> int:
+    """Consumo interno e perdas do mês, por módulo (recomputável: atualiza o valor)."""
+    data = _ultimo_dia(ano, mes)
+    rotulos = {"consumo_interno": "Consumo interno", "perda": "Perdas"}
+    tocados = 0
+    for tipo, por_modulo in saidas_sem_venda_por_modulo(ano, mes).items():
+        if not por_modulo:
+            continue
+        cat, classif = _categoria(tipo), _conta_classif(tipo)
+        for modulo, total in por_modulo.items():
+            setor = dict(Modulo.choices).get(modulo, modulo)
+            LancamentoFinanceiro.objects.update_or_create(
+                referencia=f"{CATEGORIAS[tipo][1]}:{ano:04d}-{mes:02d}:{modulo}",
+                defaults=dict(
+                    tipo=CategoriaFinanceira.Tipo.DESPESA, categoria=cat, centro=modulo,
+                    descricao=f"{rotulos[tipo]} do estoque {setor} — {ano:04d}/{mes:02d}",
+                    valor=total, data=data, criado_por=_robo(),
+                    origem=CATEGORIAS[tipo][1], conta_contabil=classif,
+                ),
+            )
+            tocados += 1
+    return tocados
+
+
 def capturar_mes(ano: int, mes: int) -> dict[str, int]:
     """Orquestra todas as capturas do mês. Idempotente."""
     return {
         "receita": capturar_receita(ano, mes),
+        "desconto": capturar_descontos(ano, mes),
         "taxa_cartao": capturar_taxas_cartao(ano, mes),
         "cmv": capturar_cmv(ano, mes),
+        "saidas_estoque": capturar_saidas_estoque(ano, mes),
         "comissao_ota": capturar_comissoes_ota(ano, mes),
     }
+
+
+def rotina_diaria(hoje: date | None = None) -> dict:
+    """
+    O que a DRE precisa todo dia, pela rotina `diarias` (cron da casa): capturas do
+    mês corrente — e do anterior nos cinco primeiros dias, para fechar a competência
+    que virou — e os títulos das contas recorrentes do mês (não retroage: uma
+    recorrência não cria título de mês em que talvez nem existisse). Idempotente.
+    """
+    from django.utils import timezone
+
+    from apps.nucleo.models import modulo_ativo
+    from apps.nucleo.models.financeiro import ContaRecorrente
+
+    hoje = hoje or timezone.localdate()
+    capturas = {}
+    if modulo_ativo(Modulo.CONTABIL):
+        meses = [(hoje.year, hoje.month)]
+        if hoje.day <= 5:
+            anterior = hoje.replace(day=1) - timedelta(days=1)
+            meses.append((anterior.year, anterior.month))
+        for ano, mes in meses:
+            capturas[f"{ano:04d}-{mes:02d}"] = capturar_mes(ano, mes)
+
+    competencia = f"{hoje.year:04d}-{hoje.month:02d}"
+    recorrentes = 0
+    for rec in ContaRecorrente.objects.filter(ativo=True):
+        existia = rec.titulos.filter(competencia=competencia).exists()
+        rec.gerar(hoje.year, hoje.month)
+        recorrentes += not existia
+    return {"capturas": capturas, "recorrentes_criadas": recorrentes}

@@ -1,5 +1,4 @@
 import csv
-from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 
 from django.conf import settings
@@ -126,36 +125,13 @@ def cron_capturar(request):
     token = getattr(settings, "CONTABIL_CRON_TOKEN", "")
     if not token:
         raise Http404("Cron de capturas desativado (sem CONTABIL_CRON_TOKEN).")
-    fornecido = request.headers.get("X-Cron-Token") or request.GET.get("token", "")
-    if not constant_time_compare(fornecido, token):
+    # Só pelo cabeçalho: parâmetro de URL fica gravado em log de proxy e de acesso.
+    if not constant_time_compare(request.headers.get("X-Cron-Token", ""), token):
         return HttpResponseForbidden("token inválido")
 
-    from apps.nucleo.models.financeiro import ContaRecorrente
+    from .capturas import rotina_diaria
 
-    from .capturas import capturar_mes
-
-    hoje = timezone.localdate()
-    meses = [(hoje.year, hoje.month)]
-    if hoje.day <= 5:  # começo do mês: finaliza a competência do mês anterior
-        anterior = hoje.replace(day=1) - timedelta(days=1)
-        meses.append((anterior.year, anterior.month))
-
-    capturas = {}
-    for ano, mes in meses:
-        capturas[f"{ano:04d}-{mes:02d}"] = capturar_mes(ano, mes)
-
-    # Contas fixas do mês corrente (idempotente). NÃO retroage — uma recorrência
-    # não deve criar título de mês passado em que talvez nem existisse.
-    recorrentes = 0
-    for rec in ContaRecorrente.objects.filter(ativo=True):
-        existia = rec.titulos.filter(
-            competencia=f"{hoje.year:04d}-{hoje.month:02d}"
-        ).exists()
-        rec.gerar(hoje.year, hoje.month)
-        if not existia:
-            recorrentes += 1
-
-    return JsonResponse({"ok": True, "capturas": capturas, "recorrentes_criadas": recorrentes})
+    return JsonResponse({"ok": True, **rotina_diaria()})
 
 
 EXPORTS = {"resumo", "lancamentos", "plano"}

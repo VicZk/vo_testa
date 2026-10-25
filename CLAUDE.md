@@ -246,8 +246,13 @@ ativação/homologação externa; o que entrou depois está no [CHANGELOG](CHANG
   capturas por competência (receita do folio/vendas, taxa de cartão, CMV),
   `FechamentoMensal` (folha/encargos/pró-labore/DAS) e painel em abas com export CSV.
   Carimba `conta_contabil` por signal (o núcleo não importa `contabil`). Comissão de
-  OTA é stub até o módulo Canais. Cron por endpoint token-gated
-  (`CONTABIL_CRON_TOKEN`); sem o token o endpoint responde 404.
+  OTA é stub até o módulo Canais. No fork, as capturas e as recorrentes rodam na
+  rotina `rotina_contabil` (grupo `diarias`); o endpoint token-gated
+  (`CONTABIL_CRON_TOKEN`, só no cabeçalho) fica como alternativa e sem o token responde
+  404. Integração com os fluxos do fork: baixa de título com categoria gerida pelo
+  sistema (faturado, folha por recorrência) e a compra para o estoque ("Insumos") vão
+  para contas fora da DRE (1.x/2.x); o custo do estoque entra pela saída (CMV, consumo
+  interno, perdas), e o day pass e os descontos da conta entram nas capturas.
 - **Comercial/marketing:** funil, cotações, atividades, WhatsApp, e-mail, LPs, campanhas,
   peças e orçamento. Site e portal integrados à hospedagem.
 - **Integrações:** Safrapay, Serpro, WhatsApp Cloud, Meta e JEV têm adapters; produção

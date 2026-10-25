@@ -1973,6 +1973,27 @@ class FaturarParaAgenciaTests(ReservasTestsBase):
         self.assertEqual(conta.saldo(), Decimal("0.00"))
         r.fazer_checkout(self.usuario)
 
+    def test_faturado_recebido_nao_soma_a_diaria_de_novo_na_dre(self):
+        """A diária entra na DRE pela competência; quando a agência paga o título, a baixa
+        é só o dinheiro chegando (conta fora da DRE), não uma segunda receita."""
+        from apps.contabil import relatorios
+        from apps.contabil.capturas import capturar_receita
+        from apps.nucleo.models import ContaPagarReceber
+
+        r = self.reserva_faturada()
+        conta = r.fazer_checkin(self.usuario)
+        services.faturar_conta(conta, self.usuario)
+        titulo = ContaPagarReceber.objects.get()
+        self.assertTrue(titulo.categoria.automatica)
+        lancamento = titulo.baixar(self.usuario)
+        lancamento.refresh_from_db()
+        self.assertEqual(lancamento.conta_contabil, "1.1.02.01")
+        total = Decimal("0")
+        for ano, mes in {(d.year, d.month) for d in (HOJE, HOJE + timedelta(days=1))}:
+            capturar_receita(ano, mes)
+            total += relatorios.dre(ano, mes)["receita_bruta"]
+        self.assertEqual(total, Decimal("600.00"))
+
     def test_parte_faturada_e_o_resto_fica_com_o_hospede(self):
         from apps.nucleo.models import NaturezaFiscal
 

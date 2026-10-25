@@ -2258,8 +2258,14 @@ def faturar_conta(conta, usuario, *, valor=None, vencimento=None):
         raise ValidationError(f"O valor faturado deve ficar entre R$ 0,01 e o saldo (R$ {saldo}).")
     vencimento = vencimento or (
         timezone.localdate() + timedelta(days=settings.FATURAMENTO_PRAZO_DIAS))
+    # Gerida pelo sistema: a diária já entra na DRE pela competência; a baixa deste
+    # título é só o dinheiro da agência chegando (a camada Contábil a trata assim).
     categoria, _criada = CategoriaFinanceira.objects.get_or_create(
-        nome="Hospedagem faturada", tipo=CategoriaFinanceira.Tipo.RECEITA)
+        nome="Hospedagem faturada", tipo=CategoriaFinanceira.Tipo.RECEITA,
+        defaults={"automatica": True})
+    if not categoria.automatica:
+        categoria.automatica = True
+        categoria.save(update_fields=["automatica"])
     if conta.reserva_id:
         referencia = (f"reserva #{dono.pk} — {dono.hospede.nome} ({dono.uh.numero}, "
                       f"{dono.checkin:%d/%m} a {dono.checkout:%d/%m/%Y})")
@@ -3212,6 +3218,16 @@ def diarias_periodo(inicio, fim) -> Decimal:
     from django.db.models import Sum
     return (LancamentoConta.objects.filter(
         competencia__range=(inicio, fim), tipo=LancamentoConta.Tipo.DIARIA
+    ).aggregate(t=Sum("valor"))["t"] or Decimal("0"))
+
+
+def descontos_periodo(inicio, fim) -> Decimal:
+    """Descontos dados na conta do hóspede (na diária ou no consumo), pela competência.
+    Interface pública p/ a camada Contábil lançar como abatimento da receita — as
+    diárias e o consumo entram brutos."""
+    from django.db.models import Sum
+    return (LancamentoConta.objects.filter(
+        competencia__range=(inicio, fim), tipo=LancamentoConta.Tipo.DESCONTO
     ).aggregate(t=Sum("valor"))["t"] or Decimal("0"))
 
 

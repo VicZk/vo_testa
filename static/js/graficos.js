@@ -171,8 +171,42 @@
       backgroundColor: [MUSGO, LAMPIAO, MADEIRA], borderColor: '#fff', borderWidth: 3, hoverOffset: 4 }] },
     options: opc });
   }
+  function contabil() {
+  const fonteCascata = document.getElementById('ctb-wf');
+  const fonteRosca = document.getElementById('ctb-donut');
+  if (!fonteCascata || !fonteRosca) return;
+  const wf = JSON.parse(fonteCascata.textContent);
+  const dn = JSON.parse(fonteRosca.textContent);
+  // Cores pelos tokens do app.css: o tema muda num lugar só.
+  const css = getComputedStyle(document.documentElement);
+  const tok = nome => css.getPropertyValue(nome).trim();
+  const acc = tok('--lampiao'), ok = tok('--sucesso'), bad = tok('--perigo'),
+    fio = tok('--fio'), sup = tok('--superficie');
+  Chart.defaults.color = tok('--tinta-suave');
+  Chart.defaults.font.family = "'Hanken Grotesk', -apple-system, sans-serif";
+  const cascata = disponivel('ctbWaterfall') && document.getElementById('ctbWaterfall').getContext('2d');
+  if (cascata) criarGrafico(cascata, {
+    type: 'bar',
+    data: { labels: wf.labels, datasets: [
+      { data: [0, wf.receita_liquida, wf.lucro_bruto, wf.resultado, 0], backgroundColor: 'transparent', stack: 's' },
+      { data: [wf.receita_bruta, wf.deducoes, wf.custos, wf.despesas, wf.resultado],
+        backgroundColor: [acc, bad, bad, bad, wf.resultado < 0 ? bad : ok], borderRadius: 5, stack: 's' }] },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { enabled: true } },
+      scales: { x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        y: { grid: { color: fio }, stacked: true } } },
+  });
+  const rosca = disponivel('ctbDonut') && document.getElementById('ctbDonut').getContext('2d');
+  if (rosca) criarGrafico(rosca, {
+    type: 'doughnut',
+    data: { labels: ['Serviços', 'Mercadorias'], datasets: [{
+      data: dn, backgroundColor: [acc, ok], borderColor: sup, borderWidth: 3 }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '60%',
+      plugins: { legend: { position: 'bottom' }, tooltip: { enabled: true } } },
+  });
+  }
   function iniciar() {
-    if (!document.querySelector('#dados-graficos, #dados-conciliacao')) return;
+    if (!document.querySelector('#dados-graficos, #dados-conciliacao, #ctb-wf')) return;
     if (!window.Chart) {
       if (fonteChart) carregarChart().then(iniciar).catch(() => {});
       return;
@@ -184,6 +218,7 @@
     });
     painel();
     conciliacao();
+    contabil();
   }
   function limpar(raiz) {
     if (!window.Chart || !raiz?.querySelectorAll) return;

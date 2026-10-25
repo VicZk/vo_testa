@@ -230,6 +230,22 @@ def cancelar(visita, usuario, motivo):
     registrar_auditoria(usuario, "daypass_cancelar", visita, {"motivo": motivo})
 
 
+def faturamento_periodo(inicio, fim):
+    """Ingressos do day pass pela data do turno (competência). Interface pública para a
+    camada Contábil: a visita que aconteceu vale o ingresso; a reservada vale o que já
+    foi pago (quem pagou e não veio); a cancelada não entra — ela só cancela com o
+    pago devolvido. O consumo do dia vai pelas comandas do Restaurante."""
+    total = Decimal("0.00")
+    visitas = (VisitaDayPass.objects.filter(turno__dia__data__range=(inicio, fim))
+               .exclude(status=VisitaDayPass.Status.CANCELADA))
+    for visita in visitas:
+        if visita.status == VisitaDayPass.Status.RESERVADA:
+            total += visita.total_pago()
+        else:
+            total += visita.valor_ingressos
+    return {"ingressos": total}
+
+
 @transaction.atomic
 def abrir_consumo(visita, usuario, local):
     from apps.nucleo.models import modulo_ativo

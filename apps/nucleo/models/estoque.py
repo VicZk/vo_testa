@@ -396,6 +396,26 @@ def cmv_por_modulo(ano: int, mes: int) -> dict[str, Decimal]:
     return {m: v for m, v in por_modulo.items() if v > 0}
 
 
+def saidas_sem_venda_por_modulo(ano: int, mes: int) -> dict[str, dict[str, Decimal]]:
+    """
+    Custo das saídas do mês que não são venda — consumo interno (amenities, limpeza,
+    cozinha) e perdas —, por tipo e por módulo. Interface pública p/ a camada
+    Contábil: com a compra no estoque, é a saída que vira custo na DRE (a compra em
+    si só troca dinheiro por mercadoria).
+    """
+    from collections import defaultdict
+
+    tipos = (MovimentoEstoque.Tipo.CONSUMO_INTERNO, MovimentoEstoque.Tipo.PERDA)
+    qs = MovimentoEstoque.objects.filter(
+        tipo__in=tipos, criado_em__year=ano, criado_em__month=mes,
+    ).select_related("local")
+    resultado: dict[str, dict[str, Decimal]] = {t: defaultdict(lambda: ZERO) for t in tipos}
+    for mov in qs:
+        custo = (abs(mov.quantidade) * mov.custo_unitario).quantize(Decimal("0.01"))
+        resultado[mov.tipo][mov.local.modulo] += custo
+    return {t: {m: v for m, v in mods.items() if v > 0} for t, mods in resultado.items()}
+
+
 # ---------- Movimentações (interface pública do motor) ----------
 
 

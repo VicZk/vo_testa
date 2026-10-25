@@ -9,8 +9,9 @@ Grupos:
 - diarias (madrugada): o no-show automático (se ligado na Tabela de Preços) e o
   fechamento do dia, conversões de mídia pendentes, gasto das campanhas, o backup do
   banco para fora do Railway (se R2_* ou BACKUP_DIR estiverem definidos), a purga da
-  trilha e a cópia do Kit de contingência por e-mail (se
-  KIT_CONTINGENCIA_EMAILS estiver definido).
+  trilha, a cópia do Kit de contingência por e-mail (se
+  KIT_CONTINGENCIA_EMAILS estiver definido) e a rotina do Contábil (capturas da DRE e
+  contas recorrentes do mês).
 
 Cada tarefa roda isolada: se uma falha, o erro vai para o log e as outras seguem. Ao fim,
 se alguma falhou, o comando termina com erro para o Railway marcar a execução.
@@ -57,6 +58,7 @@ GRUPOS = {
         "backup_banco",
         "purgar_trilha",
         "enviar_kit_contingencia",  # a folha do dia no celular de quem decide
+        "rotina_contabil",  # capturas da DRE e contas recorrentes do mês
     ],
 }
 

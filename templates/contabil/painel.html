@@ -275,9 +275,10 @@
 
 {{ waterfall|json_script:"ctb-wf" }}
 {{ donut|json_script:"ctb-donut" }}
-{% comment %}Chart.js é o do projeto (static/vendor/chartjs), não um CDN: o CRM
-carrega HTMX, Alpine e Chart locais.{% endcomment %}
-<script src="{% static 'vendor/chartjs/chart.umd.min.js' %}"></script>
+{% comment %}Os gráficos (cascata e rosca) são desenhados pelo static/js/graficos.js, que
+carrega o Chart.js local quando a página tem os dados e acompanha a navegação do HTMX:
+um script inline com o Chart no próprio template rodava antes do Chart carregar ao
+chegar pelo menu (hx-boost) e a tela ficava sem gráfico.{% endcomment %}
 <script>
 (function(){
   // abas
@@ -290,32 +291,6 @@ carrega HTMX, Alpine e Chart locais.{% endcomment %}
     var el = document.getElementById('aba-' + b.dataset.aba); if(el) el.classList.add('on');
   }); });
   if (location.hash === '#fechar') { var fb = document.querySelector('[data-aba="fechar"]'); if(fb) fb.click(); }
-
-  if (typeof Chart === 'undefined') return;
-  var css = getComputedStyle(document.documentElement);
-  function tok(n, fb){ return (css.getPropertyValue(n)||'').trim() || fb; }
-  var acc = tok('--lampiao','#b9801f'), ok = tok('--sucesso','#2f8d6a'),
-      bad = tok('--perigo','#c0493f'), ink = tok('--tinta-suave','#7a7161'),
-      fio = tok('--fio','rgba(0,0,0,.1)'), sup = tok('--superficie','#fff');
-  Chart.defaults.animation = false; Chart.defaults.color = ink; Chart.defaults.font.family = 'inherit';
-
-  var wf = JSON.parse(document.getElementById('ctb-wf').textContent);
-  new Chart(document.getElementById('ctbWaterfall'), {
-    type:'bar',
-    data:{ labels: wf.labels, datasets:[
-      { data:[0, wf.receita_liquida, wf.lucro_bruto, wf.resultado, 0], backgroundColor:'transparent', stack:'s' },
-      { data:[wf.receita_bruta, wf.deducoes, wf.custos, wf.despesas, wf.resultado],
-        backgroundColor:[acc,bad,bad,bad, wf.resultado<0?bad:ok], borderRadius:5, stack:'s' } ]},
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false},tooltip:{enabled:true}},
-      scales:{ x:{grid:{display:false},ticks:{font:{size:11}}}, y:{grid:{color:fio},stacked:true}, } }
-  });
-
-  var dn = JSON.parse(document.getElementById('ctb-donut').textContent);
-  new Chart(document.getElementById('ctbDonut'), {
-    type:'doughnut',
-    data:{ labels:['Serviços','Mercadorias'], datasets:[{ data:dn, backgroundColor:[acc, ok], borderColor:sup, borderWidth:3 }] },
-    options:{ responsive:true, maintainAspectRatio:false, cutout:'60%', plugins:{legend:{position:'bottom'},tooltip:{enabled:true}} }
-  });
 })();
 </script>
 {% endblock %}
