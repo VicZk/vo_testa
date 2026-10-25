@@ -40,7 +40,14 @@
         </div></td>
       </tr>
     {% empty %}
-      <tr><td colspan="7" class="vazio">{% url "conta_nova" as destino_vazio %}{% include "componentes/estado_vazio.html" with mensagem="Nenhuma conta nesta listagem." url_acao=destino_vazio acao="Nova conta" ajuda="" only %}</td></tr>
+      <tr><td colspan="7" class="vazio">
+        {% url "conta_nova" as destino_vazio %}
+        {% if situacao == "abertas" %}
+          {% include "componentes/estado_vazio.html" with mensagem="Nenhuma conta aberta no momento." url_acao=destino_vazio acao="Nova conta" ajuda="" only %}
+        {% else %}
+          {% include "componentes/estado_vazio.html" with mensagem="Nenhuma conta cadastrada." url_acao=destino_vazio acao="Nova conta" ajuda="" only %}
+        {% endif %}
+      </td></tr>
     {% endfor %}
   </tbody>
 </table>

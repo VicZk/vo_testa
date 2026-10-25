@@ -110,7 +110,9 @@ class UsabilidadeOperacionalE2ETests(_BaseE2E):
         with p.expect_response(lambda r: r.url.endswith(reverse("conta_baixar", args=[conta.pk]))) as resposta:
             p.get_by_role("button", name="Baixar", exact=True).click()
         self.assertEqual(resposta.value.status, 200)
-        expect(p.get_by_text("Nenhuma conta aberta no momento.", exact=True)).to_be_visible()
+        vazio = p.locator(".tabela .vazio")
+        expect(vazio.get_by_text("Nenhuma conta aberta no momento.", exact=True)).to_be_visible()
+        expect(vazio.get_by_role("link", name="Nova conta", exact=True)).to_have_attribute("href", reverse("conta_nova"))
         self.foto("financeiro-baixa-descricao-maxima")
         conta.refresh_from_db()
         self.assertEqual(conta.status, "baixada")

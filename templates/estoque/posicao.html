@@ -73,6 +73,17 @@ peneira a tabela; os números de cima continuam dizendo como está o depósito.{
   </div>
 </div>
 
+<form method="get" class="filtro-barra filtro-inline est-filtros">
+  {% if local %}<input type="hidden" name="local" value="{{ local.pk }}">{% endif %}
+  {% if catalogo %}<input type="hidden" name="catalogo" value="1">{% endif %}
+  <div class="est-busca-linha">
+  <div class="filtro-campo est-filtro-busca">
+    <label for="q-produto">Buscar produto</label>
+    <input type="search" id="q-produto" name="q" value="{{ filtros.q }}"
+           placeholder="Nome ou código de barras">
+  </div>
+  <button type="submit" class="botao-primario filtro-aplicar">Buscar</button>
+  </div>
 {% comment %}A seleção de local é o ponto de partida da tela: cada depósito mostra
 quanto guarda e o que está no limite, em vez de um chip com o nome e mais nada.{% endcomment %}
 <details class="est-resumo-locais">
@@ -102,17 +113,6 @@ quanto guarda e o que está no limite, em vez de um chip com o nome e mais nada.
 </div>
 </details>
 
-<form method="get" class="filtro-barra filtro-inline est-filtros">
-  {% if local %}<input type="hidden" name="local" value="{{ local.pk }}">{% endif %}
-  {% if catalogo %}<input type="hidden" name="catalogo" value="1">{% endif %}
-  <div class="est-busca-linha">
-  <div class="filtro-campo est-filtro-busca">
-    <label for="q-produto">Buscar produto</label>
-    <input type="search" id="q-produto" name="q" value="{{ filtros.q }}"
-           placeholder="Nome ou código de barras">
-  </div>
-  <button type="submit" class="botao-primario filtro-aplicar">Filtrar</button>
-  </div>
   <details class="est-filtros-avancados"{% if filtros.categoria or filtros.situacao %} open{% endif %}>
   <summary>Filtros{% if filtros.categoria or filtros.situacao %} ativos{% endif %}</summary>
   <div class="est-filtros-campos">
@@ -133,7 +133,7 @@ quanto guarda e o que está no limite, em vez de um chip com o nome e mais nada.
       {% endfor %}
     </select>
   </div>
-  <button type="submit" class="botao-primario filtro-aplicar">Filtrar</button>
+  <button type="submit" class="botao-primario filtro-aplicar">Buscar</button>
   </div>
   </details>
   {% if tem_filtro %}

@@ -233,7 +233,7 @@ class RetomadaFrontE2ETests(_BaseE2E):
             self.assertEqual(select.locator("option").evaluate_all("es => es.map(e => e.value)"),
                              ["", "com_saldo", "vencidos"])
             select.select_option("com_saldo")
-            self.page.get_by_role("button", name="Filtrar", exact=True).click()
+            self.page.get_by_role("button", name="Buscar", exact=True).click()
             expect(self.page.locator("#situacao-lote")).to_have_value("com_saldo")
             self.abrir("estoque:compra_receber", largura, trilho)
             expect(self.page.locator(".est-abas")).to_be_visible()

@@ -125,7 +125,7 @@ class TipografiaFiltrosE2ETests(_BaseE2E):
             tema=tema, status="publicada", criado_por=self.usuario) for tema in ("fundador", "blueprint")]
         rotas = (
             ("comercial:funil", (), ".card-nome", ".card-novo"),
-            ("comercial:oportunidade", (oportunidade.pk,), ".wpp-av", ".wpp-tag"),
+            ("comercial:oportunidade", (oportunidade.pk,), ".wpp-av", ".wpp-topo-dir .selo"),
             ("comercial:enviar_email_lead", (oportunidade.pk,), ".em-topo h1", ".em-campo > label"),
             ("captacao:publica", (paginas[0].slug,), ".kicker", ".hero .selo"),
             ("captacao:publica", (paginas[1].slug,), ".sub", ".cue"),

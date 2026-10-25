@@ -84,7 +84,7 @@
     <label for="k-ate">Até</label>
     <input type="date" name="ate" id="k-ate" value="{{ filtros.ate }}">
   </div>
-  <button type="submit" class="botao-primario filtro-aplicar">Aplicar</button>
+  <button type="submit" class="botao-primario filtro-aplicar">Filtrar</button>
   {% if tem_filtro %}<a href="{% url 'estoque:kardex' produto.pk %}" class="botao-mini">Limpar</a>{% endif %}
 </form>
 

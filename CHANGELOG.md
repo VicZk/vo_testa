@@ -9,6 +9,19 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 25/10/2026: regressões da execução completa de navegador
+
+- Os indicadores do Estoque mantêm duas colunas em telas estreitas, com o total
+  monetário inteiro e o último contador ocupando a largura disponível. O respiro
+  lateral permanece igual entre os cartões. Resumo por depósito e filtros fechados
+  compartilham uma linha para manter os produtos próximos à primeira tela.
+- Os formulários com texto livre do Estoque usam “Buscar”, inclusive os dois
+  botões da Posição; o histórico de movimentos usa “Filtrar”. Os testes cobrem a
+  busca sem JavaScript e conferem o selo atual do Comercial, o calendário sem
+  altura excedente e a ação do estado vazio específico de contas abertas após a baixa.
+- Acrescentada conferência dos indicadores com valor de milhões e fontes de
+  16 e 20 px, preservando as verificações de filtros, baixa única e navegação.
+
 ## 25/10/2026: conclusão da varredura de interface e páginas públicas
 
 - Estados vazios indicam o próximo passo e preservam o papel da pessoa ao limpar a

@@ -731,6 +731,10 @@ desliga a trava da FNRH, as taxas automáticas, o MFA e o limite de login.
   Django. Regras de dinheiro e de disponibilidade são sempre testadas.
 - **Resultados:** contagens e tempos em auditorias/changelogs pertencem à execução
   registrada. Consulte o resultado da suíte e do CI no commit que será publicado.
+- **Regressões de interface:** a posição de estoque cobre filtros com e sem
+  JavaScript, valores longos e fonte ampliada. O calendário público é conferido
+  pelo alinhamento superior e pela altura do próprio conteúdo; o estado vazio de
+  contas mantém a ação de criar uma conta depois da baixa.
 - **Navegador:** `apps/site/tests_e2e.py` usa Playwright (reserva no site, calendário,
   funil, a LP da Inauguração e o menu lateral do CRM). Localmente é pulado se ele não
   estiver instalado (`pip install playwright==1.64.0 && playwright install chromium`); no

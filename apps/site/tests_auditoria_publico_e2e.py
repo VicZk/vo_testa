@@ -152,8 +152,13 @@ class AuditoriaPublicoE2ETests(_UnidadeVendavelMixin, _BaseE2E):
                 self.assertAlmostEqual(posicoes[0]["x"], posicoes[7]["x"], delta=1)
                 self.cabe_no_pai(".reserva-passo > .relative, #btn-ver-quartos > svg")
                 if largura >= 768:
-                    cartoes = self.page.locator("#form-datas > div").evaluate_all("els => els.map(e => e.getBoundingClientRect().bottom)")
-                    self.assertLessEqual(max(cartoes)-min(cartoes), 1)
+                    cartoes = self.page.locator("#form-datas > div").evaluate_all("""els => els.map(e => {
+                        const r=e.getBoundingClientRect(), ultimo=e.lastElementChild.getBoundingClientRect();
+                        return {top:r.top,bottom:r.bottom,conteudoBottom:ultimo.bottom,padding:parseFloat(getComputedStyle(e).paddingBottom)};
+                    })""")
+                    self.assertAlmostEqual(cartoes[0]["top"], cartoes[1]["top"], delta=1)
+                    self.assertLess(cartoes[0]["bottom"], cartoes[1]["bottom"])
+                    self.assertLessEqual(cartoes[0]["bottom"] - cartoes[0]["conteudoBottom"], cartoes[0]["padding"] + 1)
                 self.foto("calendario", largura)
                 dias = cal.locator(".flatpickr-day:not(.prevMonthDay):not(.nextMonthDay):not(.flatpickr-disabled)")
                 dias.nth(2).click()

@@ -7155,6 +7155,8 @@ form.filtros.manutencao-filtros:not(.subnav) { display: grid; grid-template-colu
 .est-posicao .est-resumo-locais .est-locais { margin: .3rem 0 .8rem; }
 .est-posicao .est-local-nome { white-space: normal; overflow-wrap: anywhere; }
 .est-posicao .est-filtros { display: flex; flex-wrap: wrap; align-items: end; gap: .3rem 1rem; }
+.est-posicao .est-filtros > .est-resumo-locais { flex: 0 1 auto; margin: 0; }
+.est-posicao .est-filtros > .est-resumo-locais[open] { flex-basis: 100%; }
 .est-posicao .est-busca-linha { display: flex; align-items: end; gap: .5rem; flex: 1 1 320px; }
 .est-posicao .est-filtro-busca { min-width: 0; max-width: none; }
 .est-posicao .est-filtros-avancados { flex: 1 1 360px; min-width: 0; }
@@ -7233,6 +7235,19 @@ form.filtros.manutencao-filtros:not(.subnav) { display: grid; grid-template-colu
   }
   .est-posicao .est-acao-texto { display: inline; font-size: 0.75rem; font-weight: 600; }
   .est-posicao .est-tabela .col-acao .est-ver-movimentos { display: flex; align-items: center; grid-column: 1 / -1; min-height: 44px; justify-content: center; }
+}
+
+/* A faixa estreita mantém duas colunas; o total monetário e o último contador
+   usam a linha inteira. O mínimo de 150px não pode transformar quatro KPIs
+   numa pilha a 320px, e o valor longo conserva a largura de leitura. */
+@container conteudo (max-width: 28rem) {
+  .est-posicao .est-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .est-posicao .est-kpis .kpi:last-child {
+    grid-column: 1 / -1; display: grid;
+    grid-template-columns: minmax(0, 1fr) auto; align-items: center;
+  }
+  .est-posicao .est-kpis .kpi:last-child .kpi-valor { margin-top: 0; }
+  .est-posicao .est-filtros-avancados:not([open]) { flex: 0 1 auto; }
 }
 
 /* ---------- Tabela: saldo com régua do mínimo ---------- */

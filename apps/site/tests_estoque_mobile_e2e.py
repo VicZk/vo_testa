@@ -118,7 +118,7 @@ class EstoqueMobileE2ETests(_BaseE2E):
     def buscar(self, texto):
         self.page.get_by_label("Buscar produto", exact=True).fill(texto)
         with self.page.expect_navigation(wait_until="load"):
-            self.page.get_by_role("button", name="Buscar", exact=True).click()
+            self.page.locator(".est-busca-linha").get_by_role("button", name="Buscar", exact=True).click()
         self.esperar_layout()
 
     def conferir_parametros(self, **esperados):
@@ -206,6 +206,35 @@ class EstoqueMobileE2ETests(_BaseE2E):
                 self.foto(str(largura))
                 self.conferir_geometria(primeira_tela=True)
                 self.page.evaluate("window.scrollTo(0,0)")
+
+    def test_indicadores_compactos_preservam_valores_e_fonte_ampliada(self):
+        for largura in (320, 390, 821, 1440):
+            self.page.set_viewport_size({"width": largura, "height": 900})
+            self.abrir()
+            for fonte in (16, 20):
+                with self.subTest(largura=largura, fonte=fonte):
+                    self.page.evaluate("v => document.documentElement.style.fontSize = `${v}px`", fonte)
+                    indicadores = self.page.locator(".est-kpis .kpi").evaluate_all("""els => els.map(e => {
+                        const r=e.getBoundingClientRect(), estilo=getComputedStyle(e);
+                        return {left:r.left,right:r.right,width:r.width,
+                            padding:[parseFloat(estilo.paddingLeft),parseFloat(estilo.paddingRight)],
+                            textos:[...e.querySelectorAll('.kpi-rotulo,.kpi-valor,.kpi-nota')].flatMap(t=>{
+                                const range=document.createRange();range.selectNodeContents(t);
+                                return [...range.getClientRects()].map(b=>({texto:t.textContent,left:b.left,right:b.right}));
+                            })};
+                    })""")
+                    self.assertEqual(len(indicadores), 4)
+                    expect(self.page.locator(".est-kpis .kpi-valor").first).to_have_text("R$ 15.241.651,03")
+                    for indicador in indicadores:
+                        self.assertEqual(indicador["padding"], indicadores[0]["padding"])
+                        for texto in indicador["textos"]:
+                            self.assertGreaterEqual(texto["left"], indicador["left"] + indicador["padding"][0] - 1, texto)
+                            self.assertLessEqual(texto["right"], indicador["right"] - indicador["padding"][1] + 1, texto)
+                    if largura <= 390:
+                        self.assertGreater(indicadores[0]["width"], indicadores[1]["width"] * 1.9)
+                        self.assertAlmostEqual(indicadores[1]["width"], indicadores[2]["width"], delta=1)
+                        self.assertAlmostEqual(indicadores[0]["width"], indicadores[3]["width"], delta=1)
+                    self.foto(f"indicadores-{largura}-fonte{fonte}")
 
     def test_quinze_paginas_preservam_abas_antes_do_titulo_em_cinco_estados(self):
         from apps.nucleo.models import Fornecedor, Inventario, ItemInventario, Pessoa
@@ -474,7 +503,7 @@ class EstoqueMobileE2ETests(_BaseE2E):
             self.page.locator(".est-filtros-avancados > summary").click()
             self.page.get_by_label("Categoria", exact=True).select_option(str(self.limpeza.pk))
             self.page.get_by_label("Situação", exact=True).select_option("zerado")
-            self.page.get_by_role("button", name="Aplicar", exact=True).click()
+            self.page.locator(".est-filtros-avancados").get_by_role("button", name="Buscar", exact=True).click()
             self.esperar_layout()
             self.conferir_parametros(local=self.local.pk, categoria=self.limpeza.pk, situacao="zerado")
             expect(self.page.locator(".est-posicao [data-produto-id]")).to_have_count(1)
