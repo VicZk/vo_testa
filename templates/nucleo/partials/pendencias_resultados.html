@@ -12,7 +12,7 @@ pílulas fazendo a mesma coisa (14 pílulas).{% endcomment %}
   {% if estado %}<input type="hidden" name="estado" value="{{ estado }}">{% endif %}
   <label class="pendencias-barra-rotulo" for="pendencias-origem">Origem</label>
   <span class="select-wrap pendencias-origem">
-    <select id="pendencias-origem" name="origem" data-pendencias-auto>
+    <select id="pendencias-origem" name="origem" data-pendencias-auto aria-label="Origem das pendências">
       <option value="">Todas as minhas áreas · {{ total_geral }}</option>
       {% for o in origens %}<option value="{{ o.codigo }}"{% if origem == o.codigo %} selected{% endif %}>{{ o.rotulo }} · {{ o.n }}</option>{% endfor %}
     </select>

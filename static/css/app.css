@@ -7129,9 +7129,10 @@ body.escala-dragging .escala-drop { cursor: copy; }
   }
   .est-posicao .est-kpis .kpi:first-child .kpi-valor { max-width: 100%; font-size: 1.2rem; }
   .est-posicao .est-kpis .kpi:first-child .kpi-nota { grid-column: 1 / -1; }
-  /* Recuo maior do lado da faixa colorida (inset de 3px): com .35rem o rótulo e o
-     número encostavam nela ("Abaixo do mínimo" no celular). */
-  .est-posicao .est-kpis .kpi:not(:first-child) { padding-inline: .75rem .45rem; }
+  /* Recuo maior do lado da faixa colorida (3px): com .35rem o rótulo e o número
+     encostavam nela ("Abaixo do mínimo" no celular). .6rem/.3rem mantém o rótulo em
+     duas linhas a 320px — mais que isso ele ia a três e empurrava a lista para baixo. */
+  .est-posicao .est-kpis .kpi:not(:first-child) { padding-inline: .6rem .3rem; }
   .est-posicao .est-kpis .kpi:not(:first-child) .kpi-rotulo { letter-spacing: 0; overflow-wrap: normal; }
   /* A linha da grade já iguala os cartões. O valor fica na base e o rótulo
      ocupa só as linhas necessárias, sem reservar uma terceira linha vazia. */

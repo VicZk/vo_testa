@@ -156,7 +156,8 @@ class PendenciasOperacionaisE2ETests(_BaseE2E):
         expect(p.locator("[data-pendencia-id]")).to_have_count(2)
         expect(p.locator("[data-governanca-avisos]")).to_have_text("2")
         expect(p.get_by_role("combobox", name="Origem das pendências")).to_have_value("governanca")
-        expect(p.get_by_role("combobox", name="Situação das pendências")).to_have_value("pendente")
+        # A situação deixou de ser um <select>: é a aba ativa do filtro.
+        expect(p.get_by_role("navigation", name="Pendências por situação").locator('[aria-current="page"]')).to_contain_text("Aguardando início")
 
         # O link em foco some com o serviço resolvido; o foco permanece no bloco.
         p.locator("[data-pendencia-id] a").first.focus()
