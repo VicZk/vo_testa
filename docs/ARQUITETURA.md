@@ -793,7 +793,7 @@ Tudo é declarado em **`config/urls.py`**, que compõe o domínio único:
 | `/crm/estoque/…` | `apps.estoque.urls` | equipe | posição, produtos (lista, novo, editar, kardex), cadastros (categorias e depósitos), entrada, saída, transferência, ajuste, inventários e a contagem |
 | `/crm/loja/…` | `apps.loja.urls` | equipe | 6 rotas: `pdv`, `finalizar`, `vendas`, `venda`, `cupom` (80 mm), `cancelar` |
 | `/crm/restaurante/…` | `apps.restaurante.urls` | equipe | 11 rotas (comandas, itens, fechamento, transferência, cupom de 80 mm) |
-| `/crm/lavanderia/…` | `apps.lavanderia.urls` | equipe | 14 rotas (ordens + rouparia + cupom de 80 mm) |
+| `/crm/lavanderia/…` | `apps.lavanderia.urls` | equipe | 20 rotas (fila por etapa, ordem com cesta e observação, histórico, tabela de preços, rouparia com lote, extrato do enxoval e cupom de 80 mm) |
 | `/crm/governanca/…` | `apps.governanca.urls` | equipe | 8 rotas: `painel` (a visão geral da casa), `quartos` (a lista de trabalho, aceita `?estado=`), `discrepancias`, `nova_tarefa` (com `iniciar` abre e já começa), `tarefa_acao`, `status_marcar`, `ronda`, `devolver` (formulário do motivo: modal com HTMX, página sem JS) |
 | `/crm/manutencao/…` | `apps.manutencao.urls` | equipe | 6 rotas (painel, nova, detalhe, iniciar, concluir, cancelar) |
 | `/crm/escala/…` | `apps.escala.urls` | equipe | 12 rotas: `grade`, `gerar`, `editar`, `publicar`, `relatorio`, `atribuir`, `remover_atribuicao`, `minha`, `turnos`, `ausencias`, `trocas`, `decidir_troca` |

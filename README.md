@@ -266,7 +266,7 @@ Detalhes em [§9](#9-testes-e-qualidade).
 | `site` (label **`core`**) | — (serve `/`) | Site público, motor de reservas, páginas legais, e-mails transacionais |
 | `loja` | `loja` | PDV de balcão |
 | `restaurante` | `restaurante` | Comandas por mesa, guarda-sol ou bar |
-| `lavanderia` | `lavanderia` | Serviço de lavanderia ao hóspede + rouparia (enxoval) |
+| `lavanderia` | `lavanderia` | Serviço ao hóspede (fila por etapa, cesta de peças, cobrança) + rouparia (enxoval com lote e extrato) |
 | `governanca` | `governanca` | Situação de limpeza por quarto e fila de faxinas |
 | `manutencao` | `manutencao` | Ordens de serviço, bloqueio e liberação de quarto |
 | `escala` | `escala` | Turnos, grade semanal, ausências e trocas |
@@ -540,9 +540,22 @@ Cupom de 80 mm para impressora térmica pelo navegador (`componentes/cupom.html`
 recibo da venda e, no restaurante, a conferência da conta com a comanda aberta. Não é
 documento fiscal (a NFC-e sai pelo Fiscal).
 
-**Lavanderia.** Ordens de serviço ao hóspede (recebida → lavando → pronta → entregue) e
-rouparia interna como livro-razão de enxoval (limpa, em uso, suja, lavando). O mesmo
-cupom de 80 mm serve de comprovante na recepção da roupa e de recibo na entrega.
+**Lavanderia.** Receber roupa é um gesto no balcão: quem deixou, para quando fica pronta
+(em chip: hoje, amanhã, em 2 dias) e o botão. A ordem abre em seguida com a grade da
+tabela de preços — um toque lança a peça, o serviço por quilo pede o peso (1,5 kg) — e a
+cesta soma na hora; o recado da recepção ("mancha, não passar") sai impresso com a roupa.
+A produção é uma **fila por etapa** (recebida → lavando → pronta), com o próximo passo
+escrito no botão do próprio cartão: a lavadeira faz a fila andar no tablet sem abrir
+ordem nenhuma, e cada passo fica com a hora na trilha da ordem. O que venceu o prazo
+sobe na frente e é o único com cápsula. Na entrega, cobrança no caixa do setor ou na
+conta do quarto (desconto só com a gerência, sempre com trilha) e aviso de "roupa
+pronta" pelo WhatsApp. Histórico com período, situação e busca.
+A **rouparia interna** é o livro-razão do enxoval (limpa → em uso → suja → lavando →
+limpa): cada item mostra a barra da situação e um toque no número já propõe o movimento
+que sai dele; o lote move várias linhas numa transação (tudo ou nada) e o extrato mostra
+cada movimento, com quem, quando e por quê — nada se apaga. A faxina da Governança
+recolhe o enxoval sujo sozinha. O mesmo cupom de 80 mm serve de comprovante na recepção
+da roupa e de recibo na entrega.
 
 **Governança** (pensada para tablet e celular). A entrada é "Como está a casa": os
 quartos em blocos com o número e o estado na frente e quem está dentro (vago, ocupado,

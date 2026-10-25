@@ -1,78 +1,227 @@
 {% extends "base.html" %}
+{% load pecas_lavanderia %}
 
 {% block titulo %}Rouparia | Lavanderia{% endblock %}
 
 {% block conteudo %}
-<p class="pagina-eyebrow letreiro">Lavanderia</p>
-<h1>Rouparia interna</h1>
-<p class="subtitulo">Enxoval da casa por estado. A faxina da Governança recolhe automaticamente o enxoval sujo (em uso → suja).</p>
+<div class="eleg">
+<p class="pagina-eyebrow letreiro">Vendas &amp; Estoque</p>
 {% include "lavanderia/partials/nav.html" %}
+<div class="pagina-cabecalho">
+  <h1>Rouparia interna</h1>
+  <div class="pagina-acoes">
+    <a class="botao-neutro" href="{% url 'lavanderia:extrato' %}">Ver extrato</a>
+  </div>
+</div>
+<p class="subtitulo">Enxoval da casa por estado: limpa → em uso → suja → lavando → limpa. A faxina da Governança recolhe o enxoval sujo sozinha. Toque num número da linha para já preparar o movimento que sai dele.</p>
 
-<div class="colunas colunas-2-1">
-  <section>
-    <h2>Posição do enxoval</h2>
-    <table class="tabela tabela-cartoes">
+<div class="kpis">
+  <div class="kpi">
+    <div class="kpi-topo">
+      <span class="kpi-rotulo letreiro">Limpa na rouparia</span>
+      {% icone_peca "" "estado_limpa" classe="kpi-ico" %}
+    </div>
+    <span class="kpi-valor">{{ kpis.limpa }}</span>
+    <span class="kpi-nota">Pronta para distribuir</span>
+  </div>
+  <div class="kpi">
+    <div class="kpi-topo">
+      <span class="kpi-rotulo letreiro">Fora da rouparia</span>
+      {% icone_peca "" "estado_em_uso" classe="kpi-ico" %}
+    </div>
+    <span class="kpi-valor">{{ kpis.fora }}</span>
+    <span class="kpi-nota">Em uso, suja ou na lavagem</span>
+  </div>
+  <div class="kpi">
+    <div class="kpi-topo">
+      <span class="kpi-rotulo letreiro">Suja esperando</span>
+      {% icone_peca "" "estado_suja" classe="kpi-ico" %}
+    </div>
+    <span class="kpi-valor">{{ kpis.suja }}</span>
+    <span class="kpi-nota">No cesto, à espera de lavagem</span>
+  </div>
+  <div class="kpi{% if kpis.abaixo %} alerta{% endif %}">
+    <div class="kpi-topo">
+      <span class="kpi-rotulo letreiro">Abaixo do alvo</span>
+      {% icone_peca "" "expresso" classe="kpi-ico" %}
+    </div>
+    <span class="kpi-valor">{{ kpis.abaixo }}</span>
+    <span class="kpi-nota">{% if kpis.abaixo %}Itens com rouparia limpa abaixo do alvo{% else %}Todos os itens no alvo{% endif %}</span>
+  </div>
+</div>
+
+<div x-data="rouparia()" :class="{ 'lav-com-lote': marcados.length }">
+{% comment %}O quadro é o livro-razão de cada item: a barra conta a história de
+relance e cada número é o começo de um movimento — tocar no «4» de Suja já propõe
+mandar 4 para lavar no formulário abaixo. Marcar linhas abre o lote (uma
+transação, tudo ou nada).
+
+`data-preservar-erros`: o lote recusado (saldo insuficiente, item que saiu da
+lista) volta com as linhas AINDA marcadas — o redirect limpava as quatro caixas e
+a quantidade, e era preciso remarcar tudo.{% endcomment %}
+<form data-preservar-erros method="post" action="{% url 'lavanderia:rouparia_lote' %}">
+  {% csrf_token %}
+  <div class="quadro">
+    <table class="tabela tabela-cartoes lav-rouparia">
       <thead>
-        <tr><th>Item</th><th class="num">Limpa</th><th class="num">Em uso</th><th class="num">Suja</th><th class="num">Lavando</th><th class="num">Total</th></tr>
+        <tr>
+          <th>Lote</th>
+          <th>Item</th><th>Situação</th>
+          <th class="num">Limpa</th><th class="num">Em uso</th><th class="num">Suja</th><th class="num">Lavando</th>
+          <th class="num">Total</th><th class="num">Alvo</th>
+        </tr>
       </thead>
       <tbody>
         {% for l in posicao %}
           <tr>
-            <td data-rotulo="Item"><div class="tabela-valor">{{ l.item.nome }}{% if l.abaixo_minimo %} <span class="selo prioridade-alta dica" data-dica="Abaixo do mínimo ({{ l.item.minimo }})">Baixo</span>{% endif %}</div></td>
-            <td class="num" data-rotulo="Limpa"><div class="tabela-valor">{{ l.estados.limpa }}</div></td>
-            <td class="num" data-rotulo="Em uso"><div class="tabela-valor">{{ l.estados.em_uso }}</div></td>
-            <td class="num" data-rotulo="Suja"><div class="tabela-valor">{{ l.estados.suja }}</div></td>
-            <td class="num" data-rotulo="Lavando"><div class="tabela-valor">{{ l.estados.lavando }}</div></td>
-            <td class="num" data-rotulo="Total"><div class="tabela-valor"><strong>{{ l.total }}</strong></div></td>
+            <td class="lav-marca lav-col-marca" data-rotulo="Lote">
+              <label class="lav-marca-alvo">
+                <input type="checkbox" name="itens" value="{{ l.item.pk }}" x-model="marcados"
+                       aria-label="Selecionar {{ l.item.nome }} para o lote">
+              </label>
+            </td>
+            <td class="lav-col-item" data-rotulo="Item">
+              <div class="tabela-valor lav-item-nome">
+                {% icone_peca l.item.nome %}<span>{{ l.item.nome }}</span>
+              </div>
+            </td>
+            <td class="lav-col-barra" data-rotulo="Situação">
+              <div class="lav-barra" role="img"
+                   aria-label="{% for f in l.barra %}{{ f.rotulo }} {{ f.quantidade }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+                {% for f in l.barra %}{% if f.pct %}
+                  <span class="lav-barra-parte lav-cor-{{ f.estado }}" style="width: {{ f.pct }}%"
+                        data-dica="{{ f.rotulo }}: {{ f.quantidade }}"></span>
+                {% endif %}{% endfor %}
+              </div>
+            </td>
+            {% for f in l.barra %}
+              <td class="num" data-rotulo="{{ f.rotulo }}">
+                <div class="tabela-valor">
+                  <button type="button" class="lav-cel-acao num" {% if not f.quantidade %}disabled{% endif %}
+                          data-dica="{{ f.rotulo }}: {{ f.quantidade }} · {{ f.proposta }}"
+                          aria-label="{{ f.rotulo }}: {{ f.quantidade }}. {{ f.proposta }}."
+                          @click="propor('{{ l.item.pk }}', '{{ f.acao }}', {{ f.quantidade }})">{{ f.quantidade }}</button>
+                </div>
+              </td>
+            {% endfor %}
+            <td class="num lav-col-total" data-rotulo="Total">
+              <div class="tabela-valor"><strong>{{ l.total }}</strong></div>
+            </td>
+            <td class="num lav-col-alvo" data-rotulo="Alvo">
+              <div class="tabela-valor">
+                {{ l.item.minimo }}
+                {% if l.abaixo_minimo %}<span class="selo selo--acao selo-alerta">Repor</span>{% endif %}
+              </div>
+            </td>
           </tr>
         {% empty %}
-          <tr><td colspan="6" class="vazio">Nenhum item de enxoval. Cadastre ao lado.</td></tr>
+          <tr><td colspan="9" class="vazio">Nenhum item de enxoval. Cadastre o primeiro abaixo.</td></tr>
         {% endfor %}
       </tbody>
     </table>
-  </section>
+  </div>
 
-  <section>
-    <div class="painel-bloco bloco-fim">
-      <h2 class="titulo-topo">Movimentar</h2>
-      <form data-preservar-erros method="post" action="{% url 'lavanderia:rouparia_mover' %}" class="form-cartao" x-data="{ acao: 'adquirir' }">
-        {% csrf_token %}
-        <div class="campo"><label>Item</label>
-          <select name="item" required>{% for i in itens %}<option value="{{ i.pk }}">{{ i.nome }}</option>{% endfor %}</select>
-        </div>
-        <div class="campo"><label>Ação</label>
-          <select name="acao" x-model="acao">
-            <option value="adquirir">Adquirir (entra limpa)</option>
-            <option value="distribuir">Distribuir (limpa → em uso)</option>
-            <option value="coletar">Coletar suja (em uso → suja)</option>
-            <option value="enviar">Enviar p/ lavar (suja → lavando)</option>
-            <option value="receber">Receber limpa (lavando → limpa)</option>
-            <option value="baixar">Baixar (desgaste/dano)</option>
+  {% comment %}A legenda lê o estado do MESMO jeito que a barra: bolinha na cor do
+  estado + texto, sem cápsula — a tabela já é cheia de números.{% endcomment %}
+  <div class="lav-legenda">
+    {% for codigo, rotulo in estados %}<span class="selo lav-cor-{{ codigo }}">{{ rotulo }}</span>{% endfor %}
+  </div>
+
+  <div class="barra-acao lav-lote" x-show="marcados.length" x-cloak>
+    <span class="lav-lote-conta">
+      <strong x-text="marcados.length"></strong>
+      <span x-text="marcados.length === 1 ? 'item selecionado' : 'itens selecionados'"></span>
+    </span>
+    <label class="lav-lote-qtd">Quantidade
+      <input type="number" name="quantidade" min="1" value="1" aria-label="Quantidade por item do lote">
+    </label>
+    {% for codigo, rotulo in acoes_lote %}
+      <button type="submit" name="acao" value="{{ codigo }}" class="botao-neutro">{{ rotulo }}</button>
+    {% endfor %}
+    <button type="button" class="botao-mini" @click="marcados = []">Limpar seleção</button>
+  </div>
+</form>
+
+<div class="gov-colunas">
+  <div class="painel-bloco">
+    <h2 class="titulo-topo">Movimentar</h2>
+    <form data-preservar-erros method="post" action="{% url 'lavanderia:rouparia_mover' %}"
+          class="form-cartao" id="form-mover" x-data="{ acao: 'adquirir' }">
+      {% csrf_token %}
+      <div class="campo"><label for="mover-item">Item</label>
+        <select id="mover-item" name="item" required>
+          {% for i in itens %}<option value="{{ i.pk }}">{{ i.nome }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="campo"><label for="mover-acao">Ação</label>
+        <select id="mover-acao" name="acao" x-model="acao">
+          <option value="adquirir">Adquirir (entra limpa)</option>
+          <option value="distribuir">Distribuir (limpa → em uso)</option>
+          <option value="coletar">Coletar suja (em uso → suja)</option>
+          <option value="enviar">Enviar p/ lavar (suja → lavando)</option>
+          <option value="receber">Receber limpa (lavando → limpa)</option>
+          <option value="baixar">Baixar (desgaste/dano)</option>
+        </select>
+      </div>
+      <div class="form-grade" x-show="acao === 'baixar'" x-cloak>
+        <div class="campo"><label for="mover-estado">De qual estado</label>
+          <select id="mover-estado" name="estado">
+            {% for v, r in estados %}<option value="{{ v }}">{{ r }}</option>{% endfor %}
           </select>
         </div>
-        <div class="form-grade" x-show="acao === 'baixar'" x-cloak>
-          <div class="campo"><label>De qual estado</label>
-            <select name="estado">{% for v, r in estados %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select>
-          </div>
-          <div class="campo"><label>Motivo</label><input type="text" name="motivo" placeholder="desgaste"></div>
+        <div class="campo"><label for="mover-motivo">Motivo</label>
+          <input id="mover-motivo" type="text" name="motivo" placeholder="Desgaste">
         </div>
-        <div class="campo"><label>Quantidade</label><input type="number" name="quantidade" min="1" value="1" required></div>
-        <div class="acoes"><button type="submit" class="botao-primario">Registrar</button></div>
-      </form>
-    </div>
+      </div>
+      <div class="campo"><label for="mover-qtd">Quantidade</label>
+        <input id="mover-qtd" type="number" name="quantidade" min="1" value="1" required>
+      </div>
+      <div class="acoes"><button type="submit" class="botao-primario">Registrar</button></div>
+    </form>
+  </div>
 
-    <div class="painel-bloco">
-      <h2 class="titulo-topo">Novo item de enxoval</h2>
-      <form method="post" action="{% url 'lavanderia:rouparia_item' %}" class="form-cartao">
-        {% csrf_token %}
-        <div class="campo"><label>Nome</label><input type="text" name="nome" placeholder="Ex.: Lençol casal" required></div>
-        <div class="form-grade">
-          <div class="campo"><label>Mínimo (limpa)</label><input type="number" name="minimo" min="0" value="0"></div>
-          <div class="campo"><label>Peças por faxina</label><input type="number" name="por_faxina" min="0" value="0"></div>
+  <div class="painel-bloco">
+    <h2 class="titulo-topo">Novo item de enxoval</h2>
+    <form data-preservar-erros method="post" action="{% url 'lavanderia:rouparia_item' %}" class="form-cartao">
+      {% csrf_token %}
+      <div class="campo"><label for="novo-nome">Nome</label>
+        <input id="novo-nome" type="text" name="nome" placeholder="Ex.: Lençol casal" required>
+      </div>
+      <div class="form-grade">
+        <div class="campo"><label for="novo-minimo">Alvo na rouparia</label>
+          <input id="novo-minimo" type="number" name="minimo" min="0" value="{{ alvo_novo }}">
+          <small class="ajuda">Sugerido: {{ alvo_novo }} ({{ quartos }} quartos × {{ por_faxina_padrao }} por faxina).</small>
         </div>
-        <div class="acoes"><button type="submit" class="botao-primario">Cadastrar</button></div>
-      </form>
-    </div>
-  </section>
+        <div class="campo"><label for="novo-por-faxina">Peças por faxina</label>
+          <input id="novo-por-faxina" type="number" name="por_faxina" min="0" value="{{ por_faxina_padrao }}">
+          <small class="ajuda">Quantas peças deste item uma faxina recolhe.</small>
+        </div>
+      </div>
+      <div class="acoes"><button type="submit" class="botao-primario">Cadastrar</button></div>
+    </form>
+  </div>
 </div>
+</div>
+</div>
+
+<script>
+  function rouparia() {
+    return {
+      marcados: [],
+      // Tocar num número da linha já prepara o movimento certo: a origem define a
+      // ação (o «4» de Suja propõe mandar 4 para lavar) e o campo recebe o máximo.
+      propor(item, acao, maximo) {
+        const f = document.getElementById('form-mover');
+        if (!f) return;
+        f.item.value = item;
+        f.acao.value = acao;
+        f.acao.dispatchEvent(new Event('input'));
+        f.quantidade.value = String(Math.max(1, maximo));
+        f.scrollIntoView({ block: 'center', behavior: 'instant' });
+        f.quantidade.focus();
+        f.quantidade.select();
+      },
+    };
+  }
+</script>
 {% endblock %}

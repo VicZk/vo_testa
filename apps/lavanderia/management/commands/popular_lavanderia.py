@@ -99,6 +99,8 @@ class Command(BaseCommand):
         o3 = services.abrir_ordem(op, rotulo="Balcão avulso")
         services.adicionar_item(o3, servicos["Passar (peça)"], 5, op)
         forma = FormaPagamento.objects.filter(tipo="dinheiro").first() or FormaPagamento.objects.first()
+        services.avancar_status(o3)   # lavando
+        services.avancar_status(o3)   # pronta: a entrega exige a roupa pronta
         services.entregar(o3, op, "caixa", forma=forma)
 
         self.stdout.write(self.style.SUCCESS(

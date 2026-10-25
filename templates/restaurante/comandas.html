@@ -48,7 +48,7 @@
         <strong>{{ c.titulo }}</strong>
         <span class="comanda-hora">{{ c.aberta_em|date:"H:i" }}</span>
       </div>
-      <span class="comanda-card-itens">{{ c.itens.count }} item{{ c.itens.count|pluralize }}</span>
+      <span class="comanda-card-itens">{{ c.itens.count }} ite{{ c.itens.count|pluralize:"m,ns" }}</span>
       <span class="comanda-card-total">{{ c.total|intcomma_brl }}</span>
     </a>
   {% empty %}

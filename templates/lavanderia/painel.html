@@ -1,49 +1,173 @@
 {% extends "base.html" %}
-{% load moeda %}
+{% load moeda nucleo_extras pecas_lavanderia %}
 
 {% block titulo %}Lavanderia | CRM Vô Testa{% endblock %}
 
 {% block conteudo %}
-<p class="pagina-eyebrow letreiro">Vendas & Estoque</p>
+<p class="pagina-eyebrow letreiro">Vendas &amp; Estoque</p>
+{% include "lavanderia/partials/nav.html" %}
+{% comment %}Sem botão de ação aqui: «Rouparia» já é uma aba, logo acima, e os dois
+controles ficavam a 60 px um do outro (no celular o botão virava largura cheia
+abaixo do h1, na melhor faixa da tela, para repetir a aba).{% endcomment %}
 <div class="pagina-cabecalho">
   <h1>Lavanderia</h1>
 </div>
-<p class="subtitulo">Serviço de lavagem ao hóspede: recebida → lavando → pronta → entregue, cobrando na conta do quarto ou no caixa.</p>
-{% include "lavanderia/partials/nav.html" %}
+<p class="subtitulo">Receba no balcão, acompanhe a produção e entregue cobrando no caixa ou na conta do quarto.</p>
+
+{% comment %}Quatro números e nada mais: o que foi prometido para hoje, o que já
+venceu, o que está na máquina e o que o setor recebeu no mês. «Atrasadas» é o
+único que vira link — o que pede ação tem para onde levar.{% endcomment %}
+<div class="kpis">
+  <div class="kpi">
+    <div class="kpi-topo">
+      <span class="kpi-rotulo letreiro">Para entregar hoje</span>
+      {% icone_peca "" "estado_limpa" classe="kpi-ico" %}
+    </div>
+    <span class="kpi-valor">{{ kpis.para_hoje }}</span>
+    <span class="kpi-nota">Prometidas para hoje</span>
+  </div>
+
+  {% if kpis.atrasadas %}
+    <a href="?etapa=atrasadas" class="kpi cartao-link alerta">
+      <div class="kpi-topo">
+        <span class="kpi-rotulo letreiro">Atrasadas</span>
+        {% icone_peca "" "expresso" classe="kpi-ico" %}
+      </div>
+      <span class="kpi-valor">{{ kpis.atrasadas }}</span>
+      <span class="kpi-nota">Prazo vencido e não entregue</span>
+    </a>
+  {% else %}
+    <div class="kpi">
+      <div class="kpi-topo">
+        <span class="kpi-rotulo letreiro">Atrasadas</span>
+        {% icone_peca "" "expresso" classe="kpi-ico" %}
+      </div>
+      <span class="kpi-valor">0</span>
+      <span class="kpi-nota">Nenhum prazo vencido</span>
+    </div>
+  {% endif %}
+
+  <div class="kpi">
+    <div class="kpi-topo">
+      <span class="kpi-rotulo letreiro">Peças em lavagem</span>
+      {% icone_peca "" "estado_lavando" classe="kpi-ico" %}
+    </div>
+    <span class="kpi-valor">{{ kpis.pecas_lavando }}</span>
+    <span class="kpi-nota">Em {{ kpis.ordens_lavando }} orde{{ kpis.ordens_lavando|pluralize:"m,ns" }}{% if kpis.granel_lavando %} · {{ kpis.granel_lavando|quantidade_br }} kg a granel{% endif %}</span>
+  </div>
+
+  <div class="kpi">
+    <div class="kpi-topo">
+      <span class="kpi-rotulo letreiro">Recebido no mês</span>
+      {% icone_peca "" "quilo" classe="kpi-ico" %}
+    </div>
+    <span class="kpi-valor">{{ kpis.mes_total|intcomma_brl }}</span>
+    <span class="kpi-nota">Caixa {{ kpis.mes_caixa|intcomma_brl }} · Conta {{ kpis.mes_conta|intcomma_brl }}</span>
+  </div>
+</div>
 
 {% if not tem_servico %}
-  <p class="bloco-vazio">Cadastre serviços na <a href="{% url 'lavanderia:servicos' %}">tabela de preços</a> antes de abrir ordens.</p>
+  <p class="bloco-vazio">Cadastre serviços na <a href="{% url 'lavanderia:servicos' %}">tabela de preços</a> antes de receber roupa.</p>
 {% else %}
 
-<section class="painel-bloco form-abertura">
-  <h2 class="titulo-topo">Nova ordem</h2>
-  <form data-preservar-erros method="post" action="{% url 'lavanderia:abrir' %}" class="abrir-comanda">
-    {% csrf_token %}
-    {% if contas %}<label class="select-wrap"><select name="conta" aria-label="Estadia vinculada">
-      <option value="">Estadia (opcional)…</option>
-      {% for conta in contas %}<option value="{{ conta.pk }}">{{ conta.reserva.uh.numero }} · {{ conta.reserva.hospede.nome }}</option>{% endfor %}
-    </select></label>{% endif %}
-    {% include "componentes/combo_pessoa.html" with dados=clientes dados_id="clientes-data" campo="cliente" placeholder="Hóspede/cliente…" %}
-    <input type="text" name="rotulo" placeholder="Ou identifique (ex.: quarto 12)">
-    <label class="prazo-campo">Pronto para <input type="date" name="prazo" class="combo-input campo-prazo"></label>
-    <button type="submit" class="botao-primario">Abrir</button>
-  </form>
-</section>
+{% comment %}Receber roupa é um gesto: quem deixou, para quando fica pronta e o
+botão. O resto (peças, peso, cobrança) acontece na ordem, que abre em seguida.
+Os chips de prazo existem porque o `<input type=date>` cru mostra mm/dd/yyyy no
+Chrome em inglês e não há como forçar pt-BR: o caminho comum não toca nele.
 
-<h2>Ordens em produção</h2>
-<div class="comandas-grid">
-  {% for o in abertas %}
-    <a href="{% url 'lavanderia:ordem' o.pk %}" class="comanda-card">
-      <div class="comanda-card-topo">
-        <strong>{{ o.titulo }}</strong>
-        <span class="selo {% if o.status == 'pronta' %}selo-limpa{% else %}selo-em_andamento{% endif %}">{{ o.get_status_display }}</span>
+O bloco RECOLHE no toque (`:open="!toque"`): no tablet da produção ele empurrava a
+fila um scroll inteiro para baixo — a lavadeira abria a tela e não via trabalho
+nenhum. Sem JavaScript o `open` do HTML vale e o bloco fica aberto.{% endcomment %}
+<details open class="painel-bloco lav-receber" :open="!toque"
+         x-data="{ quem: '{% if contas %}hospede{% else %}avulso{% endif %}',
+                   prazo: '{{ prazos.1.iso }}', extenso: '{{ prazos.1.extenso }}', outra: false,
+                   toque: window.matchMedia('(pointer: coarse)').matches }">
+  <summary><h2 class="titulo-topo">Receber roupa</h2></summary>
+  <form data-preservar-erros method="post" action="{% url 'lavanderia:abrir' %}">
+    {% csrf_token %}
+    {% if contas %}
+      <div class="pdv-seg lav-quem" role="group" aria-label="Quem está deixando a roupa">
+        <button type="button" :aria-pressed="quem === 'hospede'" :class="{ativo: quem === 'hospede'}"
+                @click="quem = 'hospede'">Hóspede hospedado</button>
+        <button type="button" :aria-pressed="quem === 'avulso'" :class="{ativo: quem === 'avulso'}"
+                @click="quem = 'avulso'">Cliente avulso</button>
       </div>
-      <span class="comanda-card-itens">{{ o.itens.count }} item{{ o.itens.count|pluralize }}{% if o.prazo %} · pronto {{ o.prazo|date:"d/m" }}{% endif %}</span>
-      <span class="comanda-card-total">{{ o.total|intcomma_brl }}</span>
+    {% endif %}
+
+    <div class="lav-receber-grade">
+      {% if contas %}
+        <div class="campo" x-show="quem === 'hospede'" x-cloak>
+          <label for="lav-conta">Quarto / hóspede</label>
+          <label class="select-wrap">
+            <select id="lav-conta" name="conta">
+              <option value="">Escolha a estadia…</option>
+              {% for conta in contas %}
+                <option value="{{ conta.pk }}">{{ conta.reserva.uh.numero }} · {{ conta.reserva.hospede.nome }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <small class="ajuda">A estadia já preenche a identificação com «Quarto N» e o check-out avisa sobre a ordem.</small>
+        </div>
+      {% endif %}
+
+      <div class="campo" x-show="quem === 'avulso'" x-cloak>
+        <label for="id_cliente">Hóspede / cliente</label>
+        {% include "componentes/combo_pessoa.html" with dados=clientes dados_id="clientes-data" campo="cliente" placeholder="Hóspede/cliente…" %}
+        <input type="text" name="rotulo" placeholder="Ou identifique (ex.: quarto 12)" aria-label="Identificação da ordem">
+      </div>
+
+      <div class="campo">
+        <label id="lav-prazo-rotulo">Pronto para</label>
+        <div class="lav-prazo" role="group" aria-labelledby="lav-prazo-rotulo">
+          {% for p in prazos %}
+            <button type="button" class="filtro-chip"
+                    :aria-pressed="!outra && prazo === '{{ p.iso }}'"
+                    @click="outra = false; prazo = '{{ p.iso }}'; extenso = '{{ p.extenso }}'">{{ p.rotulo }}</button>
+          {% endfor %}
+          <button type="button" class="filtro-chip" :aria-pressed="outra" @click="outra = true">Outra data</button>
+          <span class="lav-data-br" x-show="!outra" x-text="extenso">{{ prazos.1.extenso }}</span>
+        </div>
+        <input type="hidden" name="prazo" :value="outra ? '' : prazo" value="{{ prazos.1.iso }}">
+        <div class="lav-prazo-campo" x-show="outra" x-cloak>
+          <input type="date" name="prazo_data" aria-label="Outra data para ficar pronta">
+        </div>
+      </div>
+    </div>
+
+    <div class="acoes"><button type="submit" class="botao-primario">Receber roupa</button></div>
+  </form>
+</details>
+
+<div class="filtros-chips" role="group" aria-label="Filtrar a fila por etapa">
+  {% for chip in chips %}
+    <a class="filtro-chip" href="{% if chip.codigo %}?etapa={{ chip.codigo }}{% else %}{% url 'lavanderia:painel' %}{% endif %}"
+       {% if chip.ativo %}aria-current="page"{% endif %}>
+      {% if chip.perigo %}<span class="ponto ponto-perigo"></span>{% endif %}
+      {{ chip.rotulo }} <span class="n">{{ chip.n }}</span>
     </a>
-  {% empty %}
-    <p class="bloco-vazio">Nenhuma ordem em produção. Abra a primeira acima.</p>
   {% endfor %}
 </div>
+
+{% if not kpis.contagens.todas %}
+  <p class="bloco-vazio">Nenhuma ordem em produção. Receba a primeira acima.</p>
+{% elif not filas %}
+  <p class="bloco-vazio">Nenhuma ordem nesta etapa.</p>
+{% else %}
+  <div class="lav-fila">
+    {% for fila in filas %}
+      <section class="lav-coluna" aria-label="Ordens em {{ fila.rotulo|lower }}">
+        <div class="secao-cabecalho">
+          <h2>{{ fila.rotulo }}</h2>
+          <span class="secao-contagem">{{ fila.n }}</span>
+        </div>
+        {% for o in fila.ordens %}
+          {% include "lavanderia/partials/fila_cartao.html" with o=o hoje=hoje etapa=etapa %}
+        {% empty %}
+          <p class="bloco-vazio">Nada aqui.</p>
+        {% endfor %}
+      </section>
+    {% endfor %}
+  </div>
+{% endif %}
 {% endif %}
 {% endblock %}

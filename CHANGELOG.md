@@ -9,6 +9,86 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 24/10/2026: Lavanderia redesenhada e plurais em português
+
+- **Receber roupa virou um gesto.** Quem deixou, para quando fica pronta (chip "Hoje ·
+  Amanhã · Em 2 dias") e o botão — o campo de data só aparece em "Outra data", porque o
+  `<input type=date>` cru mostra `mm/dd/yyyy` no Chrome em inglês. A ordem abre em
+  seguida com a grade da tabela de preços: um toque lança a peça, o serviço por quilo
+  abre o campo de peso (1,5 kg, com os pesos de sempre em chip) e a cesta soma na hora,
+  com o resumo na aba para quem está no celular. O recado da recepção ("mancha, não
+  passar") fica na ordem e sai impresso com a roupa.
+- **A produção é uma fila por etapa** (Recebida · Lavando · Pronta), com o próximo passo
+  escrito no botão do próprio cartão: a lavadeira faz a fila andar no tablet sem abrir
+  ordem nenhuma — e, depois de avançar, continua **na fila**, no mesmo filtro, em vez de
+  cair na ordem a cada toque. Quem venceu o prazo sobe na frente e é o único com cápsula
+  vermelha. No tablet, o bloco "Receber roupa" nasce recolhido: antes ele empurrava a
+  fila um scroll inteiro abaixo da dobra e a lavadeira abria a tela sem ver trabalho.
+- **Cada passo da ordem fica com a hora.** A trilha mostra "Recebida 20/10 12:12 ·
+  Lavando 14:30 · Pronta 17:05 · Entregue —" em vez de inventar "Cumprido" e "Agora"
+  onde devia haver horário (dois carimbos novos no banco).
+- **Ordem vazia não anda nem é cobrada:** o botão do próximo passo fica apagado com
+  "Lance ao menos uma peça" enquanto a cesta está vazia, e o servidor recusa — o que não
+  foi contado não é cobrado.
+- **Desconto só com a gerência, de verdade.** A tela já escondia o campo; agora o
+  servidor recusa o desconto de quem não é gerência, e todo desconto fica na trilha de
+  auditoria, como todo ajuste de dinheiro da casa. A forma de cobrança também é
+  conferida no servidor: um valor inventado no lugar de "caixa" ou "conta do quarto"
+  lançava no fólio do hóspede por fora da permissão do Reservas.
+- **Peça é contada, quilo é pesado:** meia camisa não entra mais (cobrava metade e o
+  cartão dizia "0 peças"), e um peso absurdo recebe "informe um número" em vez de uma
+  página de erro.
+- **Rouparia:** cada item mostra a barra da situação (limpa · em uso · suja · lavando) e
+  um toque no número já propõe o movimento que sai dele — agora com pista visual no
+  toque, onde não existe hover. O lote move várias linhas numa transação só (tudo ou
+  nada): se alguma caixinha marcada saiu da lista, o lote é recusado em vez de mover as
+  outras calado, e a recusa volta **com as linhas ainda marcadas**. No celular a barra
+  do lote fica presa ao pé da tela (antes nascia 85 px abaixo da dobra, sem como rolar
+  até ela) e a caixa de marcar passou a ter 44 px de alvo.
+- **Extrato do enxoval** (tela nova): cada movimento com quem, quando e por quê — nada
+  se apaga. Período em chip, como no histórico; "Quem" mostra o nome da pessoa, não o
+  login.
+- **Histórico:** os números do topo e o rodapé do quadro somam o período inteiro por
+  agregação no banco. Antes a tela percorria todas as ordens e todos os itens em memória
+  a cada carregamento (com o chip "Tudo", o histórico completo) e o rodapé não fechava
+  com a página 2.
+- **Tabela de preços:** "Editar" volta com o preço preenchido (o campo nascia vazio
+  porque o valor ia localizado para um `input type=number`, e o preço era obrigatório —
+  quem só queria renomear redigitava de cabeça). Cada serviço tem **ícone**: 36 traçados
+  próprios, do Tabler (MIT) e do Lucide (ISC), com licença e sha256 registrados e
+  conferidos por teste; a escolha pelo desenho agora mora dentro do campo "Ícone",
+  agrupada por tipo, acima do botão de salvar — e sem os ícones de estado do enxoval,
+  que não são serviço.
+- **Correções de interface que valem para o sistema inteiro:** a seta do `<select>`
+  voltou em toda tela elegante (`.eleg`) — Lavanderia, Canais, Conciliação, Estoque e
+  Comercial mostravam caixas sem seta, porque o atalho `background` apagava o desenho;
+  a moldura quebrada do segmentado do balcão (meia caixa com as pontas enroladas) sumiu
+  na Lavanderia e na Loja; a faixa vermelha do cartão atrasado não desaparece mais
+  quando o dedo mira o cartão; e rótulo de KPI em maiúsculas não se hifeniza
+  ("PARA ENTRE-GAR HOJE" a 390 px).
+- **Plural em português:** "2 items" nas comandas do Restaurante e "contagemns" no
+  inventário do Estoque viraram "2 itens" e "2 contagens". O `|pluralize` do Django só
+  acrescenta "s", o que erra toda palavra terminada em m, l, r, z, "ão" ou "ês" — o
+  teste novo `PluralEmPortuguesTests` varre todos os templates e barra o caso.
+- **Modificado:** `apps/lavanderia/` (`models.py` + migrações `0003`/`0004` — ícone,
+  observação, alvo e carimbos de produção; `services.py` — validação por unidade, teto
+  da quantidade, destino conferido, trilha do desconto, carimbos, `mover_lote`;
+  `views.py` — gate do desconto e do destino, volta para a fila, KPIs do histórico por
+  agregação, chips do extrato, lote tudo-ou-nada; `icones.py` e
+  `templatetags/pecas_lavanderia.py`, novos; `urls.py`), `templates/lavanderia/`
+  (`painel.html`, `ordem.html`, `historico.html`, `servicos.html`, `rouparia.html`,
+  `extrato.html` novo e os parciais `cobranca.html`, `fila_cartao.html`, `itens.html`,
+  `nav.html`, `observacao_status.html`), `static/css/app.css` (bloco da Lavanderia,
+  `background-color` no campo `.eleg`, `.pdv-loja .pdv-seg` sem raio, hover do cartão
+  atrasado, `hyphens` do letreiro), `static/vendor/tabler/` e `static/vendor/lucide/`
+  (traçados com LICENSE e `origem.json`), `apps/auditoria/formatacao.py` (rótulo do
+  desconto), `templates/restaurante/comandas.html`, `templates/estoque/inventarios.html`
+  e os testes: `apps/lavanderia/tests.py`, `tests_producao.py`, `tests_tela.py`,
+  `tests_icones.py` (novos), `apps/site/tests_lavanderia_e2e.py` (novo),
+  `apps/nucleo/tests_design.py` (`PluralEmPortuguesTests` + alvo de toque da caixinha do
+  lote), `apps/nucleo/tests_operacionais.py` e `apps/site/tests_operacao_e2e.py`.
+  Documentação: `README.md`, `docs/MODULOS_E_FLUXOS.md` (A.10) e `docs/ARQUITETURA.md`.
+
 ## 23/10/2026: cantos das caixas, canais com ícone e verba alinhada
 
 - O quadrado branco no cantinho das tabelas arredondadas (Pessoas, Reservas, Estoque e

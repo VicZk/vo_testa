@@ -1,0 +1,52 @@
+{
+  "projeto": "Tabler Icons",
+  "versao": "3.31.0",
+  "licenca": "MIT",
+  "origem": "https://github.com/tabler/tabler-icons",
+  "arquivos": {
+    "LICENSE": {
+      "url": "https://raw.githubusercontent.com/tabler/tabler-icons/v3.31.0/LICENSE",
+      "sha256": "d5a3f948ae5cb95bfc4d2f767ef2bf6a778815b0ddb2d1c48037744cf636518e"
+    },
+    "icons/basket.svg": {
+      "url": "https://cdn.jsdelivr.net/npm/@tabler/icons@3.31.0/icons/outline/basket.svg",
+      "sha256": "d1c8c9633adfbfbfc674f7f16b891791cd20dbd170d6a165d518a8bcd5437570"
+    },
+    "icons/hanger.svg": {
+      "url": "https://cdn.jsdelivr.net/npm/@tabler/icons@3.31.0/icons/outline/hanger.svg",
+      "sha256": "b74dab36df703e2c3c93d985e1ec137a07f6df5d7c888ffc580f762e220ea493"
+    },
+    "icons/ironing.svg": {
+      "url": "https://cdn.jsdelivr.net/npm/@tabler/icons@3.31.0/icons/outline/ironing.svg",
+      "sha256": "b59709a174cd200bd34ebbaeb9261db746b4bd0115afc398baf35984e58e93b7"
+    },
+    "icons/jacket.svg": {
+      "url": "https://cdn.jsdelivr.net/npm/@tabler/icons@3.31.0/icons/outline/jacket.svg",
+      "sha256": "142ebfbc9b57aed935586993bce4f9ac89c57cc4c470177ab2a6465b54f82a0a"
+    },
+    "icons/shirt.svg": {
+      "url": "https://cdn.jsdelivr.net/npm/@tabler/icons@3.31.0/icons/outline/shirt.svg",
+      "sha256": "2d96d413a30de8480d24c28fd60f20b8421c3036e4cdc5df6806e7904a48abbf"
+    },
+    "icons/shoe.svg": {
+      "url": "https://cdn.jsdelivr.net/npm/@tabler/icons@3.31.0/icons/outline/shoe.svg",
+      "sha256": "f99fb19ce6dd1ff3530a256e4fb38e0ca72698af97682745adbd2cee625bb559"
+    },
+    "icons/sock.svg": {
+      "url": "https://cdn.jsdelivr.net/npm/@tabler/icons@3.31.0/icons/outline/sock.svg",
+      "sha256": "c78126805c5662391b5e04728edb508d69c423ca59a0c60b20a20d9dc3b1152c"
+    },
+    "icons/tie.svg": {
+      "url": "https://cdn.jsdelivr.net/npm/@tabler/icons@3.31.0/icons/outline/tie.svg",
+      "sha256": "e86796e78e9500b3642be8143448c9eb45aa4e663605f8d49a96937a0f8d977f"
+    },
+    "icons/wash-machine.svg": {
+      "url": "https://cdn.jsdelivr.net/npm/@tabler/icons@3.31.0/icons/outline/wash-machine.svg",
+      "sha256": "547aa0019eb34ddbf2efc9fa875543d747dc61b0f9c016153dfea22b1ce88207"
+    },
+    "icons/wash.svg": {
+      "url": "https://cdn.jsdelivr.net/npm/@tabler/icons@3.31.0/icons/outline/wash.svg",
+      "sha256": "603ca4eb09efaecd4933fc79e2c6726641e2205eb1fdd1208548afd70ad6d86e"
+    }
+  }
+}

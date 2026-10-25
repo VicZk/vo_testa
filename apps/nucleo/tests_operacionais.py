@@ -202,7 +202,8 @@ class OperationalContracts(FixtureMixin, TestCase):
         order = laundry.abrir_ordem(self.op, cliente=self.guest)
         laundry.adicionar_item(order, service, 1, self.op)
         stale = OrdemLavanderia.objects.get(pk=order.pk)
-        laundry.entregar(order, self.op, "caixa", forma=self.cash)
+        # Entrega antecipada confirmada: aqui o que importa é a ordem já encerrada.
+        laundry.entregar(order, self.op, "caixa", forma=self.cash, confirmar=True)
         rejected = False
         try:
             laundry.adicionar_item(stale, service, 2, self.op)
@@ -219,7 +220,7 @@ class OperationalContracts(FixtureMixin, TestCase):
         order = laundry.abrir_ordem(self.op, cliente=self.guest)
         laundry.adicionar_item(order, service, 1, self.op)
         stale = OrdemLavanderia.objects.get(pk=order.pk)
-        laundry.entregar(order, self.op, "caixa", forma=self.cash)
+        laundry.entregar(order, self.op, "caixa", forma=self.cash, confirmar=True)
         try:
             laundry.cancelar_ordem(stale, self.op, "QA another tab")
         except ValidationError:
@@ -291,6 +292,8 @@ class OperationalContracts(FixtureMixin, TestCase):
         service = ServicoLavanderia.objects.create(nome="QA Lavagem", preco=D("12"))
         wash = laundry.abrir_ordem(self.op, cliente=self.guest)
         laundry.adicionar_item(wash, service, 1, self.op)
+        laundry.avancar_status(wash)   # lavando
+        laundry.avancar_status(wash)   # pronta — só então a roupa é entregue
         laundry.entregar(wash, self.op, "conta", conta_id=account.pk)
         self.assertEqual(account.saldo(), D("647"))
         booking.receber_pagamento(account, self.op, self.cash, D("100"))
@@ -489,6 +492,8 @@ class RealConcurrency(FixtureMixin, TransactionTestCase):
         service = ServicoLavanderia.objects.create(nome="QA Lavar", preco=D("12"))
         order = wash.abrir_ordem(self.op, cliente=self.guest)
         wash.adicionar_item(order, service, 1, self.op)
+        wash.avancar_status(order)   # lavando
+        wash.avancar_status(order)   # pronta: a corrida é na entrega, não no fluxo
         rows = self.race(
             2,
             lambda i, o: wash.entregar(o, self.op, "caixa", forma=self.cash),

@@ -1,42 +1,119 @@
 {% extends "base.html" %}
-{% load moeda %}
+{% load l10n moeda pecas_lavanderia %}
 
 {% block titulo %}Tabela de preços | Lavanderia{% endblock %}
 
 {% block conteudo %}
-<p class="pagina-eyebrow letreiro">Lavanderia</p>
-<h1>Tabela de preços</h1>
-<p class="subtitulo">Serviços cobrados do hóspede (natureza SERVIÇO).</p>
-{% include "lavanderia/partials/nav.html" %}
+<div class="eleg">
+  <p class="pagina-eyebrow letreiro">Vendas &amp; Estoque</p>
+  {% include "lavanderia/partials/nav.html" %}
+  <div class="pagina-cabecalho">
+    <h1>Tabela de preços</h1>
+  </div>
+  <p class="subtitulo">O que a Lavanderia cobra do hóspede (natureza SERVIÇO). O ícone de cada linha é o que aparece no balcão e na fila.</p>
 
-<div class="colunas">
-  <section>
-    <h2>Serviços</h2>
+  {% comment %}O quadro fica na largura toda de propósito: dividido ao meio com o
+  formulário, ele caía em modo cartão já a 1440 px e cinco serviços viravam uma
+  página inteira de rótulos repetidos.{% endcomment %}
+  <div class="quadro">
     <table class="tabela tabela-cartoes">
-      <thead><tr><th>Serviço</th><th>Unidade</th><th class="num">Preço</th><th>Situação</th></tr></thead>
+      <thead>
+        <tr><th>Serviço</th><th>Unidade</th><th class="num">Preço</th><th>Situação</th><th class="acao">Ações</th></tr>
+      </thead>
       <tbody>
         {% for s in servicos %}
-          <tr><td data-rotulo="Serviço"><div class="tabela-valor">{{ s.nome }}</div></td><td data-rotulo="Unidade"><div class="tabela-valor">{{ s.get_unidade_display }}</div></td><td class="num" data-rotulo="Preço"><div class="tabela-valor">{{ s.preco|intcomma_brl }}</div></td>
-              <td data-rotulo="Situação"><div class="tabela-valor">{% if s.ativo %}<span class="selo selo-limpa">Ativo</span>{% else %}<span class="selo selo-neutro">Inativo</span>{% endif %}</div></td></tr>
+          <tr>
+            <td data-rotulo="Serviço">
+              <div class="tabela-valor lav-item-nome">
+                {% icone_peca s.nome s.icone %}<span>{{ s.nome }}</span>
+              </div>
+            </td>
+            <td data-rotulo="Unidade"><div class="tabela-valor"><span class="rotulo-dado">{{ s.get_unidade_display }}</span></div></td>
+            <td class="num" data-rotulo="Preço"><div class="tabela-valor">{{ s.preco|intcomma_brl }}</div></td>
+            <td data-rotulo="Situação">
+              <div class="tabela-valor"><span class="selo {% if s.ativo %}selo-limpa{% else %}selo-neutro{% endif %}">{% if s.ativo %}Ativo{% else %}Inativo{% endif %}</span></div>
+            </td>
+            <td class="acao" data-rotulo="Ações">
+              <div class="tabela-valor lav-acoes-linha">
+                <a class="botao-mini" href="?editar={{ s.pk }}">Editar</a>
+                <form method="post" action="{% url 'lavanderia:servico_salvar' s.pk %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="acao" value="{% if s.ativo %}desativar{% else %}reativar{% endif %}">
+                  <button type="submit" class="botao-mini">{% if s.ativo %}Desativar{% else %}Reativar{% endif %}</button>
+                </form>
+              </div>
+            </td>
+          </tr>
         {% empty %}
-          <tr><td colspan="4" class="vazio">Nenhum serviço ainda.</td></tr>
+          <tr><td colspan="5" class="vazio">Nenhum serviço ainda. Cadastre o primeiro abaixo.</td></tr>
         {% endfor %}
       </tbody>
     </table>
-  </section>
-  <section class="painel-bloco">
-    <h2 class="titulo-topo">Novo serviço</h2>
-    <form data-preservar-erros method="post" class="form-cartao">
+  </div>
+
+  {% comment %}O mesmo formulário cria e ALTERA. Antes a tela usava `get_or_create` e
+  respondia «Serviço salvo.» sem gravar nada quando o nome já existia — o preço novo
+  era descartado em silêncio.{% endcomment %}
+  <div class="painel-bloco lav-servico-form" x-data="{ icone: '{{ editar.icone|default:'' }}' }">
+    <h2 class="titulo-topo">{% if editar %}Editar «{{ editar.nome }}»{% else %}Novo serviço{% endif %}</h2>
+    <form data-preservar-erros method="post" class="form-cartao form-cartao-largo">
       {% csrf_token %}
-      <div class="campo"><label>Nome</label><input type="text" name="nome" placeholder="Ex.: Camisa social" required></div>
-      <div class="form-grade">
-        <div class="campo"><label>Unidade</label>
-          <select name="unidade">{% for v, r in unidades %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select>
+      {% if editar %}<input type="hidden" name="pk" value="{{ editar.pk }}">{% endif %}
+      <div class="form-grade lav-servico-grade">
+        <div class="campo"><label for="serv-nome">Nome</label>
+          <input id="serv-nome" type="text" name="nome" placeholder="Ex.: Camisa social"
+                 value="{{ editar.nome|default:'' }}" required>
         </div>
-        <div class="campo"><label>Preço (R$)</label><input type="number" name="preco" min="0" step="0.01" required></div>
+        <div class="campo"><label for="serv-unidade">Unidade</label>
+          <select id="serv-unidade" name="unidade">
+            {% for v, r in unidades %}<option value="{{ v }}"{% if editar.unidade == v %} selected{% endif %}>{{ r }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="campo"><label for="serv-preco">Preço (R$)</label>
+          {% comment %}`unlocalize`: o `value` de um `<input type=number>` é lido pelo
+          navegador em formato de máquina. Com «10,00» o campo nascia VAZIO e quem só
+          queria renomear tinha de redigitar o preço de cabeça.{% endcomment %}
+          <input id="serv-preco" type="number" name="preco" min="0" step="0.01"
+                 value="{{ editar.preco|default:''|unlocalize }}" required>
+        </div>
+        <div class="campo lav-campo-icone"><label for="serv-icone">Ícone</label>
+          <select id="serv-icone" name="icone" x-model="icone">
+            <option value="">Automático pelo nome</option>
+            {% for grupo, opcoes in escolhas_icones %}
+              <optgroup label="{{ grupo }}">
+                {% for chave, rotulo in opcoes %}
+                  <option value="{{ chave }}"{% if editar.icone == chave %} selected{% endif %}>{{ rotulo }}</option>
+                {% endfor %}
+              </optgroup>
+            {% endfor %}
+          </select>
+          <small class="ajuda">Vazio: escolhido pelo nome do serviço (camisa, calça, quilo…).</small>
+
+          {% comment %}A grade dos desenhos mora DENTRO do campo do ícone, acima do
+          botão: fora do formulário e abaixo do submit, quem preenchia de cima para
+          baixo salvava antes de ver que existia. Agrupada por tipo, porque 31
+          traçados numa fileira só não se procuram — e os ícones de ESTADO não entram:
+          são a cor da barra da rouparia, não um serviço que o hóspede compra.{% endcomment %}
+          <p class="ajuda">Ou escolha pelo desenho:</p>
+          <div class="lav-icones-previa" role="group" aria-label="Escolher o ícone pelo desenho">
+            {% for grupo, opcoes in escolhas_icones %}
+              <p class="lav-icones-grupo letreiro">{{ grupo }}</p>
+              <div class="lav-icones-fileira">
+                {% for chave, rotulo in opcoes %}
+                  <button type="button" class="lav-icone-opcao" :aria-pressed="icone === '{{ chave }}'"
+                          data-dica="{{ rotulo }}" aria-label="{{ rotulo }}"
+                          @click="icone = '{{ chave }}'">{% icone_peca "" chave %}</button>
+                {% endfor %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
       </div>
-      <div class="acoes"><button type="submit" class="botao-primario">Salvar</button></div>
+      <div class="acoes">
+        <button type="submit" class="botao-primario">{% if editar %}Salvar serviço{% else %}Cadastrar serviço{% endif %}</button>
+        {% if editar %}<a class="botao-neutro" href="{% url 'lavanderia:servicos' %}">Cancelar</a>{% endif %}
+      </div>
     </form>
-  </section>
+  </div>
 </div>
 {% endblock %}

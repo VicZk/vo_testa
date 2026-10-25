@@ -1737,7 +1737,7 @@ class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
         p = self.page
         self.abrir("lavanderia:ordem", self.ordem.pk)
         p.locator(".pdv-produto").filter(has_text="Lavagem de camisa QA").click()
-        expect(p.locator("#ordem-itens .comanda-total-linha")).to_contain_text("24,00")
+        expect(p.locator("#ordem-itens .pdv-total")).to_contain_text("24,00")
         self.enviar("Enviar para lavagem")
         self.enviar("Marcar como pronta")
         p.locator("select[name=forma]").select_option(str(self.cash.pk))

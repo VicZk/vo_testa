@@ -35,6 +35,12 @@ class LavanderiaBase(TestCase):
         return SessaoCaixa.objects.create(operador=self.op, modulo="lavanderia",
                                           fundo_troco=Decimal("0.00"))
 
+    def pronta(self, ordem):
+        """Leva a ordem até 'pronta' — só o que está pronto pode ser entregue."""
+        services.avancar_status(ordem)
+        services.avancar_status(ordem)
+        return ordem
+
 
 # ───────── (a) Serviço ao hóspede ─────────
 
@@ -52,6 +58,10 @@ class OrdemHospedeTests(LavanderiaBase):
 
     def test_fluxo_status(self):
         o = services.abrir_ordem(self.op, rotulo="Q1")
+        # Ordem sem peça não anda: o que não foi contado não é cobrado.
+        with self.assertRaises(ValidationError):
+            services.avancar_status(o)
+        services.adicionar_item(o, self.camisa, 1, self.op)
         self.assertEqual(o.status, OrdemLavanderia.Status.RECEBIDA)
         services.avancar_status(o)
         self.assertEqual(o.status, OrdemLavanderia.Status.LAVANDO)
@@ -64,6 +74,7 @@ class OrdemHospedeTests(LavanderiaBase):
         sessao = self.abrir_caixa()
         o = services.abrir_ordem(self.op, rotulo="Q1")
         services.adicionar_item(o, self.camisa, 2, self.op)
+        self.pronta(o)
         services.entregar(o, self.op, "caixa", forma=self.dinheiro)
         o.refresh_from_db()
         self.assertEqual(o.status, OrdemLavanderia.Status.ENTREGUE)
@@ -83,6 +94,7 @@ class OrdemHospedeTests(LavanderiaBase):
         conta = r.fazer_checkin(self.op)
         o = services.abrir_ordem(self.op, cliente=hospede)
         services.adicionar_item(o, self.camisa, 3, self.op)
+        self.pronta(o)
         services.entregar(o, self.op, "conta", conta_id=conta.pk)
         lanc = LancamentoConta.objects.filter(conta=conta, tipo="servico").first()
         self.assertIsNotNone(lanc)
@@ -92,6 +104,7 @@ class OrdemHospedeTests(LavanderiaBase):
         self.abrir_caixa()
         o = services.abrir_ordem(self.op, rotulo="Q1")
         services.adicionar_item(o, self.camisa, 1, self.op)
+        self.pronta(o)
         services.entregar(o, self.op, "caixa", forma=self.dinheiro)
         with self.assertRaises(ValidationError):
             services.cancelar_ordem(o, self.op, "tarde demais")
@@ -176,6 +189,7 @@ class CupomTests(LavanderiaBase):
         self.assertContains(self.client.get(reverse("lavanderia:ordem", args=[o.pk])),
                             "Imprimir comprovante")
         self.abrir_caixa()
+        self.pronta(o)
         services.entregar(o, self.op, "caixa", forma=self.dinheiro)
         r = self.client.get(url)
         self.assertNotContains(r, "Comprovante de recebimento")

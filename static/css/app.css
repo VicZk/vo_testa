@@ -4138,7 +4138,10 @@ div.porta.dica[data-dica] { cursor: default; }
 .pdv-estoque-nota { margin: .4rem 1rem .8rem; font-size: max(var(--rotulo-min), 0.72rem); line-height: 1.4; color: var(--tinta-suave); }
 .pdv-loja .pdv-resumo { padding: 1rem; }
 .pdv-loja .pdv-painel .pdv-cliente, .pdv-loja .pdv-painel .pdv-seg, .pdv-loja .pdv-painel > .select-wrap { margin-left: 1rem; margin-right: 1rem; }
-.pdv-loja .pdv-seg { border-radius: var(--raio); }
+/* O segmentado da casa é uma fileira de abas com hairline só embaixo (`border:0;
+   border-bottom:1px`): com raio, o fio curvava para cima nas duas pontas e virava
+   meia caixa. Aqui ele não tem moldura — logo, não tem raio. */
+.pdv-loja .pdv-seg { border-radius: 0; }
 .pdv-loja .pdv-seg button { min-height: 44px; border-radius: var(--raio-p); }
 .pdv-loja .input-reais input { min-height: 44px; }
 .pdv-loja .pdv-finalizar { margin: 1rem !important; flex-wrap: wrap; }
@@ -6485,7 +6488,10 @@ body.escala-dragging .escala-drop { cursor: copy; }
 .eleg input[type=datetime-local], .eleg select, .eleg textarea,
 .cartao-el input[type=text], .cartao-el input[type=number], .cartao-el select, .cartao-el textarea {
   width: 100%; padding: .6rem .75rem; border: 1px solid var(--fio-forte); border-radius: var(--raio-p);
-  background: var(--superficie); color: var(--tinta); font: inherit; margin-top: .25rem;
+  /* `background-color`, nunca o atalho `background`: o atalho zerava o
+     `background-image` da seta do `<select>` da casa (mesma especificidade, e esta
+     regra vem depois), e o campo lia como caixa de texto em toda tela `.eleg`. */
+  background-color: var(--superficie); color: var(--tinta); font: inherit; margin-top: .25rem;
 }
 .qr-el { width: 100%; max-width: 180px; border-radius: var(--raio); }
 /* QR do hóspede (recepção → Portal): bloco estreito e centrado, o código no meio.
@@ -8149,6 +8155,11 @@ html.com-js [data-precos-filtros][hidden] { display: block; visibility: hidden; 
 .mk-aviso-acao { height: auto; min-height: var(--controle-h); }
 .est-posicao .est-tabela td > a.est-produto-nome { display: inline-flex; align-items: center; min-height: var(--controle-h); }
 .painel-visao > .kpis .kpi-rotulo, .conteudo :is(.kpi-rotulo,.indicador-rotulo) { overflow-wrap: break-word; hyphens: auto; }
+/* Rótulo em MAIÚSCULAS com tracking não se hifeniza: «PARA ENTRE-GAR HOJE» lê como
+   erro de digitação (visto a 390 px na Lavanderia). A quebra de palavra comprida
+   continua valendo pelo `overflow-wrap`. */
+.painel-visao > .kpis .kpi-rotulo.letreiro,
+.conteudo :is(.kpi-rotulo,.indicador-rotulo).letreiro { hyphens: manual; }
 @container conteudo (max-width: 48rem) {
   .mk-colunas { scroll-snap-type: x proximity; }
   .mk-coluna { width: min(100%,22rem); scroll-snap-align: start; }
@@ -8419,3 +8430,368 @@ html.com-js [data-precos-filtros][hidden] { display: block; visibility: hidden; 
    subtítulo ou não. O título passa a ser o da seção aberta. */
 .pagina-eyebrow + .abas-secao { margin: .35rem 0 1rem; }
 .abas-secao + .pagina-cabecalho { margin-top: .2rem; margin-bottom: 1.1rem; }
+
+/* ═══════════════════════════════════════════════════════════════
+   LAVANDERIA — balcão, fila de produção e rouparia
+
+   A tela da ordem REUSA o `.pdv-loja` da Loja: é o mesmo gesto (escolher numa
+   grade, conferir num painel) e com ele já vêm a container query
+   `@container pdv (max-width: 760px)`, o stepper de 44 px, o cartão com
+   ilustração, o `:active` e as abas «Peças | Cesta». Daqui para baixo moram só
+   as DIFERENÇAS da Lavanderia: a tira de ícones da peça, o campo de quilo, a
+   trilha da ordem, a fila por etapa e o livro-razão da rouparia.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Ícone da peça / serviço / enxoval / estado (`{% icone_peca %}`) na mesma forma
+   do `.ico-canal--traco` do Marketing: traçado monocromático, na cor do texto ao
+   redor, que não encolhe — e o nome SEMPRE em texto ao lado. */
+.ico-peca {
+  width: 19px; height: 19px; flex: none; vertical-align: -.24em;
+  fill: none; stroke: currentColor; stroke-width: 1.9;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.ico-peca--grande { width: 30px; height: 30px; }
+.kpi-ico.ico-peca { width: 20px; height: 20px; }
+
+/* Fileira de chips de filtro (a fila da Lavanderia, o período do histórico):
+   quem decide quantos cabem por linha é o espaço, não a janela. */
+.filtros-chips { display: flex; flex-wrap: wrap; gap: .45rem; margin: 0 0 1.1rem; }
+
+/* A ordem na linha do tempo — estado novo é UMA linha de `--selo-cor`. A cápsula
+   fica só para a cancelada (`.selo-perigo`), que é a única que pede alguém. */
+.selo-lav-recebida { --selo-cor: var(--info); }
+.selo-lav-lavando  { --selo-cor: var(--andamento); }
+.selo-lav-pronta   { --selo-cor: var(--sucesso); }
+.selo-lav-entregue { --selo-cor: var(--fio-forte); }
+
+/* ───────── Painel — receber roupa (quem → pronto para → botão) ───────── */
+.lav-receber { margin-bottom: var(--espaco-secao); }
+/* «Receber roupa» é um bloco que RECOLHE: no toque ele nasce fechado, porque no
+   tablet da produção o bloco inteiro empurrava a fila um scroll abaixo da dobra
+   (primeiro cartão a 1125 px numa janela de 1000 px). O chevron é o da casa. */
+.lav-receber > summary { display: flex; align-items: center; }
+.lav-receber > summary h2 { margin: 0; }
+.lav-receber[open] > summary { margin-bottom: .2rem; }
+.lav-receber .lav-quem { margin-top: 0 !important; max-width: 24rem; }
+.lav-receber-grade {
+  display: grid; gap: .9rem; margin-top: .9rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
+  align-items: end;
+}
+.lav-receber-grade > * { min-width: 0; }
+.lav-receber-grade .campo { margin-bottom: 0; }
+.lav-receber .acoes { margin-top: 1.1rem; }
+/* «Pronto para»: três chips resolvem o caminho comum. O `<input type=date>` cru
+   mostra mm/dd/yyyy no Chrome em inglês e não há como forçar pt-BR — por isso o
+   caminho comum não passa pelo campo de data, que fica atrás de «Outra data». */
+.lav-prazo { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem; margin-top: .4rem; }
+.lav-data-br {
+  font-size: 0.82rem; font-weight: 600; color: var(--madeira);
+  font-variant-numeric: tabular-nums;
+}
+.lav-prazo-campo { flex: 1 1 11rem; min-width: 0; margin: 0; }
+
+/* ───────── Painel — a fila por etapa ─────────
+   Três colunas que decidem pelo ESPAÇO: a 821 px com o menu aberto sobram
+   ~500 px e a fila cai para uma coluna sozinha, sem `@media`. */
+.lav-fila {
+  display: grid; gap: 1rem; align-items: start;
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+}
+.lav-fila > * { min-width: 0; }
+.lav-coluna { display: flex; flex-direction: column; gap: .7rem; min-width: 0; }
+.lav-coluna > * { min-width: 0; }
+.lav-coluna .secao-cabecalho { margin-bottom: 0; }
+.lav-coluna .bloco-vazio { padding: .1rem 0 .5rem; }
+
+.lav-ordem {
+  position: relative; display: grid; gap: .5rem; margin: 0; padding: .95rem 1.05rem;
+  transition: border-color var(--mov-rapido) var(--curva), box-shadow var(--mov-rapido) var(--curva);
+}
+.lav-ordem:hover { border-color: color-mix(in srgb, var(--lampiao) 55%, var(--fio)); box-shadow: var(--sombra-2); }
+/* Vencida: faixa interna na cor do perigo (a cápsula do atraso já grita o texto;
+   a faixa é só para achar o cartão de longe, na fila do tablet). O hover repete a
+   faixa: sem isto ela SUMIA justo quando o dedo mirava o cartão vencido. */
+.lav-ordem--atrasada { box-shadow: var(--sombra-cartao), inset 3px 0 0 var(--perigo); }
+.lav-ordem--atrasada:hover { box-shadow: var(--sombra-2), inset 3px 0 0 var(--perigo); }
+.lav-ordem-topo { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .4rem; }
+/* O cartão INTEIRO abre a ordem (no tablet o dedo mira o cartão, não a palavra);
+   o `<form>` do próximo passo sobe para cima dessa camada. */
+.lav-ordem-link {
+  min-width: 0; font-family: var(--fonte-titulo); font-size: 1.02rem; font-weight: 600;
+  color: var(--noturno); text-decoration: none; overflow-wrap: anywhere;
+}
+.lav-ordem-link::before { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+.lav-ordem-pecas { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .45rem; margin: 0; }
+.lav-ordem-pecas .ico-peca { color: var(--tinta-suave); }
+.lav-ordem-conta { font-size: 0.86rem; color: var(--tinta); font-variant-numeric: tabular-nums; }
+.lav-ordem-linha {
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
+  gap: .3rem .6rem; font-size: 0.86rem; color: var(--tinta-suave);
+}
+.lav-ordem-total { font-weight: 700; color: var(--noturno); }
+.lav-ordem-passo { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: .5rem; }
+.lav-ordem-passo > * { flex: 1 1 11rem; min-width: 0; margin: 0; }
+.lav-ordem-passo :is(.botao-primario, .botao-neutro) { width: 100%; text-align: center; justify-content: center; }
+
+/* ───────── Ordem — trilha, atraso e o próximo passo ─────────
+   Só «Recebida» e «Entregue» têm hora gravada no banco; o passo já cumprido sem
+   coluna de data aparece como «Cumprido», em vez de inventar um carimbo. */
+.lav-trilha {
+  display: grid; gap: .6rem .9rem; margin: 1rem 0 0; padding: .9rem 1rem; list-style: none;
+  grid-template-columns: repeat(auto-fit, minmax(min(5.5rem, 100%), 1fr));
+  background: var(--superficie); border: 1px solid var(--fio);
+  border-radius: var(--raio); box-shadow: var(--sombra-1);
+}
+.lav-trilha-passo {
+  display: grid; gap: .15rem; min-width: 0; padding-top: .5rem;
+  border-top: 3px solid var(--fio); color: var(--tinta-suave);
+}
+.lav-trilha-passo.feito { border-top-color: var(--sucesso); color: var(--tinta); }
+.lav-trilha-passo[aria-current="step"] { border-top-color: var(--lampiao); color: var(--noturno); }
+.lav-trilha-rotulo {
+  font-size: var(--rotulo-min); font-weight: 700; letter-spacing: .07em;
+  text-transform: uppercase;
+}
+.lav-trilha-carimbo { font-size: 0.84rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.lav-atraso {
+  display: flex; align-items: center; gap: .45rem; margin: .8rem 0 0;
+  font-size: 0.9rem; font-weight: 600; color: var(--perigo);
+}
+/* O próximo passo mora FORA das duas colunas do balcão: no celular a aba «Peças»
+   esconde a cesta, e o passo da ordem tem de continuar ao alcance do dedo. */
+.lav-passo { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem .9rem; margin: 1rem 0 0; }
+.lav-passo form { margin: 0; }
+.lav-passo .botao-primario { min-width: min(16rem, 100%); text-align: center; justify-content: center; }
+/* Ordem sem peça não anda: o botão fica apagado com a ajuda do lado dizendo o que
+   falta (antes ele era o único CTA da tela e levava a ordem vazia até «Pronta»). */
+.lav-passo .botao-primario:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
+.lav-passo .ajuda { flex: 1 1 14rem; min-width: 0; margin: 0; }
+
+/* ───────── Ordem — a grade de lançamento ───────── */
+.lav-pdv .pdv-lista { align-items: start; }
+.lav-peca { align-items: stretch; }
+.produto-ilustracao--lav { color: var(--madeira); background: var(--lampiao-claro); }
+/* O «+» só existia no hover do mouse: no tablet ninguém via a afordância. */
+.lav-pdv .pdv-add { opacity: .5; transform: none; }
+.lav-pdv .pdv-produto:hover:not(:disabled) .pdv-add { opacity: 1; transform: none; }
+/* Serviço por quilo não soma 1 — ele pede o peso. O campo abre embaixo do cartão,
+   com os pesos de sempre em chip (o model já aceita 3 casas: 3,400 kg). */
+.lav-granel { display: grid; gap: .4rem; min-width: 0; }
+.lav-peso {
+  display: grid; gap: .5rem; padding: .7rem;
+  background: var(--superficie-2); border: 1px solid var(--fio); border-radius: var(--raio-p);
+}
+.lav-peso label {
+  font-size: var(--rotulo-min); font-weight: 700; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--tinta-suave);
+}
+.lav-peso input {
+  width: 100%; min-width: 0; min-height: 44px; margin: 0; padding: .45rem .6rem;
+  font: inherit; font-variant-numeric: tabular-nums; text-align: right; color: var(--tinta);
+  background: var(--superficie); border: 1px solid var(--fio-forte); border-radius: var(--raio-p);
+}
+/* Os quatro pesos de sempre em uma fileira só: dentro de um cartão de 172 px eles
+   quebravam 3 + 1, e a última virava uma linha solta. */
+.lav-peso-chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .3rem; }
+.lav-peso-chips .filtro-chip { justify-content: center; }
+.lav-peso-chips .filtro-chip { min-height: 34px; padding: .2rem .6rem; font-variant-numeric: tabular-nums; }
+.lav-peso .botao-primario { width: 100%; text-align: center; justify-content: center; }
+
+/* ───────── Ordem — a cesta e a cobrança ───────── */
+.lav-pdv .pdv-item-nome { display: flex; align-items: flex-start; gap: .4rem; }
+.lav-pdv .pdv-item-nome > span { min-width: 0; overflow-wrap: anywhere; }
+.lav-pdv .pdv-item-nome .ico-peca { color: var(--tinta-suave); margin-top: .1rem; }
+/* Cobrança, aviso e observação são blocos do painel: o recuo lateral é o do
+   cartão, o mesmo do `.pdv-resumo`. */
+.lav-pdv .pdv-painel > :is(.lav-cobranca, .lav-aviso-pronta, .lav-obs, .lav-sensiveis) {
+  margin: 0 1rem 1rem; min-width: 0;
+}
+.lav-cobranca { display: grid; gap: .6rem; }
+.lav-pdv .lav-cobranca .pdv-seg { margin: 0 !important; }
+.lav-pdv .lav-cobranca .pdv-finalizar { width: 100%; margin: .2rem 0 0 !important; }
+.lav-cobranca-linha { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; }
+.lav-cobranca-linha label { font-size: 0.84rem; font-weight: 600; color: var(--tinta-suave); }
+.lav-vincular { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem; }
+.lav-vincular .select-wrap { flex: 1 1 11rem; min-width: 0; }
+.lav-aviso-pronta {
+  padding: .8rem .9rem; background: var(--sucesso-bg); border-radius: var(--raio-p);
+  border: 1px solid color-mix(in srgb, var(--sucesso) 28%, transparent);
+}
+.lav-aviso-pronta .copiar { margin-top: .3rem; }
+.lav-obs { display: grid; gap: .3rem; }
+.lav-obs label {
+  font-size: var(--rotulo-min); font-weight: 700; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--tinta-suave);
+}
+.lav-obs textarea { width: 100%; min-width: 0; margin: 0; resize: vertical; }
+.lav-sensiveis { display: grid; gap: .5rem; }
+
+
+/* A cesta rola dentro do painel, mas o total não sai de vista: ele é o número
+   que o operador confere antes de cobrar. */
+.lav-cesta { min-width: 0; }
+.lav-cesta .pdv-total {
+  position: sticky; bottom: 0; margin-top: .2rem; padding: .45rem .4rem .25rem;
+  background: var(--superficie); border-top: 1px solid var(--fio);
+}
+.lav-pdv .pdv-item-qtd { font-size: 0.86rem; color: var(--tinta-suave); }
+/* Na Loja a quantidade é sempre inteira; aqui o granel mostra «1,5» — número na
+   tela é tabular, sempre. */
+.lav-pdv .pdv-qtd span { font-variant-numeric: tabular-nums; }
+.lav-pdv .lav-sensiveis .lav-cobranca { margin-top: .7rem; }
+
+
+
+/* Histórico: o «#12» é o link que abre a ordem. */
+.lav-hist-num { display: inline-flex; align-items: center; justify-content: flex-end; min-width: 2.5rem; }
+/* Extrato: o sinal diz de relance se a peça entrou ou saiu do estado. */
+.lav-mov-sinal { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--sucesso); }
+.lav-mov-sinal.saiu { color: var(--tinta-suave); }
+/* ───────── Tabela de preços — escolher o ícone vendo o traçado ───────── */
+/* As duas ações da linha ficam lado a lado: a coluna é `width: 1%`, então quem
+   permite quebra tem min-content de UM botão e elas empilhavam, dobrando a linha. */
+.lav-acoes-linha { display: flex; flex-wrap: nowrap; align-items: center; justify-content: flex-end; gap: .4rem; }
+.lav-acoes-linha form { margin: 0; }
+@container tabela (max-width: 48rem) {
+  .lav-acoes-linha { flex-wrap: wrap; justify-content: flex-start; }
+}
+/* O campo do ícone leva a grade de desenhos: ele ocupa a linha inteira do
+   formulário, senão os 31 traçados empilhariam dentro de uma coluna de 13rem. */
+.lav-campo-icone { grid-column: 1 / -1; }
+.lav-icones-previa { display: grid; gap: .35rem; margin-top: .4rem; }
+.lav-icones-grupo { margin: .35rem 0 0; color: var(--tinta-suave); }
+.lav-icones-fileira { display: flex; flex-wrap: wrap; gap: .3rem; }
+.lav-icone-opcao {
+  display: grid; place-items: center; width: 40px; height: 40px; padding: 0;
+  color: var(--tinta-suave); background: var(--superficie);
+  border: 1px solid var(--fio); border-radius: var(--raio-p); cursor: pointer;
+  transition: border-color var(--mov-rapido) var(--curva), color var(--mov-rapido) var(--curva),
+              transform var(--mov-toque) var(--curva);
+}
+.lav-icone-opcao:hover { border-color: var(--fio-forte); color: var(--tinta); }
+.lav-icone-opcao:active { transform: scale(.94); }
+.lav-icone-opcao[aria-pressed="true"] {
+  color: var(--noturno); background: var(--lampiao-claro); border-color: var(--lampiao);
+}
+
+.lav-servico-form { margin-top: var(--espaco-secao); }
+.lav-servico-grade { grid-template-columns: repeat(auto-fit, minmax(min(13rem, 100%), 1fr)); }
+/* ───────── Rouparia — o livro-razão do enxoval ───────── */
+.lav-item-nome { display: flex; align-items: center; gap: .45rem; min-width: 0; }
+.lav-item-nome .ico-peca { color: var(--tinta-suave); }
+.lav-item-nome > span { min-width: 0; overflow-wrap: anywhere; }
+/* Barra da situação do item: mesma mecânica da `.gov-barra` da Governança —
+   quatro fatias somando 100, cada estado na sua cor semântica. */
+.lav-barra {
+  display: flex; height: 12px; min-width: 6rem; overflow: hidden;
+  background: var(--superficie-2); border: 1px solid var(--fio);
+  border-radius: var(--raio-pilula);
+}
+/* Uma cor por estado serve às DUAS leituras: a fatia da barra e a bolinha da
+   legenda (que é `.selo`, e lê `--selo-cor`). Estado novo = uma linha. */
+.lav-cor-limpa   { --selo-cor: var(--sucesso); }
+.lav-cor-em_uso  { --selo-cor: var(--info); }
+.lav-cor-suja    { --selo-cor: var(--alerta); }
+.lav-cor-lavando { --selo-cor: var(--andamento); }
+.lav-barra-parte {
+  display: block; min-width: 2px; background: var(--selo-cor);
+  transition: width var(--mov-padrao) var(--curva);
+}
+.lav-legenda { display: flex; flex-wrap: wrap; gap: .25rem 1.1rem; margin: .9rem 0 0; }
+/* Cada número da linha começa um movimento: tocar no «4» de Suja propõe mandar 4
+   para lavar. A CAIXA de toque cresce (bloco de toque, lá embaixo); o desenho fica. */
+.lav-cel-acao {
+  display: inline-block; padding: .25rem .4rem; margin: -.25rem -.4rem;
+  font: inherit; font-variant-numeric: tabular-nums; color: var(--madeira);
+  background: none; border: 0; border-radius: var(--raio-p); cursor: pointer;
+  transition: background var(--mov-rapido) var(--curva), transform var(--mov-toque) var(--curva);
+}
+.lav-cel-acao:hover { background: var(--lampiao-claro); color: var(--noturno); }
+.lav-cel-acao:active { transform: scale(.94); }
+.lav-cel-acao:disabled { color: var(--tinta-suave); cursor: default; }
+.lav-cel-acao:disabled:hover { background: none; }
+.lav-marca { width: 1%; }
+.lav-marca-alvo { display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.lav-marca-alvo input { width: 20px; height: 20px; margin: 0; }
+.lav-rouparia .lav-col-total { font-weight: 700; color: var(--noturno); }
+/* Lote: a barra só existe quando há linha marcada — e uma transação só, tudo ou nada. */
+.lav-lote { flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: .5rem .7rem; }
+.lav-lote-conta { margin-right: auto; font-size: 0.9rem; color: var(--tinta); }
+.lav-lote-conta strong { font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+.lav-lote-qtd { display: flex; align-items: center; gap: .45rem; font-size: 0.84rem; color: var(--tinta-suave); }
+.lav-lote-qtd input {
+  width: 5.5rem; min-height: 40px; margin: 0; padding: .35rem .55rem;
+  font: inherit; text-align: right; font-variant-numeric: tabular-nums; color: var(--tinta);
+  background: var(--superficie); border: 1px solid var(--fio-forte); border-radius: var(--raio-p);
+}
+
+@container tabela (max-width: 48rem) {
+  /* A linha do enxoval vira cartão: identidade e barra em cima (é o que se lê de
+     relance) e os quatro estados numa grade 2×2, em vez de quatro linhas iguais.
+     A folga de linha existe porque o número é um alvo de 44 px com caixa maior que
+     o desenho: sem ela, duas áreas de toque vizinhas se encostariam. */
+  .tabela.tabela-cartoes.lav-rouparia tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem .9rem; }
+  .tabela.tabela-cartoes.lav-rouparia td:is(.lav-col-marca, .lav-col-item, .lav-col-barra, .lav-col-total, .lav-col-alvo, [colspan]) { grid-column: 1 / -1; }
+  /* A caixa de marcar fica NA LINHA do rótulo «Lote»: abaixo de 22rem a casa empilha
+     rótulo e valor em toda célula, e aqui isso deixava a caixinha sozinha no meio. */
+  .tabela.tabela-cartoes.lav-rouparia td.lav-col-marca {
+    flex-direction: row; align-items: center; justify-content: flex-start; gap: .7rem;
+  }
+  /* `minmax(0, 1fr)` explícito: sem ele a faixa é medida pelo max-content do rótulo
+     e a barra encolhia a um terço do cartão. */
+  .tabela.tabela-cartoes.lav-rouparia td.lav-col-barra { display: grid; grid-template-columns: minmax(0, 1fr); gap: .3rem; }
+  .tabela.tabela-cartoes.lav-rouparia td.lav-col-barra::before { max-width: none; white-space: nowrap; }
+  .tabela.tabela-cartoes.lav-rouparia td.lav-col-total { margin-top: .35rem; padding-top: .5rem; border-top: 1px solid var(--fio); }
+  .tabela.tabela-cartoes.lav-rouparia td[data-rotulo]::before { flex: 0 0 auto; max-width: 60%; }
+  .tabela.tabela-cartoes.lav-rouparia .lav-barra { width: 100%; }
+  /* O cartão abre pelo NOME do item: antes a primeira linha era «Lote ☐» e a
+     identidade vinha só depois, na segunda. */
+  .tabela.tabela-cartoes.lav-rouparia td.lav-col-item { order: -1; }
+  /* `.num` promete coluna alinhada — e é no celular que ela mais serve. A casa
+     alinha o valor à esquerda no modo cartão; aqui os quatro estados formam uma
+     grade 2×2 de números, que só se comparam alinhados à direita. */
+  .tabela.tabela-cartoes.lav-rouparia td.num .tabela-valor { text-align: right; }
+  .tabela.tabela-cartoes.lav-rouparia .lav-cel-acao { text-align: right; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lav-barra-parte, .lav-cel-acao, .lav-ordem, .lav-icone-opcao { transition: none; }
+  .lav-cel-acao:active, .lav-icone-opcao:active { transform: none; }
+}
+
+@media (pointer: coarse), (max-width: 820px) {
+  /* Lavanderia no dedo: o cartão da fila, o número da rouparia e os botões do
+     lote viram alvo de 44 px — a caixa cresce, o desenho continua do tamanho que
+     o olho precisa. Folga de 10 px entre chips vizinhos (44 colado em 44 ainda erra). */
+  .filtros-chips, .lav-prazo, .lav-peso-chips, .lav-icones-fileira { gap: 10px; }
+  .lav-ordem-link { display: flex; align-items: center; min-height: 44px; }
+  .lav-cel-acao { min-width: 44px; min-height: 44px; padding: .75rem .5rem; margin: -.75rem -.5rem; }
+  /* No toque não há hover: sem uma pista permanente, nada dizia que o número é um
+     botão (e o subtítulo tinha de explicar a interação em palavras). */
+  .lav-cel-acao:not(:disabled) { text-decoration: underline dotted; text-underline-offset: 4px; }
+  /* Três classes: no modo cartão o `.tabela.tabela-cartoes td > *` da casa zera o
+     `min-width` de tudo dentro da célula — e esta é a caixa de seleção do lote. */
+  .tabela.tabela-cartoes .lav-marca-alvo { min-width: 44px; min-height: 44px; }
+  .lav-lote .botao-neutro, .lav-lote .botao-mini, .lav-lote-qtd input { min-height: 44px; }
+  .lav-peso-chips .filtro-chip { min-height: 44px; }
+  .lav-icone-opcao { width: 44px; height: 44px; }
+  .lav-hist-num { min-height: 44px; }
+  .lav-acoes-linha { gap: 10px; }
+  /* No celular a trilha fica 2 × 2: quatro colunas de 70 px cortariam o carimbo. */
+  .lav-trilha { grid-template-columns: repeat(auto-fit, minmax(min(6.5rem, 100%), 1fr)); }
+}
+
+/* No celular a barra do lote é gaveta de baixo, como a `.modal-acoes`: presa ao pé
+   da janela. Sticky dentro da página nascia 85 px abaixo da dobra ao marcar o
+   primeiro item — e, sendo sticky, não havia como rolar até «Distribuir». */
+@media (max-width: 820px) {
+  .lav-lote.barra-acao {
+    position: fixed; inset-inline: 0; bottom: 0; z-index: 9; margin: 0;
+    padding: .75rem 1rem calc(.75rem + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--fio-forte);
+  }
+  /* Folga para a gaveta não cobrir o último bloco da tela (a classe entra só
+     quando há linha marcada, que é quando a barra existe). */
+  .lav-com-lote { padding-bottom: 8rem; }
+}

@@ -1543,6 +1543,33 @@ class ComentarioQueNaoVazaTests(TestCase):
         self.assertEqual(vazando, [], "comentário {# #} em várias linhas vaza na tela")
 
 
+class PluralEmPortuguesTests(TestCase):
+    """`|pluralize` do Django só acrescenta "s": em português isso erra toda palavra
+    terminada em m, l, r, z, "ão" ou "ês" ("2 items" no painel da Lavanderia e nas
+    comandas do Restaurante; "contagemns" no inventário do Estoque). Nessas palavras o
+    template corta a terminação e passa os dois sufixos: `ite{{ n|pluralize:"m,ns" }}`."""
+
+    PADRAO = re.compile(r"([A-Za-zÀ-ú]+)\{\{\s*[^{}|]+\|pluralize(?::\s*[\"']([^\"']*)[\"'])?\s*\}\}")
+
+    def test_plural_padrao_nao_vai_em_palavra_que_pede_outro_plural(self):
+        raiz = Path(settings.BASE_DIR)
+        errados = []
+        for arq in sorted(raiz.rglob("*.html")):
+            partes = arq.relative_to(raiz).parts
+            if {"node_modules", ".venv", ".codex-work"} & set(partes):
+                continue
+            texto = arq.read_text(encoding="utf-8")
+            for m in self.PADRAO.finditer(texto):
+                palavra, sufixo = m.group(1), m.group(2)
+                linha = texto[:m.start()].count("\n") + 1
+                onde = f"{arq.relative_to(raiz).as_posix()}:{linha} {m.group(0)}"
+                if sufixo is None and re.search(r"(m|l|r|z|ão|ês)$", palavra):
+                    errados.append(onde)
+                elif sufixo is not None and "," not in sufixo and re.search(r"(m|l|ão)$", palavra):
+                    errados.append(onde)   # "contagem" + "ns" = "contagemns"
+        self.assertEqual(errados, [], "plural em português errado (ver docstring)")
+
+
 class AlvoDeToqueTests(TestCase):
     """Controle pequeno que vive DENTRO de outra coisa (um chip, uma célula) não
     aparecia na regra geral de 44px, e era onde o dedo mais errava: 56 alvos de
@@ -1564,7 +1591,13 @@ class AlvoDeToqueTests(TestCase):
                     # botões do kit da ficha de campanha (Marketing) e o "×" dos
                     # carrinhos — Loja, Restaurante e Lavanderia usam a mesma classe
                     ".fx-chip", ".fx-btn-n", ".fx-dispensar", ".fx-x", ".mkt-btn-ghost",
-                    ".pdv-x"):
+                    ".pdv-x",
+                    # Lavanderia: o cartão da fila, o número da rouparia (que começa
+                    # um movimento), os botões do lote e a caixa que SELECIONA o lote
+                    # (no modo cartão o `td > *` da casa zerava o `min-width` dela,
+                    # e o alvo ficava com 20 px de largura).
+                    ".lav-ordem-link", ".lav-cel-acao", ".lav-lote .botao-neutro",
+                    ".tabela.tabela-cartoes .lav-marca-alvo"):
             self.assertIn(sel, self.coarse, f"{sel} ficou fora do alvo de toque")
 
     def test_caixinha_da_etapa_cresce_a_area_sem_crescer_o_quadrado(self):

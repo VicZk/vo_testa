@@ -1,0 +1,50 @@
+{% load moeda nucleo_extras pecas_lavanderia %}
+{% comment %}Um cartão da fila. O cartão inteiro abre a ordem; o botão do próximo
+passo fica por cima dessa camada (`.lav-ordem-passo` é `z-index: 1`), para avançar
+a produção sem abrir a ordem — é o que rende no tablet. Uma única cápsula por
+cartão, e só quando o prazo venceu.{% endcomment %}
+<article class="cartao-el lav-ordem{% if o.atrasada %} lav-ordem--atrasada{% endif %}">
+  <div class="lav-ordem-topo">
+    <a class="lav-ordem-link" href="{% url 'lavanderia:ordem' o.pk %}">{{ o.titulo }}</a>
+    {% if o.atrasada %}
+      <span class="selo selo--acao selo-alerta">Atrasada há {{ o.dias_atraso }} dia{{ o.dias_atraso|pluralize }}</span>
+    {% endif %}
+  </div>
+
+  <p class="lav-ordem-pecas">
+    {% for ico in o.icones %}{% icone_peca ico.nome ico.icone %}{% endfor %}
+    {% if o.icones_restantes %}<span class="rotulo-dado">+{{ o.icones_restantes }}</span>{% endif %}
+    <span class="lav-ordem-conta">
+      {% if o.n_pecas %}{{ o.n_pecas }} peça{{ o.n_pecas|pluralize }}{% endif %}
+      {% if o.granel %}{% if o.n_pecas %} · {% endif %}{{ o.granel|quantidade_br }} kg{% endif %}
+      {% if not o.n_pecas and not o.granel %}Sem peças lançadas{% endif %}
+    </span>
+    <span class="rotulo-dado">{% if o.conta_id %}Conta do quarto{% else %}Balcão{% endif %}</span>
+  </p>
+
+  <div class="lav-ordem-linha">
+    <span>{% if not o.prazo %}Sem prazo{% elif o.prazo == hoje %}Pronto hoje{% else %}Pronto {{ o.prazo|date:"d/m" }}{% endif %}</span>
+    <span class="num lav-ordem-total">{{ o.total_cobrado|intcomma_brl }}</span>
+  </div>
+
+  {% if o.proximo %}
+    <div class="lav-ordem-passo">
+      {% if o.proximo.url_name == 'lavanderia:avancar' %}
+        <form method="post" action="{% url 'lavanderia:avancar' o.pk %}">
+          {% csrf_token %}
+          {% comment %}`de` é a etapa que a tela mostrava: o segundo clique (ou a
+          segunda aba) avisa, em vez de pular dois passos de uma vez. `voltar` traz
+          de volta para a FILA, no mesmo filtro: avançar oito quartos no tablet são
+          oito toques, não oito idas e voltas pela ordem.{% endcomment %}
+          <input type="hidden" name="de" value="{{ o.status }}">
+          <input type="hidden" name="voltar" value="painel">
+          <input type="hidden" name="etapa" value="{{ etapa }}">
+          <button type="submit" class="botao-primario">{{ o.proximo.rotulo }}</button>
+        </form>
+      {% else %}
+        {% comment %}Cobrar exige escolher destino, forma e desconto: o passo abre a ordem.{% endcomment %}
+        <a class="botao-primario" href="{% url 'lavanderia:ordem' o.pk %}">{{ o.proximo.rotulo }}</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</article>

@@ -4,29 +4,105 @@
 {% block titulo %}Histórico | Lavanderia{% endblock %}
 
 {% block conteudo %}
-<p class="pagina-eyebrow letreiro">Lavanderia</p>
-<h1>Histórico de ordens</h1>
-<p class="subtitulo">Ordens entregues e canceladas.</p>
+<div class="eleg">
+<p class="pagina-eyebrow letreiro">Vendas &amp; Estoque</p>
 {% include "lavanderia/partials/nav.html" %}
+<div class="pagina-cabecalho">
+  <h1>Histórico de ordens</h1>
+</div>
+<p class="subtitulo">Ordens entregues e canceladas. Os números do topo e o rodapé do quadro somam o período filtrado, não só a página.</p>
 
-<table class="tabela tabela-cartoes">
-  <thead>
-    <tr><th>#</th><th>Cliente</th><th>Situação</th><th class="num">Total</th><th>Fecho</th><th>Quando</th></tr>
-  </thead>
-  <tbody>
-    {% for o in ordens %}
-      <tr class="linha-clique" onclick="location.href='{% url 'lavanderia:ordem' o.pk %}'">
-        <td data-rotulo="Ordem"><div class="tabela-valor">{{ o.pk }}</div></td>
-        <td data-rotulo="Cliente"><div class="tabela-valor">{{ o.titulo }}</div></td>
-        <td data-rotulo="Situação"><div class="tabela-valor"><span class="selo {% if o.status == 'cancelada' %}selo-alerta{% else %}selo-limpa{% endif %}">{{ o.get_status_display }}</span></div></td>
-        <td class="num" data-rotulo="Total"><div class="tabela-valor">{{ o.total|intcomma_brl }}</div></td>
-        <td data-rotulo="Fecho"><div class="tabela-valor">{% if o.status == 'cancelada' %}Cancelada{% elif o.conta_ref %}Conta: {{ o.conta_ref }}{% elif o.forma_pagamento %}{{ o.forma_pagamento.nome }}{% else %}—{% endif %}</div></td>
-        <td data-rotulo="Quando"><div class="tabela-valor">{{ o.entregue_em|default:o.recebida_em|date:"d/m H:i" }}</div></td>
-      </tr>
-    {% empty %}
-      <tr><td colspan="6" class="vazio">Nenhuma ordem encerrada ainda.</td></tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="filtros-chips" role="group" aria-label="Período do histórico">
+  {% for p in periodos %}
+    <a class="filtro-chip" href="?periodo={{ p.codigo }}{% if situacao %}&situacao={{ situacao }}{% endif %}{% if busca %}&busca={{ busca|urlencode }}{% endif %}"
+       {% if p.ativo %}aria-current="page"{% endif %}>{{ p.rotulo }}</a>
+  {% endfor %}
+</div>
+<div class="filtros-chips" role="group" aria-label="Situação da ordem">
+  {% for s in situacoes %}
+    <a class="filtro-chip" href="?periodo={{ periodo }}{% if s.codigo %}&situacao={{ s.codigo }}{% endif %}{% if busca %}&busca={{ busca|urlencode }}{% endif %}"
+       {% if s.ativo %}aria-current="page"{% endif %}>{{ s.rotulo }}</a>
+  {% endfor %}
+</div>
+
+<form method="get" class="barra-busca">
+  <input type="hidden" name="periodo" value="{{ periodo }}">
+  {% if situacao %}<input type="hidden" name="situacao" value="{{ situacao }}">{% endif %}
+  <input type="search" name="busca" value="{{ busca }}" placeholder="Cliente, quarto ou #número"
+         aria-label="Buscar no histórico">
+  <button type="submit" class="botao-neutro">Buscar</button>
+</form>
+
+<div class="kpis">
+  <div class="kpi">
+    <div class="kpi-topo"><span class="kpi-rotulo letreiro">Ordens</span></div>
+    <span class="kpi-valor">{{ kpis.ordens }}</span>
+    <span class="kpi-nota">Encerradas no período</span>
+  </div>
+  <div class="kpi">
+    <div class="kpi-topo"><span class="kpi-rotulo letreiro">Total no período</span></div>
+    <span class="kpi-valor">{{ kpis.total|intcomma_brl }}</span>
+    <span class="kpi-nota">Só o que foi entregue</span>
+  </div>
+  <div class="kpi">
+    <div class="kpi-topo"><span class="kpi-rotulo letreiro">No caixa</span></div>
+    <span class="kpi-valor">{{ kpis.caixa|intcomma_brl }}</span>
+    <span class="kpi-nota">Pago na hora, no caixa do setor</span>
+  </div>
+  <div class="kpi">
+    <div class="kpi-topo"><span class="kpi-rotulo letreiro">Na conta</span></div>
+    <span class="kpi-valor">{{ kpis.conta|intcomma_brl }}</span>
+    <span class="kpi-nota">Lançado na conta do quarto</span>
+  </div>
+</div>
+
+<div class="quadro">
+  <table class="tabela tabela-cartoes">
+    <thead>
+      <tr><th class="num">Ordem</th><th>Cliente</th><th>Situação</th><th class="num">Total</th><th>Cobrança</th><th>Quando</th></tr>
+    </thead>
+    <tbody>
+      {% for o in ordens %}
+        <tr>
+          {% comment %}A célula é um link de verdade: o `onclick` no <tr> não
+          funcionava no teclado nem em leitor de tela.{% endcomment %}
+          <td class="num" data-rotulo="Ordem"><div class="tabela-valor"><a class="lav-hist-num" href="{% url 'lavanderia:ordem' o.pk %}">#{{ o.pk }}</a></div></td>
+          <td data-rotulo="Cliente"><div class="tabela-valor">{{ o.titulo }}</div></td>
+          <td data-rotulo="Situação">
+            <div class="tabela-valor">
+              {% if o.status == 'cancelada' %}
+                <span class="selo selo-perigo">Cancelada</span>
+              {% else %}
+                <span class="selo selo-lav-entregue">Entregue</span>
+              {% endif %}
+            </div>
+          </td>
+          <td class="num" data-rotulo="Total"><div class="tabela-valor">{{ o.total|intcomma_brl }}</div></td>
+          <td data-rotulo="Cobrança">
+            <div class="tabela-valor">
+              {% if o.status == 'cancelada' %}<span class="rotulo-dado">Não cobrada</span>
+              {% elif o.conta_ref %}<span class="rotulo-dado">Conta</span> {{ o.conta_ref }}
+              {% elif o.forma_pagamento %}<span class="rotulo-dado">Caixa</span> {{ o.forma_pagamento.nome }}
+              {% else %}—{% endif %}
+            </div>
+          </td>
+          <td data-rotulo="Quando"><div class="tabela-valor">{{ o.entregue_em|default:o.recebida_em|date:"d/m/Y H:i" }}</div></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6" class="vazio">Nenhuma ordem encerrada no período.</td></tr>
+      {% endfor %}
+    </tbody>
+    {% if kpis.ordens %}
+      <tfoot>
+        <tr>
+          <th colspan="3">Total do período</th>
+          <th class="num">{{ kpis.total|intcomma_brl }}</th>
+          <th colspan="2">{{ kpis.ordens }} orde{{ kpis.ordens|pluralize:"m,ns" }}</th>
+        </tr>
+      </tfoot>
+    {% endif %}
+  </table>
+</div>
 {% include "componentes/paginacao.html" with pagina=pagina %}
+</div>
 {% endblock %}

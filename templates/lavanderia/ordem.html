@@ -1,116 +1,239 @@
 {% extends "base.html" %}
-{% load moeda %}
+{% load moeda nucleo_extras pecas_lavanderia %}
 
 {% block titulo %}Lavanderia #{{ ordem.pk }}{% endblock %}
 
 {% block conteudo %}
+{% resumo_da_cesta ordem as cesta %}
 <a href="{% url 'lavanderia:painel' %}" class="voltar">
-  <svg viewBox="0 0 24 24" class="ico"><path d="M15 6l-6 6 6 6"/></svg> Lavanderia
+  <svg viewBox="0 0 24 24" class="ico" aria-hidden="true" focusable="false"><path d="M15 6l-6 6 6 6"/></svg> Lavanderia
 </a>
 <p class="pagina-eyebrow letreiro">Lavanderia</p>
 <div class="pagina-cabecalho">
-  <h1>Ordem #{{ ordem.pk }}: {{ ordem.titulo }}</h1>
-  <span class="selo {% if ordem.status == 'cancelada' %}selo-alerta{% elif ordem.status == 'entregue' %}selo-limpa{% else %}selo-em_andamento{% endif %}">{{ ordem.get_status_display }}</span>
-  <a href="{% url 'lavanderia:cupom' ordem.pk %}?imprimir=1" target="_blank" rel="noopener" class="botao-neutro">{% if ordem.status == 'entregue' %}Imprimir recibo{% else %}Imprimir comprovante{% endif %}</a>
-</div>
-{% if ordem.prazo %}<p class="subtitulo">Prometida para {{ ordem.prazo|date:"d/m/Y" }}.</p>{% endif %}
-
-<div class="pdv" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-  <section class="pdv-produtos">
-    {% if ordem.em_producao %}
-      <p class="subtitulo">Toque num serviço da tabela para lançar na ordem.</p>
-      <div class="pdv-lista">
-        {% for s in servicos %}
-          <button type="button" class="pdv-produto"
-                  hx-post="{% url 'lavanderia:add_item' ordem.pk %}"
-                  hx-vals='{"servico_id": {{ s.id }}, "quantidade": 1}'
-                  hx-target="#ordem-itens" hx-swap="outerHTML">
-            <span class="pdv-produto-nome">{{ s.nome }}</span>
-            <span class="pdv-produto-meta">
-              <span class="pdv-preco">{{ s.preco|intcomma_brl }}</span>
-              <small class="pdv-saldo">Por {{ s.get_unidade_display|lower }}</small>
-            </span>
-            <span class="pdv-add" aria-hidden="true">+</span>
-          </button>
-        {% endfor %}
-      </div>
+  <h1>Ordem #{{ ordem.pk }} · {{ ordem.titulo }}</h1>
+  <div class="pagina-acoes">
+    {% if ordem.status == 'cancelada' %}
+      <span class="selo selo-perigo">Cancelada</span>
     {% else %}
-      <p class="subtitulo">
-        Ordem {{ ordem.get_status_display|lower }}
-        {% if ordem.status == 'cancelada' %}{% if ordem.motivo_cancelamento %}. Motivo: <strong>{{ ordem.motivo_cancelamento }}</strong>{% endif %}
-        {% elif ordem.conta_ref %}, lançada na conta: <strong>{{ ordem.conta_ref }}</strong>
-        {% elif ordem.forma_pagamento %}, paga com <strong>{{ ordem.forma_pagamento.nome }}</strong>{% endif %}.
-      </p>
+      <span class="selo selo-lav-{{ ordem.status }}">{{ ordem.get_status_display }}</span>
     {% endif %}
-  </section>
+    <a href="{% url 'lavanderia:cupom' ordem.pk %}?imprimir=1" target="_blank" rel="noopener"
+       class="botao-neutro">{% if ordem.status == 'entregue' %}Imprimir recibo{% else %}Imprimir comprovante{% endif %}</a>
+  </div>
+</div>
 
-  <aside class="pdv-painel">
-    <div class="pdv-painel-topo">
-      <h2>Peças</h2>
-      <span class="pdv-contador">{{ ordem.titulo }}</span>
+{% comment %}O balcão da ordem reusa o `.pdv-loja` da Loja — mesmo gesto, mesma
+container query, mesmo stepper de 44 px. A `.pdv-shell` é quem mede a largura ÚTIL
+(não a janela): com o menu aberto a 821 px as duas colunas viram uma na hora certa.
+{% endcomment %}
+<div class="pdv-shell" x-data="ordemLavanderia({ painel: '{{ painel_inicial }}', conta: '{{ ordem.conta_id|default_if_none:'' }}' })">
+
+  <ol class="lav-trilha">
+    {% for passo in trilha %}
+      <li class="lav-trilha-passo{% if passo.feito %} feito{% endif %}"{% if passo.atual %} aria-current="step"{% endif %}>
+        <span class="lav-trilha-rotulo">{{ passo.rotulo }}</span>
+        {% comment %}Carimbo é hora, e só hora: os quatro passos gravam a sua
+        (`CARIMBO_DO_PASSO`). O que ainda não aconteceu fica com o travessão — a cor
+        do passo é que diz o que já foi feito.{% endcomment %}
+        <span class="lav-trilha-carimbo">{% if passo.carimbo %}{{ passo.carimbo|date:"d/m H:i" }}{% else %}—{% endif %}</span>
+      </li>
+    {% endfor %}
+  </ol>
+
+  {% if dias_atraso %}
+    <p class="lav-atraso">
+      {% icone_peca "" "expresso" %}
+      Prometida para {{ ordem.prazo|date:"d/m/Y" }} — atrasada há {{ dias_atraso }} dia{{ dias_atraso|pluralize }}.
+    </p>
+  {% elif ordem.prazo and ordem.em_producao %}
+    <p class="subtitulo">Prometida para {{ ordem.prazo|date:"d/m/Y" }}.</p>
+  {% endif %}
+
+  {% if ordem.em_producao and proximo.url_name == 'lavanderia:avancar' %}
+    <div class="lav-passo">
+      <form method="post" action="{% url 'lavanderia:avancar' ordem.pk %}">
+        {% csrf_token %}
+        {% comment %}`de` é a etapa que esta tela mostrava: o segundo clique avisa,
+        em vez de levar a ordem de «recebida» a «pronta» de uma vez.{% endcomment %}
+        <input type="hidden" name="de" value="{{ ordem.status }}">
+        <button type="submit" class="botao-primario" {% if vazia %}disabled aria-describedby="lav-passo-ajuda"{% endif %}>{{ proximo.rotulo }}</button>
+      </form>
+      <p class="ajuda" id="lav-passo-ajuda">{% if vazia %}Lance ao menos uma peça: a ordem só anda depois de contada.{% else %}Lance tudo o que entrou antes de avançar — depois de entregue a ordem não aceita peça nova.{% endif %}</p>
     </div>
-    <div class="pdv-carrinho">
-      {% include "lavanderia/partials/itens.html" %}
-    </div>
+  {% endif %}
+
+  <div class="pdv pdv-loja lav-pdv"{% if ordem.em_producao %} :data-painel="painel"{% endif %}
+       hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
 
     {% if ordem.em_producao %}
-      {% if ordem.status != 'pronta' %}
-        <form data-preservar-erros method="post" action="{% url 'lavanderia:avancar' ordem.pk %}" class="pdv-destino">
-          {% csrf_token %}
-          <button type="submit" class="botao-neutro botao-largo">
-            {% if ordem.status == 'recebida' %}Enviar para lavagem{% else %}Marcar como pronta{% endif %}
-          </button>
-        </form>
-      {% endif %}
-
-      <form data-preservar-erros method="post" action="{% url 'lavanderia:entregar' ordem.pk %}" class="comanda-fechar" x-data="{ destino: 'caixa' }">
-        {% csrf_token %}
-        <input type="hidden" name="destino" :value="destino">
-        <div class="pdv-resumo">
-          <div class="pdv-linha-desc">
-            <span>Desconto</span>
-            <div class="input-reais"><span>R$</span><input type="number" name="desconto" min="0" step="0.01" value="0"></div>
-          </div>
-        </div>
-        <div class="pdv-seg pdv-seg-lateral">
-          <button type="button" :class="{ativo: destino === 'caixa'}" @click="destino = 'caixa'">Pagar agora</button>
-          {% if contas %}<button type="button" :class="{ativo: destino === 'conta'}" @click="destino = 'conta'">Conta do quarto</button>{% endif %}
-        </div>
-        <label class="select-wrap pdv-destino" x-show="destino === 'caixa'" x-cloak>
-          <select name="forma"><option value="">Forma de pagamento…</option>
-            {% for f in formas %}<option value="{{ f.pk }}">{{ f.nome }}</option>{% endfor %}
-          </select>
-        </label>
-        {% if contas %}
-        <label class="select-wrap pdv-destino" x-show="destino === 'conta'" x-cloak>
-          <select name="conta_id"><option value="">Quarto / hóspede…</option>
-            {% for c in contas %}<option value="{{ c.id }}"{% if c.id == ordem.conta_id %} selected{% endif %}>{{ c.rotulo }}</option>{% endfor %}
-          </select>
-        </label>
-        {% endif %}
-        <button type="submit" class="botao-primario pdv-finalizar">Entregar e cobrar</button>
-      </form>
-
-      {% if contas %}<form data-preservar-erros method="post" action="{% url 'lavanderia:vincular' ordem.pk %}" class="comanda-extras campo">
-        {% csrf_token %}<label for="lavanderia-estadia">Estadia vinculada</label>
-        <select id="lavanderia-estadia" name="conta_id" required><option value="">Selecione o quarto / hóspede…</option>
-          {% for conta in contas %}<option value="{{ conta.id }}"{% if conta.id == ordem.conta_id %} selected{% endif %}>{{ conta.rotulo }}</option>{% endfor %}
-        </select><button class="botao-neutro" type="submit">Vincular à estadia</button>
-        <small class="ajuda">O check-out avisa sobre esta ordem enquanto ela estiver em produção.</small>
-      </form>{% endif %}
-      {% if eh_gerente %}
-        <div class="comanda-extras">
-          <details class="acao-sensivel">
-            <summary>Cancelar ordem</summary>
-            <form data-preservar-erros method="post" action="{% url 'lavanderia:cancelar' ordem.pk %}" class="form-cartao">
-              {% csrf_token %}
-              <div class="campo"><label>Motivo</label><input type="text" name="motivo" required></div>
-              <div class="acoes"><button type="submit" class="botao-perigo">Cancelar ordem</button></div>
-            </form>
-          </details>
-        </div>
-      {% endif %}
+      <div class="pdv-etapas" role="group" aria-label="Partes da ordem">
+        <button type="button" :aria-pressed="painel === 'produtos'" @click="verPainel('produtos')">Peças</button>
+        <button type="button" :aria-pressed="painel === 'carrinho'" @click="verPainel('carrinho')">
+          <span>Cesta</span>
+          {% comment %}O quilo entra no resumo da aba: no celular ela é o único
+          resumo enquanto se lança peça, e sem o granel parecia que o peso não
+          tinha entrado.{% endcomment %}
+          <strong><span id="lav-resumo">{{ cesta.n_pecas }} peça{{ cesta.n_pecas|pluralize }}{% if cesta.granel %} · {{ cesta.granel|quantidade_br }} kg{% endif %} · {{ ordem.total|intcomma_brl }}</span></strong>
+        </button>
+      </div>
     {% endif %}
-  </aside>
+
+    <section class="pdv-produtos" aria-label="Tabela de preços">
+      {% if ordem.em_producao %}
+        {% if servicos|length > 8 %}
+          <div class="pdv-produtos-topo">
+            <div class="pdv-busca-campo">
+              <label for="lav-busca" class="pdv-busca-rotulo">Buscar serviço</label>
+              <div class="pdv-busca-wrap">
+                <svg viewBox="0 0 24 24" class="ico" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+                <input type="search" id="lav-busca" class="pdv-busca" placeholder="Nome do serviço" x-model="filtro">
+              </div>
+            </div>
+          </div>
+        {% endif %}
+
+        <div class="pdv-lista">
+          {% for s in servicos %}
+            {% if s.unidade == 'kg' %}
+              {% comment %}Serviço a granel não soma 1: o cartão abre o campo de peso
+              embaixo dele (o model e o validador sempre aceitaram 3,400 kg).{% endcomment %}
+              <div class="lav-granel" x-data="{ aberto: false }" x-show="casa('{{ s.nome|escapejs }}')">
+                <button type="button" class="pdv-produto lav-peca" :aria-expanded="aberto"
+                        aria-controls="lav-peso-{{ s.pk }}" @click="aberto = !aberto">
+                  <span class="produto-ilustracao produto-ilustracao--lav" aria-hidden="true">{% icone_peca s.nome s.icone classe="ico-peca--grande" %}</span>
+                  <span class="pdv-produto-nome">{{ s.nome }}</span>
+                  <span class="pdv-produto-meta">
+                    <span class="pdv-preco">{{ s.preco|intcomma_brl }}</span>
+                    <small class="pdv-saldo">Por quilo — informe o peso</small>
+                  </span>
+                  <span class="pdv-add" aria-hidden="true">+</span>
+                </button>
+                <form id="lav-peso-{{ s.pk }}" class="lav-peso" x-show="aberto" x-cloak
+                      hx-post="{% url 'lavanderia:add_item' ordem.pk %}"
+                      hx-target="#ordem-itens" hx-swap="outerHTML">
+                  <input type="hidden" name="servico_id" value="{{ s.pk }}">
+                  <label for="lav-peso-campo-{{ s.pk }}">Peso (kg)</label>
+                  <input id="lav-peso-campo-{{ s.pk }}" x-ref="peso" type="text" inputmode="decimal"
+                         name="quantidade" value="1" autocomplete="off">
+                  <div class="lav-peso-chips" role="group" aria-label="Pesos de sempre">
+                    <button type="button" class="filtro-chip" @click="$refs.peso.value = '0,5'">0,5</button>
+                    <button type="button" class="filtro-chip" @click="$refs.peso.value = '1'">1</button>
+                    <button type="button" class="filtro-chip" @click="$refs.peso.value = '2'">2</button>
+                    <button type="button" class="filtro-chip" @click="$refs.peso.value = '5'">5</button>
+                  </div>
+                  <button type="submit" class="botao-primario">Lançar</button>
+                </form>
+              </div>
+            {% else %}
+              <button type="button" class="pdv-produto lav-peca" x-show="casa('{{ s.nome|escapejs }}')"
+                      aria-label="Lançar {{ s.nome }} na ordem"
+                      hx-post="{% url 'lavanderia:add_item' ordem.pk %}"
+                      hx-vals='{"servico_id": {{ s.pk }}, "quantidade": 1}'
+                      hx-target="#ordem-itens" hx-swap="outerHTML">
+                <span class="produto-ilustracao produto-ilustracao--lav" aria-hidden="true">{% icone_peca s.nome s.icone classe="ico-peca--grande" %}</span>
+                <span class="pdv-produto-nome">{{ s.nome }}</span>
+                <span class="pdv-produto-meta">
+                  <span class="pdv-preco">{{ s.preco|intcomma_brl }}</span>
+                  <small class="pdv-saldo">Por {{ s.get_unidade_display|lower }}</small>
+                </span>
+                <span class="pdv-add" aria-hidden="true">+</span>
+              </button>
+            {% endif %}
+          {% empty %}
+            <p class="pdv-lista-vazia">Nenhum serviço ativo. Cadastre na <a href="{% url 'lavanderia:servicos' %}">tabela de preços</a>.</p>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="subtitulo">
+          Ordem {{ ordem.get_status_display|lower }}{% if ordem.status == 'cancelada' %}{% if ordem.motivo_cancelamento %}. Motivo: <strong>{{ ordem.motivo_cancelamento }}</strong>{% endif %}{% elif ordem.conta_ref %}, lançada na conta: <strong>{{ ordem.conta_ref }}</strong>{% elif ordem.forma_pagamento %}, paga com <strong>{{ ordem.forma_pagamento.nome }}</strong>{% endif %}.
+        </p>
+        {% if ordem.observacao %}<p class="ajuda">Observação: {{ ordem.observacao }}</p>{% endif %}
+      {% endif %}
+    </section>
+
+    <aside class="pdv-painel" aria-label="Peças da ordem">
+      <div class="pdv-painel-topo">
+        <h2>Peças</h2>
+        <span id="lav-contador" class="pdv-contador">{{ cesta.n_pecas }} peça{{ cesta.n_pecas|pluralize }}{% if cesta.granel %} · {{ cesta.granel|quantidade_br }} kg{% endif %}</span>
+      </div>
+      <div class="pdv-carrinho">
+        {% include "lavanderia/partials/itens.html" with embutido=True %}
+      </div>
+
+      {% if ordem.em_producao %}
+        {% if pode_entregar %}
+          {% include "lavanderia/partials/cobranca.html" %}
+        {% else %}
+          <div class="lav-sensiveis">
+            <details class="acao-sensivel">
+              <summary>Entregar antes de ficar pronta</summary>
+              {% include "lavanderia/partials/cobranca.html" with antecipada=True %}
+            </details>
+          </div>
+        {% endif %}
+
+        {% if pode_entregar %}
+          <div class="lav-aviso-pronta">
+            <p class="ajuda">A roupa está pronta — avise quem deixou antes de ela vir buscar.</p>
+            {% copiar recado rotulo="Aviso de roupa pronta" recado=recado telefone=contato.telefone mostrar=False %}
+          </div>
+        {% endif %}
+
+        <div class="lav-obs">
+          <label for="lav-observacao">Observação</label>
+          <textarea id="lav-observacao" name="observacao" rows="2" maxlength="240"
+                    placeholder="Mancha, não passar, peça delicada…"
+                    hx-post="{% url 'lavanderia:observacao' ordem.pk %}"
+                    hx-trigger="change" hx-target="#lav-observacao-status"
+                    hx-swap="outerHTML">{{ ordem.observacao }}</textarea>
+          <span id="lav-observacao-status" class="ajuda" role="status">Sai impressa no comprovante. Salva ao sair do campo.</span>
+        </div>
+
+        {% if eh_gerente %}
+          <div class="lav-sensiveis">
+            <details class="acao-sensivel">
+              <summary>Cancelar ordem</summary>
+              <form data-preservar-erros method="post" action="{% url 'lavanderia:cancelar' ordem.pk %}" class="form-cartao">
+                {% csrf_token %}
+                <div class="campo"><label for="lav-motivo">Motivo</label><input id="lav-motivo" type="text" name="motivo" required></div>
+                <div class="acoes"><button type="submit" class="botao-perigo">Cancelar ordem</button></div>
+              </form>
+            </details>
+          </div>
+        {% endif %}
+      {% endif %}
+    </aside>
+  </div>
+
+  {% if ordem.em_producao and contas %}
+    {% comment %}O «Vincular agora» da cobrança manda o quarto escolhido por aqui: o
+    select fica num formulário só (o de cobrar) e este leva o mesmo valor.{% endcomment %}
+    <form id="lav-vincular-form" method="post" action="{% url 'lavanderia:vincular' ordem.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="conta_id" :value="conta">
+    </form>
+  {% endif %}
 </div>
+
+<script>
+  function ordemLavanderia(cfg) {
+    return {
+      painel: cfg.painel, conta: cfg.conta, filtro: '',
+      chave(texto) {
+        return String(texto || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLocaleLowerCase('pt-BR');
+      },
+      casa(nome) {
+        const busca = this.chave(this.filtro).trim();
+        return !busca || this.chave(nome).includes(busca);
+      },
+      verPainel(qual) {
+        this.painel = qual;
+        this.$nextTick(() => {
+          const abas = this.$root.querySelector('.pdv-etapas');
+          if (abas) abas.scrollIntoView({ block: 'start', behavior: 'instant' });
+        });
+      },
+    };
+  }
+</script>
 {% endblock %}

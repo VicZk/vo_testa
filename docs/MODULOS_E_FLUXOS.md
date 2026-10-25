@@ -1180,10 +1180,14 @@ como SERVIÇO) e (b) **rouparia interna** (enxoval da casa rastreado por estado)
 ### Models
 
 (a) **`ServicoLavanderia`** (tabela de preços: `nome` unique, `unidade` peça|kg, `preco`,
-`ativo`); **`OrdemLavanderia`** — ciclo `recebida → lavando → pronta → entregue`
-(+ `cancelada`), `FLUXO = [recebida, lavando, pronta]`, `prazo`, `destino`, `desconto`,
-`forma_pagamento`, `movimento_caixa`, `conta_ref`; **`ItemOrdemLavanderia`** — natureza
-fixada em **SERVIÇO** (NFS-e, nunca consumo).
+`icone` — chave do catálogo de `icones.py`, vazio = inferido pelo nome —, `ativo`);
+**`OrdemLavanderia`** — ciclo `recebida → lavando → pronta → entregue`
+(+ `cancelada`), `FLUXO = [recebida, lavando, pronta]`, `prazo`, `observacao` (recado da
+recepção, 240 caracteres, sai no cupom), `destino`, `desconto`, `forma_pagamento`,
+`movimento_caixa`, `conta_ref`, `conta` (estadia vinculada) e **um carimbo por passo**
+(`recebida_em`, `lavando_em`, `pronta_em`, `entregue_em` — `CARIMBO_DO_PASSO` é a fonte
+única); **`ItemOrdemLavanderia`** — natureza fixada em **SERVIÇO** (NFS-e, nunca
+consumo), `quantidade` `numeric(10,3)` (daí `MAXIMO_QUANTIDADE = 9999999.999`).
 
 (b) **`ItemEnxoval`** — `nome` unique, `unidade`, `minimo` (sobre a rouparia limpa),
 **`por_faxina`** (quantas peças uma faxina recolhe); **`MovimentoEnxoval`** —
@@ -1193,11 +1197,20 @@ entrada no destino).
 
 ### Interface pública (`apps/lavanderia/services.py`)
 
-(a) `abrir_ordem`, `adicionar_item`, `remover_item`, `avancar_status(ordem)`,
-`entregar(ordem, operador, destino, forma, conta_id, desconto)`, `cancelar_ordem`.
+(a) `abrir_ordem`, `adicionar_item`, `definir_quantidade` (DEFINE, não soma — é o `−`/`+`
+da cesta e o campo de peso), `remover_item`, `definir_observacao`,
+`avancar_status(ordem, esperado=…)`, `entregar(ordem, operador, destino, forma, conta_id,
+desconto, confirmar)`, `vincular_conta`, `cancelar_ordem`, `salvar_servico`.
+Leitura da tela: `painel_do_setor()` (os quatro números do topo + contagem de cada chip),
+`filas_de_producao(etapa)` (as três colunas, atrasada na frente), `proximo_passo(ordem)`
+(`PROXIMOS` — fonte única do rótulo do botão dourado), `prazos_sugeridos()`,
+`trilha_da_ordem(ordem)`.
 (b) `saldo_enxoval(item, estado)`, `adquirir`, `distribuir`, `coletar_suja`,
 `enviar_lavar`, `receber_limpo`, `baixar(item, qtd, estado, motivo, usuario)` (auditada),
-`posicao_enxoval()` (com alerta de mínimo), **`coletar_faxina(uh, usuario)`**.
+`mover_lote(itens, acao, qtd, usuario)` (tudo ou nada), `posicao_enxoval()` (barra da
+situação + alerta de mínimo), `extrato_enxoval(item, estado, de, ate)`,
+`rotulo_estado`/`rotulo_motivo` (código do banco nunca cru na tela),
+**`coletar_faxina(uh, usuario)`**.
 Transversais: `pendencias_auditoria()`, `faturamento_periodo(inicio, fim)`.
 
 ### Sinais
@@ -1209,21 +1222,55 @@ Transversais: `pendencias_auditoria()`, `faturamento_periodo(inicio, fim)`.
 
 ### Telas/rotas (`/crm/lavanderia/`)
 
-`lavanderia:painel`, `abrir`, `ordem/<pk>`, `add_item`, `remover_item`, `avancar`,
-`entregar`, `historico`, `servicos` (tabela de preços), `rouparia`, `rouparia_item`,
-`rouparia_mover`, `cupom` (80 mm: comprovante na recepção da roupa, recibo na entrega) —
-`@requer_modulo`; `lavanderia:cancelar` — `@requer_modulo` +
-**`@requer_gerencia`**.
+Seis telas, com a mesma barra de seções (`partials/nav.html`): **fila** (`painel`, aceita
+`?etapa=recebida|lavando|pronta|atrasadas`, com o bloco "Receber roupa" que recolhe no
+toque), **ordem** (`ordem/<pk>` — trilha com carimbo, grade da tabela de preços e cesta,
+pelo `.pdv-loja` da Loja), **histórico** (`historico` — chips de período e situação,
+busca, KPIs do período por agregação), **tabela de preços** (`servicos` +
+`servicos/<pk>` só para desativar/reativar), **rouparia** (`rouparia`, `rouparia_item`,
+`rouparia_mover`, `rouparia_lote`) e **extrato do enxoval**
+(`rouparia/extrato/` — chips de período, data livre atrás de "Outro período").
+HTMX: `add_item`, `item_qtd`, `remover_item` e `observacao` devolvem o partial da cesta
+(com `hx-swap-oob` para o resumo da aba). `avancar` (o `voltar=painel` do cartão volta
+para a fila no mesmo filtro), `entregar`, `vincular`, `cupom` (80 mm: comprovante na
+recepção da roupa, recibo na entrega) — tudo `@requer_modulo`; `lavanderia:cancelar` —
+`@requer_modulo` + **`@requer_gerencia`**.
 
 ### Regras de negócio
 
-- `entregar` trava a ordem (`sistema.travar`) contra duplo POST; recusa ordem vazia e
-  desconto inválido; cobra no caixa **da Lavanderia** ou lança no folio como `servico`
-  com natureza SERVIÇO.
+- `avancar_status` trava a linha e **exige** o `esperado` quando vem da web (as duas
+  telas mandam o `de` da etapa que mostravam): o segundo clique avisa em vez de pular
+  dois passos. Ordem **sem peça lançada não avança** — o que não foi contado não é
+  cobrado.
+- Quantidade conferida pela UNIDADE do serviço: o quilo aceita três casas (3,400 kg), a
+  peça só número inteiro (`_quantidade_do_servico`).
+- `entregar` trava a ordem (`sistema.travar`) contra duplo POST; **valida o `destino`**
+  contra `Destino.values` (qualquer outro valor caía no fólio por fora do gate do
+  Reservas); recusa ordem vazia e desconto inválido; cobra no caixa **da Lavanderia** ou
+  lança no folio como `servico` com natureza SERVIÇO.
+- **Desconto é da gerência:** a view zera/recusa o POST de quem não é gerente (a tela
+  esconde o campo) e todo desconto > 0 vai para a trilha (`desconto_lavanderia`), como
+  todo ajuste de dinheiro da casa.
 - Ordem **entregue não é cancelável** (já cobrada).
 - `_transferir` valida saldo do estado de origem antes de mover; quantidade sempre > 0.
+- `mover_lote` trava os itens em ordem de `pk` e usa os helpers de sempre (movimento
+  segue imutável, só `create`); saldo insuficiente derruba o lote inteiro, e a view
+  recusa o lote quando algum item marcado saiu da lista (desativado em outra aba, id
+  inexistente) em vez de movê-lo em silêncio.
 - A view `rouparia_mover` trata quantidade não numérica com mensagem (sem 500).
 - Insumos de lavagem (sabão etc.) ainda não passam pelo motor de Estoque.
+
+### Ícones das peças (`apps/lavanderia/icones.py`)
+
+36 chaves (21 próprias, 10 Tabler MIT, 5 Lucide ISC), cada uma com `rotulo`, `grupo`,
+`fonte`, `licenca`, `arquivo` de origem e `svg` inline (`viewBox 0 0 24 24`,
+`currentColor`). `icone_de(nome, escolha)` deixa a escolha manual vencer e, sem ela,
+infere pelo nome com o sinônimo **mais longo** primeiro, cercado de espaço ("Toalha de
+banho" não é maiô; "Calção" não é calça). A tag `{% icone_peca %}` desenha; o ícone
+**acompanha** o nome, nunca o substitui. A tabela de preços oferece os grupos peça,
+serviço e enxoval (`GRUPOS_DA_TABELA`) — os de estado são a cor da barra da rouparia.
+A procedência é conferida por teste: sha256 de cada arquivo do vendor contra o
+`origem.json`.
 
 ---
 

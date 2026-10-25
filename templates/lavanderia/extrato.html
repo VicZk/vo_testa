@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% load pecas_lavanderia %}
+
+{% block titulo %}Extrato do enxoval | Lavanderia{% endblock %}
+
+{% block conteudo %}
+<div class="eleg">
+  <p class="pagina-eyebrow letreiro">Vendas &amp; Estoque</p>
+  {% include "lavanderia/partials/nav.html" %}
+  <div class="pagina-cabecalho">
+    <h1>Extrato do enxoval</h1>
+    <div class="pagina-acoes">
+      <a class="botao-neutro" href="{% url 'lavanderia:rouparia' %}">Voltar à rouparia</a>
+    </div>
+  </div>
+  <p class="subtitulo">Cada movimento do enxoval, na ordem em que aconteceu: o que saiu de um estado entra em outro, e nada se apaga.</p>
+
+  {% comment %}Período em chip, como no histórico: o `<input type=date>` cru mostra
+  mm/dd/yyyy no Chrome em inglês e não há como forçar pt-BR, então a data livre fica
+  atrás de «Outro período» e o caminho comum não toca nela.{% endcomment %}
+  <div class="filtros-chips" role="group" aria-label="Período do extrato">
+    {% for p in periodos %}
+      <a class="filtro-chip" href="?periodo={{ p.codigo }}{% if filtros.item %}&item={{ filtros.item }}{% endif %}{% if filtros.estado %}&estado={{ filtros.estado }}{% endif %}"
+         {% if p.ativo %}aria-current="page"{% endif %}>{{ p.rotulo }}</a>
+    {% endfor %}
+  </div>
+
+  <form method="get" class="filtro-barra filtro-inline">
+    <input type="hidden" name="periodo" value="{{ periodo }}">
+    <div class="filtro-campo">
+      <label for="extrato-item">Item</label>
+      <select id="extrato-item" name="item">
+        <option value="">Todos os itens</option>
+        {% for item in itens %}
+          <option value="{{ item.pk }}"{% if filtros.item == item.pk %} selected{% endif %}>{{ item.nome }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filtro-campo">
+      <label for="extrato-estado">Estado</label>
+      <select id="extrato-estado" name="estado">
+        <option value="">Todos os estados</option>
+        {% for codigo, rotulo in estados %}
+          <option value="{{ codigo }}"{% if filtros.estado == codigo %} selected{% endif %}>{{ rotulo }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% if periodo == outro_periodo %}
+      <div class="filtro-campo">
+        <label for="extrato-de">De</label>
+        <input id="extrato-de" type="date" name="de" value="{{ filtros.de }}">
+      </div>
+      <div class="filtro-campo">
+        <label for="extrato-ate">Até</label>
+        <input id="extrato-ate" type="date" name="ate" value="{{ filtros.ate }}">
+      </div>
+    {% endif %}
+    <button type="submit" class="botao-neutro">Filtrar</button>
+  </form>
+
+  <div class="quadro">
+    <table class="tabela tabela-cartoes">
+      <thead>
+        <tr>
+          <th>Quando</th><th>Item</th><th>Estado</th><th class="num">Quantidade</th>
+          <th>Motivo</th><th>Quarto</th><th>Quem</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for linha in linhas %}
+          <tr>
+            <td data-rotulo="Quando"><div class="tabela-valor">{{ linha.mov.criado_em|date:"d/m/Y H:i" }}</div></td>
+            <td data-rotulo="Item">
+              <div class="tabela-valor lav-item-nome">
+                {% icone_peca linha.mov.item.nome %}<span>{{ linha.mov.item.nome }}</span>
+              </div>
+            </td>
+            <td data-rotulo="Estado">
+              <div class="tabela-valor"><span class="selo lav-cor-{{ linha.mov.estado }}">{{ linha.estado }}</span></div>
+            </td>
+            <td class="num" data-rotulo="Quantidade">
+              <div class="tabela-valor">
+                <span class="lav-mov-sinal{% if linha.mov.quantidade < 0 %} saiu{% endif %}">{{ linha.mov.quantidade|stringformat:"+d" }}</span>
+              </div>
+            </td>
+            <td data-rotulo="Motivo"><div class="tabela-valor">{{ linha.motivo }}</div></td>
+            <td data-rotulo="Quarto"><div class="tabela-valor">{{ linha.mov.uh.numero|default:"—" }}</div></td>
+            {% comment %}Nome da pessoa, como nas outras dez telas da casa: o login
+            («auditor», «_governanca») é código, não gente.{% endcomment %}
+            <td data-rotulo="Quem"><div class="tabela-valor">{{ linha.mov.criado_por.get_short_name|default:linha.mov.criado_por.username|default:"—" }}</div></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7" class="vazio">Nenhum movimento no período.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "componentes/paginacao.html" with pagina=pagina %}
+</div>
+{% endblock %}

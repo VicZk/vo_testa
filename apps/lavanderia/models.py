@@ -31,6 +31,10 @@ class ServicoLavanderia(models.Model):
     unidade = models.CharField("unidade", max_length=4, choices=Unidade.choices,
                                default=Unidade.PECA)
     preco = models.DecimalField("preço (R$)", max_digits=10, decimal_places=2)
+    # Vazio = inferido pelo nome (apps/lavanderia/icones.py). Guarda só a chave do
+    # catálogo; o traçado nunca entra no banco.
+    icone = models.CharField("ícone", max_length=24, blank=True,
+                             help_text="Vazio: escolhido pelo nome do serviço.")
     ativo = models.BooleanField("ativo", default=True)
 
     class Meta:
@@ -64,6 +68,10 @@ class OrdemLavanderia(models.Model):
     rotulo = models.CharField("identificação", max_length=60, blank=True,
                               help_text="Ex.: quarto 12, avulso balcão.")
     prazo = models.DateField("pronto para", null=True, blank=True)
+    # Mancha, peça delicada, "não passar" — o recado da recepção para quem lava.
+    # Sai no cupom; 240 caracteres na tela.
+    observacao = models.TextField("observação", blank=True,
+                                  help_text="Mancha, não passar, peça delicada…")
     status = models.CharField("status", max_length=10, choices=Status.choices,
                               default=Status.RECEBIDA)
     destino = models.CharField("destino", max_length=8, choices=Destino.choices, blank=True)
@@ -87,6 +95,10 @@ class OrdemLavanderia(models.Model):
         related_name="ordens_lavanderia", verbose_name="recebida por",
     )
     recebida_em = models.DateTimeField("recebida em", auto_now_add=True)
+    # Carimbo de cada passo da produção: a trilha da ordem responde "a que horas foi
+    # para a máquina?" com hora, em vez de escrever "Cumprido" onde não havia coluna.
+    lavando_em = models.DateTimeField("foi lavar em", null=True, blank=True)
+    pronta_em = models.DateTimeField("ficou pronta em", null=True, blank=True)
     entregue_em = models.DateTimeField("entregue em", null=True, blank=True)
     motivo_cancelamento = models.TextField("motivo do cancelamento", blank=True)
 
@@ -149,7 +161,9 @@ class ItemOrdemLavanderia(models.Model):
 class ItemEnxoval(models.Model):
     nome = models.CharField("item de enxoval", max_length=80, unique=True)
     unidade = models.CharField("unidade", max_length=20, default="peça")
-    minimo = models.PositiveIntegerField("estoque mínimo (limpo)", default=0)
+    # O "mínimo" é o alvo de peças limpas na rouparia (quartos × peças por faxina) —
+    # o rótulo antigo não dizia do que era mínimo e ninguém preenchia.
+    minimo = models.PositiveIntegerField("alvo na rouparia (peças limpas)", default=0)
     por_faxina = models.PositiveSmallIntegerField(
         "peças por faxina", default=0,
         help_text="Quantas peças deste item uma faxina recolhe (em uso → suja).",

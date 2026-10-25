@@ -1,29 +1,59 @@
-{% load moeda %}
-<div id="ordem-itens" class="comanda-itens">
-  {% if erro %}<div class="mensagem error">{{ erro }}</div>{% endif %}
+{% load moeda nucleo_extras pecas_lavanderia %}
+{% resumo_da_cesta ordem as cesta %}
+<div id="ordem-itens" class="lav-cesta">
+  {% if erro %}<div class="mensagem error" role="alert">{{ erro }}</div>{% endif %}
   {% if ordem.itens.all %}
-    <div class="comanda-lista">
-      {% for i in ordem.itens.all %}
-        <div class="pdv-item">
-          <span class="comanda-qtd">{{ i.quantidade|floatformat:"-3" }}×</span>
-          <span class="pdv-item-nome">{{ i.descricao }}</span>
-          <span class="pdv-sub">{{ i.subtotal|intcomma_brl }}</span>
-          {% if ordem.em_producao %}
-            <button type="button" class="pdv-x" title="Remover"
-                    hx-post="{% url 'lavanderia:remover_item' ordem.pk i.pk %}"
-                    hx-target="#ordem-itens" hx-swap="outerHTML">&times;</button>
-          {% else %}<span></span>{% endif %}
-        </div>
-      {% endfor %}
-    </div>
-    <div class="comanda-total-linha">
+    {% for i in ordem.itens.all %}
+      {% comment %}O «−»/«+» DEFINE a quantidade (não soma): a quantidade que cada
+      botão vai gravar já vem calculada, e peça anda de 1 em 1 enquanto o granel
+      anda de meio quilo. Zero remove a linha.{% endcomment %}
+      {% passo_da_quantidade i "-" as menos %}
+      {% passo_da_quantidade i "+" as mais %}
+      <div class="pdv-item">
+        <span class="pdv-item-nome">
+          {% icone_peca i.descricao i.servico.icone %}
+          <span>{{ i.descricao }}</span>
+        </span>
+        {% if ordem.em_producao %}
+          <button type="button" class="pdv-x" aria-label="Remover {{ i.descricao }}"
+                  hx-post="{% url 'lavanderia:remover_item' ordem.pk i.pk %}"
+                  hx-target="#ordem-itens" hx-swap="outerHTML">&times;</button>
+          <div class="pdv-qtd" role="group" aria-label="Quantidade de {{ i.descricao }}">
+            <button type="button" aria-label="Diminuir {{ i.descricao }}"
+                    hx-post="{% url 'lavanderia:item_qtd' ordem.pk i.pk %}"
+                    hx-vals='{"quantidade": "{{ menos }}"}'
+                    hx-target="#ordem-itens" hx-swap="outerHTML">&minus;</button>
+            <span>{{ i.quantidade|quantidade_br }}</span>
+            <button type="button" aria-label="Aumentar {{ i.descricao }}"
+                    hx-post="{% url 'lavanderia:item_qtd' ordem.pk i.pk %}"
+                    hx-vals='{"quantidade": "{{ mais }}"}'
+                    hx-target="#ordem-itens" hx-swap="outerHTML">+</button>
+          </div>
+        {% else %}
+          <span></span>
+          <span class="pdv-item-qtd num">{{ i.quantidade|quantidade_br }} ×</span>
+        {% endif %}
+        <span class="pdv-sub">{{ i.subtotal|intcomma_brl }}</span>
+      </div>
+    {% endfor %}
+    <div class="pdv-total">
       <span class="letreiro">Total</span>
       <strong>{{ ordem.total|intcomma_brl }}</strong>
     </div>
   {% else %}
     <div class="pdv-vazio">
-      <svg viewBox="0 0 24 24" class="ico"><path d="M4 8h16l-1 12H5z"/><path d="M9 8V6a3 3 0 016 0v2"/></svg>
-      <span>Nenhuma peça lançada. Toque num serviço da tabela.</span>
+      <svg viewBox="0 0 24 24" class="ico" aria-hidden="true" focusable="false">
+        <path d="M4 8h16l-1 12H5z"/><path d="M9 8V6a3 3 0 016 0v2"/>
+      </svg>
+      <strong>Nenhuma peça lançada</strong>
+      <span>Toque num serviço da tabela de preços.</span>
     </div>
   {% endif %}
 </div>
+{% if not embutido %}
+  {% comment %}Depois de cada troca do `#ordem-itens`, a aba «Cesta» e o contador do
+  painel recebem o resumo novo — inclusive quando a cesta não está na tela (celular,
+  onde «Peças» e «Cesta» se alternam).{% endcomment %}
+  <span id="lav-resumo" hx-swap-oob="true">{{ cesta.n_pecas }} peça{{ cesta.n_pecas|pluralize }}{% if cesta.granel %} · {{ cesta.granel|quantidade_br }} kg{% endif %} · {{ ordem.total|intcomma_brl }}</span>
+  <span id="lav-contador" class="pdv-contador" hx-swap-oob="true">{{ cesta.n_pecas }} peça{{ cesta.n_pecas|pluralize }}{% if cesta.granel %} · {{ cesta.granel|quantidade_br }} kg{% endif %}</span>
+{% endif %}

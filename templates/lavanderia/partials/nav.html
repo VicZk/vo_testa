@@ -1,7 +1,9 @@
+{% load pecas_lavanderia %}
+{% ordens_em_producao as ordens_abertas %}
 {% with atual=request.resolver_match.url_name %}
 <nav class="est-abas abas-secao" aria-label="Seções da Lavanderia">
-  <a href="{% url 'lavanderia:painel' %}" class="est-aba"{% if atual == 'painel' or atual == 'ordem' %} aria-current="page"{% endif %}>Ordens</a>
-  <a href="{% url 'lavanderia:rouparia' %}" class="est-aba"{% if atual == 'rouparia' %} aria-current="page"{% endif %}>Rouparia</a>
+  <a href="{% url 'lavanderia:painel' %}" class="est-aba"{% if atual == 'painel' or atual == 'ordem' %} aria-current="page"{% endif %}>Ordens{% if ordens_abertas %} <span class="n">{{ ordens_abertas }}</span>{% endif %}</a>
+  <a href="{% url 'lavanderia:rouparia' %}" class="est-aba"{% if atual == 'rouparia' or atual == 'extrato' %} aria-current="page"{% endif %}>Rouparia</a>
   <a href="{% url 'lavanderia:servicos' %}" class="est-aba"{% if atual == 'servicos' %} aria-current="page"{% endif %}>Tabela de preços</a>
   <a href="{% url 'lavanderia:historico' %}" class="est-aba"{% if atual == 'historico' %} aria-current="page"{% endif %}>Histórico</a>
 </nav>
