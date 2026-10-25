@@ -1,8 +1,9 @@
 import csv
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 
 from django.conf import settings
 from django.contrib import messages
+from django.db import transaction
 from django.http import Http404, HttpResponseForbidden, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -12,11 +13,14 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
 
 from apps.nucleo.export import resposta_csv, sanitizar_celula
+from apps.nucleo.forms import ReaisInput
+from apps.nucleo.formularios import erros_do_formulario
 from apps.nucleo.modulos import Modulo
 from apps.nucleo.periodos import _mes_ano, selecao_periodo
 from apps.nucleo.permissoes import requer_gerencia, requer_modulo
 
 from . import relatorios
+from .forms import FechamentoMensalForm
 from .models import ContaContabil, FechamentoMensal
 from .services import plano_de_contas
 
@@ -41,6 +45,9 @@ def painel(request):
     fechamento = FechamentoMensal.objects.filter(ano=ano, mes=mes).first()
     from apps.nucleo.models.cadastros import folha_base
     folha = folha_base()
+    # Sem fechamento ainda, a folha nasce sugerida pelo cadastro (editável).
+    form_fechamento = FechamentoMensalForm(
+        instance=fechamento, initial=None if fechamento else {"folha": folha["total"]})
 
     # Receita futura contratada (reservas confirmadas ainda não hospedadas).
     from apps.nucleo.models import modulo_ativo
@@ -70,7 +77,8 @@ def painel(request):
         "ano": ano, "mes": mes, "dre": dados_dre, "fluxo": fluxo,
         "orfaos": orf, "contas": contas, "fechamento": fechamento,
         "donut": donut, "waterfall": waterfall, "folha_cadastro": folha,
-        "futura": futura,
+        "folha_cadastro_campo": ReaisInput().format_value(folha["total"]),
+        "form_fechamento": form_fechamento, "futura": futura,
         **selecao_periodo(request),
     })
 
@@ -92,24 +100,29 @@ def fechar(request):
 
     ano = _int("ano", hoje.year)
     mes = _int("mes", hoje.month)
+    voltar = f"{reverse('contabil:painel')}?ano={ano}&mes={mes}#fechar"
+    if not (1 <= mes <= 12 and 2000 <= ano <= 2100):
+        messages.error(request, "Mês ou ano inválido para o fechamento.")
+        return redirect(reverse("contabil:painel"))
 
-    def _dec(campo):
-        try:
-            return Decimal((request.POST.get(campo) or "0").replace(",", "."))
-        except (InvalidOperation, AttributeError):
-            return Decimal("0")
+    with transaction.atomic():
+        from apps.nucleo.sistema import travar
 
-    fm, _ = FechamentoMensal.objects.get_or_create(ano=ano, mes=mes)
-    fm.folha = _dec("folha")
-    fm.encargos = _dec("encargos")
-    fm.pro_labore = _dec("pro_labore")
-    fm.das = _dec("das")
-    fm.observacao = request.POST.get("observacao", "")[:200]
-    fm.fechado_por = request.user
-    fm.save()
-    fm.aplicar()
+        fm, _ = FechamentoMensal.objects.get_or_create(ano=ano, mes=mes)
+        fm = travar(fm)  # dois envios do mesmo mês: um espera o outro
+        form = FechamentoMensalForm(request.POST, instance=fm)
+        if not form.is_valid():
+            # Nada é gravado: o formulário (data-preservar-erros) mostra o erro e
+            # mantém o que foi digitado; sem JavaScript, volta com a mensagem.
+            transaction.set_rollback(True)
+            messages.error(request, erros_do_formulario(form))
+            return redirect(voltar)
+        fm = form.save(commit=False)
+        fm.fechado_por = request.user
+        fm.save()
+        fm.aplicar()
     messages.success(request, f"Fechamento de {mes:02d}/{ano} aplicado à DRE.")
-    return redirect(f"{reverse('contabil:painel')}?ano={ano}&mes={mes}#fechar")
+    return redirect(voltar)
 
 
 @csrf_exempt

@@ -47,6 +47,9 @@
          não depois dele. -->
     <link rel="preload" href="{% static 'site/fonts/Neco-Regular.woff2' %}" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="{% static 'site/fonts/Neco-Black.woff2' %}" as="font" type="font/woff2" crossorigin>
+    {% comment %}O Bold dos nomes dos quartos, do preço e da navegação também: sem preload,
+    ele chegava depois da primeira pintura e a troca de fonte mexia a vitrine (CLS).{% endcomment %}
+    <link rel="preload" href="{% static 'site/fonts/Neco-Bold.woff2' %}" as="font" type="font/woff2" crossorigin>
     <style>
         @font-face {
             font-family: 'Neco';

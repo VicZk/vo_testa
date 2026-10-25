@@ -740,6 +740,39 @@ class PainelViewTests(TestCase):
             LancamentoFinanceiro.objects.filter(origem="fechamento").count(), 4
         )
 
+    def test_fechar_aceita_o_valor_da_mascara_e_o_milhar(self):
+        """"12.500,00" (máscara sem JavaScript) e "8000.50" (o que o JS envia) entram
+        certos; antes o milhar virava "12.500.00" e o valor caía para zero calado."""
+        self.client.post("/crm/contabil/fechar/", {
+            "ano": 2026, "mes": 9, "folha": "12.500,00", "encargos": "8000.50",
+            "pro_labore": "", "das": "0,00",
+        })
+        fm = FechamentoMensal.objects.get(ano=2026, mes=9)
+        self.assertEqual((fm.folha, fm.encargos, fm.pro_labore, fm.das),
+                         (Decimal("12500.00"), Decimal("8000.50"), Decimal("0"), Decimal("0")))
+
+    def test_fechar_com_valor_invalido_avisa_e_nao_grava(self):
+        FechamentoMensal.objects.create(ano=2026, mes=9, folha=Decimal("100"))
+        resp = self.client.post("/crm/contabil/fechar/", {
+            "ano": 2026, "mes": 9, "folha": "doze mil", "encargos": "0",
+            "pro_labore": "0", "das": "0",
+        }, HTTP_X_FORM_PRESERVE="1")
+        self.assertEqual(resp.status_code, 422)
+        self.assertIn("Folha", resp.json()["errors"][0])
+        self.assertEqual(FechamentoMensal.objects.get(ano=2026, mes=9).folha, Decimal("100"))
+        self.assertFalse(LancamentoFinanceiro.objects.filter(origem="fechamento").exists())
+
+    def test_fechar_mes_invalido_nao_quebra(self):
+        resp = self.client.post("/crm/contabil/fechar/", {"ano": 2026, "mes": 13, "folha": "1"})
+        self.assertEqual(resp.status_code, 302)
+        self.assertFalse(FechamentoMensal.objects.exists())
+
+    def test_campos_do_fechamento_usam_a_mascara_de_reais(self):
+        FechamentoMensal.objects.create(ano=2026, mes=9, folha=Decimal("12500"))
+        resp = self.client.get("/crm/contabil/?ano=2026&mes=9")
+        self.assertContains(resp, 'value="12.500,00"')
+        self.assertContains(resp, 'class="mascara-reais"', count=4)
+
     def test_export_resumo_csv(self):
         resp = self.client.get("/crm/contabil/export/resumo/?ano=2026&mes=9")
         self.assertEqual(resp.status_code, 200)

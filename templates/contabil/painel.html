@@ -6,8 +6,10 @@
 {% block conteudo %}
 <style>
 /* ===== Camada Contábil — réplica do mockup, em tokens Lampião. Escopo .ctb ===== */
-.ctb { --acc: var(--lampiao); }
-.ctb .eyebrow { text-transform:uppercase; letter-spacing:.14em; font-size:.72rem; font-weight:600; color:var(--acc); margin:0; }
+/* O dourado de faixa e gráfico é o --lampiao; como TEXTO sobre claro, o --lampiao-tinta
+   (o claro dá ~2:1 de contraste, abaixo do mínimo até para número grande). */
+.ctb { --acc: var(--lampiao); --acc-texto: var(--lampiao-tinta); }
+.ctb .eyebrow { text-transform:uppercase; letter-spacing:.14em; font-size:max(var(--rotulo-min), .72rem); font-weight:600; color:var(--acc-texto); margin:0; }
 /* Filtro de período no cabeçalho: controle solto, não barra que estica. */
 .ctb .filtro-inline { justify-content:flex-end; gap:.6rem; }
 .ctb .filtro-inline .filtro-campo { flex:0 0 auto; }
@@ -21,10 +23,18 @@
 
 /* kpis */
 .ctb .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr)); gap:1rem; margin-bottom:1.4rem; }
-.ctb .kpi .rotulo { text-transform:uppercase; letter-spacing:.07em; font-size:.72rem; color:var(--tinta-suave); font-weight:600; }
+.ctb .kpi .rotulo { text-transform:uppercase; letter-spacing:.07em; font-size:max(var(--rotulo-min), .72rem); color:var(--tinta-suave); font-weight:600; }
 .ctb .kpi .valor { font-size:2rem; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; margin-top:.2rem; }
-.ctb .kpi .valor.pos { color:var(--sucesso); } .ctb .kpi .valor.neg { color:var(--perigo); } .ctb .kpi .valor.acc { color:var(--acc); }
-.ctb .kpi .foot { font-size:.78rem; color:var(--tinta-suave); margin-top:.1rem; }
+.ctb .kpi .valor.pos { color:var(--sucesso); } .ctb .kpi .valor.neg { color:var(--perigo); } .ctb .kpi .valor.acc { color:var(--acc-texto); }
+.ctb .kpi .foot { font-size:max(var(--rotulo-min), .78rem); color:var(--tinta-suave); margin-top:.1rem; }
+
+/* No estreito, a densidade dos indicadores da casa: dois por linha, número que cabe
+   no cartão (a regra geral dos .kpis perde para a desta tela, mais específica). */
+@container conteudo (max-width:42rem){
+  .ctb .kpis { grid-template-columns:repeat(2,minmax(0,1fr)); gap:.7rem; }
+  .ctb .kpis > .kpi { min-width:0; padding:1rem .85rem; }
+  .ctb .kpi .valor { font-size:clamp(1.05rem, 5cqi, 1.5rem); overflow-wrap:anywhere; }
+}
 
 /* Quem divide espaço decide pelo ESPAÇO: o menu aberto/recolhido muda a largura
    útil e o @media só enxerga a janela. `.conteudo` é container nomeado no app.css. */
@@ -36,8 +46,8 @@
 /* DRE table */
 .ctb table.dre { width:100%; border-collapse:collapse; font-size:.94rem; }
 .ctb table.dre :is(td, th) { padding:.6rem .8rem; border-bottom:1px solid var(--fio); text-align:left; }
-.ctb table.dre :is(td, th).num { text-align:right; font-variant-numeric:tabular-nums; }
-.ctb table.dre thead th { font-size:.72rem; text-transform:uppercase; letter-spacing:.07em; color:var(--tinta-suave); font-weight:600; }
+.ctb table.dre :is(td, th).num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.ctb table.dre thead th { font-size:max(var(--rotulo-min), .72rem); text-transform:uppercase; letter-spacing:.07em; color:var(--tinta-suave); font-weight:600; }
 .ctb tr.l-grupo td { font-weight:700; background:color-mix(in srgb, var(--lampiao) 8%, transparent); }
 .ctb tr.l-sub td:first-child { padding-left:2rem; color:var(--tinta-suave); }
 .ctb tr.l-resultado td { font-weight:800; border-top:2px solid var(--fio); }
@@ -47,28 +57,33 @@
 @container conteudo (max-width:47.5rem){ .ctb .bridge{ grid-template-columns:1fr;} .ctb .bridge .op{display:none;} }
 .ctb .bridge .op { font-size:1.4rem; color:var(--acc); text-align:center; }
 .ctb .bridge .b { background:var(--canvas); border:1px solid var(--fio); border-radius:var(--raio); padding:1rem; text-align:center; }
-.ctb .bridge .b .l { font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--tinta-suave); }
+.ctb .bridge .b .l { font-size:max(var(--rotulo-min), .72rem); text-transform:uppercase; letter-spacing:.06em; color:var(--tinta-suave); }
 .ctb .bridge .b .v { font-size:1.3rem; font-weight:700; font-variant-numeric:tabular-nums; margin-top:.2rem; }
 
 /* plano tree */
 .ctb .conta-linha { display:flex; align-items:center; gap:.8rem; padding:.5rem .6rem; border-bottom:1px solid var(--fio); font-size:.92rem; }
-.ctb .conta-linha .cod { font-variant-numeric:tabular-nums; color:var(--acc); font-weight:700; min-width:80px; }
+.ctb .conta-linha .cod { font-variant-numeric:tabular-nums; color:var(--acc-texto); font-weight:700; min-width:80px; }
 .ctb .conta-linha.sintetica { font-weight:700; background:color-mix(in srgb, var(--lampiao) 6%, transparent); }
 .ctb .conta-linha.sintetica .cod { color:var(--tinta); }
-.ctb .conta-linha .v { margin-left:auto; font-variant-numeric:tabular-nums; }
-.ctb .ind-1{padding-left:1rem;} .ctb .ind-2{padding-left:2rem;} .ctb .ind-3{padding-left:3rem;}
+.ctb .conta-linha .nome { flex:1 1 auto; min-width:0; }
+.ctb .conta-linha .v { margin-left:auto; flex:none; font-variant-numeric:tabular-nums; white-space:nowrap; }
+/* Recuo pela profundidade da conta. A classe vem do comprimento do código
+   (1 → ind-1, 3.1.01 → ind-6, 3.1.01.01 → ind-9): antes ind-1/2/3, e só a raiz
+   recuava — o grupo e a analítica ficavam à esquerda dela. */
+.ctb .ind-1 { padding-left:.6rem; } .ctb .ind-6 { padding-left:1.4rem; } .ctb .ind-9 { padding-left:2.2rem; }
 
 /* fechar form */
 .ctb .form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr)); gap:1.1rem 1.2rem; margin-bottom:1rem; align-items:start; }
 .ctb .form-campo { display:flex; flex-direction:column; }
-.ctb .form-grid label { min-height:2.5em; font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--tinta-suave); margin-bottom:.3rem; line-height:1.25; }
+.ctb .form-grid label { min-height:2.5em; font-size:max(var(--rotulo-min), .72rem); text-transform:uppercase; letter-spacing:.06em; color:var(--tinta-suave); margin-bottom:.3rem; line-height:1.25; }
 .ctb .hint { text-transform:none; letter-spacing:0; font-weight:400; opacity:.75; }
 .ctb .form-grid input { width:100%; padding:.55rem .7rem; border:1px solid var(--fio); border-radius:var(--raio-p); background:var(--superficie); color:var(--tinta); font-family:inherit; font-variant-numeric:tabular-nums; }
-.ctb .folha-dica { display:block; margin-top:.4rem; line-height:1.5; }
-.ctb .folha-dica .botao-mini { margin-left:.35rem; vertical-align:middle; }
+/* Texto e botão lado a lado; sem espaço, o botão desce alinhado à esquerda (antes
+   levava o recuo de quando estava ao lado do texto). */
+.ctb .folha-dica { display:flex; flex-wrap:wrap; align-items:center; gap:.35rem .6rem; margin-top:.4rem; line-height:1.5; }
 
 .ctb .export-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr)); gap:1rem; }
-.ctb .vazio { color:var(--tinta-suave); padding:1rem; text-align:center; }
+.ctb .vazio { color:var(--tinta-suave); padding:1rem; text-align:center; max-width:none; }
 
 /* Blocos da tela — o projeto não aceita `style=` estático no template
    (teste EstiloForaDoAtributoTests); o desenho mora aqui, em tokens. */
@@ -210,12 +225,12 @@
       {% for item in contas %}
       <div class="conta-linha {{ item.conta.tipo }} ind-{{ item.conta.classificacao|length }}">
         <span class="cod">{{ item.conta.classificacao }}</span>
-        <span>{{ item.conta.nome }}</span>
+        <span class="nome">{{ item.conta.nome }}</span>
         {% if item.conta.tipo == 'analitica' %}<span class="v">{{ item.total|intcomma_brl }}</span>{% endif %}
       </div>
       {% endfor %}
     </div>
-    <p class="periodo nota-rodape">Códigos do contador preservados para o export. Patrimonial (Ativo/Passivo) fica com o contador.</p>
+    <p class="periodo nota-rodape">Códigos do contador preservados para o export. As contas 1 e 2 ficam fora da DRE: recebem só o dinheiro que liquida o que a DRE já reconheceu (o faturado pago, a folha paga) e a compra que entra no estoque. O balanço completo fica com o contador.</p>
   </section>
 
   {# ===================== A CLASSIFICAR (órfãos) ===================== #}
@@ -240,22 +255,24 @@
     <div class="cartao cartao-form">
       <h3 class="t-form">Fechar {{ mes_sel }}/{{ ano_sel }}</h3>
       <p class="periodo">Os números de baixa frequência que não nascem no sistema. Gera os lançamentos de competência já classificados. Recomputável (reenviar atualiza).</p>
-      <form method="post" action="{% url 'contabil:fechar' %}">
+      <form method="post" action="{% url 'contabil:fechar' %}" data-preservar-erros>
         {% csrf_token %}
         <input type="hidden" name="ano" value="{{ ano_sel }}"><input type="hidden" name="mes" value="{{ mes_sel }}">
+        {% with f=form_fechamento %}
         <div class="form-grid">
           <div class="form-campo">
-            <label>Folha <span class="hint">→ 4.2.01.01</span></label>
-            <input id="campo-folha" name="folha" inputmode="decimal" value="{% if fechamento %}{{ fechamento.folha }}{% else %}{{ folha_cadastro.total }}{% endif %}" data-cadastro="{{ folha_cadastro.total }}">
+            <label for="{{ f.folha.id_for_label }}">Folha <span class="hint">→ 4.2.01.01</span></label>
+            {{ f.folha }}
             <span class="hint folha-dica">
               {{ folha_cadastro.qtd }} funcionário{{ folha_cadastro.qtd|pluralize }} no cadastro · {{ folha_cadastro.total|intcomma_brl }}
-              <button type="button" class="botao-mini" onclick="var i=document.getElementById('campo-folha'); i.value=i.dataset.cadastro;">Usar do cadastro</button>
+              <button type="button" class="botao-mini" data-cadastro="{{ folha_cadastro_campo|default:'0,00' }}" onclick="document.getElementById('{{ f.folha.id_for_label }}').value=this.dataset.cadastro;">Usar do cadastro</button>
             </span>
           </div>
-          <div class="form-campo"><label>Encargos FGTS/INSS <span class="hint">→ 4.2.01.01</span></label><input name="encargos" inputmode="decimal" value="{{ fechamento.encargos|default:'0' }}"></div>
-          <div class="form-campo"><label>Pró‑labore <span class="hint">→ 5.1.02.02</span></label><input name="pro_labore" inputmode="decimal" value="{{ fechamento.pro_labore|default:'0' }}"></div>
-          <div class="form-campo"><label>DAS / Simples <span class="hint">→ 3.1.02.01</span></label><input name="das" inputmode="decimal" value="{{ fechamento.das|default:'0' }}"></div>
+          <div class="form-campo"><label for="{{ f.encargos.id_for_label }}">Encargos FGTS/INSS <span class="hint">→ 4.2.01.01</span></label>{{ f.encargos }}</div>
+          <div class="form-campo"><label for="{{ f.pro_labore.id_for_label }}">Pró-labore <span class="hint">→ 5.1.02.02</span></label>{{ f.pro_labore }}</div>
+          <div class="form-campo"><label for="{{ f.das.id_for_label }}">DAS / Simples <span class="hint">→ 3.1.02.01</span></label>{{ f.das }}</div>
         </div>
+        {% endwith %}
         <button type="submit" class="botao-primario">Aplicar à DRE</button>
         {% if fechamento %}<span class="selo selo-ok ao-lado">Fechado em {{ fechamento.fechado_em|date:"d/m/Y H:i" }}</span>{% endif %}
       </form>
@@ -266,9 +283,9 @@
   <section class="painel-aba" id="aba-export" role="tabpanel" tabindex="0">
     <p class="periodo">Arquivos CSV (pt‑BR, Excel) no layout do contador — com o código numérico das contas.</p>
     <div class="export-grid">
-      <div class="cartao"><h3>Resumo por conta</h3><p class="periodo">Saldo do mês por conta analítica.</p><a class="botao-primario" href="{% url 'contabil:export' 'resumo' %}?ano={{ ano_sel }}&mes={{ mes_sel }}">Baixar CSV</a></div>
-      <div class="cartao"><h3>Lançamentos</h3><p class="periodo">Linha a linha, com conta e centro.</p><a class="botao-primario" href="{% url 'contabil:export' 'lancamentos' %}?ano={{ ano_sel }}&mes={{ mes_sel }}">Baixar CSV</a></div>
-      <div class="cartao"><h3>Plano de contas</h3><p class="periodo">Estrutura + códigos do contador.</p><a class="botao-primario" href="{% url 'contabil:export' 'plano' %}">Baixar CSV</a></div>
+      <div class="cartao"><h3>Resumo por conta</h3><p class="periodo">Saldo do mês por conta analítica.</p><a class="botao-neutro" href="{% url 'contabil:export' 'resumo' %}?ano={{ ano_sel }}&mes={{ mes_sel }}">Baixar CSV</a></div>
+      <div class="cartao"><h3>Lançamentos</h3><p class="periodo">Linha a linha, com conta e centro.</p><a class="botao-neutro" href="{% url 'contabil:export' 'lancamentos' %}?ano={{ ano_sel }}&mes={{ mes_sel }}">Baixar CSV</a></div>
+      <div class="cartao"><h3>Plano de contas</h3><p class="periodo">Estrutura + códigos do contador.</p><a class="botao-neutro" href="{% url 'contabil:export' 'plano' %}">Baixar CSV</a></div>
     </div>
   </section>
 </div>

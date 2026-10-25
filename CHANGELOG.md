@@ -9,6 +9,32 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 25/10/2026: varredura final do front (Contábil, Comercial e site)
+
+- **Fechar o mês no Contábil grava o que foi digitado.** "12.500,00" chegava ao servidor
+  como "12.500.00" (não é número) e a folha entrava como zero, sem aviso. Agora os
+  quatro campos usam a máscara de R$ da casa. Valor inválido avisa no próprio formulário,
+  sem apagar o que foi digitado e sem gravar nada. Mês fora de 1–12 não quebra mais.
+- **Painel Contábil no padrão da casa:**
+  - indicadores dois por linha no celular (antes, um por linha);
+  - dinheiro que não parte entre o "R$" e o número;
+  - plano de contas recuado pela profundidade (antes, só as contas do topo recuavam);
+  - rótulos com o tamanho mínimo de leitura no toque;
+  - dourado legível como texto;
+  - "Baixar CSV" como botão secundário;
+  - aviso de vazio na largura do cartão;
+  - nota do plano atualizada para as contas fora da DRE.
+- **Comercial:** a lista de quartos do lead não empurra mais a coluna para baixo ao
+  carregar. Os 6 primeiros já nascem visíveis, em vez de esperar o JavaScript.
+- **Site:** o peso Bold da fonte também é pré-carregado. A vitrine de quartos não muda
+  mais de tamanho quando a fonte chega.
+- **Como foi achado:** varredura completa de 415 telas em 5 larguras (320, 390, 821 com o
+  menu aberto e 1440 aberto e recolhido), comparada com a de 24/10. Resultado: 38 melhoras,
+  1.895 iguais e 4 pioras reais, as duas mexidas de layout acima, corrigidas aqui.
+- **Modificado:** `apps/contabil/forms.py` (novo), `apps/contabil/views.py`,
+  `templates/contabil/painel.html`, `templates/comercial/_painel_quartos.html` e
+  `apps/site/templates/site/base.html`.
+
 ## 25/10/2026: Contábil do original integrado, sem contar nada duas vezes
 
 - **Chegou a camada Contábil do original** (DRE, fluxo de caixa, plano de contas,
