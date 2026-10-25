@@ -93,7 +93,7 @@ consultadas nesta revisão. Esta é uma **fork de desenvolvimento**: publicar na
 | Contábil / gerencial (DRE, fluxo de caixa, fechamento mensal, export para o contador) | Vindo do original (24/10) e integrado aos fluxos do fork em 25/10 |
 | Pagamentos online | Safrapay implementado; ativação em produção a confirmar. Pix direto tem baixa manual |
 | FNRH Digital (envio ao governo) | Integração Serpro escrita; credenciais e homologação precisam ser verificadas no ambiente |
-| Fiscal (NFS-e/NFC-e) | Focus NFe v2 implementado; cadastro, credenciais e homologação pendentes de configuração |
+| Fiscal (NFS-e/NFC-e) | Focus NFe v2 e Spedy (NFS-e, vindo do original em 25/10) implementados; cadastro, credenciais e homologação pendentes de configuração |
 | NPS | Pesquisa pós-estadia, resposta por token e painel implementados |
 | Canais/OTAs | Adaptador Channex e operação no CRM; ativação e homologação real pendentes ([guia](docs/CANAIS.md)) |
 | CRM do Hóspede | Evolução de catálogo |
@@ -426,7 +426,7 @@ Cada integração externa é escolhida por uma variável e sempre começa em `si
 | `PAGAMENTOS_GATEWAY` | `simulado`, `safrapay` | Safrapay pronto para Pix, cartão e boleto (homologação) |
 | `PIX_DIRETO` (flag) | BR Code gerado localmente | Sem PSP: confirmação manual pela recepção |
 | `FNRH_GATEWAY` | `simulado`, `serpro` | Fluxo da API v2 escrito; conferir credenciais e homologação no ambiente |
-| `FISCAL_GATEWAY` | `simulado`, `focus` | Focus NFe v2: emissão, consulta, cancelamento e retorno autenticado; exige homologação |
+| `FISCAL_GATEWAY` | `simulado`, `focus`, `spedy` | Focus NFe v2 ou Spedy: emissão, consulta, cancelamento e retorno autenticado (no Spedy, retorno assinado e emissão assíncrona); exige homologação |
 | `WHATSAPP_GATEWAY` | `simulado`, `cloud` | Cloud API (Meta), assinatura do webhook e confirmação do identificador de envio |
 | `EMAIL_GATEWAY` | `simulado`, `smtp`, `ses` | SMTP e SES implementados; simulado usa memória e não envia externamente |
 | `MIDIA_GATEWAY` | `simulado`, `meta`, `google` | Meta CAPI pronta; Google stub |
@@ -532,7 +532,9 @@ check-out expresso. Ações registradas em nome do usuário de sistema `_portal`
 configurado; lavanderia e demais serviços exigem classificação explícita. NFC-e usa
 itens de vendas/comandas fechadas e cadastro tributário revisado na tela Fiscal.
 Referências persistidas evitam duplicidade; respostas incertas exigem consulta antes
-de novo envio. [Configuração, limites e homologação](docs/Implementar_fiscal.md).
+de novo envio. No Spedy, a nota fica processando até o retorno assinado, e o pedido de
+cancelamento entra na trilha antes da confirmação.
+[Configuração, limites e homologação](docs/Implementar_fiscal.md).
 
 **Site (`core`).** Vitrine por quarto, busca de disponibilidade, seleção da unidade,
 resumo com a política de cancelamento, pré-reserva com retenção de 30 minutos, cobrança
@@ -705,7 +707,7 @@ Railway em produção). As essenciais:
 | `SITE_PUBLIC_URL` | links absolutos nos e-mails |
 | `PAGAMENTOS_GATEWAY`, `SAFRAPAY_*`, `PIX_DIRETO`, `PIX_CHAVE` | pagamentos |
 | `FNRH_GATEWAY`, `FNRH_API_*`, `FNRH_BLOQUEAR_CHECKIN` | FNRH Digital e trava de check-in |
-| `FISCAL_GATEWAY`, `FISCAL_NFSE_*` | emissão fiscal |
+| `FISCAL_GATEWAY`, `FISCAL_NFSE_*`, `SPEDY_*`, `EMPRESA_*` | emissão fiscal e dados do emitente |
 | `WHATSAPP_*`, `META_*`, `GA_MEASUREMENT_ID` | comunicação e mídia |
 | `RESERVA_RETENCAO_MINUTOS`, `PRECO_*`, `CANCELAMENTO_*` | regras de reserva e preço |
 | `CHECKOUT_TOLERANCIA_ARREDONDAMENTO` | resíduo de centavos quitado sozinho no check-out (padrão R$ 0,10) |

@@ -244,7 +244,7 @@ ativação/homologação externa; o que entrou depois está no [CHANGELOG](CHANG
   `Modulo.CONTABIL` (grupo Gestão). Camada ADITIVA e de LEITURA sobre o financeiro —
   sem partidas dobradas, DRE por soma. Plano de contas + de-para (`resolver_conta`),
   capturas por competência (receita do folio/vendas, taxa de cartão, CMV),
-  `FechamentoMensal` (folha/encargos/pró-labore/DAS) e painel em abas com export CSV.
+  `FechamentoMensal` (folha/encargos/pró-labore/impostos sobre a receita) e painel em abas com export CSV.
   Carimba `conta_contabil` por signal (o núcleo não importa `contabil`). Comissão de
   OTA é stub até o módulo Canais. No fork, as capturas e as recorrentes rodam na
   rotina `rotina_contabil` (grupo `diarias`); o endpoint token-gated
@@ -261,6 +261,10 @@ ativação/homologação externa; o que entrou depois está no [CHANGELOG](CHANG
   Envio real exige configuração explícita e preferências de contato válidas.
 - **Fiscal (22/10):** Focus NFe v2, NFS-e/NFC-e, consulta e cancelamento implementados;
   classificação fiscal e credenciais precisam ser conferidas antes da homologação real.
+  Spedy (original, 25/10) adaptado ao ciclo do fork em `apps/fiscal/spedy.py`: NFS-e
+  assíncrona, `integrationId` = `gateway_id`, retorno com assinatura Standard Webhooks
+  (`SPEDY_WEBHOOK_SECRET`) e cancelamento que só fecha com a confirmação
+  (`CancelamentoPendente`). Regime confirmado: Lucro Presumido (`settings.EMPRESA_*`).
 - **NPS (22/10):** coleta persistida, consentimento e acompanhamento disponíveis.
 - **Day pass:** módulo próprio de turnos, capacidade, visitantes, caixa e comandas;
   veja `docs/Reservas/DAY_PASS.md`. Nenhuma capacidade física é presumida.

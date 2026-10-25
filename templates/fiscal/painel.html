@@ -17,7 +17,7 @@
 <p class="subtitulo">
   Acompanhe os documentos de serviço (NFS-e) e de consumo (NFC-e).
   {% if gateway == 'simulado' %}<strong>Modo de teste: os documentos não têm valor fiscal.</strong>
-  {% else %}<span class="selo">Integração: {{ gateway }}</span>{% endif %}
+  {% else %}<span class="selo">Integração: {% if gateway == 'focus' %}Focus NFe{% elif gateway == 'spedy' %}Spedy{% else %}{{ gateway }}{% endif %}</span>{% endif %}
 </p>
 
 <div class="tabela-rol">

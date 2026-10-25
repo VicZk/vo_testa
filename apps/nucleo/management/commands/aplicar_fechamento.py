@@ -1,6 +1,6 @@
 """
-Aplica o fechamento mensal guiado (folha, encargos, pró-labore, DAS) à DRE,
-gerando/atualizando os lançamentos de competência.
+Aplica o fechamento mensal guiado (folha, encargos, pró-labore, impostos sobre a
+receita) à DRE, gerando/atualizando os lançamentos de competência.
 
 O FechamentoMensal é preenchido na tela/admin; este comando (re)aplica.
 Uso: `manage.py aplicar_fechamento --ano 2026 --mes 9`.
@@ -13,7 +13,7 @@ from apps.contabil.models import FechamentoMensal
 
 
 class Command(BaseCommand):
-    help = "Aplica o fechamento mensal (gera os lançamentos de folha/encargos/pró-labore/DAS)."
+    help = "Aplica o fechamento mensal (gera os lançamentos de folha/encargos/pró-labore/impostos sobre a receita)."
 
     def add_arguments(self, parser):
         hoje = timezone.localdate()
@@ -31,5 +31,5 @@ class Command(BaseCommand):
         fm.aplicar()
         self.stdout.write(self.style.SUCCESS(
             f"Fechamento {ano:04d}-{mes:02d} aplicado: folha R$ {fm.folha}, "
-            f"encargos R$ {fm.encargos}, pró-labore R$ {fm.pro_labore}, DAS R$ {fm.das}."
+            f"encargos R$ {fm.encargos}, pró-labore R$ {fm.pro_labore}, impostos s/ receita R$ {fm.das}."
         ))

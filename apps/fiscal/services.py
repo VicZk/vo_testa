@@ -12,6 +12,8 @@ from apps.nucleo.models import NaturezaFiscal, modulo_ativo, registrar_auditoria
 from apps.nucleo.modulos import Modulo
 from apps.nucleo.validadores import decimal_valido, identificador_valido
 
+from . import spedy
+from .erros import CancelamentoPendente
 from .focus import normalizar
 from .gateways import get_gateway
 from .models import DocumentoFiscal, EventoFiscal
@@ -131,7 +133,8 @@ def _executar(doc_id, acao, motivo=""):
         if acao == "corrigir":
             resultado = gw.consultar(doc)
             if resultado and resultado.get("status") == "rejeitada":
-                if resultado.get("retorno", {}).get("status") not in ("erro_autorizacao", "rejeitado", "rejeitada"):
+                # Só a rejeição por cadastro se corrige com reenvio (no Spedy, "rejected").
+                if resultado.get("retorno", {}).get("status") not in ("erro_autorizacao", "rejeitado", "rejeitada", "rejected"):
                     raise ValidationError("Esta rejeição exige conciliação no provedor antes de uma nova emissão.")
                 if doc.tipo == "nfce":
                     from .consumo import renovar_payload
@@ -180,14 +183,27 @@ def corrigir(documento):
 def cancelar(documento, operador, motivo):
     if not isinstance(motivo, str) or not 15 <= len(motivo.strip()) <= 255:
         raise ValidationError("Descreva o motivo do cancelamento em 15 a 255 caracteres.")
-    doc = _executar(documento.pk, "cancelar", motivo.strip())
-    if doc.status == "cancelada" and not doc.eventos.filter(tipo="cancelamento_log").exists():
-        with transaction.atomic():
-            DocumentoFiscal.objects.select_for_update().get(pk=doc.pk)
-            if not doc.eventos.filter(tipo="cancelamento_log").exists():
-                registrar_auditoria(operador, "cancelamento_fiscal", doc, {"motivo":motivo.strip()})
-                EventoFiscal.objects.create(documento=doc, tipo="cancelamento_log")
+    try:
+        doc = _executar(documento.pk, "cancelar", motivo.strip())
+    except CancelamentoPendente:
+        # Provedor assíncrono (Spedy): a confirmação chega depois, pelo retorno. Quem
+        # pediu, quando e por quê ficam na trilha já no pedido.
+        _registrar_cancelamento(documento, operador, motivo.strip(), confirmado=False)
+        raise
+    if doc.status == "cancelada":
+        _registrar_cancelamento(doc, operador, motivo.strip())
     return doc
+
+
+def _registrar_cancelamento(doc, operador, motivo, confirmado=True):
+    if doc.eventos.filter(tipo="cancelamento_log").exists():
+        return
+    with transaction.atomic():
+        DocumentoFiscal.objects.select_for_update().get(pk=doc.pk)
+        if not doc.eventos.filter(tipo="cancelamento_log").exists():
+            detalhe = {"motivo":motivo} if confirmado else {"motivo":motivo, "confirmado":False}
+            registrar_auditoria(operador, "cancelamento_fiscal", doc, detalhe)
+            EventoFiscal.objects.create(documento=doc, tipo="cancelamento_log")
 
 
 def emitir_nfse_da_conta(conta_id, operador, codigo_servico=None):
@@ -227,6 +243,22 @@ def processar_retorno_focus(payload):
     return _aplicar(doc.pk, resultado, origem="webhook")
 
 
+def processar_retorno_spedy(payload):
+    """Retorno já autenticado pela assinatura (`spedy.assinatura_valida`, na view)."""
+    dados = payload.get("data") if isinstance(payload, dict) else None
+    if not isinstance(dados, dict) or not isinstance(dados.get("integrationId"), str) or len(dados["integrationId"]) > 80:
+        raise ValidationError("Retorno fiscal inválido.")
+    doc = DocumentoFiscal.objects.filter(gateway="spedy", gateway_id=dados["integrationId"]).first()
+    if doc is None:
+        return None
+    gw = _gateway_documento(doc)
+    resultado = spedy.normalizar(dados, gw.base)
+    if resultado["status"] == "processando":
+        # As entregas podem chegar fora de ordem: um "na fila" atrasado não desfaz o fecho.
+        return doc
+    return _aplicar(doc.pk, resultado, origem="webhook")
+
+
 def configuracao():
     nome = settings.FISCAL_GATEWAY
     if nome == "simulado":
@@ -236,6 +268,12 @@ def configuracao():
         get_gateway()
     except ValidationError as erro:
         pendencias.extend(erro.messages)
+    if nome == "spedy":
+        if not settings.SPEDY_WEBHOOK_SECRET:
+            pendencias.append("Assinatura do retorno fiscal (segredo do webhook do Spedy): configuração pendente.")
+        ambiente = "testes (sandbox)" if settings.SPEDY_SANDBOX else "produção"
+        return {"mensagem":f"Spedy: ambiente de {ambiente}. A validade depende da autorização do documento pelo fisco. Confirme o cadastro da empresa, o certificado A1 e os parâmetros com o responsável fiscal.",
+                "pendencias":pendencias}
     for chave, rotulo in (("FISCAL_EMITENTE_CNPJ", "CNPJ do emitente"),
                          ("FISCAL_MUNICIPIO_IBGE", "Código IBGE do município"),
                          ("FISCAL_DPS_SERIE", "Série DPS exclusiva"),

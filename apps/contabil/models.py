@@ -167,7 +167,7 @@ class MapeamentoContabil(models.Model):
 class FechamentoMensal(models.Model):
     """
     Fechamento mensal guiado (Etapa 4): os números de baixa frequência que NÃO
-    nascem no sistema (folha, encargos, pró-labore, DAS/Simples). Digitados uma
+    nascem no sistema (folha, encargos, pró-labore, impostos sobre a receita). Digitados uma
     vez por mês; `aplicar()` gera/atualiza os `LancamentoFinanceiro` de competência
     já classificados. Recomputável e idempotente (chave `referencia`).
     """
@@ -177,7 +177,8 @@ class FechamentoMensal(models.Model):
         ("folha", "folha", "Folha de pagamento", "4.2.01.01", "Folha de pagamento"),
         ("encargos", "encargos", "Encargos sociais (FGTS/INSS)", "4.2.01.01", "Encargos (FGTS/INSS)"),
         ("pro_labore", "pro_labore", "Pró-labore", "5.1.02.02", "Pró-labore dos sócios"),
-        ("das", "das", "Simples Nacional (DAS)", "3.1.02.01", "DAS — Simples Nacional"),
+        ("das", "das", "Impostos sobre a receita", "3.1.02.01",
+         "Impostos sobre a receita (PIS/COFINS/ISS)"),
     ]
 
     ano = models.PositiveIntegerField("ano")

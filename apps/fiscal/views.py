@@ -15,6 +15,7 @@ from apps.nucleo.permissoes import eh_gerente, requer_gerencia, requer_modulo
 from apps.nucleo.validadores import identificador_valido
 
 from . import services
+from .erros import CancelamentoPendente
 from .forms import ConfigFiscalProdutoForm
 from .models import ConfigFiscalProduto, DocumentoFiscal
 
@@ -113,8 +114,10 @@ def preparar_conta(request, pk):
 @csrf_exempt
 @require_POST
 def webhook(request):
-    """Recebe o retorno do Focus NFe (autorização/cancelamento da nota) e atualiza o
-    documento (status + PDF/DANFSE + XML). Configurar esta URL no painel do Focus."""
+    """Recebe o retorno do provedor fiscal (autorização/cancelamento da nota) e atualiza o
+    documento (status + PDF/DANFSE + XML). Configurar esta URL no painel do provedor."""
+    if getattr(settings, "FISCAL_GATEWAY", "simulado") == "spedy":
+        return _webhook_spedy(request)
     # Valida o header de autorização (mesmo segredo posto na 'Chave de Autorização' do Focus).
     import hmac
     esperado = getattr(settings, "FISCAL_WEBHOOK_TOKEN", "")
@@ -138,6 +141,27 @@ def webhook(request):
     return JsonResponse({"ok": True, "status": doc.status})
 
 
+def _webhook_spedy(request):
+    # O Spedy assina cada entrega com o segredo da conta (id + carimbo + corpo cru).
+    from .spedy import assinatura_valida
+    segredo = getattr(settings, "SPEDY_WEBHOOK_SECRET", "")
+    if not segredo:
+        return JsonResponse({"erro": "webhook não configurado"}, status=503)
+    if len(request.body) > 65536 or not assinatura_valida(request.body, request.headers, segredo):
+        return JsonResponse({"erro": "não autorizado"}, status=401)
+    try:
+        payload = json.loads(request.body)
+        if not isinstance(payload, dict):
+            raise ValueError()
+        doc = services.processar_retorno_spedy(payload)
+    except (ValueError, UnicodeDecodeError, ValidationError):
+        return JsonResponse({"erro": "retorno fiscal inválido"}, status=400)
+    if not doc:
+        # Entrega de nota que não é deste sistema (o webhook vale para a conta toda).
+        return JsonResponse({"ok": True, "ignorado": True})
+    return JsonResponse({"ok": True, "status": doc.status})
+
+
 @requer_modulo(Modulo.FISCAL)
 @requer_gerencia
 def cancelar(request, pk):
@@ -149,6 +173,8 @@ def cancelar(request, pk):
                 messages.success(request, "Cancelamento confirmado pelo provedor.")
             else:
                 messages.info(request, "Há uma operação em andamento. Consulte o documento para conferir o resultado.")
+        except CancelamentoPendente as aviso:
+            messages.info(request, aviso.messages[0])
         except (ValidationError, NotImplementedError) as erro:
             messages.error(request, str(getattr(erro, "messages", [str(erro)])[0]
                                         if isinstance(erro, ValidationError) else erro))

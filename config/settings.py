@@ -440,7 +440,7 @@ FNRH_API_USER = os.environ.get("FNRH_API_USER", "")
 FNRH_API_SENHA = os.environ.get("FNRH_API_SENHA", "")
 FNRH_CPF_SOLICITANTE = os.environ.get("FNRH_CPF_SOLICITANTE", "")
 
-# Fiscal — "simulado" (sem validade fiscal) ou "focus" (Focus NFe v2).
+# Fiscal — "simulado" (sem validade fiscal), "focus" (Focus NFe v2) ou "spedy" (Spedy).
 # Configuração e homologação: docs/Implementar_fiscal.md.
 FISCAL_GATEWAY = os.environ.get("FISCAL_GATEWAY", "simulado")
 FISCAL_FOCUS_URL = os.environ.get("FISCAL_FOCUS_URL", "https://homologacao.focusnfe.com.br")
@@ -451,10 +451,9 @@ FISCAL_DPS_SERIE = os.environ.get("FISCAL_DPS_SERIE", "")
 FISCAL_DPS_NUMERO_INICIAL = os.environ.get("FISCAL_DPS_NUMERO_INICIAL", "1")
 FISCAL_NFSE_COMPLEMENTOS = os.environ.get("FISCAL_NFSE_COMPLEMENTOS", "{}")
 
-# Contábil — token do cron de capturas (a DRE se atualiza sozinha). Vazio = endpoint
-# de cron DESATIVADO (fail-safe). Definir o mesmo valor no Railway (env) e no GitHub
-# (secret CONTABIL_CRON_TOKEN). Ver apps/contabil/views.py:cron_capturar e
-# .github/workflows/cron-financeiro.yml.
+# Contábil — as capturas rodam na rotina diária (`rotina_contabil`, grupo `diarias`).
+# O token só liga o endpoint alternativo de cron (cabeçalho X-Cron-Token); vazio =
+# endpoint DESATIVADO (fail-safe). Ver apps/contabil/views.py:cron_capturar.
 CONTABIL_CRON_TOKEN = os.environ.get("CONTABIL_CRON_TOKEN", "")
 
 # Mídia/Impulsionamento — gateway de conversões (Fase B do Gestor de Impulsionamento):
@@ -492,10 +491,27 @@ JEV_API_URL = os.environ.get("JEV_API_URL", "")
 JEV_API_KEY = os.environ.get("JEV_API_KEY", "")
 JEV_TIMEOUT_MS = int(os.environ.get("JEV_TIMEOUT_MS", "800"))
 
-# Parâmetros fiscais confirmados pelo contador (jul/2026) — Pousada Vô Testa, Itá/SC.
-# Regime Lucro Presumido; NFS-e pelo Emissor Nacional. NFC-e aguarda Inscrição Estadual.
+# Identidade fiscal da empresa (emissor das notas). Fonte: contrato social (2ª alt.,
+# JUCESC 02/09/2026) + Comprovante de Inscrição Municipal de Itá (IM 4829). Não é segredo
+# — defaults reais, sobreponíveis por env. Usado pelo gateway fiscal (Spedy) p/ o prestador.
+EMPRESA_RAZAO_SOCIAL = os.environ.get("EMPRESA_RAZAO_SOCIAL", "POUSADA VÔ TESTA LTDA")
+EMPRESA_NOME_FANTASIA = os.environ.get("EMPRESA_NOME_FANTASIA", "POUSADA VÔ TESTA")
+EMPRESA_CNPJ = os.environ.get("EMPRESA_CNPJ", "26003246000100")
+EMPRESA_INSCRICAO_MUNICIPAL = os.environ.get("EMPRESA_INSCRICAO_MUNICIPAL", "4829")
+EMPRESA_INSCRICAO_ESTADUAL = os.environ.get("EMPRESA_INSCRICAO_ESTADUAL", "")  # não possui → bloqueia NFC-e
+EMPRESA_MUNICIPIO = os.environ.get("EMPRESA_MUNICIPIO", "Itá")
+EMPRESA_UF = os.environ.get("EMPRESA_UF", "SC")
+EMPRESA_MUNICIPIO_IBGE = os.environ.get("EMPRESA_MUNICIPIO_IBGE", "4208005")  # Itá/SC (conferido no IBGE)
+EMPRESA_CEP = os.environ.get("EMPRESA_CEP", "89760000")
+
+# Parâmetros fiscais — Pousada Vô Testa, Itá/SC. NFS-e pelo Emissor Nacional.
+# NFC-e aguarda Inscrição Estadual.
+# Regime: LUCRO PRESUMIDO (confirmado — contador + parametrização do contador, out/2026:
+# CST + PIS 0,65% / COFINS 3% cumulativos). Usar CST (não CSOSN). O tributo sobre a
+# receita no fechamento = PIS/COFINS/ISS (conta 3.1.02.01).
 FISCAL_REGIME = os.environ.get("FISCAL_REGIME", "lucro_presumido")
-FISCAL_NFSE_CODIGO_SERVICO = os.environ.get("FISCAL_NFSE_CODIGO_SERVICO", "090101")  # hospedagem
+FISCAL_NFSE_CODIGO_SERVICO = os.environ.get("FISCAL_NFSE_CODIGO_SERVICO", "090101")  # código municipal de Itá
+FISCAL_NFSE_LC116 = os.environ.get("FISCAL_NFSE_LC116", "9.01")  # item LC 116 (hospedagem) — NFS-e Nacional/Spedy
 FISCAL_NFSE_ISS_ALIQUOTA = os.environ.get("FISCAL_NFSE_ISS_ALIQUOTA", "4.0")  # % ISS Itá
 FISCAL_NFCE_HABILITADA = os.environ.get("FISCAL_NFCE_HABILITADA", "0") == "1"  # depende da IE
 # Reforma tributária (LC 214/2025): IBS/CBS destacados nos documentos. 2026 = fase de
@@ -508,6 +524,15 @@ FISCAL_BLOQUEAR_VENDA_SEM_NFCE = os.environ.get("FISCAL_BLOQUEAR_VENDA_SEM_NFCE"
 # Segredo compartilhado com o Focus (campo "Chave de Autorização" do webhook). O Focus
 # envia no header Authorization; o endpoint /crm/fiscal/webhook/ valida.
 FISCAL_WEBHOOK_TOKEN = os.environ.get("FISCAL_WEBHOOK_TOKEN", "")
+
+# Spedy (provedor NF-e/NFS-e/NFC-e) — ative com FISCAL_GATEWAY=spedy. Sem a chave, o
+# painel Fiscal mostra a pendência e nada é enviado. Sandbox por padrão; produção quando
+# SPEDY_SANDBOX=0. Ver apps/fiscal/spedy.py.
+SPEDY_API_KEY = os.environ.get("SPEDY_API_KEY", "")
+SPEDY_SANDBOX = os.environ.get("SPEDY_SANDBOX", "1") == "1"
+# Segredo da conta (`whsec_…`, GET /v1/webhooks/secret) que assina os retornos do Spedy.
+# Sem ele, o endpoint /crm/fiscal/webhook/ recusa o retorno (503).
+SPEDY_WEBHOOK_SECRET = os.environ.get("SPEDY_WEBHOOK_SECRET", "")
 
 # Preço ao hóspede (motor de tarifa — Manual de Vendas §2 + taxas).
 # ISS reaproveita a alíquota fiscal (4%). Taxa de turismo = valor fixo por diária (noite).

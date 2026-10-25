@@ -9,6 +9,40 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 25/10/2026: NFS-e pelo Spedy e regime Lucro Presumido, vindos do original
+
+- **O original passou a emitir NFS-e pelo Spedy** (commit `85e19bf` do Gefferson). O
+  fiscal do fork tem outro desenho (referência gravada antes do envio, trava contra
+  clique duplo, confirmação pelo provedor), então o Spedy foi reescrito nesse padrão em
+  vez de entrar como veio:
+  - a nota fica **Processando** até o retorno do Spedy ou a consulta, sem virar
+    rejeitada por engano;
+  - a referência do sistema vai como `integrationId`: reenviar depois de uma resposta
+    perdida, ou corrigir uma rejeição de cadastro, atualiza a mesma nota, sem criar outra;
+  - o retorno só é aceito com a **assinatura do Spedy** (HMAC com o segredo da conta,
+    conforme a documentação deles). A versão original esperava um token no cabeçalho,
+    que o Spedy não manda: todo retorno seria recusado;
+  - um retorno atrasado de "na fila" não desfaz uma nota já autorizada. Nota de outro
+    sistema da mesma conta é ignorada, sem erro;
+  - o cancelamento no Spedy é assíncrono. O pedido entra na trilha de auditoria (quem,
+    quando e por quê) já na hora, e a nota só vira Cancelada quando o Spedy confirma;
+  - links de PDF e XML da nota, situação e pendências no painel Fiscal e em "Operação e
+    integrações".
+- **Regime confirmado: Lucro Presumido.** No "Fechar o mês" do Contábil, o campo "DAS /
+  Simples" virou "Impostos s/ receita" (PIS, COFINS e ISS), e a conta 3.1.02.01 passou a
+  "(-) Impostos sobre a receita". A categoria antiga troca de nome junto, para o próximo
+  fechamento não criar uma segunda. O pró-labore ganhou a dica de que, pelo contrato, fica
+  em R$ 0. Dados do emitente (CNPJ, inscrição municipal, IBGE de Itá) em `EMPRESA_*`.
+- **Nada muda na operação agora:** o fiscal segue em modo de teste e o módulo inativo. Para
+  ligar o Spedy: chave da API, segredo do retorno, certificado A1 no painel deles e ensaio
+  no sandbox, como descreve `docs/Implementar_fiscal.md`.
+- **Modificado:** `apps/fiscal/spedy.py` e `apps/fiscal/erros.py` (novos),
+  `apps/fiscal/gateways.py`, `apps/fiscal/services.py`, `apps/fiscal/views.py`,
+  `templates/fiscal/`, `apps/nucleo/integracoes.py`, `config/settings.py`,
+  `apps/contabil/` (formulário, migrações `0009_conta_deducao_neutra` e
+  `0011_merge_regime_presumido`), `templates/contabil/painel.html`,
+  `aplicar_fechamento` e `docs/Implementar_fiscal.md`.
+
 ## 25/10/2026: varredura final do front (Contábil, Comercial e site)
 
 - **Fechar o mês no Contábil grava o que foi digitado.** "12.500,00" chegava ao servidor

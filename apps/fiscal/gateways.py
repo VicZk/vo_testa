@@ -4,7 +4,10 @@ Gateway fiscal plugável. Escolha via `FISCAL_GATEWAY` no settings.
 - `simulado` (default): sandbox — autoriza na hora com número/chave fake. Serve para
   testar o fluxo do módulo sem credencial nenhuma.
 - `focus`: Focus NFe v2, NFS-e Nacional e NFC-e. Exige cadastro, credenciais e ensaio.
-  Integração direta com governo e outros provedores não estão disponíveis.
+- `spedy`: Spedy, NFS-e pelo Ambiente Nacional (a NFC-e aguarda a inscrição estadual).
+  Exige a chave da API, o certificado A1 no painel do Spedy e o ensaio no sandbox.
+
+Integração direta com o governo e outros provedores não estão disponíveis.
 
 Interface: criar_documento(doc) -> dict; cancelar(doc, motivo) -> dict.
 O dict de emissão pode conter: gateway, gateway_id, numero, serie, chave, protocolo,
@@ -17,6 +20,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from .focus import GatewayFocus
+from .spedy import GatewaySpedy
 
 
 class GatewayFiscalBase:
@@ -63,11 +67,12 @@ class GatewaySimulado(GatewayFiscalBase):
 _GATEWAYS = {
     "simulado": GatewaySimulado,
     "focus": GatewayFocus,
+    "spedy": GatewaySpedy,
 }
 
 
 def get_gateway(nome=None):
     nome = nome or getattr(settings, "FISCAL_GATEWAY", "simulado")
     if nome not in _GATEWAYS:
-        raise ValidationError("Provedor fiscal indisponível. Configure Focus NFe ou use o emissor externo conciliado; simulação exige seleção explícita.")
+        raise ValidationError("Provedor fiscal indisponível. Configure Focus NFe ou Spedy, ou use o emissor externo conciliado; simulação exige seleção explícita.")
     return _GATEWAYS[nome]()

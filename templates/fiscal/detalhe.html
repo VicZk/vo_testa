@@ -24,7 +24,7 @@
         <div><dt>Estimativa IBS ({{ doc.ibs_aliquota|floatformat:"-2" }}%)</dt><dd class="num">{{ doc.ibs_valor|intcomma_brl }}</dd></div>
       {% endif %}
       {% if doc.tomador %}<div><dt>Tomador</dt><dd>{{ doc.tomador.nome }}</dd></div>{% endif %}
-      <div><dt>Emissão</dt><dd>{% if doc.gateway == 'simulado' %}Documento de teste{% else %}{{ doc.gateway|default:"—" }}{% endif %}{% if doc.gateway_id %} · {{ doc.gateway_id }}{% endif %}</dd></div>
+      <div><dt>Emissão</dt><dd>{% if doc.gateway == 'simulado' %}Documento de teste{% elif doc.gateway == 'focus' %}Focus NFe{% elif doc.gateway == 'spedy' %}Spedy{% else %}{{ doc.gateway|default:"—" }}{% endif %}{% if doc.gateway_id %} · {{ doc.gateway_id }}{% endif %}</dd></div>
       {% if doc.numero %}<div><dt>Número/série</dt><dd>{{ doc.numero }} / {{ doc.serie }}</dd></div>{% endif %}
       {% if doc.chave %}<div><dt>Chave</dt><dd><small>{{ doc.chave }}</small></dd></div>{% endif %}
       {% if doc.motivo_rejeicao %}<div><dt>Motivo</dt><dd>{{ doc.motivo_rejeicao }}</dd></div>{% endif %}

@@ -23,7 +23,7 @@ class FechamentoMensalForm(forms.ModelForm):
     folha = _valor("Folha")
     encargos = _valor("Encargos FGTS/INSS")
     pro_labore = _valor("Pró-labore")
-    das = _valor("DAS / Simples")
+    das = _valor("Impostos s/ receita")
 
     class Meta:
         model = FechamentoMensal

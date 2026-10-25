@@ -36,8 +36,10 @@ def situacao_integracoes():
         ("fiscal", "Emissão fiscal", "FISCAL_GATEWAY", {"focus": (
             ("FISCAL_FOCUS_TOKEN", "Credencial Focus NFe"), ("FISCAL_FOCUS_URL", "Ambiente fiscal"),
             ("FISCAL_EMITENTE_CNPJ", "CNPJ emitente"), ("FISCAL_MUNICIPIO_IBGE", "Município do emitente"),
-            ("FISCAL_DPS_SERIE", "Série exclusiva da DPS"), ("FISCAL_WEBHOOK_TOKEN", "Autenticação dos retornos"))},
-            ("FISCAL_REGIME", "FISCAL_NFSE_COMPLEMENTOS", "FISCAL_NFCE_HABILITADA", "FISCAL_DPS_NUMERO_INICIAL", "FISCAL_NFSE_CODIGO_SERVICO"),
+            ("FISCAL_DPS_SERIE", "Série exclusiva da DPS"), ("FISCAL_WEBHOOK_TOKEN", "Autenticação dos retornos")),
+            "spedy": (("SPEDY_API_KEY", "Credencial Spedy"), ("SPEDY_WEBHOOK_SECRET", "Assinatura dos retornos"))},
+            ("FISCAL_REGIME", "FISCAL_NFSE_COMPLEMENTOS", "FISCAL_NFCE_HABILITADA", "FISCAL_DPS_NUMERO_INICIAL", "FISCAL_NFSE_CODIGO_SERVICO",
+             "FISCAL_NFSE_LC116", "FISCAL_NFSE_ISS_ALIQUOTA", "SPEDY_SANDBOX"),
             "Ensaie autorização, documento e cancelamento com o responsável fiscal, no ambiente indicado."),
     ]
     ensaios = {e.canal:e for e in EnsaioIntegracao.objects.select_related("registrado_por")}
@@ -65,9 +67,12 @@ def situacao_integracoes():
                 pendencias.append("Confira credencial e endereço oficial do ambiente selecionado")
             if not settings.SAFRAPAY_ID:
                 pendencias.append("Identificação do estabelecimento para o antifraude")
-        if codigo == "fiscal" and modo == "focus":
+        if codigo == "fiscal" and modo in ("focus", "spedy"):
             from apps.fiscal.services import configuracao
-            ambiente = "Homologação" if "homologacao" in settings.FISCAL_FOCUS_URL else "Produção"
+            if modo == "focus":
+                ambiente = "Homologação" if "homologacao" in settings.FISCAL_FOCUS_URL else "Produção"
+            else:
+                ambiente = "Homologação (sandbox)" if settings.SPEDY_SANDBOX else "Produção"
             if configuracao()["pendencias"]:
                 pendencias.append("Revise a configuração no painel Fiscal")
         pronto = modo in modos and not pendencias

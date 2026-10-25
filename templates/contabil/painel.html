@@ -75,7 +75,7 @@
 /* fechar form */
 .ctb .form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr)); gap:1.1rem 1.2rem; margin-bottom:1rem; align-items:start; }
 .ctb .form-campo { display:flex; flex-direction:column; }
-.ctb .form-grid label { min-height:2.5em; font-size:max(var(--rotulo-min), .72rem); text-transform:uppercase; letter-spacing:.06em; color:var(--tinta-suave); margin-bottom:.3rem; line-height:1.25; }
+.ctb .form-grid label { min-height:2.5em; font-size:max(var(--rotulo-min), .72rem); text-transform:uppercase; letter-spacing:.06em; color:var(--tinta-suave); margin-bottom:.3rem; line-height:1.4; }
 .ctb .hint { text-transform:none; letter-spacing:0; font-weight:400; opacity:.75; }
 .ctb .form-grid input { width:100%; padding:.55rem .7rem; border:1px solid var(--fio); border-radius:var(--raio-p); background:var(--superficie); color:var(--tinta); font-family:inherit; font-variant-numeric:tabular-nums; }
 /* Texto e botão lado a lado; sem espaço, o botão desce alinhado à esquerda (antes
@@ -261,16 +261,24 @@
         {% with f=form_fechamento %}
         <div class="form-grid">
           <div class="form-campo">
-            <label for="{{ f.folha.id_for_label }}">Folha <span class="hint">→ 4.2.01.01</span></label>
+            <label for="{{ f.folha.id_for_label }}">Folha</label>
             {{ f.folha }}
             <span class="hint folha-dica">
               {{ folha_cadastro.qtd }} funcionário{{ folha_cadastro.qtd|pluralize }} no cadastro · {{ folha_cadastro.total|intcomma_brl }}
               <button type="button" class="botao-mini" data-cadastro="{{ folha_cadastro_campo|default:'0,00' }}" onclick="document.getElementById('{{ f.folha.id_for_label }}').value=this.dataset.cadastro;">Usar do cadastro</button>
             </span>
           </div>
-          <div class="form-campo"><label for="{{ f.encargos.id_for_label }}">Encargos FGTS/INSS <span class="hint">→ 4.2.01.01</span></label>{{ f.encargos }}</div>
-          <div class="form-campo"><label for="{{ f.pro_labore.id_for_label }}">Pró-labore <span class="hint">→ 5.1.02.02</span></label>{{ f.pro_labore }}</div>
-          <div class="form-campo"><label for="{{ f.das.id_for_label }}">DAS / Simples <span class="hint">→ 3.1.02.01</span></label>{{ f.das }}</div>
+          <div class="form-campo"><label for="{{ f.encargos.id_for_label }}">Encargos FGTS/INSS</label>{{ f.encargos }}</div>
+          <div class="form-campo">
+            <label for="{{ f.pro_labore.id_for_label }}">Pró-labore</label>
+            {{ f.pro_labore }}
+            <span class="hint folha-dica">Em geral R$&nbsp;0 — a empresa não paga pró‑labore (contrato, cl. 16ª); o sócio retira por distribuição de lucros, que não é despesa.</span>
+          </div>
+          <div class="form-campo">
+            <label for="{{ f.das.id_for_label }}">Impostos s/ receita</label>
+            {{ f.das }}
+            <span class="hint folha-dica">PIS, COFINS e ISS sobre a receita (Lucro Presumido).</span>
+          </div>
         </div>
         {% endwith %}
         <button type="submit" class="botao-primario">Aplicar à DRE</button>
