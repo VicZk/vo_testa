@@ -9,6 +9,18 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 24/10/2026: Escala mais sóbria
+
+- Os cartões do último turno da grade (Tarde) perdiam a borda de baixo — e o de domingo, o
+  canto arredondado — porque herdavam regras do modo tabela; agora todo cartão tem as
+  quatro bordas e o mesmo raio.
+- Validação sem as quatro faixas pintadas (vermelho, verde, azul, amarelo): fundo neutro,
+  uma faixa fina na cor do aviso e o ícone colorido; o texto volta à cor normal.
+- Nomes para arrastar como etiquetas retas com a inicial num círculo (não mais pílulas) e,
+  nos cartões de cada dia, os nomes como linhas de lista alinhadas, sem sombra de botão.
+- **Modificado:** `static/css/app.css` (bloco de cartões da `.escala-grade`, `.escala-al`,
+  `.escala-roster .rpill`, `.rpill-ini`) e `templates/escala/grade.html` (inicial no nome).
+
 ## 24/10/2026: ajustes de interface para a abertura (sidebar, Pendências, Marketing, Estoque)
 
 - Topo do menu: o logotipo fica no eixo da sidebar (estava 18 px à esquerda) e desce um

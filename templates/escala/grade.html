@@ -66,7 +66,7 @@
     <span class="escala-roster-lbl">Arraste para a grade:</span>
     <div class="escala-roster-pills">
       {% for f in funcionarios %}
-        <span class="rpill" draggable="true" data-func="{{ f.pk }}" title="{{ f.cargo }}{% if f.setor %} · {{ f.setor }}{% endif %}">{{ f.pessoa.nome }}</span>
+        <span class="rpill" draggable="true" data-func="{{ f.pk }}" title="{{ f.cargo }}{% if f.setor %} · {{ f.setor }}{% endif %}"><span class="rpill-ini" aria-hidden="true">{{ f.pessoa.nome|slice:":1"|upper }}</span>{{ f.pessoa.nome }}</span>
       {% endfor %}
     </div>
     <span class="escala-trash" id="escala-trash">Soltar aqui para remover</span>

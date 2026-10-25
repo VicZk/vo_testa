@@ -6204,6 +6204,25 @@ form.htmx-request input { opacity: .7; }
 }
 .escala-roster-lbl { font-size: max(var(--rotulo-min), 0.72rem); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--tinta-suave); }
 .escala-roster-pills { display: flex; gap: .4rem; flex-wrap: wrap; flex: 1 1 320px; min-width: 0; }
+/* ESCALA MAIS SÓBRIA (pedido do dono: "menos colorido… muita pílula… mais profissional").
+   Os nomes para arrastar são etiquetas retas com a inicial num círculo (seletor de
+   pessoas), não pílulas; a validação deixa de ser quatro faixas pintadas — fundo neutro,
+   faixa interna fina na cor do aviso e o ícone na cor; o texto volta à tinta. */
+.escala-roster .rpill { gap: .45rem; border-radius: var(--raio-p); padding: .28rem .7rem .28rem .3rem; }
+.rpill-ini {
+  display: inline-grid; place-items: center; width: 1.45rem; height: 1.45rem; flex: none;
+  border-radius: 50%; background: var(--superficie-2); color: var(--tinta-suave);
+  font-size: max(var(--rotulo-min), 0.7rem); font-weight: 700;
+}
+.escala-al.escala-al {
+  background: var(--superficie); color: var(--tinta); border-color: var(--fio);
+  box-shadow: inset 3px 0 0 var(--faixa, var(--fio-forte)); padding-left: .9rem;
+}
+.escala-al .ic { color: var(--faixa, var(--tinta-suave)); }
+.escala-al-ok { --faixa: var(--sucesso); }
+.escala-al-perigo { --faixa: var(--perigo); }
+.escala-al-aviso { --faixa: var(--alerta); }
+.escala-al-info { --faixa: var(--info); }
 .rpill {
   display: inline-flex; align-items: center; background: var(--superficie); border: 1px solid var(--fio);
   color: var(--tinta); border-radius: var(--raio-pilula); padding: .32rem .8rem; font-size: 0.82rem; font-weight: 600;
@@ -8437,6 +8456,17 @@ html.com-js [data-precos-filtros][hidden] { display: block; visibility: hidden; 
       background-color: var(--superficie-2);
     }
     .escala-grade tbody td.escala-celula.col-hoje { background-color: color-mix(in srgb, var(--lampiao) 8%, var(--superficie)); }
+    /* A última fileira (o último turno, ex.: Tarde) herdava duas regras do modo TABELA: a
+       que tira a linha de baixo da última linha e a que arredonda só os cantos externos da
+       tabela (com raio 0 aqui). Em cartões, todo cartão tem as quatro bordas e o mesmo raio:
+       a regra genérica de canto lê --raio-celula, então cada cartão a redefine. */
+    .escala-grade tbody tr:last-child > td.escala-celula { border-bottom: 1px solid var(--fio); }
+    .escala-grade tbody td.escala-celula { --raio-celula: var(--raio-p); }
+    /* Nomes do dia como linhas de lista (chapadas, alinhadas), não etiquetas soltas. */
+    .escala-grade td.escala-celula .escala-chip {
+      display: flex; width: 100%; margin: 0 0 .35rem; box-shadow: none; border-color: var(--fio);
+    }
+    .escala-grade td.escala-celula .escala-chip .escala-chip-nome { flex: 1 1 auto; max-width: none; }
     .escala-dia-celula {
       display: block; margin-bottom: .55rem; font-size: .85rem; font-weight: 700;
       color: var(--tinta); text-transform: capitalize;
