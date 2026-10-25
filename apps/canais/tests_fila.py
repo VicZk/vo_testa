@@ -182,11 +182,16 @@ class AvisosCanaisTests(DadosCanais, TestCase):
 
     def test_assinatura_replay_ambientes_e_corpo_adulterado_nao_gravam(self):
         dados = self.aviso()
-        for opcoes in ({"segredo": CONFIGURACAO["CHANNEX_WEBHOOK_SECRET_HML"]}, {"assinatura": "0"*64},
-                       {"instante": int(time.time())-301}, {"instante": int(time.time())+301},
-                       {"instante": "9"*13}, {"instante": "１２３"}, {"assinatura": ",".join(["0"*64]*3)}):
-            with self.subTest(opcoes=opcoes):
-                self.assertEqual(self.enviar(dados, **opcoes).status_code, 401)
+        # Relógio parado: com o relógio andando, o "+301" (truncado no segundo) virava 300 se
+        # o segundo mudasse antes da conferência, e o aviso passava (falha intermitente no CI).
+        agora = int(time.time())
+        with patch("apps.canais.webhooks.time") as relogio:
+            relogio.time.return_value = float(agora)
+            for opcoes in ({"segredo": CONFIGURACAO["CHANNEX_WEBHOOK_SECRET_HML"]}, {"assinatura": "0"*64},
+                           {"instante": agora-301}, {"instante": agora+301},
+                           {"instante": "9"*13}, {"instante": "１２３"}, {"assinatura": ",".join(["0"*64]*3)}):
+                with self.subTest(opcoes=opcoes):
+                    self.assertEqual(self.enviar(dados, **opcoes).status_code, 401)
         self.assertFalse(AvisoCanal.objects.exists())
 
     def test_rotacao_duas_assinaturas_corpo_limite_e_estrutura(self):

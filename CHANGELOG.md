@@ -42,6 +42,10 @@ A entrada mais nova fica no topo. As datas são as do push.
   `apps/contabil/` (formulário, migrações `0009_conta_deducao_neutra` e
   `0011_merge_regime_presumido`), `templates/contabil/painel.html`,
   `aplicar_fechamento` e `docs/Implementar_fiscal.md`.
+- **CI:** o teste da assinatura dos avisos do Channex falhava de vez em quando. O caso
+  "carimbo 301 s no futuro" era montado com o segundo truncado; se o relógio virasse o
+  segundo antes da conferência, a diferença caía para 300 s, dentro da tolerância, e o
+  aviso passava. O teste agora para o relógio do webhook (`apps/canais/tests_fila.py`).
 
 ## 25/10/2026: varredura final do front (Contábil, Comercial e site)
 
