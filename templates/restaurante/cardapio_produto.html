@@ -1,8 +1,10 @@
 {% extends "base.html" %}{% load moeda nucleo_extras %}
 {% block titulo %}Escolhas · {{ produto.nome }}{% endblock %}
 {% block conteudo %}
+<p class="pagina-eyebrow letreiro">Restaurante</p>
+{% include "restaurante/partials/nav.html" %}
 <a class="voltar" href="{% url 'restaurante:cardapio_config' %}">Cardápio e adicionais</a>
-<div class="pagina-cabecalho"><h1>{{ produto.nome }}</h1><strong>{{ produto.preco_venda|intcomma_brl }}</strong></div>
+<div class="pagina-cabecalho"><h1>{{ produto.nome }}</h1></div><p class="subtitulo">Preço de venda · {{ produto.preco_venda|intcomma_brl }}</p>
 <div class="cardapio-config">
   <aside class="painel-bloco"><h2>Grupos de escolhas</h2><p class="ajuda">Para ponto da carne, use mínimo 1 e máximo 1. Para adicionais opcionais, use mínimo 0.</p>
     <nav class="cardapio-grupos" aria-label="Grupos do produto">{% for existente in grupos %}<a class="botao-neutro" href="?grupo={{ existente.pk }}">{{ existente.nome }}{% if not existente.ativo %} · Inativo{% endif %}</a>{% empty %}<p>Ainda sem grupos.</p>{% endfor %}<a class="botao-primario" href="{% url 'restaurante:cardapio_produto' produto.pk %}">Novo grupo</a></nav>

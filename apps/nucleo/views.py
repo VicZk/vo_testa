@@ -422,6 +422,21 @@ def pessoas(request, perfil=None):
     trava o filtro, muda o título e o 'novo' já marca o papel certo."""
     busca = request.GET.get("q", "").strip()
     papel = perfil or request.GET.get("papel", "")
+    vazio_papel = {
+        "hospedes": ("Nenhum hóspede cadastrado ainda.", "Novo hóspede", "hospede"),
+        "agencias": ("Nenhuma agência cadastrada ainda.", "Nova agência", "agencia"),
+        "empresas": ("Nenhuma empresa cadastrada ainda.", "Nova empresa", "empresa"),
+        "fornecedores": ("Nenhum fornecedor cadastrado ainda.", "Novo fornecedor", "fornecedor"),
+    }.get(papel, ("Nenhuma pessoa cadastrada ainda.", "Nova pessoa", ""))
+    url_criar = reverse("pessoa_nova") + (f"?papel={vazio_papel[2]}" if vazio_papel[2] else "")
+    url_limpar = reverse(perfil) if perfil else reverse("pessoas")
+    if not perfil and papel in PAPEL_FILTROS:
+        url_limpar += f"?papel={papel}"
+    vazio_contexto = {
+        "mensagem_vazio": f'Nenhum resultado para “{busca}”.' if busca else vazio_papel[0],
+        "acao_vazio": "Limpar a busca" if busca else vazio_papel[1],
+        "url_vazio": url_limpar if busca else url_criar,
+    }
 
     # Os papéis de cada linha (hóspede, agência, funcionário…) vêm no mesmo SELECT:
     # sem isto eram 5 consultas por pessoa listada.
@@ -448,6 +463,7 @@ def pessoas(request, perfil=None):
             "pessoas": pagina, "pagina": pagina,
             "busca": busca, "papel": chave, "perfil": perfil,
             "titulo": titulo, "novo_papel": novo_papel, "filtros": filtros,
+            **vazio_contexto,
         })
 
     lista = base
@@ -459,6 +475,7 @@ def pessoas(request, perfil=None):
         "pessoas": pagina, "pagina": pagina,
         "busca": busca, "papel": papel, "filtros": filtros,
         "titulo": "Pessoas",
+        **vazio_contexto,
     })
 
 

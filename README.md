@@ -836,6 +836,12 @@ arquivo.json.gz`. Teste a restauração num banco separado antes de precisar del
 camas), `migrar_media_r2`. Os de limpeza de demonstração (`zerar_funil`, `sanear_demo`,
 `recentrar_demo`, `limpar_nomes_quartos`) são destrutivos e não devem rodar em produção.
 
+`corrigir_icones_experiencias` simula a correção dos cinco fragmentos SVG do seed
+antigo. Após backup, `--aplicar` troca somente esses valores exatos, preserva nomes,
+descrições, ordem e publicação, e registra a alteração na trilha. É idempotente e
+não substitui desenhos personalizados. Não execute `popular_dados` para corrigir
+conteúdo existente.
+
 Detalhes em [`docs/ARQUITETURA.md` §10](docs/ARQUITETURA.md).
 
 ---
@@ -843,6 +849,13 @@ Detalhes em [`docs/ARQUITETURA.md` §10](docs/ARQUITETURA.md).
 ## 11. Design system "Lampião"
 
 Toda tela do CRM nasce no design system; nada de estilo paralelo nem cor fixa no template.
+
+Os estados vazios mantêm o contexto do filtro e oferecem uma ação correspondente.
+Relatórios compactam a primeira coluna apenas no modo tabela; o modo cartão mantém
+largura livre para texto e dinheiro. Dicas de rolagem aparecem somente quando há
+conteúdo fora da área visível. As LPs usam dourado nos CTAs, caixas de consentimento
+de 24 px e links de navegação com alvo de 44 px. A política da lista e a política de
+navegação conservam seus conteúdos e identificam suas finalidades nos links.
 
 - **Tokens** em `static/css/app.css` (`:root`): marca (`--noturno`, `--lampiao`,
   `--madeira`), canvas e superfícies, tinta, fios, cores semânticas (`--sucesso`,

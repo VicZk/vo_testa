@@ -187,7 +187,8 @@ header{
 
 /* ---------- História ---------- */
 .historia{background:var(--noturno-painel);border-block:1px solid var(--noturno-borda)}
-.historia .inner{padding-block:var(--gap-sec);max-width:56ch}
+.historia .inner{padding-block:var(--gap-sec)}
+.historia .inner > *{max-width:56ch}
 .historia h2{font-size:clamp(2rem,1.6rem + 2.2vw,3.2rem);margin-bottom:1.6rem}
 .historia p + p{margin-top:1.2rem}
 .historia .assinatura{margin-top:2rem;font-style:italic;color:var(--lampiao);font-size:1.25rem}
@@ -244,13 +245,12 @@ form.lista{display:grid;gap:1.1rem}
 .field input[aria-invalid=true] + .err{display:block}
 
 .consent{display:flex;gap:.7rem;align-items:flex-start;font-size:1rem;line-height:1.4}
-.consent input{margin-top:.25rem;width:20px;height:20px;accent-color:var(--musgo);flex:0 0 auto}
+.consent input{margin-top:.25rem;width:24px;height:24px;accent-color:var(--lampiao);flex:0 0 auto}
 .consent .err{display:none;margin-top:.3rem;font-size:.95rem;color:#9c3a24}
 .consent.invalid .err{display:block}
 .consent a{color:var(--musgo);text-decoration:underline}
 
-form.lista .btn-primary{width:100%;background:var(--musgo);color:var(--pergaminho)}
-form.lista .btn-primary:hover{box-shadow:0 8px 30px -10px var(--musgo)}
+form.lista .btn-primary{width:100%}
 .form-help{font-size:.98rem;font-style:italic;color:color-mix(in srgb,var(--madeira) 65%,transparent);text-align:center;margin-top:.2rem}
 
 .sucesso{
@@ -280,7 +280,8 @@ form.lista .btn-primary:hover{box-shadow:0 8px 30px -10px var(--musgo)}
 
 /* ---------- Localização + Footer ---------- */
 .local{background:var(--noturno-painel);border-top:1px solid var(--noturno-borda)}
-.local .inner{padding-block:clamp(3rem,7vw,5rem);display:grid;gap:.6rem;max-width:52ch}
+.local .inner{padding-block:clamp(3rem,7vw,5rem);display:grid;gap:.6rem}
+.local .inner > *{max-width:52ch}
 .local .rotulo{font-style:italic;color:var(--lampiao)}
 .local h2{font-size:clamp(1.8rem,1.5rem + 1.8vw,2.6rem)}
 .local p{color:var(--pergaminho-70)}
@@ -300,6 +301,10 @@ footer .links a:hover{color:var(--lampiao)}
   .reveal.d3{animation-delay:.31s}.reveal.d4{animation-delay:.44s}
   @keyframes subir{to{opacity:1;transform:none}}
 }
+</style>
+<style>
+header .brand, header .nav-logo, footer .links a { display:inline-flex; align-items:center; min-height:44px; }
+.fc-consent input { width:24px; height:24px; flex:0 0 auto; accent-color:var(--lampiao); }
 </style>
 </head>
 <body>

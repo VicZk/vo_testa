@@ -71,7 +71,9 @@ def _com_aviso_de_cookies(html: str) -> str:
     antes, fecho, depois = html.rpartition("</body>")
     if not fecho:
         return html
-    return antes + render_to_string("componentes/consentimento.html") + fecho + depois
+    return antes + render_to_string("componentes/consentimento.html", {
+        "rotulo_politica_privacidade": "Privacidade de navegação",
+    }) + fecho + depois
 
 
 # O HTML das LPs vem pronto do design e é servido como está. Medido em 390px com
@@ -81,7 +83,7 @@ def _com_aviso_de_cookies(html: str) -> str:
 # (31 a 35px) e o "Inscrever outra pessoa" (31px). Só esses dois entram aqui, só
 # no dedo, e só crescendo por dentro — os dois já centram o próprio texto, então
 # ganham altura sem mexer no desenho. O que NÃO entra, de propósito, está no
-# comentário do fim: mexer na marca da campanha é decisão do dono, não polimento.
+# comentário do fim. Os alvos da marca e do rodapé estão no CSS de cada LP.
 _TOQUE_LP = """
 <style>
 @media (pointer: coarse) {
@@ -90,9 +92,7 @@ _TOQUE_LP = """
 }
 </style>
 """
-# Fora daqui: a logo do topo (22 a 40px) e o "Entrar para a lista" (42px) — crescer
-# qualquer um dos dois empurra o cabeçalho de uma campanha que já está no ar, e o
-# ganho é pequeno. Os links "Privacidade" dentro da frase de consentimento ficam
+# Os links "Privacidade" dentro da frase de consentimento ficam
 # como estão: alvo dentro de texto corrido é isento pela WCAG 2.5.8.
 
 

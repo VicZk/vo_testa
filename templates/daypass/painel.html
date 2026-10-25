@@ -30,13 +30,13 @@
 </section>{% endfor %}</div>
 <section class="painel-bloco">
 <h2>Grupos do dia</h2>
-<table class="tabela tabela-cartoes">
+<div class="quadro"><table class="tabela tabela-cartoes">
 <thead>
 <tr>
 <th>Grupo</th>
 <th>Responsável</th>
 <th>Turno</th>
-<th>Pessoas</th>
+<th class="num">Pessoas</th>
 <th>Situação</th>
 <th class="num">Ingressos</th>
 </tr>
@@ -48,13 +48,13 @@
 <td data-rotulo="Responsável"><div class="tabela-valor">
 <a href="{% url 'daypass:visita' visita.pk %}">{{ visita.responsavel }}</a>{% if visita.hospedagem_id %}<span class="selo">Hóspedes</span>{% endif %}</div></td>
 <td data-rotulo="Turno"><div class="tabela-valor">{{ visita.turno.nome }}</div></td>
-<td data-rotulo="Pessoas"><div class="tabela-valor">{{ visita.visitantes.all|length }}</div></td>
+<td class="num" data-rotulo="Pessoas"><div class="tabela-valor">{{ visita.visitantes.all|length }}</div></td>
 <td data-rotulo="Situação"><div class="tabela-valor"><span class="selo selo-{{ visita.status }}">{{ visita.get_status_display }}</span></div></td>
 <td class="num" data-rotulo="Ingressos"><div class="tabela-valor">{{ visita.valor_ingressos|intcomma_brl }}</div></td>
 </tr>{% empty %}<tr>
 <td colspan="6" class="vazio">Nenhum grupo registrado para esta data.</td>
 </tr>{% endfor %}</tbody>
-</table>
+</table></div>
 {% include "componentes/paginacao.html" with pagina=visitas %}
 </section>
 {% endblock %}

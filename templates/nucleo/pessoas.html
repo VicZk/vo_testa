@@ -56,7 +56,7 @@ celular ficam só Nome e Papéis — o resto está na ficha da pessoa.{% endcomm
         <td class="c-sit" data-rotulo="Situação"><div class="tabela-valor"><span class="selo {% if not p.ativo %}selo-neutro{% endif %}">{% if p.ativo %}Ativa{% else %}Inativa{% endif %}</span></div></td>
       </tr>
     {% empty %}
-      <tr><td colspan="6" class="vazio">Nenhuma pessoa neste filtro. {% if busca or papel %}<a href="{% url 'pessoas' %}">Limpar filtros</a>{% else %}Comece pela primeira!{% endif %}</td></tr>
+      <tr><td colspan="6" class="vazio">{% include "componentes/estado_vazio.html" with mensagem=mensagem_vazio url_acao=url_vazio acao=acao_vazio only %}</td></tr>
     {% endfor %}
   </tbody>
 </table>

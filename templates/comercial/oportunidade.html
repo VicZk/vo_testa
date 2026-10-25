@@ -14,7 +14,7 @@
   </div>
 </div>
 {% if op.titulo_curto %}<p class="subtitulo">{{ op.titulo_curto }}</p>{% endif %}
-{% if proxima_acao %}<p class="op-proxima op-proxima-{{ proxima_acao.nivel }}">Próxima ação: <b>{{ proxima_acao.texto }}</b></p>{% endif %}
+{% if proxima_acao %}<p class="selo selo--acao op-proxima op-proxima-{{ proxima_acao.nivel }}">Próxima ação: <b>{{ proxima_acao.texto }}</b></p>{% endif %}
 {% if historico_cliente %}
 <p class="op-recorrente" title="Cliente com histórico na pousada">Cliente recorrente:
   {% if historico_cliente.estadias %}<b>{{ historico_cliente.estadias }}</b> estadia{{ historico_cliente.estadias|pluralize:"s" }}{% if historico_cliente.ultima %} · última em {{ historico_cliente.ultima|date:"m/Y" }}{% endif %}{% endif %}{% if historico_cliente.futuras %}{% if historico_cliente.estadias %} · {% endif %}<b>{{ historico_cliente.futuras }}</b> reserva{{ historico_cliente.futuras|pluralize }} em aberto{% endif %}
@@ -41,8 +41,8 @@
           <span class="wpp-tel-sub">{% if op.pessoa.telefone %}{{ op.pessoa.telefone }}{% else %}sem telefone{% endif %}{% if op.campanha %} · via {{ op.campanha.nome }}{% endif %}</span>
         </div>
         <div class="wpp-topo-dir">
-          <span class="wpp-tag{% if not conversa_wpp.janela_aberta %} wpp-tag-fechada{% endif %}">{% if conversa_wpp.janela_aberta %}janela 24h aberta{% else %}fora da janela{% endif %}</span>
-          {% if whatsapp_simulado %}<span class="wpp-sim">modo simulado</span>{% endif %}
+          <span class="selo">{% if conversa_wpp.janela_aberta %}Janela 24h aberta{% else %}Fora da janela{% endif %}</span>
+          {% if whatsapp_simulado %}<span class="rotulo-dado">Modo simulado</span>{% endif %}
         </div>
       </div>
 
@@ -484,9 +484,6 @@
   .wpp-tel-sub{display:block;font-size:0.78125rem;color:var(--tinta-suave);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .wpp-topo-dir{margin-left:auto;display:flex;align-items:center;gap:.4rem;flex:0 1 auto;flex-wrap:wrap;justify-content:flex-end}
   .tel-wpp{color:var(--sucesso);text-decoration:none;font-weight:700} .tel-wpp:hover{text-decoration:underline}
-  .wpp-tag{font-size:0.75rem;font-weight:600;color:var(--sucesso);background:var(--sucesso-bg);padding:2px 9px;border-radius:100px}
-  .wpp-tag-fechada{color:var(--tinta-suave);background:color-mix(in srgb, var(--tinta) 5%, transparent)}
-  .wpp-sim{font-size:var(--rotulo-min, .75rem);font-weight:700;color:var(--madeira);background:color-mix(in srgb, var(--lampiao) 15%, transparent);padding:2px 8px;border-radius:100px}
   .wpp-reabrir{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin-bottom:.6rem;padding:.6rem .75rem;
     border:1px solid color-mix(in srgb, var(--lampiao) 40%, transparent);background:color-mix(in srgb, var(--lampiao) 10%, transparent);border-radius:12px}
   .wpp-reabrir-txt{flex:1;min-width:0;font-size:0.78125rem;color:var(--madeira);line-height:1.35}
@@ -545,7 +542,7 @@
   .pq{font-size:0.8125rem}
   .pq-head{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--fio)}
   .pq-head h3{margin:0;font-size:0.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--tinta-suave);font-weight:700}
-  .pq-count{margin-left:auto;background:var(--sucesso-bg);color:var(--sucesso);font-size:var(--rotulo-min, .75rem);font-weight:700;padding:2px 9px;border-radius:999px}
+  .pq-count{margin-left:auto;--selo-cor:var(--sucesso)}
   .pq-filtro{display:flex;align-items:flex-start;gap:8px;padding:10px 14px;border-bottom:1px solid var(--fio);background:var(--canvas);font-size:0.78125rem}
   .pq-filtro b{font-weight:700}
   .pq-sem-datas{color:var(--alerta)}
@@ -562,15 +559,13 @@
   .pq-lista{padding:12px 14px;display:flex;flex-direction:column;gap:10px;max-height:420px;overflow-y:auto}
   .pq-lista::-webkit-scrollbar{width:8px} .pq-lista::-webkit-scrollbar-thumb{background:var(--fio-forte);border-radius:8px}
   .pq-card{flex:none;border:1px solid var(--fio);border-radius:var(--raio-p);overflow:hidden;transition:border-color .15s,box-shadow .15s}
-  .pq-vertodos{width:calc(100% - 28px);margin:0 14px 12px;border:1px dashed var(--fio-forte);background:none;border-radius:var(--raio-p);padding:8px;font-size:0.78125rem;font-weight:600;color:var(--info);cursor:pointer}
+  .pq-vertodos{width:calc(100% - 28px);margin:10px 14px 12px;border:1px dashed var(--fio-forte);background:none;border-radius:var(--raio-p);padding:8px;font-size:0.78125rem;font-weight:600;color:var(--info);cursor:pointer}
   .pq-vertodos:hover{background:var(--canvas)}
   /* No toque, a lista dos que servem cresce com a página em vez de rolar por dentro:
      rolagem dentro de rolagem prende o dedo, e o cartão cortado na borda dos 420 px
      parecia encavalado no «Ver todos». O «Ver todos» já segura a lista em 6. A dos
      indisponíveis (sem esse limite) continua rolando por dentro. */
-  @media (pointer: coarse), (max-width: 820px){
-    .pq-lista:not(.pq-ocupados-titulo + .pq-lista){max-height:none;overflow:visible}
-  }
+  .pq-lista:not(.pq-ocupados-titulo + .pq-lista){max-height:none;overflow:visible}
   .pq-datas-cta{margin:12px 14px 0;width:calc(100% - 28px);border:1px solid color-mix(in srgb, var(--alerta) 25%, transparent);background:var(--alerta-bg);color:var(--alerta);border-radius:var(--raio-p);padding:8px 11px;font-size:0.78125rem;font-weight:600;cursor:pointer;text-align:left}
   .pq-card:hover{border-color:var(--fio-forte);box-shadow:var(--sombra-1)}
   .pq-card-topo{display:flex;gap:11px;padding:11px 12px;cursor:pointer;align-items:flex-start}
@@ -597,11 +592,11 @@
   .pq-chip:hover{border-color:var(--lampiao)}
   .pq-chip.on{background:var(--noturno);color:var(--pergaminho);border-color:var(--noturno)}
   .pq-mudo{color:var(--tinta-suave)}
-  .op-proxima{display:inline-flex;align-items:center;gap:5px;font-size:0.78125rem;padding:4px 11px;border-radius:999px;margin-top:8px;border:1px solid var(--fio-forte)}
+  .op-proxima{gap:.3rem;margin-top:.5rem;white-space:normal;flex-wrap:wrap}
   .op-proxima b{font-weight:700}
-  .op-proxima-info{background:var(--info-bg);color:var(--info);border-color:transparent}
-  .op-proxima-aviso{background:var(--alerta-bg);color:var(--alerta);border-color:transparent}
-  .op-proxima-alerta{background:var(--perigo-bg);color:var(--perigo);border-color:transparent}
+  .op-proxima-info{--selo-cor:var(--info)}
+  .op-proxima-aviso{--selo-cor:var(--alerta)}
+  .op-proxima-alerta{--selo-cor:var(--perigo)}
   .op-recorrente{display:inline-flex;align-items:center;gap:5px;font-size:0.78125rem;padding:4px 11px;border-radius:999px;margin-top:8px;background:color-mix(in srgb, var(--lampiao) 14%, var(--superficie));color:var(--madeira)}
   .op-recorrente b{font-weight:700}
   .pq-selo-at{display:inline-flex;align-items:center;gap:4px;background:var(--alerta-bg);color:var(--alerta);font-size:var(--rotulo-min, .75rem);font-weight:700;padding:2px 8px;border-radius:999px;margin-top:6px}

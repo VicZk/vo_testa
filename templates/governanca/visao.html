@@ -9,13 +9,7 @@ lista operacional está a um toque, na aba Quartos.{% endcomment %}
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Hospedagem · Governança</p>
-<div class="pagina-cabecalho">
-  <h1>Visão geral da governança</h1>
-  <div class="acoes bloco-plano">
-    <a href="{% url 'governanca:quartos' %}" class="botao-primario">Ver quartos</a>
-  </div>
-</div>
-<p class="subtitulo">Acompanhe a limpeza, as inspeções e a distribuição de serviços. Selecione um quarto para consultar os detalhes e registrar o atendimento.</p>
+<div class="pagina-cabecalho"><div class="pagina-titulos"><h1>Visão geral da governança</h1><p class="subtitulo">Acompanhe a limpeza, as inspeções e a distribuição de serviços. Selecione um quarto para consultar os detalhes e registrar o atendimento.</p></div><div class="pagina-acoes"><a href="{% url 'governanca:quartos' %}" class="botao-primario">Ver quartos</a></div></div>
 
 {% include "governanca/partials/abas.html" %}
 <p class="ajuda gov-rotina-status">{% if config_governanca.ativa %}Arrumações diárias geradas automaticamente a partir de {{ config_governanca.horario|time:"H:i" }}, no horário local.{% if config_governanca.distribuir %} Atribuição automática à equipe escalada.{% endif %}{% else %}Geração automática desativada.{% endif %} As saídas geram limpeza após o check-out.</p>

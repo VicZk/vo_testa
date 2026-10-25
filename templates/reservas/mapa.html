@@ -62,10 +62,10 @@
         <tr class="mapa-linha {% if linha.bloqueada %}mapa-linha-bloqueada{% endif %}"
             data-uh="{{ linha.uh.pk }}" data-numero="{{ linha.uh.numero }}"
             {% if linha.bloqueada %}data-bloqueada="1"{% endif %}>
-          <td class="mapa-uh">
+          <td class="mapa-uh"{% if linha.bloqueada %} title="Quarto bloqueado — indisponível para reserva"{% endif %}>
             <strong>{{ linha.uh.numero }}</strong>
             {% if linha.bloqueada %}
-              <span class="mapa-tag-bloq dica" data-dica="Quarto bloqueado. Indisponível para reserva.">Bloqueado</span>
+              <small class="dica" data-dica="Quarto bloqueado. Indisponível para reserva.">Bloqueado</small>
             {% endif %}
           </td>
           {% for c in linha.celulas %}

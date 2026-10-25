@@ -13,6 +13,7 @@ from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
 
 from apps.nucleo.modulos import Modulo
+from apps.nucleo.textos import plural
 
 # Ordem de gravidade para ordenar os achados (alta primeiro).
 _ORDEM_GRAVIDADE = {"alta": 0, "media": 1, "baixa": 2}
@@ -56,7 +57,7 @@ def _checagens_nucleo():
     if n:
         achados.append({
             "area": "Estoque", "tipo": "estoque_minimo", "gravidade": "media",
-            "descricao": f"{n} produto(s) abaixo do estoque mínimo.",
+            "descricao": f"{n} {plural(n, 'produto')} abaixo do estoque mínimo.",
             "url": _url("estoque:posicao"),
         })
     return achados

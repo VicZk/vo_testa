@@ -213,13 +213,12 @@ form.lista{display:grid;gap:1.1rem}
 .field input[aria-invalid=true] + .err{display:block}
 
 .consent{display:flex;gap:.7rem;align-items:flex-start;font-size:1rem;line-height:1.4}
-.consent input{margin-top:.25rem;width:20px;height:20px;accent-color:var(--musgo);flex:0 0 auto}
+.consent input{margin-top:.25rem;width:24px;height:24px;accent-color:var(--lampiao);flex:0 0 auto}
 .consent .err{display:none;margin-top:.3rem;font-size:.95rem;color:#9c3a24}
 .consent.invalid .err{display:block}
 .consent a{color:var(--musgo);text-decoration:underline}
 
-form.lista .btn-primary{width:100%;background:var(--musgo);color:var(--pergaminho)}
-form.lista .btn-primary:hover{box-shadow:0 8px 30px -10px var(--musgo)}
+form.lista .btn-primary{width:100%}
 .form-help{font-size:.98rem;font-style:italic;color:color-mix(in srgb,var(--madeira) 65%,transparent);text-align:center;margin-top:.2rem}
 
 .sucesso{
@@ -480,8 +479,8 @@ body{ font-size:clamp(1.18rem,.95rem + .7vw,1.42rem); line-height:1.55 }
 .paraquem .rotulo{ font-size:1.1rem }
 .paraquem .manifesto{ font-size:clamp(2.5rem,1.4rem + 3.8vw,5rem); letter-spacing:-.028em; line-height:1.05; max-width:26ch; text-wrap:balance; margin-bottom:3rem }
 .paraquem .manifesto b{white-space:nowrap}
-.paraquem .linhas{ gap:1.4rem; max-width:34ch }
-.paraquem .linhas p{ font-size:clamp(1.5rem,1.1rem + 1.4vw,2.4rem); line-height:1.22 }
+.paraquem .linhas{ gap:1.4rem; max-width:52ch }
+.paraquem .linhas p{ font-size:clamp(1.15rem,1rem + .6vw,1.6rem); line-height:1.35 }
 
 /* Prova social — 2 colunas, cartões e citações grandes */
 .prova .inner{ max-width:1400px }
@@ -577,6 +576,10 @@ html{scrollbar-color:var(--lampiao) var(--noturno-painel)}
   .olugar .inner{padding-inline:clamp(1.25rem,5vw,3rem)}
   .galeria{padding-inline:0}
 }
+</style>
+<style>
+header .brand, header .nav-logo, footer .links a { display:inline-flex; align-items:center; min-height:44px; }
+.fc-consent input { width:24px; height:24px; flex:0 0 auto; accent-color:var(--lampiao); }
 </style>
 </head>
 <body>
@@ -726,7 +729,7 @@ html{scrollbar-color:var(--lampiao) var(--noturno-painel)}
 <!-- ============ O LUGAR (galeria 2-up, mockup) ============ -->
 <section class="olugar">
   <div class="wrap inner">
-    <p class="rotulo appear">Casas <b>Família</b>, estilo Hobbit</p>
+    <p class="rotulo appear">O lugar, por dentro</p>
     <div class="galeria">
       <div class="cartao-foto appear d-1">
         <img src="/static/lp/fundador-2/cabanas-vista.webp" alt="Vista das casas família estilo Hobbit na encosta" loading="lazy">

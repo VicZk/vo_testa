@@ -22,7 +22,7 @@
       <div><dt>Alvo</dt><dd>{{ os.alvo }}{% if os.bloqueio_ativo_hoje %} <span class="selo prioridade-urgente">bloqueado por esta OS hoje</span>{% endif %}</dd></div>
       {% if os.bloqueia_uh %}<div><dt>Período do bloqueio</dt><dd>{{ os.bloqueio_inicio|date:'d/m/Y' }}{% if os.bloqueio_fim %} a {{ os.bloqueio_fim|date:'d/m/Y' }}{% else %} até a conclusão{% endif %}{% if not os.aberta_ou_andamento %} · encerrado{% endif %}</dd></div>{% endif %}
       <div><dt>Tipo</dt><dd>{{ os.get_tipo_display }}</dd></div>
-      <div><dt>Prioridade</dt><dd><span class="rotulo-dado">{{ os.get_prioridade_display }}</span></dd></div>
+      <div><dt>Prioridade</dt><dd>{{ os.get_prioridade_display }}</dd></div>
       <div><dt>Responsável</dt><dd>{% if os.responsavel %}{{ os.responsavel.get_short_name|default:os.responsavel.username }}{% else %}A definir{% endif %}</dd></div>
       {% if os.prestador %}<div><dt>Prestador</dt><dd>{{ os.prestador.nome }} <small>(externo)</small></dd></div>{% endif %}
       <div><dt>Aberta em</dt><dd>{{ os.aberta_em|date:"d/m/Y H:i" }} por {{ os.criado_por.get_short_name|default:os.criado_por.username }}</dd></div>
@@ -45,7 +45,7 @@
     {% if os.status == 'aberta' %}
       <form data-preservar-erros method="post" action="{% url 'manutencao:iniciar' os.pk %}">
         {% csrf_token %}
-        <button type="submit" class="botao-neutro botao-largo">Iniciar (em andamento)</button>
+        <button type="submit" class="botao-primario botao-largo">Iniciar (em andamento)</button>
       </form>
     {% endif %}
 
@@ -63,7 +63,7 @@
         </div>
         <div class="campo"><label for="os-anexo-conclusao">Anexar nota fiscal / documento <small class="opcional">(opcional)</small></label><input id="os-anexo-conclusao" type="file" name="anexo_nota_fiscal" accept=".pdf,.jpg,.jpeg,.png,.xml" aria-describedby="os-anexo-ajuda"><p class="ajuda" id="os-anexo-ajuda">PDF, JPG, PNG ou XML, até 10 MB. Você também pode anexar depois de concluir.</p></div>
         <div class="campo"><label for="os-resolucao">Resolução</label><textarea id="os-resolucao" name="resolucao" rows="2" placeholder="O que foi feito"></textarea></div>
-        <div class="acoes"><button type="submit" class="botao-primario">Concluir{% if os.bloqueia_uh %} e liberar quarto{% endif %}</button></div>
+        <div class="acoes"><button type="submit" class="{% if os.status == 'aberta' %}botao-neutro{% else %}botao-primario{% endif %}">Concluir{% if os.bloqueia_uh %} e liberar quarto{% endif %}</button></div>
       </form>
     </details>
 

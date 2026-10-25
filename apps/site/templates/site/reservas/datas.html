@@ -29,7 +29,7 @@
     {% endif %}
 </div>
 
-<form method="get" action="{% url 'core:reservar' %}" id="form-datas" class="grid md:grid-cols-2 gap-6 items-stretch">
+<form method="get" action="{% url 'core:reservar' %}" id="form-datas" class="grid md:grid-cols-2 gap-6 items-start">
     <input type="hidden" name="checkin" id="f-checkin">
     <input type="hidden" name="checkout" id="f-checkout">
     <input type="hidden" name="hospedes" id="f-hospedes" value="2">

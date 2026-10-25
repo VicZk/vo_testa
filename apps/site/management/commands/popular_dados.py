@@ -5,6 +5,7 @@ from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 from PIL import Image, ImageDraw, ImageFont
 
+from apps.site.icones_experiencias import ICONES_CORRIGIDOS
 from apps.site.models import (
     CategoriaQuarto,
     ConfiguracaoSite,
@@ -205,6 +206,7 @@ class Command(BaseCommand):
              'icone': 'M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733'},
         ]
         for e in experiencias_data:
+            e['icone'] = ICONES_CORRIGIDOS.get(e['icone'], e['icone'])
             Experiencia.objects.get_or_create(nome=e['nome'], defaults=e)
         self.stdout.write(f'  Experiências: {Experiencia.objects.count()}')
 

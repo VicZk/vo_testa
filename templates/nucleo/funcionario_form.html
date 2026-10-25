@@ -41,7 +41,7 @@
       </div>
 
       {% if form.salario %}
-      <h4 class="letreiro bloco-respiro-medio">Remuneração <span class="selo selo-alerta">requer flag Remuneração</span></h4>
+      <h4 class="letreiro bloco-respiro-medio">Remuneração</h4><p class="ajuda">Só quem tem a área <strong>Remuneração</strong> em Equipe &amp; Acessos vê e edita o salário.</p>
       <div class="form-grade">
         <div class="campo"><label for="{{ form.salario.id_for_label }}">Salário base (R$)</label>{{ form.salario }}</div>
       </div>

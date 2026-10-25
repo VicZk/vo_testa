@@ -18,6 +18,7 @@
         // montar, o apelido do rótulo passa para o campo visível.
         function ligarRotulo(_datas, _str, fp) {
             var orig = fp.input, alt = fp.altInput;
+            if (alt && !alt.placeholder) alt.placeholder = "Selecione";
             if (!alt || !orig || !orig.id) return;
             var rotulo = document.querySelector('label[for="' + orig.id + '"]');
             alt.id = orig.id + '-visivel';

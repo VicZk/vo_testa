@@ -24,7 +24,7 @@ não depende do build do Tailwind (classes utilitárias novas exigiriam rebuild)
   <p class="marca">Pousada Vô Testa</p>
   <h1>{% block legal_titulo %}{% endblock %}</h1>
   <p class="sub">{% block legal_sub %}{% endblock %}</p>
-  <p class="data">Última atualização: {% block legal_data %}12 de outubro de 2026{% endblock %}</p>
+  {% block legal_atualizacao %}<p class="data">Última atualização: {% block legal_data %}12 de outubro de 2026{% endblock %}</p>{% endblock %}
 
   {% block legal_corpo %}{% endblock %}
 

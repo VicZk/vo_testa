@@ -8,7 +8,7 @@
 <section class="mk-secao">
   <div class="mk-secao-cab">
     <h2 class="mk-secao-tit">Onde estão os vazios</h2>
-    <p class="mk-ocup-resumo{% if resumo_tom == 'perigo' %} perigo{% elif resumo_tom == 'alerta' %} alerta{% endif %}">{{ resumo }}</p>
+    {% if resumo_tom != 'perigo' %}<p class="mk-ocup-resumo{% if resumo_tom == 'alerta' %} alerta{% endif %}">{{ resumo }}</p>{% endif %}
     <p class="mk-secao-sub">Ocupação semanal prevista dos próximos 90 dias, contra as campanhas que cobrem cada semana. A faixa hachurada representa a capacidade total. O espaço em branco mostra as vagas disponíveis.</p>
   </div>
 
@@ -39,11 +39,11 @@
     <div class="mk-ocup-semana">
       <span class="mk-ocup-data">{{ b.inicio|date:"d/m" }}–{{ b.fim|date:"d/m" }}</span>
       <span class="mk-ocup-pct{% if b.situacao == 'problema' %} problema{% endif %}">{{ b.taxa|floatformat:0 }}%</span>
-      <span class="mk-ocup-camp">{{ b.campanhas|default:"sem campanha na semana" }}</span>
+      <span class="mk-ocup-camp">{{ b.campanhas|default:"Sem campanha na semana" }}</span>
       {% if b.situacao == 'problema' %}
-      <span class="mk-ocup-acao problema">campanha no ar e vazio</span>
+      <span class="selo selo--acao mk-ocup-acao problema">Campanha no ar e vazio</span>
       {% else %}
-      <span class="mk-ocup-acao">anunciar aqui</span>
+      <span class="selo mk-ocup-acao">Anunciar aqui</span>
       {% endif %}
     </div>
     {% endif %}{% endfor %}

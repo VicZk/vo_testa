@@ -12,7 +12,7 @@
 </form>
 <div class="quadro"><table class="tabela tabela-cartoes est-notas-tabela"><thead><tr><th>Nota</th><th>Fornecedor</th><th>Emissão</th><th>Recebimento</th><th class="num">Valor previsto</th><th>Abrir</th></tr></thead><tbody>
 {% for nota in pagina %}<tr><td data-rotulo="Nota"><div><a href="{% url 'estoque:nota' nota.pk %}">{{ nota.referencia }}</a><small class="camp-sub">{{ nota.total_itens }} ite{{ nota.total_itens|pluralize:"m,ns" }}</small></div></td><td data-rotulo="Fornecedor">{{ nota.fornecedor_nome }}</td><td data-rotulo="Emissão">{{ nota.emissao|date:"d/m/Y" }}</td><td data-rotulo="Recebimento"><span class="est-nota-status" data-status="{{ nota.status }}">{{ nota.status_label }}</span></td><td class="num" data-rotulo="Valor previsto">{{ nota.valor_total|intcomma_brl }}</td><td data-rotulo="Abrir"><a href="{% url 'estoque:nota' nota.pk %}" class="botao-mini" aria-label="Conferir {{ nota.referencia }}">Conferir nota</a></td></tr>
-{% empty %}<tr><td colspan="6"><p class="est-notas-vazio">{% if busca or estado %}Nenhuma nota corresponde a estes filtros.{% else %}As notas cadastradas aparecerão aqui. Cadastre a primeira para acompanhar as entregas.{% endif %}</p></td></tr>{% endfor %}
+{% empty %}<tr><td colspan="6" class="vazio">{% if busca or estado %}Nenhuma nota corresponde a estes filtros.{% else %}As notas cadastradas aparecerão aqui. Cadastre a primeira para acompanhar as entregas.{% endif %}</td></tr>{% endfor %}
 </tbody></table></div>
 {% include "componentes/paginacao.html" with pagina=pagina %}
 </div>{% endblock %}

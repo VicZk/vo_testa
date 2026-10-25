@@ -47,8 +47,8 @@
       </form>
     </div>
 
-    <p class="pdv-categorias-ajuda">Categorias <span>Deslize para ver todas</span></p>
-    <div class="pdv-categorias" role="group" aria-label="Categorias de produtos">
+    <p class="pdv-categorias-ajuda">Categorias <span data-categorias-rolagem hidden>Deslize para ver todas</span></p>
+    <div class="pdv-categorias" data-categorias-lista role="group" aria-label="Categorias de produtos">
       <button type="button" class="filtro-chip" :aria-pressed="categoria === ''" @click="categoria = ''">
         <svg viewBox="0 0 24 24" class="ico" aria-hidden="true" focusable="false"><use href="{% static 'vendor/lucide/catalogo.svg' %}#package"></use></svg>
         <span>Todos</span> <span x-text="produtos.length"></span>
@@ -265,6 +265,7 @@
     };
   }
 </script>
+<script src="{% static 'js/categorias-rolagem.js' %}"></script>
 <form>{% csrf_token %}</form>
 {% endif %}
 {% endblock %}

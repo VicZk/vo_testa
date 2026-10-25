@@ -5,11 +5,7 @@
 {% block conteudo %}
 <div class="manutencao-painel">
 <p class="pagina-eyebrow letreiro">Hospedagem</p>
-<div class="pagina-cabecalho">
-  <h1>Manutenção</h1>
-  <a href="#nova-ordem" class="botao-primario">Nova ordem de serviço</a>
-</div>
-<p class="subtitulo">Ordens de serviço de quartos e áreas comuns, com histórico de atendimentos e documentos.</p>
+<div class="pagina-cabecalho"><div class="pagina-titulos"><h1>Manutenção</h1><p class="subtitulo">Ordens de serviço de quartos e áreas comuns, com histórico de atendimentos e documentos.</p></div><div class="pagina-acoes"><a href="#nova-ordem" class="botao-primario">Nova ordem de serviço</a></div></div>
 
 <form method="get" class="filtros manutencao-filtros" aria-label="Filtrar ordens de serviço">
   <div class="campo"><label for="os-filtro-situacao">Situação</label><select name="situacao" id="os-filtro-situacao"><option value="abertas"{% if situacao == 'abertas' %} selected{% endif %}>Em aberto</option><option value="concluidas"{% if situacao == 'concluidas' %} selected{% endif %}>Concluídas</option><option value="canceladas"{% if situacao == 'canceladas' %} selected{% endif %}>Canceladas</option><option value="todas"{% if situacao == 'todas' %} selected{% endif %}>Todas</option></select></div>

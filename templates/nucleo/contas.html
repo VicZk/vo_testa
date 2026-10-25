@@ -40,7 +40,7 @@
         </div></td>
       </tr>
     {% empty %}
-      <tr><td colspan="7" class="vazio">Nenhuma conta {% if situacao == 'abertas' %}aberta{% endif %} no momento.</td></tr>
+      <tr><td colspan="7" class="vazio">{% url "conta_nova" as destino_vazio %}{% include "componentes/estado_vazio.html" with mensagem="Nenhuma conta nesta listagem." url_acao=destino_vazio acao="Nova conta" ajuda="" only %}</td></tr>
     {% endfor %}
   </tbody>
 </table>

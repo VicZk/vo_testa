@@ -9,6 +9,12 @@ register = template.Library()
 
 
 @register.filter
+def moeda_sem_quebra(valor):
+    """Mantém o prefixo com o valor dentro de indicadores que também têm texto."""
+    return str(valor).replace("R$ ", "R$\u00a0")
+
+
+@register.filter
 def quantidade_br(valor):
     """Quantidades de estoque sem zeros decimais desnecessários: 5.000 → 5."""
     return "" if valor is None or valor == "" else _qtd_br(valor)

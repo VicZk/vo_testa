@@ -66,15 +66,13 @@
   </table>
 
   <h3>Sofá-cama e colchões extras</h3>
-  {% include "nucleo/partials/campos.html" with form=config_form %}
+  <div class="form-grade">{% include "nucleo/partials/campos.html" with form=config_form %}</div>
 
   <div class="cartao bloco-respiro">
     <h3>Capacidade calculada</h3>
     <p>
       <strong>{{ capacidade.maxima_criancas }} pessoas</strong>,
-      {{ capacidade.fixa }} em cama fixa
-      {% if capacidade.sofa_adultos %}· {{ capacidade.sofa_adultos }} no sofá (ou {{ capacidade.sofa_criancas }} crianças até {{ capacidade.idade_sofa }} anos){% endif %}
-      {% if capacidade.extras %}· até {{ capacidade.extras }} em colchão extra{% endif %}.
+      {{ capacidade.fixa }} em cama fixa{% if capacidade.sofa_adultos %} · {{ capacidade.sofa_adultos }} no sofá (ou {{ capacidade.sofa_criancas }} crianças até {{ capacidade.idade_sofa }} anos){% endif %}{% if capacidade.extras %} · até {{ capacidade.extras }} em colchão extra{% endif %}.
     </p>
     <p class="ajuda">Só adultos: {{ capacidade.maxima }} · com crianças no sofá: {{ capacidade.maxima_criancas }}.</p>
     <p>{{ descricao_camas }}</p>

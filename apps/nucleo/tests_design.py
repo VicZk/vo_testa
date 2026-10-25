@@ -978,7 +978,7 @@ class DentroDoContainerTests(TestCase):
     def test_coluna_do_quarto_no_mapa_poe_reticencias(self):
         """Nome de ala longo saía da célula e levava a TABELA junto: 26px que a
         .mapa-rolagem não alcançava."""
-        for regra in (r"\n\.mapa-uh \{", r"\n\.mapa-meses th \{"):
+        for regra in (r"\n\.mapa-uh \{", r"\n\.mapa-meses th > span \{"):
             bloco = re.search(regra + r"([^}]*)\}", self.css)
             self.assertIsNotNone(bloco, regra)
             self.assertIn("text-overflow: ellipsis", bloco.group(1), regra)

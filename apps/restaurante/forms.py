@@ -72,6 +72,10 @@ class GrupoOpcaoForm(forms.ModelForm):
 
 
 class OpcoesFormSet(BaseInlineFormSet):
+    def add_fields(self, form, index):
+        super().add_fields(form, index)
+        form.fields["produto_estoque"].empty_label = "Nenhum produto"
+
     def clean(self):
         super().clean()
         if any(self.errors):

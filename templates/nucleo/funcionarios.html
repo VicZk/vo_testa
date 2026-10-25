@@ -44,7 +44,7 @@
       </tr>
     </tbody>
   {% empty %}
-    <tbody><tr><td colspan="6" class="vazio">Nenhum funcionário cadastrado. Cadastre o primeiro para começar.</td></tr></tbody>
+    <tbody><tr><td colspan="6" class="vazio">{% url "funcionario_novo" as destino_vazio %}{% include "componentes/estado_vazio.html" with mensagem="Nenhum funcionário cadastrado." url_acao=destino_vazio acao="Novo funcionário" ajuda="" only %}</td></tr></tbody>
   {% endfor %}
 </table>
 {% endblock %}

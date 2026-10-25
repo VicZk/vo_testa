@@ -282,3 +282,79 @@ class RetomadaFrontE2ETests(_BaseE2E):
             self.assertEqual(cores["atual"], cores["esperado"])
             expect(self.page.get_by_text("Este link de pagamento expirou")).to_be_visible()
             self.foto(f"retomada-pagamento-expirado-{largura}-{trilho}")
+
+    def test_nove_relatorios_preservam_titulos_valores_e_largura(self):
+        for chave in ("ocupacao", "faturamento_modulos", "carteira", "comercial", "distribuicao",
+                      "estoque", "reservas", "producao", "caixa"):
+            for largura, trilho in self.ESTADOS:
+                with self.subTest(relatorio=chave, largura=largura, trilho=trilho):
+                    self.abrir("relatorios:relatorio", largura, trilho, (chave,))
+                    for tabela in self.page.locator('.rel-tabela').all():
+                        medidas = tabela.locator('tbody td').evaluate_all("""es => es.map(e => ({
+                            texto:e.textContent.trim(), excesso:e.scrollWidth-e.clientWidth
+                        }))""")
+                        self.assertTrue(all(m['excesso'] <= 1 for m in medidas), (chave, medidas))
+                        if tabela.evaluate("e => getComputedStyle(e).display") == "table":
+                            linhas = tabela.locator('th.col-numero').evaluate_all("""es => es.map(e => {
+                                const r=document.createRange(); r.selectNodeContents(e);
+                                return new Set([...r.getClientRects()].map(c => Math.round(c.top))).size;
+                            })""")
+                            self.assertTrue(all(n == 1 for n in linhas), (chave, linhas))
+                    if chave in ("ocupacao", "carteira") and largura in (320, 1440):
+                        self.foto(f"retomada-relatorio-{chave}-{largura}-{trilho}")
+
+    def test_dica_de_categorias_responde_ao_conteudo_e_ao_redimensionamento(self):
+        self.abrir("loja:pdv", 1440)
+        busca = self.page.locator('#pdv-busca').bounding_box()
+        local = self.page.locator('.pdv-local select').bounding_box()
+        self.assertAlmostEqual(busca['height'], local['height'], delta=1)
+        self.assertAlmostEqual(busca['y'], local['y'], delta=1)
+        dica = self.page.locator('[data-categorias-rolagem]')
+        expect(dica).to_be_hidden()
+        self.page.locator('[data-categorias-lista]').evaluate("""e => {
+            for(let n=0;n<16;n++){
+                const b=document.createElement('button'); b.className='filtro-chip';
+                b.textContent='Categoria de teste '+n; b.dataset.teste='sim'; e.append(b);
+            }
+        }""")
+        # No monitor as categorias quebram linha; só no celular há faixa rolante.
+        expect(dica).to_be_hidden()
+        self.page.set_viewport_size({"width": 390, "height": 900})
+        expect(dica).to_be_visible()
+        self.page.locator('[data-categorias-lista] [data-teste]').evaluate_all("es => es.forEach(e=>e.remove())")
+        self.page.set_viewport_size({"width": 1440, "height": 900})
+        expect(dica).to_be_hidden()
+        self.page.evaluate("document.body.dispatchEvent(new Event('htmx:afterSwap'))")
+        expect(dica).to_be_hidden()
+
+    def test_painel_de_quartos_disponiveis_nao_recorta_linhas_e_kardex_cabe(self):
+        for largura, trilho in self.ESTADOS:
+            self.abrir("comercial:oportunidade", largura, trilho, (self.c.oportunidade.pk,))
+            lista = self.page.locator('.pq-lista:not(.pq-ocupados-titulo + .pq-lista)').first
+            if lista.count():
+                self.assertLessEqual(lista.evaluate("e => e.scrollHeight-e.clientHeight"), 1)
+            self.abrir("estoque:kardex", largura, trilho, (self.c.produto.pk,))
+            for linha in self.page.locator('.est-kardex-tabela tbody tr').all():
+                self.assertLessEqual(linha.evaluate("e => e.scrollWidth-e.clientWidth"), 1)
+            self.foto(f"retomada-kardex-{largura}-{trilho}")
+
+    def test_mapa_e_paleta_preservam_cabecalho_e_piso_de_leitura(self):
+        self.abrir("reservas:mapa", 821)
+        mapa = self.page.locator('.mapa-rolagem')
+        mapa.evaluate("e => e.scrollLeft=200")
+        self.page.evaluate("() => new Promise(r => requestAnimationFrame(r))")
+        limite = mapa.bounding_box()['x'] + 110
+        celulas = self.page.locator('.mapa-meses th:has(span)').evaluate_all("""es => es.map(e => ({
+            direita:e.getBoundingClientRect().right,
+            rotulo:e.querySelector('span').getBoundingClientRect().left
+        }))""")
+        visiveis = [c for c in celulas if c['direita'] > limite + 110]
+        self.assertTrue(visiveis)
+        self.assertTrue(all(c['rotulo'] >= limite - 1 for c in visiveis), visiveis)
+        self.foto("retomada-mapa-821-rolado")
+        self.page.keyboard.press("Control+k")
+        expect(self.page.locator('.paleta')).to_be_visible()
+        tamanhos = self.page.locator('.paleta-rodape, .paleta-rodape kbd').evaluate_all(
+            "es => es.map(e => parseFloat(getComputedStyle(e).fontSize))")
+        self.assertTrue(tamanhos)
+        self.assertTrue(all(t >= 11.2 for t in tamanhos), tamanhos)

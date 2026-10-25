@@ -1608,7 +1608,7 @@ table.tabela { --raio-tabela: var(--raio); --raio-celula: max(0px, calc(var(--ra
 .selo.mapa-cor-checkout, .selo.mapa-cor-orcamento { --selo-cor: var(--fio-forte); }
 .selo-limpa, .selo-concluida, .selo-ok, .selo-sucesso, .selo-pub,
 .selo-pg-pago, .selo.mapa-cor-confirmada          { --selo-cor: var(--sucesso); }
-.selo-inspecionada, .selo-programada, .selo-sem_bagagem,
+.selo-informacao, .selo-inspecionada, .selo-programada, .selo-sem_bagagem,
 .selo.prioridade-media                            { --selo-cor: var(--info); }
 .selo-suja, .selo-pendente, .selo-rasc, .selo-pg-pendente, .selo-pg-expirado,
 .selo-saida_nao_lancada,
@@ -2288,13 +2288,14 @@ table.tabela { --raio-tabela: var(--raio); --raio-celula: max(0px, calc(var(--ra
 
 /* Seções da ficha (agrupamento §16) — legenda como sobrescrito discreto */
 .fnrh-grupo { border: none; margin: 0; padding: .7rem 0 0; }
-.fnrh-grupo + .fnrh-grupo { border-top: 1px solid var(--fio); margin-top: .5rem; }
+.fnrh-grupo + .fnrh-grupo { margin-top: 1.1rem; }
 .fnrh-grupo > legend {
   padding: 0; margin-bottom: .55rem; font-size: max(var(--rotulo-min), 0.72rem); color: var(--madeira);
 }
 
 /* Chip de progresso (recepção) */
 .fnrh-progresso {
+  display:inline-block; white-space:nowrap; vertical-align:middle;
   font-size: 0.82rem; font-weight: 600; color: var(--tinta-suave);
   padding: .28rem .7rem; border-radius: var(--raio-pilula);
   background: var(--superficie-2); border: 1px solid var(--fio-forte);
@@ -2588,8 +2589,8 @@ table.tabela { --raio-tabela: var(--raio); --raio-celula: max(0px, calc(var(--ra
 }
 .mapa-legenda .selo { margin-right: 0; font-size: 0.78rem; font-weight: 500; color: var(--tinta-suave); }
 
-.mapa-rolagem { overflow-x: auto; }
-.mapa { min-width: 900px; table-layout: fixed; }
+.mapa-rolagem { --mapa-uh-larg: 110px; overflow-x: auto; }
+.mapa { min-width: 900px; table-layout: fixed; overflow: visible; }
 .mapa th, .mapa td { padding: .35rem .3rem; text-align: center; font-size: 0.78rem; }
 .mapa thead th { font-size: var(--rotulo-min); line-height: 1.3; }
 /* A coluna do quarto tem 110px fixos (table-layout: fixed). Nome de ala longo
@@ -2598,7 +2599,7 @@ table.tabela { --raio-tabela: var(--raio); --raio-celula: max(0px, calc(var(--ra
    rolar até lá — corte mudo. Com reticências, o que não cabe vira pista; o
    nome inteiro fica no `title` da célula. */
 .mapa-uh {
-  width: 110px; text-align: left !important;
+  width: var(--mapa-uh-larg); text-align: left !important;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .mapa-uh small {
@@ -2607,10 +2608,8 @@ table.tabela { --raio-tabela: var(--raio); --raio-celula: max(0px, calc(var(--ra
 }
 
 .mapa-meses th {
-  /* O nome do mês é maior que a faixa de dias dele quando o mês entra pela
-     ponta: o rótulo saía da célula e levava a TABELA junto (26px recortados
-     que a .mapa-rolagem não alcançava). Reticências dentro da própria célula. */
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  /* O span recorta o texto sem tornar a célula o contêiner do sticky. */
+  white-space: nowrap;
   font-size: var(--rotulo-min);
   letter-spacing: .18em;
   color: var(--madeira);
@@ -3021,6 +3020,7 @@ table.tabela { --raio-tabela: var(--raio); --raio-celula: max(0px, calc(var(--ra
 }
 
 /* Campo com botão de ação ao lado (ex.: "+ Novo" hóspede) */
+.campo-com-acao > .combo { flex:1 1 auto; min-width:0; }
 .campo-com-acao { display: flex; gap: .5rem; align-items: stretch; }
 .campo-com-acao select { flex: 1; }
 
@@ -4038,12 +4038,14 @@ div.porta.dica[data-dica] { cursor: default; }
 }
 .pdv-busca-wrap .ico { position: absolute; left: .85rem; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--tinta-suave); }
 .pdv-busca {
-  width: 100%; padding: .7rem .8rem .7rem 2.4rem;
+  height:var(--controle-h); width: 100%; padding: .7rem .8rem .7rem 2.4rem;
   font-family: var(--fonte-ui); font-size: 0.95rem; color: var(--tinta);
   background: var(--superficie); border: 1px solid var(--fio-forte); border-radius: var(--raio-p);
 }
 .pdv-busca:focus { border-color: var(--lampiao); box-shadow: 0 0 0 3px color-mix(in srgb, var(--lampiao) 22%, transparent); }
 .pdv-local { display: flex; flex-direction: column; gap: .3rem; }
+.pdv-busca-campo { display:flex; flex-direction:column; gap:.3rem; }
+.pdv-busca-campo .pdv-busca-wrap { flex:none; }
 .pdv-local .letreiro { font-size: var(--rotulo-min); color: var(--madeira); }
 .pdv-local .select-wrap select { min-width: min(190px, 100%); }
 
@@ -4953,11 +4955,11 @@ form.filtros:not(.subnav) :is(input:not([type=checkbox]):not([type=radio]):not([
 /* Valor e "Alterar" alinhados pela linha de base; o valor, blocificado pelo flex, tem a
    mesma caixa de linha dos vizinhos (que são blocos com a mesma fonte). Sem a seta
    geral dos <details> (ela, com 1.1em, empurrava a linha 2px para baixo). */
-.mk-teto-resumo { display: flex; align-items: baseline; gap: 8px; cursor: pointer; list-style: none; }
+.mk-teto-resumo { display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; }
 .mk-teto-resumo::-webkit-details-marker, .mk-teto-resumo::marker { display: none; content: none; }
 .conteudo .mk-teto > summary::before { content: none; }   /* sem a seta geral dos <details> do conteúdo */
 .mk-teto-resumo .mk-verba-n { display: inline; margin-top: 0; }
-.mk-teto-alterar { font-size: var(--rotulo-min); font-weight: 700; color: var(--madeira); }
+.mk-teto-alterar { display:inline-flex; align-items:center; min-height:var(--controle-h); padding:0 .6rem; border:1px solid var(--fio); border-radius:var(--raio-p); background:var(--superficie); font-size:var(--rotulo-min); font-weight:700; color:var(--madeira); }
 .mk-teto[open] .mk-teto-abrir, .mk-teto:not([open]) .mk-teto-fechar { display: none; }
 /* Aberto, o campo toma o lugar do valor na MESMA linha ("[campo] Salvar  Cancelar"): o
    bloco cresce só o que o campo pede, e o resto do cartão quase não se move. */
@@ -5071,7 +5073,7 @@ form.filtros:not(.subnav) :is(input:not([type=checkbox]):not([type=radio]):not([
 .mk-card-canais { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 .mk-canal { display: inline-flex; width: 18px; height: 18px; color: var(--tinta-suave); }
 .mk-canal .ico-canal { width: 100%; height: 100%; }
-.mk-card-dono { display: flex; align-items: center; gap: 8px; margin-top: 9px; }
+.mk-card-dono { display: flex; flex-wrap:wrap; align-items: center; gap: 8px; margin-top: 9px; }
 .mk-av {
   flex: none; width: 24px; height: 24px; border-radius: 50%;
   background: var(--superficie-2); border: 1px solid var(--fio);
@@ -5079,7 +5081,7 @@ form.filtros:not(.subnav) :is(input:not([type=checkbox]):not([type=radio]):not([
   display: inline-flex; align-items: center; justify-content: center;
 }
 .mk-card-resp {
-  flex: 1; min-width: 0; font-size: max(var(--rotulo-min), 0.71875rem); color: var(--tinta-suave);
+  flex: 1 1 6rem; min-width: 0; font-size: max(var(--rotulo-min), 0.71875rem); color: var(--tinta-suave);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .mk-card-verba { flex: none; font-size: 0.75rem; font-weight: 700; color: var(--tinta); }
@@ -5244,12 +5246,9 @@ form.filtros:not(.subnav) :is(input:not([type=checkbox]):not([type=radio]):not([
   flex: 1; min-width: 120px; font-size: max(var(--rotulo-min), 0.71875rem); color: var(--tinta-suave);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-/* Cápsula preenchida de propósito: as duas pedem decisão de anunciar (ou parar). */
-.mk-ocup-acao {
-  flex: none; font-size: var(--rotulo-min); font-weight: 700; border-radius: var(--raio-pilula); padding: 3px 9px;
-  background: var(--alerta-bg); color: var(--alerta);
-}
-.mk-ocup-acao.problema { background: var(--perigo-bg); color: var(--perigo); }
+/* Só a campanha que já está no ar sem resultado recebe cápsula de alerta. */
+.mk-ocup-acao { flex: none; --selo-cor: var(--alerta); color: var(--alerta); }
+.mk-ocup-acao.problema { --selo-cor: var(--perigo); }
 .mk-marcos { padding: 14px 20px 20px; display: flex; flex-direction: column; gap: 7px; }
 .mk-marco {
   display: flex; align-items: center; gap: 11px; padding: 11px 13px; border-radius: var(--raio);
@@ -6013,7 +6012,7 @@ body.sem-rolagem { overflow: hidden; }
 .tela-reservas .mapa-grupo td.mapa-uh { background: color-mix(in srgb, var(--mapa-grupo) 92%, transparent); }
 /* Scroll-edge: o conteúdo esmaece ao passar sob a coluna fixa, sem borda dura */
 .tela-reservas .mapa-rolagem::before {
-  content: ""; position: sticky; left: 110px; top: 0; z-index: 2;
+  content: ""; position: sticky; left: var(--mapa-uh-larg); top: 0; z-index: 2;
   display: block; width: 18px; height: 0;
   box-shadow: -12px 0 12px -12px color-mix(in srgb, var(--noturno) 28%, transparent);
   pointer-events: none;
@@ -6240,7 +6239,7 @@ form.htmx-request input { opacity: .7; }
 .escala-val h3 { margin: 0 0 .6rem; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--tinta-suave); }
 .escala-al { display: flex; gap: .55rem; align-items: flex-start; font-size: 0.88rem; padding: .45rem .7rem; border-radius: var(--raio-p); border: 1px solid transparent; margin-bottom: .4rem; }
 .escala-al:last-child { margin-bottom: 0; }
-.escala-al .ic { font-weight: 800; flex-shrink: 0; }
+.escala-al .ic { font-weight: 800; flex:0 0 1.1em; text-align:center; }
 .escala-al-ok { background: var(--sucesso-bg); color: var(--sucesso); border-color: color-mix(in srgb, var(--sucesso) 20%, transparent); }
 .escala-al-perigo { background: var(--perigo-bg); color: var(--perigo); border-color: color-mix(in srgb, var(--perigo) 25%, transparent); }
 .escala-al-aviso { background: var(--alerta-bg); color: var(--alerta); border-color: color-mix(in srgb, var(--alerta) 25%, transparent); }
@@ -7213,7 +7212,7 @@ form.filtros.manutencao-filtros:not(.subnav) { display: grid; grid-template-colu
   }
   .est-posicao .est-tabela td[data-rotulo]::before {
     content: attr(data-rotulo); display: block; margin-bottom: .15rem;
-    font-family: var(--fonte-ui); font-size: var(--rotulo-min); font-weight: 600; color: var(--tinta-suave);
+    font-family: var(--fonte-ui); font-size: var(--rotulo-min); font-weight: 600; color: var(--tinta-suave); text-transform:uppercase; letter-spacing:.04em;
   }
   .est-posicao .est-tabela .est-identidade,
   .est-posicao .est-tabela .col-acao,
@@ -7576,6 +7575,10 @@ form.filtros.manutencao-filtros:not(.subnav) { display: grid; grid-template-colu
    linha com os outros botões e quebra quando a coluna aperta. */
 .copiar-celula { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
 .copiar-celula .copiar, .copiar-celula .copiar-acoes { margin-top: 0; }
+.copiar-celula .copiar { flex:1 1 auto; min-width:0; }
+.reservas-listagem .barra-busca { max-width:44rem; }
+.pagina-cabecalho .pagina-titulos { flex:1 1 24rem; min-width:0; }
+.pagina-titulos .subtitulo { margin:.35rem 0 0; }
 /* No papel não há o que copiar. */
 @media print { .copiar-acoes { display: none; } }
 
@@ -7934,10 +7937,10 @@ form.filtros.manutencao-filtros:not(.subnav) { display: grid; grid-template-colu
 .manutencao-bloqueio { color:var(--perigo); font-size: 0.76rem; }
 .manutencao-ordem-responsavel { display:grid; gap:.15rem; font-size: 0.85rem; overflow-wrap:anywhere; }
 .manutencao-ordem-responsavel small { color:var(--tinta-suave); font-size: 0.76rem; }
-.manutencao-ordem-acao { display:inline-flex; align-items:center; justify-content:space-between; gap:.65rem; min-height:44px; font-size: 0.84rem; font-weight:600; white-space:nowrap; }
+.manutencao-ordem-acao { display:inline-flex; align-items:center; justify-content:flex-start; justify-self:start; gap:.65rem; min-height:44px; font-size: 0.84rem; font-weight:600; white-space:nowrap; }
 .manutencao-nova, #acoes-os { scroll-margin-top:6rem; }
 .manutencao-nova > .form-cartao { padding:0; border:0; background:none; box-shadow:none; }
-.manutencao-detalhe .selo::before { display:none; }
+.manutencao-detalhe .ficha dd .selo::before { display:none; }
 /* As ações já ficam em um cartão; o disclosure não cria uma segunda moldura. */
 .manutencao-detalhe :is(.acao-bloco,.acao-sensivel) > .form-cartao {
   margin: .75rem 0 0; padding: 0; max-width: none;
@@ -8228,6 +8231,7 @@ html.com-js [data-precos-filtros][hidden] { display: block; visibility: hidden; 
 .pagina-acoes { align-self: center; }
 .cartoes-indicadores > *, .colunas > *, .boh-mini > * { min-width: 0; }
 .cartoes-indicadores .indicador-valor { white-space: nowrap; overflow-wrap: normal; }
+.cartoes-indicadores .indicador-valor--composto { white-space: normal; }
 @container indicador (max-width: 13rem) {
   .cartoes-indicadores .indicador-valor { font-size: clamp(.95rem, 12cqi, 1.5rem); }
 }
@@ -8264,7 +8268,7 @@ html.com-js [data-precos-filtros][hidden] { display: block; visibility: hidden; 
 .escala-chip .chip-x { min-width: 1.5rem; min-height: 1.5rem; }
 .pdv-produtos-topo :is(input,select) { min-height: var(--controle-h); }
 .pdv-etapas > button { min-height: 4.5rem; display: flex; flex-direction: column; justify-content: center; }
-.pdv-busca-rotulo { display: block; margin-bottom: .3rem; font-size: var(--rotulo-min); font-weight: 600; color: var(--madeira); text-transform: uppercase; }
+.pdv-busca-rotulo { display: block; margin-bottom: 0; font-size: var(--rotulo-min); font-weight: 600; color: var(--madeira); text-transform: uppercase; }
 .tarifa-input { width: 100%; min-width: 0; }
 .tarifa-input .tarifa-rs { width: 2.8rem; text-align: center; left: 0; }
 .tarifa-input input { width: 100%; min-width: 0; padding-left: 2.8rem; text-align: right; font-variant-numeric: tabular-nums; }
@@ -8281,7 +8285,7 @@ html.com-js [data-precos-filtros][hidden] { display: block; visibility: hidden; 
 }
 }
 .mapa-meses th { text-align: left; }
-.mapa-meses th > span { position: sticky; left: 180px; }
+.mapa-meses th > span { display:inline-block; max-width:100%; overflow:hidden; text-overflow: ellipsis; position:sticky; left:var(--mapa-uh-larg); background:inherit; padding-inline:.3rem; vertical-align:middle; }
 .combo-opcao, .combo-grupo-cab { min-height: var(--controle-h); display: flex; align-items: center; }
 .mk-aviso-acao { height: auto; min-height: var(--controle-h); }
 .est-posicao .est-tabela td > a.est-produto-nome { display: inline-flex; align-items: center; min-height: var(--controle-h); }
@@ -8352,8 +8356,16 @@ html.com-js [data-precos-filtros][hidden] { display: block; visibility: hidden; 
   border-radius: 50%; background: var(--perigo-sobre-escuro); border: 2px solid var(--noturno-2);
 }
 /* Relatórios: coluna numérica com largura natural (width:1% jogava toda a sobra na primeira). */
-.rel-tabela .col-numero { width: auto; min-width: 7ch; }
-.tabela-rol > .rel-tabela th { white-space: normal; }
+.rel-tabela .col-numero { width:auto; min-width:9ch; }
+/* A largura compacta só vale para células de tabela, nunca para os cartões. */
+@container tabela (min-width: 48.01rem) {
+  .rel-tabela:not(.rel-tabela--ampla) > :is(thead,tbody) > tr > :first-child { width:1%; max-width:32rem; }
+}
+@container tabela (min-width: 56.01rem) {
+  .rel-tabela--ampla > :is(thead,tbody) > tr > :first-child { width:1%; max-width:32rem; }
+  .tabela.rel-tabela--ampla :is(th,td) { padding-inline:.5rem; }
+}
+.tabela-rol > .rel-tabela th { white-space:nowrap; }
 .rel-tabela .rel-valor-monetario { white-space: nowrap; }
 /* Muitas colunas precisam de mais espaço que uma lista curta. Cada registro
    vira um cartão com campos legíveis antes de apertar ou separar a moeda.
@@ -8956,4 +8968,13 @@ html.com-js [data-precos-filtros][hidden] { display: block; visibility: hidden; 
   /* Folga para a gaveta não cobrir o último bloco da tela (a classe entra só
      quando há linha marcada, que é quando a barra existe). */
   .lav-com-lote { padding-bottom: 8rem; }
+}
+
+/* Duas colunas por movimento, com descrição e origem completas. */
+@container conteudo (max-width:48rem) {
+  .tabela.est-kardex-tabela tbody tr:not(:has(> .vazio)) { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.75rem 1rem; }
+  .tabela.est-kardex-tabela td { display:block; min-width:0; max-width:100%; padding:0; }
+  .tabela.est-kardex-tabela td:nth-child(2), .tabela.est-kardex-tabela td:last-child { grid-column:1/-1; }
+  .tabela.est-kardex-tabela td[data-rotulo]::before { display:block; width:auto; margin-bottom:.2rem; }
+  .tabela.est-kardex-tabela td.num, .tabela.est-kardex-tabela td.num .tabela-valor { text-align:right; }
 }

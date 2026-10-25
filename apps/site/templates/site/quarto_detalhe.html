@@ -29,8 +29,17 @@
     box-shadow:0 30px 70px -28px color-mix(in srgb, var(--noturno) 75%, transparent);
   }
   .qd__hero img { width:100%; height:100%; object-fit:cover; display:block; }
-  .qd__hero:has(.qd__hero-vazio) { aspect-ratio:4/3; }
-  @media (min-width:861px) { .qd__hero-vazio .foto-ausente { width:50%; } }
+  .qd__hero:has(.qd__hero-vazio) { aspect-ratio:auto; min-height:clamp(220px,32vh,400px); }
+  @media (min-width:861px) {
+    .qd__hero-vazio .foto-ausente { width:50%; }
+    /* Sem foto, a descrição determina a altura mínima; o próximo bloco não a encobre. */
+    .qd__stage:has(.qd__hero-vazio) { display:grid; }
+    .qd__stage:has(.qd__hero-vazio) .qd__hero { grid-area:1/1; height:100%; max-height:none; }
+    .qd__stage:has(.qd__hero-vazio) .qd__panel {
+      grid-area:1/1; position:relative; top:auto; right:auto; transform:none;
+      align-self:center; justify-self:end; margin:1rem 2.5rem;
+    }
+  }
   .qd__hero-vazio { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:color-mix(in srgb, var(--pergaminho) 30%, transparent); }
   /* Scrim para o painel se destacar sobre a foto (separação sobre conteúdo) */
   .qd__hero::after {
@@ -134,7 +143,7 @@
           <span>{{ quarto.capacidade }} hóspedes</span>
           {% if quarto.metragem %}<span>{{ quarto.metragem }}m²</span>{% endif %}
         </div>
-        <p class="qd__desc">{{ descricao }}</p>
+        {% if descricao %}<p class="qd__desc">{{ descricao }}</p>{% endif %}
         {% if quarto.qualidades %}
         <div class="qd__chips">
           {% for qual in quarto.qualidades %}<span class="qd__chip">{{ qual }}</span>{% endfor %}

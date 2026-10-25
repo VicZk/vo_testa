@@ -9,6 +9,28 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 25/10/2026: conclusão da varredura de interface e páginas públicas
+
+- Estados vazios indicam o próximo passo e preservam o papel da pessoa ao limpar a
+  busca. Configuração de quartos, FNRH, preços e cabeçalhos mantêm alinhamento e
+  leitura. O mapa conserva a coluna do quarto e os meses durante a rolagem.
+- A Manutenção destaca “Iniciar” em ordens abertas. Comercial e Marketing ganham
+  filtros proporcionais, quartos disponíveis sem corte e orçamento com ação visível.
+  Informações neutras deixam de competir com alertas que exigem ação.
+- Relatórios distribuem melhor as colunas; o kardex usa duas colunas no celular.
+  O PDV alinha busca e estoque e só pede para deslizar quando há categorias fora da
+  área visível. NPS, cardápio, retornos e plurais seguem o padrão dos módulos.
+- As três campanhas usam alvos de toque consistentes. Os CTAs das páginas de fundador
+  usam dourado, a inauguração cabe em 320 px e a leitura da história fica alinhada.
+  A política da lista usa o layout do site; seu conteúdo foi preservado e o link de
+  privacidade de navegação tem rótulo próprio, pois trata de outra finalidade.
+- O calendário deixa de esticar o cartão, os campos de data indicam “Selecione” e o
+  quarto sem foto usa uma área menor. O comando `corrigir_icones_experiencias` corrige
+  somente os cinco desenhos antigos, com simulação, auditoria e aplicação idempotente.
+- Modificados os templates dos módulos, CSS compartilhado, páginas públicas, LPs e
+  testes de navegador. As verificações cobrem relatórios, CSV/impressão, operações
+  financeiras, cinco estados de largura/menu e preservação do conteúdo dos ícones.
+
 ## 25/10/2026: lotes, valores monetários, cobranças vencidas e auditoria
 
 - O filtro de lotes oferece novamente “Com saldo” e mantém a seleção após filtrar.

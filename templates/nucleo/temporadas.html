@@ -42,7 +42,7 @@
         <td data-rotulo="Fim"><div class="tabela-valor">{{ t.fim|date:"d/m/Y" }}</div></td>
       </tr>
     {% empty %}
-      <tr><td colspan="4" class="vazio">Nenhuma temporada cadastrada. As tarifas por período dependem delas.</td></tr>
+      <tr><td colspan="4" class="vazio">{% url "temporada_nova" as destino_vazio %}{% include "componentes/estado_vazio.html" with mensagem="Nenhuma temporada cadastrada." url_acao=destino_vazio acao="Nova temporada" ajuda="As tarifas por período dependem delas." only %}</td></tr>
     {% endfor %}
   </tbody>
 </table>

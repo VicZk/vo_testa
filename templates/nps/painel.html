@@ -17,11 +17,11 @@
     <button class="botao-neutro">Filtrar</button>
   </form>
   <div class="cartoes indicadores-compactos nps-indicadores">
-    <div class="cartao"><span class="indicador-rotulo">NPS do período</span><strong class="indicador-valor">{{ resumo.score|default_if_none:'—' }}</strong><span class="ajuda">Escala de −100 a +100</span></div>
-    <div class="cartao"><span class="indicador-rotulo">Respostas</span><strong class="indicador-valor">{{ resumo.total }}</strong></div>
-    <div class="cartao"><span class="indicador-rotulo">Promotores · notas 9–10</span><strong class="indicador-valor">{{ resumo.promotores }}</strong></div>
-    <div class="cartao"><span class="indicador-rotulo">Passivos · notas 7–8</span><strong class="indicador-valor">{{ resumo.passivos }}</strong></div>
-    <div class="cartao"><span class="indicador-rotulo">Detratores · notas 0–6</span><strong class="indicador-valor">{{ resumo.detratores }}</strong></div>
+    <div class="cartao"><span class="indicador-rotulo letreiro">NPS do período</span><strong class="indicador-valor">{{ resumo.score|default_if_none:'—' }}</strong><span class="ajuda">Escala de −100 a +100</span></div>
+    <div class="cartao"><span class="indicador-rotulo letreiro">Respostas</span><strong class="indicador-valor">{{ resumo.total }}</strong></div>
+    <div class="cartao"><span class="indicador-rotulo letreiro">Promotores · notas 9–10</span><strong class="indicador-valor">{{ resumo.promotores }}</strong></div>
+    <div class="cartao"><span class="indicador-rotulo letreiro">Passivos · notas 7–8</span><strong class="indicador-valor">{{ resumo.passivos }}</strong></div>
+    <div class="cartao"><span class="indicador-rotulo letreiro">Detratores · notas 0–6</span><strong class="indicador-valor">{{ resumo.detratores }}</strong></div>
   </div>
   <section class="cartao-el respiro">
     <h2 class="titulo-topo">Avaliações recebidas</h2>

@@ -10,6 +10,9 @@
   .funil-periodo select{padding:.32rem .55rem;border:1px solid var(--fio);border-radius:var(--raio-p);
     background:var(--superficie);color:var(--tinta);font-size:0.8125rem}
   .funil-periodo select:disabled{opacity:.5;cursor:not-allowed}
+  .funil-periodo-par{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+  .funil-periodo-par select{flex:1 1 6rem;min-width:0}
+  .funil-periodo .filtro-campo > .fp-rot{display:block;text-transform:uppercase;letter-spacing:.06em}
   .funil-periodo .fp-todos{display:flex;align-items:center;gap:5px;font-size:0.8125rem;
     color:var(--tinta-suave);cursor:pointer;user-select:none}
   .funil-card.status-ganha{opacity:.9}
@@ -142,15 +145,15 @@
     </select>
     </div>
     <div class="filtro-campo"><span class="fp-rot">Fechados (Ganho/Perdido)</span>
-    <div class="filtro-periodo">
+    <div class="funil-periodo-par">
     <select name="mes" aria-label="Mês" onchange="this.form.submit()" {% if todos_fechados %}disabled{% endif %}>
       {% for num, nome in meses %}<option value="{{ num }}" {% if num == mes_sel %}selected{% endif %}>{{ nome }}</option>{% endfor %}
     </select>
     <select name="ano" aria-label="Ano" onchange="this.form.submit()" {% if todos_fechados %}disabled{% endif %}>
       {% for a in anos %}<option value="{{ a }}" {% if a == ano_sel %}selected{% endif %}>{{ a }}</option>{% endfor %}
     </select>
-    </div></div>
     <label class="fp-todos"><input type="checkbox" name="fechados" value="todos" {% if todos_fechados %}checked{% endif %} onchange="this.form.submit()"> Todos</label>
+    </div></div>
   </form>
 
   {# busca dentro do funil — filtra os cards por nome, proposta ou telefone (instantâneo) #}

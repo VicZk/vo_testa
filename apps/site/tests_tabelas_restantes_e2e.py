@@ -131,7 +131,7 @@ class TabelasRestantesE2ETests(_BaseE2E):
         self.assertLessEqual(self.page.evaluate("document.documentElement.scrollWidth"), largura + 1)
         self.assertEqual(self.erros, [], (rota, largura))
 
-    def _conferir(self, rota, largura, trilho=False, seletor="#conteudo .tabela-rol > .tabela-cartoes:not(.tabela-registros)"):
+    def _conferir(self, rota, largura, trilho=False, seletor="#conteudo .tabela-rol > .tabela-cartoes:not(.tabela-registros)", sempre_tabela=False):
         tabelas = self.page.locator(seletor)
         self.assertGreater(tabelas.count(), 0, rota)
         medidas = tabelas.evaluate_all("""tabelas => tabelas.map(t => {
@@ -155,7 +155,9 @@ class TabelasRestantesE2ETests(_BaseE2E):
         })""")
         for tabela in medidas:
             self.assertGreater(len(tabela["celulas"]), 0, (rota, tabela))
-            if tabela["largura"] <= 768:
+            if sempre_tabela:
+                self.assertEqual(tabela["display"], "table", (rota, tabela))
+            elif tabela["largura"] <= 768:
                 self.assertEqual(tabela["display"], "block", (rota, tabela))
             for celula in tabela["celulas"]:
                 self.assertTrue(celula["rotulo"], celula)
@@ -198,7 +200,10 @@ class TabelasRestantesE2ETests(_BaseE2E):
                 with self.subTest(rota=rota, largura=largura, trilho=trilho):
                     self._abrir(rota, largura, trilho, args, query)
                     seletor = ".montagem-camas .tabela-cartoes" if rota == "governanca:quartos" else "#conteudo .tabela-rol > .tabela-cartoes:not(.tabela-registros)"
-                    self._conferir(rota, largura, trilho, seletor)
+                    if rota == "pagamentos:painel":
+                        # O resumo tem três colunas curtas e cabe como tabela inclusive no celular.
+                        seletor = "#conteudo .tabela-rol > .tabela:not(.tabela-cartoes)"
+                    self._conferir(rota, largura, trilho, seletor, sempre_tabela=rota == "pagamentos:painel")
 
     def test_acoes_dos_cartoes_enviam_os_registros_corretos(self):
         self._abrir("comercial:tarefas", 320)
@@ -247,9 +252,8 @@ class TabelasRestantesE2ETests(_BaseE2E):
             for largura, trilho in self.ESTADOS:
                 self._abrir("relatorios:relatorio", largura, trilho, ("reservas",))
                 self._conferir("relatorio-amplo", largura, trilho)
-                largura_util = self.page.locator(".rel-tabela").locator("..").bounding_box()["width"]
                 self.assertEqual(self.page.locator(".rel-tabela").evaluate("el=>getComputedStyle(el).display"),
-                                 "block" if largura_util <= 1200 else "table")
+                                 "table" if largura == 1440 else "block")
                 expect(self.page.locator(".rel-tabela tbody tr")).to_have_count(30)
                 expect(self.page.locator(".rel-tabela tbody tr").last).to_contain_text("Categoria completa da conferência 30")
             csv = self.client.get(reverse("relatorios:relatorio", args=["reservas"]) + "?export=csv")

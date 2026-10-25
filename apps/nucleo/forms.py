@@ -84,11 +84,13 @@ class ReaisField(forms.DecimalField):
 class PessoaForm(forms.ModelForm):
     class Meta:
         model = Pessoa
+        help_texts = {"numero": ""}
         fields = [
             "nome", "tipo", "documento", "email", "telefone",
             "endereco", "numero", "bairro", "complemento", "cidade", "uf", "cep", "observacoes", "ativo",
         ]
         widgets = {
+            "numero": forms.TextInput(attrs={"placeholder": "Nº ou S/N"}),
             "observacoes": forms.Textarea(attrs={"rows": 3}),
             "documento": forms.TextInput(
                 attrs={"class": "mascara-cpfcnpj", "inputmode": "numeric"}

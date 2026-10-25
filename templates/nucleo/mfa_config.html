@@ -28,7 +28,7 @@
       </form>
     {% endif %}
   {% else %}
-    <p class="bloco-plano"><span class="selo selo-neutro">Inativo</span></p>
+    <p class="bloco-plano">{% if obrigatorio %}<span class="selo selo--acao">Ative para continuar</span>{% else %}<span class="selo selo-neutro">Inativo</span>{% endif %}</p>
     {% if obrigatorio %}
       <p class="nota-cartao alerta">
         Sua conta exige autenticação em duas etapas (MFA). Ative para continuar usando o sistema.</p>

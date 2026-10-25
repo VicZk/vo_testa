@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load nucleo_extras %}
 
 {% block titulo %}{{ titulo }} | Relatórios{% endblock %}
 
@@ -76,7 +77,7 @@ busca na folha.{% endcomment %}
   {% for rotulo_kpi, valor in dados.kpis %}
     <div class="cartao">
       <span class="indicador-rotulo letreiro">{{ rotulo_kpi }}</span>
-      <span class="indicador-valor">{{ valor }}</span>
+      <span class="indicador-valor{% if ' · ' in valor %} indicador-valor--composto{% endif %}">{% if ' · ' in valor %}{{ valor|moeda_sem_quebra }}{% else %}{{ valor }}{% endif %}</span>
     </div>
   {% endfor %}
 </div>

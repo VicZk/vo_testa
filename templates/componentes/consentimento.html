@@ -13,7 +13,7 @@ paleta da marca no site, que não carrega o app.css.
     <p class="aviso-cookies-txt">
       <strong>Cookies e medição.</strong>
       Cookies de medição só são ativados se você aceitar.
-      <a href="{% url 'core:politica_privacidade' %}">Política de privacidade</a>.
+      <a href="{% url 'core:politica_privacidade' %}">{{ rotulo_politica_privacidade|default:"Política de privacidade" }}</a>.
     </p>
     <div class="aviso-cookies-acoes">
       <button type="button" class="aviso-cookies-btn aviso-cookies-sim" data-consent-aceitar>Aceitar</button>

@@ -45,14 +45,12 @@
     <thead>
       <tr>
         <th>Quarto</th>
-        {% for c in colunas %}<th class="num">{{ c.label }}<br><small>base · +adulto · meia</small></th>{% endfor %}
+        {% for c in colunas %}<th class="precos-grupo">{{ c.label }}<br><small>base · +adulto · meia</small></th>{% endfor %}
       </tr>
     </thead>
     <tbody>
       {% if not grupos %}
-        <tr><td colspan="{{ colunas|length|add:1 }}" class="vazio">Nenhum quarto cadastrado ainda.
-          Cadastre os quartos em <strong>Cadastros → Quartos &amp; tipos</strong> e os preços
-          aparecem aqui para preencher.</td></tr>
+        <tr><td colspan="{{ colunas|length|add:1 }}" class="vazio">{% url "estrutura" as destino_vazio %}{% include "componentes/estado_vazio.html" with mensagem="Nenhum quarto cadastrado ainda." url_acao=destino_vazio acao="Configurar quartos" ajuda="Depois do cadastro, os preços aparecem aqui para preencher." only %}</td></tr>
       {% endif %}
       {% for g in grupos %}
         <tr class="mapa-grupo" data-precos-grupo="{{ forloop.counter }}"><td colspan="{{ colunas|length|add:1 }}"><strong>{{ g.titulo }}</strong></td></tr>
@@ -139,6 +137,8 @@
 <style>
   /* A grade é larga (3 campos × temporadas): a largura vem do `.form-largo` (app.css). */
   .precos-tabela td, .precos-tabela th { white-space: nowrap; }
+  .precos-tabela thead th.precos-grupo { text-align:center; }
+  .precos-tabela thead small { font-size:max(var(--rotulo-min), .7rem); }
   .form-cartao.precos-form { container: precos / inline-size; overflow:visible; }
   .precos-filtros { max-width:100%; margin:1rem 0; }
   .precos-filtros-campos { display:flex; flex-wrap:wrap; align-items:end; gap:.65rem; }

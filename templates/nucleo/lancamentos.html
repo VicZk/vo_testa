@@ -43,7 +43,7 @@
         <td class="num registro-valor" data-rotulo="Valor">{{ l.valor|intcomma_brl }}</td>
       </tr>
     {% empty %}
-      <tr><td colspan="6" class="vazio">Nenhum lançamento. Cadastre categorias no admin e registre o primeiro.</td></tr>
+      <tr><td colspan="6" class="vazio">{% url "lancamento_novo" as destino_vazio %}{% include "componentes/estado_vazio.html" with mensagem="Nenhum lançamento registrado." url_acao=destino_vazio acao="Novo lançamento" ajuda="" only %}</td></tr>
     {% endfor %}
   </tbody>
 </table>

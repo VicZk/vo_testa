@@ -12,6 +12,7 @@
 
 <div class="rc">
   <p class="pagina-eyebrow letreiro">Equipe · Escala · Relatório do mês</p>
+  {% include "escala/partials/nav.html" %}
   <div class="rc-head">
     <div class="rc-who">
       {% if func %}<span class="rc-avatar">{{ iniciais }}</span>{% endif %}
@@ -42,7 +43,6 @@
     </form>
   </div>
 
-  {% include "escala/partials/nav.html" %}
   {% if not func %}
     <p class="bloco-vazio">Nenhum funcionário cadastrado.</p>
   {% else %}
@@ -92,7 +92,7 @@
       <div class="rc-lista">
         {% for he in dados.horas_extras %}
         <div class="rc-row"><span class="data">{{ he.data|date:"d/m" }}</span><span class="per">{{ he.inicio|time:"H:i" }}–{{ he.fim|time:"H:i" }}</span>
-          <span class="tot">+{{ he.total_txt }}</span><span class="tag {{ he.tipo }}">{{ he.get_tipo_display }}</span></div>
+          <span class="tot">+{{ he.total_txt }}</span><span class="rotulo-dado">{{ he.get_tipo_display }}</span></div>
         {% endfor %}
       </div>
       {% if dados.banco_txt != '0h00' %}<div class="rc-saldo">Saldo de <b>banco de horas</b> a compensar: <b>{{ dados.banco_txt }}</b>.</div>{% endif %}

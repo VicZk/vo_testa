@@ -27,8 +27,8 @@ o nome do período leva à edição, onde mora o "ativa". Larguras no app.css
     </colgroup>
     <thead>
       <tr>
+        <th>Restrição</th>
         <th>Período</th>
-        <th>Noites</th>
         <th class="c-onde">Onde vale</th>
         <th class="c-regras">Regras</th>
         <th>Situação</th>
@@ -38,11 +38,11 @@ o nome do período leva à edição, onde mora o "ativa". Larguras no app.css
     <tbody>
       {% for r in restricoes %}
         <tr>
-          <td data-rotulo="Período"><div class="tabela-valor">
+          <td data-rotulo="Restrição"><div class="tabela-valor">
             <a href="{% url 'reservas:restricao_editar' r.pk %}">{{ r.descricao }}</a>
             <span class="restricao-resumo"><span class="r-escopo">{{ r.escopo }}</span><span class="r-regras"> · {{ r.regras|join:" · " }}</span></span>
           </div></td>
-          <td data-rotulo="Noites"><div class="tabela-valor">{{ r.inicio|date:"d/m/Y" }} a {{ r.fim|date:"d/m/Y" }}</div></td>
+          <td data-rotulo="Período"><div class="tabela-valor">{{ r.inicio|date:"d/m/Y" }} a {{ r.fim|date:"d/m/Y" }}</div></td>
           <td class="c-onde" data-rotulo="Onde vale"><div class="tabela-valor"><span class="rotulo-dado">{{ r.escopo }}</span></div></td>
           <td class="c-regras" data-rotulo="Regras"><div class="tabela-valor">
             {% for regra in r.regras %}<span class="rotulo-dado">{{ regra }}</span>{% if not forloop.last %} · {% endif %}{% endfor %}

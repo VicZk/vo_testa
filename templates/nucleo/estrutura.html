@@ -27,7 +27,7 @@
         <td data-rotulo="Situação"><div class="tabela-valor">{% if t.ativo %}Ativo{% else %}Inativo{% endif %}</div></td>
       </tr>
     {% empty %}
-      <tr><td colspan="6" class="vazio">Cadastre um tipo de quarto para definir a capacidade e a tarifa base.</td></tr>
+      <tr><td colspan="6" class="vazio">{% url "tipo_uh_novo" as destino_vazio %}{% include "componentes/estado_vazio.html" with mensagem="Nenhum tipo de quarto cadastrado." url_acao=destino_vazio acao="Novo tipo" ajuda="Defina a capacidade e a tarifa base para cadastrar os quartos." only %}</td></tr>
     {% endfor %}
   </tbody>
 </table>
@@ -56,7 +56,7 @@
         <td class="col-acao" data-rotulo="Ação"><div class="tabela-valor"><a href="{% url 'uh_editar' uh.pk %}" class="botao-mini">Editar</a></div></td>
       </tr>
     {% empty %}
-      <tr><td colspan="7" class="vazio">Nenhum quarto cadastrado. Cadastre o tipo de acomodação e depois os quartos.</td></tr>
+      <tr><td colspan="7" class="vazio">{% url "uh_nova" as destino_vazio %}{% include "componentes/estado_vazio.html" with mensagem="Nenhum quarto cadastrado." url_acao=destino_vazio acao="Novo quarto" ajuda="Cadastre primeiro o tipo de acomodação na seção acima." only %}</td></tr>
     {% endfor %}
   </tbody>
 </table>

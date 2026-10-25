@@ -100,8 +100,8 @@
           <td data-rotulo="Descrição"><div class="tabela-valor">{{ l.descricao|default:"—" }}</div></td>
           <td data-rotulo="Banco" class="tinta-suave"><div class="tabela-valor">{{ l.extrato.banco }}</div></td>
           <td data-rotulo="Valor (R$)" class="num"><div class="tabela-valor">
-            {% if l.credito %}<span class="selo selo-sucesso">+ {{ l.valor }}</span>
-            {% else %}<span class="selo selo-perigo">{{ l.valor }}</span>{% endif %}
+            {% if l.credito %}<span>+ {{ l.valor|intcomma_brl }}</span>
+            {% else %}<span class="texto-alerta">{{ l.valor|intcomma_brl }}</span>{% endif %}
           </div></td>
         </tr>
         {% empty %}

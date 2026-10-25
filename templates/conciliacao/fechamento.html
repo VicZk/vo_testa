@@ -5,11 +5,12 @@
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Financeiro</p>
+<a class="voltar" href="{% url 'conciliacao:painel' %}">Voltar ao painel</a>
 <div class="pagina-cabecalho">
   <h1>Fechamento de conciliação</h1>
 </div>
 <p class="subtitulo">Resumo do período: quanto do extrato e das vendas no cartão foi
-  conciliado, taxas e divergências. <a href="{% url 'conciliacao:painel' %}">← painel</a></p>
+  conciliado, taxas e divergências.</p>
 
 <form method="get" class="filtro-barra">
   <label class="campo-empilhado">

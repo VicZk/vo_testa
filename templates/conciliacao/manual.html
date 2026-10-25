@@ -5,12 +5,13 @@
 
 {% block conteudo %}
 <p class="pagina-eyebrow letreiro">Financeiro</p>
+<a class="voltar" href="{% url 'conciliacao:painel' %}">Voltar ao painel</a>
 <div class="pagina-cabecalho">
   <h1>Conciliação manual</h1>
 </div>
 <p class="subtitulo">Case o que não foi automático, <b>ignore</b> o que não é receita/despesa
   (tarifas, transferências entre contas próprias) e <b>desfaça</b> se errar.
-  <a href="{% url 'conciliacao:painel' %}">← voltar ao painel</a></p>
+</p>
 
 <div class="eleg">
 
@@ -28,8 +29,8 @@
           <td data-rotulo="Data"><div class="tabela-valor">{{ l.data|date:"d/m/Y" }}</div></td>
           <td data-rotulo="Descrição"><div class="tabela-valor">{{ l.descricao|default:"—" }}</div></td>
           <td data-rotulo="Valor" class="num"><div class="tabela-valor">
-            {% if l.credito %}<span class="selo selo-sucesso">+ {{ l.valor }}</span>
-            {% else %}<span class="selo selo-perigo">{{ l.valor }}</span>{% endif %}
+            {% if l.credito %}<span>+ {{ l.valor|intcomma_brl }}</span>
+            {% else %}<span class="texto-alerta">{{ l.valor|intcomma_brl }}</span>{% endif %}
           </div></td>
           <td data-rotulo="Casar com…"><div class="tabela-valor">
             <form data-preservar-erros method="post" action="{% url 'conciliacao:casar_extrato' %}"

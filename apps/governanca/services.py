@@ -1485,10 +1485,13 @@ def pendencias_auditoria():
     if ocupados_sem_ronda:
         from django.urls import reverse
 
+        from apps.nucleo.textos import plural
+
         quartos = ", ".join(a["uh"].numero for a in ocupados_sem_ronda)
+        quantidade = len(ocupados_sem_ronda)
         achados.append({
             "area": "Governança", "tipo": "ronda_incompleta", "gravidade": "baixa",
-            "descricao": f"{len(ocupados_sem_ronda)} quarto(s) ocupado(s) sem "
+            "descricao": f"{quantidade} {plural(quantidade, 'quarto')} {plural(quantidade, 'ocupado')} sem "
                          f"conferência de ocupação hoje: {quartos}.",
             "url": reverse("governanca:discrepancias"),
         })

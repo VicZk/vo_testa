@@ -21,7 +21,7 @@
 <div class="colunas colunas-2-1">
   <section>
     <h2>Cobranças</h2>
-    <table class="tabela tabela-cartoes tabela-registros">
+    <div class="quadro"><table class="tabela tabela-cartoes tabela-registros">
       <thead><tr><th>#</th><th>Método</th><th>Descrição</th><th class="num">Valor</th><th>Situação</th><th>Enviar</th></tr></thead>
       <tbody>
         {% for c in cobrancas %}
@@ -45,10 +45,10 @@
           <tr><td colspan="6" class="vazio">Nenhuma cobrança ainda.</td></tr>
         {% endfor %}
       </tbody>
-    </table>
+    </table></div>
 
     <h2 class="secao-titulo respiro-medio">Conciliação</h2>
-    <div class="tabela-rol">
+    <div class="quadro"><div class="tabela-rol">
 {% comment %}Sem `tabela-cartoes`: são três colunas curtas (situação, quantidade e
 total) e viravam cartões num espaço em que a tabela cabe inteira.{% endcomment %}
 <table class="tabela">
@@ -61,7 +61,7 @@ total) e viravam cartões num espaço em que a tabela cabe inteira.{% endcomment
         {% endfor %}
       </tbody>
     </table>
-</div>
+</div></div>
   </section>
 
   {% comment %}`pre` vem de `?reserva=<id>` (botão «Gerar cobrança» no detalhe da reserva):

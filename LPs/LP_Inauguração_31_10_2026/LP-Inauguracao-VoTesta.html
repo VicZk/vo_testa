@@ -211,8 +211,8 @@ fieldset.field{border:0;margin:0 0 1rem;min-width:0}
 .pessoas label:active{transform:scale(.96)}
 .pessoas input:checked + label{background:var(--lampiao);border-color:var(--lampiao);color:var(--noturno);font-weight:700}
 .pessoas input:focus-visible + label{box-shadow:0 0 0 3px rgba(215,160,72,.45)}
-.consent{display:grid;grid-template-columns:22px 1fr;gap:.7rem;align-items:start;margin:.2rem 0 1.2rem;font-size:.9rem;line-height:1.45;color:var(--perg-80);cursor:pointer}
-.consent input{appearance:none;-webkit-appearance:none;width:22px;height:22px;margin:0;border-radius:7px;border:1px solid rgba(239,219,178,.35);background:rgba(5,28,44,.5);display:grid;place-items:center;cursor:pointer;transition:background-color .2s,border-color .2s}
+.consent{display:grid;grid-template-columns:24px 1fr;gap:.7rem;align-items:start;margin:.2rem 0 1.2rem;font-size:.9rem;line-height:1.45;color:var(--perg-80);cursor:pointer}
+.consent input{appearance:none;-webkit-appearance:none;width:24px;height:24px;margin:0;border-radius:7px;border:1px solid rgba(239,219,178,.35);background:rgba(5,28,44,.5);display:grid;place-items:center;cursor:pointer;transition:background-color .2s,border-color .2s}
 .consent input::after{content:"";width:11px;height:6px;border:2px solid var(--noturno);border-top:0;border-right:0;transform:rotate(-45deg) translate(1px,-1px) scale(0);transition:transform .25s var(--spring)}
 .consent input:checked{background:var(--lampiao);border-color:var(--lampiao)}
 .consent input:checked::after{transform:rotate(-45deg) translate(1px,-1px) scale(1)}
@@ -435,7 +435,7 @@ section{position:relative}
   .form-title{font-size:1.45rem}
   .form-ganhos{margin:.8rem 0 1rem;padding:.7rem .8rem;font-size:.9rem;gap:.45rem}
   .ticket-date{font-size:2.5rem;white-space:nowrap}
-  .hero-grid{grid-template-columns:1fr;grid-template-areas:"copy" "form" "count";row-gap:2.6rem}
+  .hero-grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"copy" "form" "count";row-gap:2.6rem}
   .hero h1{margin-top:1rem;font-size:clamp(2.35rem,8.6vw + .4rem,3.2rem)}
   .hero-date{font-size:clamp(2.9rem,12vw,3.8rem);margin-top:.15rem}
   .hero-lede{margin-top:.55rem;font-size:1.04rem}
@@ -556,6 +556,13 @@ section{position:relative}
 </style>
 
 <script>document.documentElement.classList.add('js')</script>
+<style>
+header .brand, header .nav-logo, .rodape nav a { display:inline-flex; align-items:center; min-height:44px; }
+@media (max-width:359px) {
+  .cd{font-size:1.8rem;gap:.25rem}
+  .cd-win{border-radius:10px;padding:.1em .1em}
+}
+</style>
 </head>
 <body>
 <div class="grain" aria-hidden="true"></div>
@@ -621,7 +628,7 @@ section{position:relative}
                 <input type="text" class="hp" id="empresa" name="empresa" tabindex="-1" autocomplete="off" aria-hidden="true">
                 <label class="consent" id="consentWrap">
                   <input type="checkbox" id="f-consent" name="consent">
-                  <span>Autorizo receber a confirmação, o pacote especial de inauguração e novidades da Pousada Vô Testa por WhatsApp e e-mail. <a href="https://www.pousadavotesta.com.br/privacidade/" target="_blank" rel="noopener">Privacidade</a></span>
+                  <span>Autorizo receber a confirmação, o pacote especial de inauguração e novidades da Pousada Vô Testa por WhatsApp e e-mail. <a href="/privacidade/" target="_blank" rel="noopener">Privacidade</a></span>
                   <span class="err">Marque esta caixa para a gente poder te enviar a confirmação.</span>
                 </label>
 
@@ -846,7 +853,7 @@ section{position:relative}
     <p><b>Pousada Vô Testa</b> · Um lugar fora do tempo.<br>Rod. SC-155, km 129, Bairro Lago Azul, Itá/SC</p>
     <nav aria-label="Links">
       <a href="https://www.instagram.com/pousadavotesta" target="_blank" rel="noopener"><i aria-hidden="true"><svg class="ico-svg"><use href="#i-instagram-logo"/></svg></i>Instagram</a>
-      <a href="https://www.pousadavotesta.com.br/privacidade/" target="_blank" rel="noopener">Privacidade</a>
+      <a href="/privacidade/" target="_blank" rel="noopener">Privacidade</a>
     </nav>
   </div>
 </footer>
