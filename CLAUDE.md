@@ -240,6 +240,14 @@ ativação/homologação externa; o que entrou depois está no [CHANGELOG](CHANG
   geral cobre produtos comuns. Veja [Compras e perecíveis](docs/ESTOQUE_COMPRAS.md).
 - **Gestão:** relatórios de carteira, pickup, ritmo e distribuição; três relatórios
   de governança; auditoria de pendências, trilha e fechamento; conciliação OFX/cartão.
+- **Contábil/gerencial (upstream, 24/10):** app `apps/contabil`, módulo
+  `Modulo.CONTABIL` (grupo Gestão). Camada ADITIVA e de LEITURA sobre o financeiro —
+  sem partidas dobradas, DRE por soma. Plano de contas + de-para (`resolver_conta`),
+  capturas por competência (receita do folio/vendas, taxa de cartão, CMV),
+  `FechamentoMensal` (folha/encargos/pró-labore/DAS) e painel em abas com export CSV.
+  Carimba `conta_contabil` por signal (o núcleo não importa `contabil`). Comissão de
+  OTA é stub até o módulo Canais. Cron por endpoint token-gated
+  (`CONTABIL_CRON_TOKEN`); sem o token o endpoint responde 404.
 - **Comercial/marketing:** funil, cotações, atividades, WhatsApp, e-mail, LPs, campanhas,
   peças e orçamento. Site e portal integrados à hospedagem.
 - **Integrações:** Safrapay, Serpro, WhatsApp Cloud, Meta e JEV têm adapters; produção

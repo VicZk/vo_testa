@@ -90,6 +90,7 @@ INSTALLED_APPS = [
     "apps.auditoria",
     "apps.relatorios",
     "apps.conciliacao",  # conciliação bancária (OFX) + cartão (NSU/SafraPay)
+    "apps.contabil",  # camada contábil/gerencial (plano de contas + de-para) — Etapa 1
     "apps.comercial.apps.ComercialConfig",
     "apps.marketing",  # camada de fluxo das campanhas (embrulha comercial.Campanha)
 ]
@@ -449,6 +450,12 @@ FISCAL_MUNICIPIO_IBGE = os.environ.get("FISCAL_MUNICIPIO_IBGE", "")
 FISCAL_DPS_SERIE = os.environ.get("FISCAL_DPS_SERIE", "")
 FISCAL_DPS_NUMERO_INICIAL = os.environ.get("FISCAL_DPS_NUMERO_INICIAL", "1")
 FISCAL_NFSE_COMPLEMENTOS = os.environ.get("FISCAL_NFSE_COMPLEMENTOS", "{}")
+
+# Contábil — token do cron de capturas (a DRE se atualiza sozinha). Vazio = endpoint
+# de cron DESATIVADO (fail-safe). Definir o mesmo valor no Railway (env) e no GitHub
+# (secret CONTABIL_CRON_TOKEN). Ver apps/contabil/views.py:cron_capturar e
+# .github/workflows/cron-financeiro.yml.
+CONTABIL_CRON_TOKEN = os.environ.get("CONTABIL_CRON_TOKEN", "")
 
 # Mídia/Impulsionamento — gateway de conversões (Fase B do Gestor de Impulsionamento):
 # "simulado" (sem rede, dev/testes) / "meta" (Conversions API) / "google" (Offline Import).

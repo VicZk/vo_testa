@@ -26,6 +26,7 @@ class Modulo(models.TextChoices):
     RELATORIOS = "relatorios", "Relatórios"
     COMERCIAL = "comercial", "Comercial"
     MARKETING = "marketing", "Marketing"
+    CONTABIL = "contabil", "Contábil / Gerencial"
 
 
 # Dependências entre módulos (módulo -> módulos exigidos).
@@ -163,5 +164,11 @@ APRESENTACAO: dict[str, dict] = {
         "ordem": 160,
         "descricao": "Relatórios consolidados e por módulo, com filtro por período.",
         "url_name": "relatorios:index",
+    },
+    Modulo.CONTABIL: {
+        "grupo": "Gestão",
+        "ordem": 155,
+        "descricao": "DRE gerencial, fluxo de caixa, plano de contas e export ao contador.",
+        "url_name": "contabil:painel",
     },
 }
