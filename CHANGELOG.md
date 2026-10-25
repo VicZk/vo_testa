@@ -89,6 +89,44 @@ A entrada mais nova fica no topo. As datas são as do push.
   lote), `apps/nucleo/tests_operacionais.py` e `apps/site/tests_operacao_e2e.py`.
   Documentação: `README.md`, `docs/MODULOS_E_FLUXOS.md` (A.10) e `docs/ARQUITETURA.md`.
 
+## 24/10/2026: Escala mais sóbria
+
+- Os cartões do último turno da grade (Tarde) perdiam a borda de baixo — e o de domingo, o
+  canto arredondado — porque herdavam regras do modo tabela; agora todo cartão tem as
+  quatro bordas e o mesmo raio.
+- Validação sem as quatro faixas pintadas (vermelho, verde, azul, amarelo): fundo neutro,
+  uma faixa fina na cor do aviso e o ícone colorido; o texto volta à cor normal.
+- Nomes para arrastar como etiquetas retas com a inicial num círculo (não mais pílulas) e,
+  nos cartões de cada dia, os nomes como linhas de lista alinhadas, sem sombra de botão.
+- **Modificado:** `static/css/app.css` (bloco de cartões da `.escala-grade`, `.escala-al`,
+  `.escala-roster .rpill`, `.rpill-ini`) e `templates/escala/grade.html` (inicial no nome).
+
+## 24/10/2026: ajustes de interface para a abertura (sidebar, Pendências, Marketing, Estoque)
+
+- Topo do menu: o logotipo fica no eixo da sidebar (estava 18 px à esquerda) e desce um
+  pouco, com mais respiro em cima (24 px) do que embaixo (18 px); o topo passou de 116 para
+  128 px. No celular, a gaveta do menu cortava o "POUSADA" do logotipo — agora ele aparece
+  inteiro. No menu recolhido, o símbolo cresce para acompanhar a coluna.
+- O ponto de alerta no avatar (MFA desligada) aparece inteiro, com um anel separando-o do
+  dourado — antes o próprio avatar o recortava em meia-lua — e em coral, legível no azul.
+- Pendências com um filtro só: a origem num seletor com a contagem de cada área (escolher já
+  filtra) e a situação nas abas da casa, com "Precisa de atenção" logo depois de "Todas".
+  Saíram os dois selects com "Aplicar filtros" e as duas fileiras de pílulas que faziam a
+  mesma coisa. Na lista, a situação é bolinha colorida + texto; o urgente leva a palavra
+  "Urgente", sem cápsula em cada linha.
+- Marketing: "+ Nova ideia" centrado no quadro tracejado e sem sublinhado; no Relatório, os
+  indicadores ficam direto sobre a seção (sumiu a faixa bege atrás dos cartões) e, sem teto
+  definido, a nota diz "Sem teto para comparar" em vez de "— do teto".
+- Estoque: os indicadores menores no celular e no tablet ganharam recuo do lado da faixa
+  colorida — "Abaixo do mínimo" encostava nela.
+- **Modificado:** `static/css/app.css` (`--sidebar-topo-h` 128/96 px, `.marca-full` pelo
+  token, `.marca-icone` 52 px, ponto de MFA, `.mk-nova-ideia`, `.mk-kpis.kpis`, bloco de
+  Pendências, recuo dos `.est-kpis`), `static/css/base.css` (regerado),
+  `templates/nucleo/pendencias.html`, `templates/nucleo/partials/pendencias_resultados.html`,
+  `apps/nucleo/views_pendencias.py` (totais e ordem das situações), `static/js/pendencias.js`
+  (seletor aplica ao escolher; a atualização automática não redesenha o filtro em uso),
+  `templates/marketing/relatorio.html` e `docs/ARQUITETURA.md`.
+
 ## 23/10/2026: cantos das caixas, canais com ícone e verba alinhada
 
 - O quadrado branco no cantinho das tabelas arredondadas (Pessoas, Reservas, Estoque e

@@ -1418,7 +1418,7 @@ criar estilo paralelo nem hard-codear cor, raio ou sombra.
 | Elevação | `--sombra-1` (elementos pequenos), `--sombra-2`, `--sombra-3`, `--glow`, `--sombra-cartao` (float suave de cartão) |
 | Raio | `--raio-p` 10px, `--raio` 14px, `--raio-g` 20px |
 | Tipografia | `--fonte-titulo` (Fraunces), `--fonte-ui` (Hanken Grotesk), `--fonte-marca` (Rosaline, `@font-face` local), `--fonte-mono` (IBM Plex Mono) |
-| Layout | `--sidebar-w` (vale agora: `--sidebar-w-aberta` 258px ou `--trilho-w` 128px), `--trilho-centro` (63,5px, o x de todo ícone do menu nos dois estados) e `--sidebar-ico-x`, `--alvo` (30px no mouse, 44px no dedo — botão de recolher e Sair), `--sidebar-topo-h` 116px (o topo do menu tem a mesma altura aberto e recolhido), `--topbar-h` 60px, `--vao-2-1` (vão do `.colunas-2-1`) |
+| Layout | `--sidebar-w` (vale agora: `--sidebar-w-aberta` 258px ou `--trilho-w` 128px), `--trilho-centro` (63,5px, o x de todo ícone do menu nos dois estados) e `--sidebar-ico-x`, `--alvo` (30px no mouse, 44px no dedo — botão de recolher e Sair), `--sidebar-topo-h` 128px (96px na gaveta do celular; o topo do menu tem a mesma altura aberto e recolhido, e o logotipo e o símbolo se posicionam a partir dele), `--topbar-h` 60px, `--vao-2-1` (vão do `.colunas-2-1`) |
 
 **Para mudar o “look” global, mexa nos tokens** — propaga para tudo.
 

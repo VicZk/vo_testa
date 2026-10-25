@@ -23,6 +23,7 @@
       if (!Number.isSafeInteger(dados.total) || dados.total < 0 || typeof dados.html !== 'string') throw new Error('resposta inválida');
       if (!raiz.isConnected || pagina !== location.href) return;
       const resultados = raiz.querySelector('#pendencias-resultados');
+      if (resultados && resultados.contains(document.activeElement) && document.activeElement.matches('select')) return;
       if (resultados) {
         const foco = document.activeElement;
         const estavaDentro = resultados.contains(foco);
@@ -58,6 +59,11 @@
   }
   document.addEventListener('click', evento => {
     if (evento.target.closest('[data-pendencias-recarregar]')) atualizar();
+  });
+  // Origem: escolher já filtra (o botão "Filtrar" só aparece sem JavaScript).
+  document.addEventListener('change', evento => {
+    const seletor = evento.target.closest('[data-pendencias-auto]');
+    if (seletor && seletor.form) seletor.form.requestSubmit();
   });
   document.addEventListener('DOMContentLoaded', atualizar);
   document.addEventListener('htmx:afterSettle', evento => {

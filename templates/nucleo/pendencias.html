@@ -11,23 +11,6 @@
   </div>
   <p class="subtitulo">Acompanhe o que precisa de ação nas suas áreas e abra a origem para resolver. Atualização automática a cada minuto.</p>
 
-  <form method="get" action="{% url 'pendencias' %}" class="filtros pendencias-filtros" aria-label="Filtros de pendências">
-    <label>Origem
-      <select name="origem" aria-label="Origem das pendências">
-        <option value="">Todas as minhas áreas</option>
-        {% for o in origens %}<option value="{{ o.codigo }}"{% if origem == o.codigo %} selected{% endif %}>{{ o.rotulo }}</option>{% endfor %}
-      </select>
-    </label>
-    <label>Situação
-      <select name="estado" aria-label="Situação das pendências">
-        <option value="">Todas as situações</option>
-        {% for e in estados %}<option value="{{ e.codigo }}"{% if estado == e.codigo %} selected{% endif %}>{{ e.rotulo }}</option>{% endfor %}
-      </select>
-    </label>
-    <button class="botao-primario" type="submit">Aplicar filtros</button>
-    {% if origem or estado %}<a href="{% url 'pendencias' %}" class="botao-neutro">Limpar filtros</a>{% endif %}
-  </form>
-
   {% if origem == 'governanca' %}
   <section class="aviso aviso-info pendencias-explicacao" aria-label="Como funciona a contagem da Governança">
     <p><strong>O número da Governança mostra serviços de limpeza aguardando início.</strong> Ao iniciar, o serviço passa para Em andamento e sai desse número. Depois da conclusão, o quarto segue para a conferência da limpeza.</p>

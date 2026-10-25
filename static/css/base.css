@@ -275,7 +275,7 @@
   /* Altura do topo da sidebar (marca + botão de recolher). É a MESMA aberta e
      recolhida: é ela que impede o menu inteiro de saltar quando o logotipo
      grande dá lugar ao símbolo. */
-  --sidebar-topo-h: 116px;
+  --sidebar-topo-h: 128px;
   /* Vão entre a coluna de conteúdo e o painel lateral (`.colunas-2-1`). Fica
      num token porque a base em porcentagem das duas colunas desconta ele. */
   --vao-2-1: 1.4rem;
