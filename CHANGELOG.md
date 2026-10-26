@@ -9,6 +9,20 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 26/10/2026: comparação entre as versões sem senha
+
+- **As duas cópias de teste abrem sem senha.** O item "Versão anterior/atualizada" do
+  menu já abria a mesma tela na outra versão, mas lá pedia login de novo. Agora se
+  entra direto, como `teste`, e a troca cai na mesma tela.
+- **Tela que só existe numa das versões.** Na troca, ela sobe até a tela mais próxima
+  que exista do outro lado (Pendências leva ao painel), com o aviso "Esta tela não
+  existe nesta versão", em vez de um 404.
+- **Só na VPS.** As duas cópias carregam uma configuração própria (`settings_vps.py`).
+  A produção e o desenvolvimento local não mudam. Depois de "Sair", a entrada volta a
+  pedir senha por 15 min, para testar outro usuário.
+- **Modificado:** `deploy/vps/comparador/` (`acesso_livre.py`, `settings_vps.py`,
+  README), `apps/site/tests_acesso_livre.py`, README §10.
+
 ## 26/10/2026: checkout da Loja, ajustes depois do CI
 
 - **Botões do carrinho com 44 px também no mouse.** No redesenho, eles ficavam com

@@ -857,6 +857,11 @@ descrições, ordem e publicação, e registra a alteração na trilha. É idemp
 não substitui desenhos personalizados. Não execute `popular_dados` para corrigir
 conteúdo existente.
 
+**Cópias de comparação (VPS de teste):** a versão atualizada (`viczk.cloud/votesta`) e
+a anterior rodam lado a lado. O item "Versão anterior/atualizada" do menu abre a mesma
+tela na outra versão. As duas entram sem senha. Como funciona e como desligar está em
+[`deploy/vps/comparador/`](deploy/vps/comparador/README.md).
+
 Detalhes em [`docs/ARQUITETURA.md` §10](docs/ARQUITETURA.md).
 
 ---
