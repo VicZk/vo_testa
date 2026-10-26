@@ -1089,6 +1089,10 @@ O projeto nasceu no macOS e funciona no Windows com alguns cuidados:
 5. **Arquivos abertos em testes:** feche os handles antes de apagar temporários;
    o Windows pode impedir a remoção que o Linux permite. Um relato antigo de falha
    deve ser reproduzido no commit atual antes de ser tratado como problema aberto.
+6. **Fim de linha:** com `core.autocrlf=true`, o Git grava CRLF nos arquivos de texto. O
+   `.gitattributes` mantém `static/vendor/` em LF, porque os hashes do `origem.json`
+   (ícones do Tabler e do Lucide, Chart.js) foram tirados do arquivo original. Num
+   checkout antigo, apague essas pastas e rode `git checkout -- static/vendor`.
 
 ---
 

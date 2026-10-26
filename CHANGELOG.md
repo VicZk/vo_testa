@@ -28,6 +28,10 @@ A entrada mais nova fica no topo. As datas são as do push.
   filtro `*/tests_*.py` no bandit), `# nosec` com o motivo em
   `apps/lavanderia/templatetags/pecas_lavanderia.py`,
   `apps/marketing/templatetags/canais_marketing.py` e `apps/nucleo/documentos_privados.py`.
+- **Testes dos ícones passam também no Windows.** O `.gitattributes` só mantinha o
+  Lucide em LF; os ícones do Tabler e o Chart.js saíam com CRLF no checkout do Windows, e
+  o teste que compara o sha256 com o `origem.json` falhava só lá. Agora vale para todo o
+  `static/vendor/`. (`.gitattributes`, README §13.)
 
 ## 25/10/2026: exportações e impressões conferidas
 

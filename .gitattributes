@@ -1,2 +1,2 @@
-# Os hashes de origem dos SVGs/licença são independentes do checkout no Windows.
-static/vendor/lucide/** text eol=lf
+# Os hashes de origem dos arquivos de terceiros (origem.json) independem do checkout no Windows.
+static/vendor/** text=auto eol=lf
