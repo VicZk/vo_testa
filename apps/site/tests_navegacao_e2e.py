@@ -273,7 +273,7 @@ class NavegacaoModulosE2ETests(_BaseE2E):
         self.page.wait_for_function("location.pathname.endsWith('/loja/')")
         self.assertEqual(len(avisos), 2)
 
-        self.page.get_by_label("Forma de pagamento", exact=True).select_option(str(self.forma.pk))
+        self.page.get_by_role("radio", name=self.forma.nome, exact=True).check()
         with self.page.expect_response(lambda r: urlparse(r.url).path == reverse("loja:finalizar")) as resposta:
             self.page.locator(".pdv-finalizar").click()
         self.assertEqual(resposta.value.status, 400)

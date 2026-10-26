@@ -44,6 +44,7 @@
             {% endfor %}
           </select>
         </label>
+        <small class="pdv-local-trava" x-show="cart.length" x-cloak>Para trocar o estoque, conclua a venda ou esvazie o carrinho.</small>
       </form>
     </div>
 
@@ -96,14 +97,22 @@
     <div class="pdv-carrinho">
       <template x-for="(i, idx) in cart" :key="i.id">
         <div class="pdv-item">
+          <span class="produto-ilustracao pdv-item-ico" :data-tom="i.ilustracao && i.ilustracao.tom" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><use :href="iconesUrl + '#' + ((i.ilustracao && i.ilustracao.icone) || 'package')"></use></svg></span>
           <span class="pdv-item-nome" x-text="i.nome"></span>
-          <button type="button" class="pdv-x" :disabled="enviando" @click="remove(idx)" :aria-label="'Remover ' + i.nome">&times;</button>
-          <div class="pdv-qtd" role="group" :aria-label="'Quantidade de ' + i.nome">
-            <button type="button" :disabled="enviando" @click="dec(idx)" :aria-label="'Diminuir ' + i.nome">−</button>
-            <span x-text="i.qtd"></span>
-            <button type="button" :disabled="enviando || i.qtd + 1 > i.saldo" @click="inc(idx)" :aria-label="'Aumentar ' + i.nome">+</button>
-          </div>
           <span class="pdv-sub" x-text="reais(i.preco * i.qtd)"></span>
+          <span class="pdv-item-unit" x-text="reais(i.preco) + ' cada'"></span>
+          <div class="pdv-item-acoes">
+            {% comment %}O "−" para em 1: tirar a linha é com a lixeira, ao lado. Antes o "−"
+            no 1 apagava o item sem querer.{% endcomment %}
+            <div class="pdv-qtd" role="group" :aria-label="'Quantidade de ' + i.nome">
+              <button type="button" :disabled="enviando || i.qtd <= 1" @click="dec(idx)" :aria-label="'Diminuir ' + i.nome">−</button>
+              <span x-text="i.qtd"></span>
+              <button type="button" :disabled="enviando || i.qtd + 1 > i.saldo" @click="inc(idx)" :aria-label="'Aumentar ' + i.nome">+</button>
+            </div>
+            <button type="button" class="pdv-x" :disabled="enviando" @click="remove(idx)" :aria-label="'Remover ' + i.nome" data-dica="Tirar do carrinho">
+              <svg viewBox="0 0 24 24" class="ico" aria-hidden="true" focusable="false"><path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/></svg>
+            </button>
+          </div>
         </div>
       </template>
       <div class="pdv-vazio" x-show="!cart.length">
@@ -113,9 +122,8 @@
         <span class="pdv-dica-arrasto">Você também pode arrastá-los até aqui.</span>
       </div>
     </div>
-    <p class="pdv-estoque-nota" x-show="cart.length" x-cloak>Para trocar o estoque, conclua a venda ou retire os itens do carrinho.</p>
-
     <div class="pdv-resumo">
+      <div class="pdv-subtotal" x-show="desconto > 0" x-cloak><span>Subtotal</span><span x-text="reais(subtotal())"></span></div>
       <div class="pdv-linha-desc">
         <label for="pdv-desconto">Desconto</label>
         <div class="input-reais"><span>R$</span><input id="pdv-desconto" type="number" min="0" step="0.01" :disabled="enviando" x-model.number="desconto"></div>
@@ -135,12 +143,14 @@
       {% if contas %}<button type="button" :disabled="enviando" :aria-pressed="destino === 'conta'" :class="{ativo: destino === 'conta'}" @click="destino = 'conta'">Conta do quarto</button>{% endif %}
     </div>
 
-    <label class="select-wrap" x-show="destino === 'caixa'" x-cloak>
-      <select x-model="forma_id" aria-label="Forma de pagamento" :disabled="enviando">
-        <option value="">Forma de pagamento…</option>
-        {% for f in formas %}<option value="{{ f.pk }}">{{ f.nome }}</option>{% endfor %}
-      </select>
-    </label>
+    <fieldset class="pdv-formas" x-show="destino === 'caixa'" x-cloak>
+      <legend class="letreiro">Forma de pagamento</legend>
+      <div class="pdv-formas-grade">
+        {% for f in formas %}
+        <label class="pdv-forma"><input type="radio" name="pdv-forma" value="{{ f.pk }}" x-model="forma_id" :disabled="enviando"><span>{{ f.nome }}</span></label>
+        {% endfor %}
+      </div>
+    </fieldset>
     {% if contas %}
     <label class="select-wrap" x-show="destino === 'conta'" x-cloak>
       <select x-model="conta_id" aria-label="Quarto ou hóspede" :disabled="enviando">
@@ -224,7 +234,7 @@
         if (this.restante(p) < 1) { toast('Sem saldo suficiente.', 'error'); return; }
         const item = this.cart.find(i => i.id === p.id);
         if (item) item.qtd++;
-        else this.cart.push({ id: p.id, nome: p.nome, preco: p.preco, saldo: p.saldo, qtd: 1 });
+        else this.cart.push({ id: p.id, nome: p.nome, preco: p.preco, saldo: p.saldo, ilustracao: p.ilustracao, qtd: 1 });
         this.aviso = p.nome + ' adicionado. ' + this.noCarrinho(p.id) + ' no carrinho.';
       },
       inc(i) { const p = this.produtos.find(p => p.id === this.cart[i].id); if (p) this.add(p); },

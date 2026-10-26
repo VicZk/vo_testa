@@ -4194,14 +4194,62 @@ div.porta.dica[data-dica] { cursor: default; }
 .pdv-produto[draggable="true"]:active { cursor: grabbing; }
 .pdv-loja .pdv-painel-topo { flex-wrap: wrap; gap: .4rem; padding: 1rem; }
 .pdv-loja .pdv-carrinho { max-height: 42dvh; padding: .4rem .6rem; }
-.pdv-loja .pdv-item { grid-template-columns: minmax(0, 1fr) auto; gap: .25rem .6rem; padding: .65rem .4rem; border-bottom: 1px solid var(--fio); border-radius: 0; }
+/* Linha do carrinho no padrão dos checkouts abertos (Medusa, PDV do Odoo): miniatura,
+   nome e total da linha em cima; embaixo, o preço unitário e, juntas no fim, a
+   quantidade e a lixeira. O "×" ficava sozinho no canto, longe da quantidade e fora
+   do alinhamento do nome (pedido do dono, 26/10). */
+.pdv-loja .pdv-carrinho { container: carrinho / inline-size; }
+.pdv-loja .pdv-item {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "ico nome sub" "ico unit acoes";
+  align-items: center; gap: .2rem .75rem;
+  padding: .75rem .4rem; border-bottom: 1px solid var(--fio); border-radius: 0;
+}
 .pdv-loja .pdv-item:last-child { border-bottom: 0; }
-.pdv-loja .pdv-item-nome { white-space: normal; overflow-wrap: anywhere; line-height: 1.4; }
-.pdv-loja .pdv-qtd { justify-self: start; border-radius: var(--raio-p); padding: 0; }
-.pdv-loja .pdv-qtd button, .pdv-loja .pdv-x { width: 44px; height: 44px; min-width: 44px; border-radius: var(--raio-p); }
-.pdv-loja .pdv-qtd button:disabled { opacity: .4; cursor: not-allowed; }
-.pdv-loja .pdv-sub { justify-self: end; font-size: 0.95rem; }
-.pdv-estoque-nota { margin: .4rem 1rem .8rem; font-size: max(var(--rotulo-min), 0.72rem); line-height: 1.4; color: var(--tinta-suave); }
+.pdv-loja .pdv-item:hover { background: none; }
+.pdv-loja .pdv-item-ico { grid-area: ico; align-self: start; width: 2.75rem; height: 2.75rem; border-radius: var(--raio-p); }
+.pdv-loja .pdv-item-ico svg { width: 1.45rem; height: 1.45rem; }
+.pdv-loja .pdv-item-nome { grid-area: nome; align-self: end; white-space: normal; overflow-wrap: anywhere; line-height: 1.35; font-weight: 600; }
+.pdv-loja .pdv-sub { grid-area: sub; align-self: end; justify-self: end; font-size: 0.95rem; }
+.pdv-loja .pdv-item-unit { grid-area: unit; min-width: 0; font-size: 0.8rem; color: var(--tinta-suave); font-variant-numeric: tabular-nums; }
+.pdv-loja .pdv-item-acoes { grid-area: acoes; justify-self: end; display: flex; align-items: center; gap: .3rem; }
+.pdv-loja .pdv-qtd { gap: 0; padding: 0; border-radius: var(--raio-p); }
+.pdv-loja .pdv-qtd button, .pdv-loja .pdv-x { width: 2.25rem; height: 2.25rem; min-width: 2.25rem; border-radius: var(--raio-p); }
+.pdv-loja .pdv-qtd span { min-width: 1.6rem; font-variant-numeric: tabular-nums; }
+.pdv-loja .pdv-qtd button:disabled { opacity: .35; cursor: not-allowed; }
+.pdv-loja .pdv-x { display: inline-grid; place-items: center; padding: 0; color: var(--tinta-suave); }
+.pdv-loja .pdv-x .ico { width: 1.1rem; height: 1.1rem; }
+.pdv-loja .pdv-x:hover:not(:disabled) { color: var(--perigo); background: var(--perigo-bg); }
+.pdv-loja .pdv-x:active:not(:disabled) { transform: scale(.94); }
+@media (pointer: coarse) {
+  .pdv-loja .pdv-qtd button, .pdv-loja .pdv-x { width: 2.75rem; height: 2.75rem; min-width: 2.75rem; }
+}
+/* Carrinho estreito: a miniatura sai antes de o preço unitário ficar sem espaço. */
+@container carrinho (max-width: 20rem) {
+  .pdv-loja .pdv-item { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "nome sub" "unit acoes"; }
+  .pdv-loja .pdv-item-ico { display: none; }
+}
+/* Com itens no carrinho o estoque fica travado: o porquê fica junto do seletor. */
+.pdv-local-trava { max-width: 15rem; font-size: max(var(--rotulo-min), 0.72rem); line-height: 1.35; color: var(--tinta-suave); }
+.pdv-loja .pdv-subtotal { display: flex; justify-content: space-between; margin-bottom: .5rem; font-size: 0.84rem; font-weight: 600; color: var(--tinta-suave); font-variant-numeric: tabular-nums; }
+/* Forma de pagamento: um toque, como nos PDVs de balcão, em vez de abrir um select.
+   São rádios de verdade (setas do teclado e leitor de tela de graça), com a cara de botão. */
+.pdv-loja .pdv-formas { min-width: 0; margin: .8rem 1rem 0; padding: 0; border: 0; }
+.pdv-loja .pdv-formas legend { padding: 0; margin-bottom: .45rem; color: var(--tinta-suave); }
+.pdv-loja .pdv-formas-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(8.5rem, 100%), 1fr)); gap: .4rem; }
+.pdv-loja .pdv-forma { position: relative; display: block; }
+.pdv-loja .pdv-forma input { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.pdv-loja .pdv-forma span {
+  display: flex; align-items: center; justify-content: center; min-height: 2.75rem; padding: .4rem .6rem;
+  font-size: 0.85rem; font-weight: 600; line-height: 1.25; text-align: center; color: var(--tinta);
+  background: var(--superficie); border: 1px solid var(--fio-forte); border-radius: var(--raio-p);
+  transition: background var(--mov-rapido) var(--curva), border-color var(--mov-rapido) var(--curva), transform var(--mov-toque) var(--curva);
+}
+.pdv-loja .pdv-forma:hover span { border-color: var(--lampiao); }
+.pdv-loja .pdv-forma:active span { transform: scale(.97); }
+.pdv-loja .pdv-forma input:checked + span { color: var(--noturno); background: color-mix(in srgb, var(--lampiao) 16%, var(--superficie)); border-color: var(--lampiao); box-shadow: inset 0 0 0 1px var(--lampiao); }
+.pdv-loja .pdv-forma input:focus-visible + span { outline: 2px solid var(--lampiao); outline-offset: 2px; }
+.pdv-loja .pdv-forma input:disabled + span { opacity: .5; }
 .pdv-loja .pdv-resumo { padding: 1rem; }
 .pdv-loja .pdv-painel .pdv-cliente, .pdv-loja .pdv-painel .pdv-seg, .pdv-loja .pdv-painel > .select-wrap { margin-left: 1rem; margin-right: 1rem; }
 /* O segmentado da casa é uma fileira de abas com hairline só embaixo (`border:0;

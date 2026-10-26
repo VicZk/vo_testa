@@ -24,6 +24,20 @@ from apps.nucleo.validadores import decimal_valido, filtro_identificador, identi
 from . import services
 from .models import Venda
 
+# No balcão, a forma de pagamento é um botão por forma: as mais usadas vêm primeiro.
+ORDEM_FORMAS = [
+    FormaPagamento.Tipo.PIX, FormaPagamento.Tipo.DINHEIRO, FormaPagamento.Tipo.CARTAO_DEBITO,
+    FormaPagamento.Tipo.CARTAO_CREDITO, FormaPagamento.Tipo.TRANSFERENCIA,
+    FormaPagamento.Tipo.CORTESIA,
+]
+
+
+def _formas_do_balcao():
+    def ordem(forma):
+        posicao = ORDEM_FORMAS.index(forma.tipo) if forma.tipo in ORDEM_FORMAS else len(ORDEM_FORMAS)
+        return posicao, forma.nome
+    return sorted(FormaPagamento.objects.filter(ativo=True), key=ordem)
+
 
 def _local_da_loja(request):
     local_id = filtro_identificador(request.GET.get("local"))
@@ -73,7 +87,7 @@ def pdv(request):
         "locais": LocalEstoque.objects.filter(ativo=True),
         "produtos_json": json.dumps(produtos),
         "icones_categorias_json": json.dumps(icones_categorias),
-        "formas": FormaPagamento.objects.filter(ativo=True),
+        "formas": _formas_do_balcao(),
         "clientes": pessoas_agrupadas(),
         "contas": contas,
         "url_finalizar": reverse("loja:finalizar"),

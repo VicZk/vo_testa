@@ -9,6 +9,33 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 26/10/2026: checkout da Loja redesenhado
+
+- **Linha do carrinho arrumada.** O "×" de tirar o item ficava sozinho no canto
+  direito, longe da quantidade e fora do alinhamento do nome. A linha agora segue o
+  desenho dos checkouts open source (como o Medusa e o PDV do Odoo):
+  - em cima, a miniatura do produto, o nome e o total da linha;
+  - embaixo, o preço unitário ("R$ 12,00 cada") e, juntas no fim, a quantidade e uma
+    lixeira.
+
+  O "−" para no 1: antes, ele apagava a linha sem querer, e agora tirar é só com a
+  lixeira. Em telas de toque os botões têm 44 px; no mouse, 36 px.
+- **Forma de pagamento num toque.** Era um select que precisava ser aberto. Agora cada
+  forma é um botão, com as mais usadas primeiro: Pix, dinheiro, débito, crédito,
+  transferência e cortesia. Por baixo são rádios, então as setas do teclado e o leitor
+  de tela funcionam.
+- **Subtotal** aparece acima do desconto quando há desconto.
+- **O aviso de estoque travado** ("para trocar o estoque, conclua a venda…") saiu do
+  meio do carrinho e foi para junto do seletor de estoque, onde se tenta trocar.
+- Conferido em 320, 390, 821 e 1440 px, sem rolagem lateral. Em 320 px, a miniatura
+  sai para o preço caber.
+- **Modificado:**
+  - `templates/loja/pdv.html`;
+  - `static/css/app.css`: bloco do carrinho da Loja, sem mexer no do Restaurante nem
+    no da Lavanderia;
+  - `apps/loja/views.py`: ordem das formas;
+  - teste de navegador `apps/site/tests_navegacao_e2e.py`: escolhe a forma pelo botão.
+
 ## 26/10/2026: painel Contábil mais claro, comparado ao mês anterior e sem vazar no celular
 
 - **DRE comparada com o mês anterior.** A tabela ganhou duas colunas:
