@@ -8,7 +8,7 @@
 .cmp { --acc-texto: var(--lampiao-tinta); }
 .cmp .eyebrow { text-transform: uppercase; letter-spacing: .14em; font-size: max(var(--rotulo-min), .72rem); font-weight: 600; color: var(--acc-texto); margin: 0; }
 .cmp .eleg-intro { max-width: 74ch; }
-.cmp-indice { display: flex; flex-wrap: wrap; gap: .5rem; }
+.cmp-indice { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.1rem; }
 .cmp section { margin-top: var(--espaco-secao); scroll-margin-top: calc(var(--topbar-h) + 1rem); }
 .cmp-secao-cab h2 { margin: 0; }
 .cmp-secao-cab p { margin: .3rem 0 0; color: var(--tinta-suave); max-width: 74ch; line-height: 1.55; }
@@ -39,6 +39,20 @@
 .cmp-passos .cmp-item::before { content: counter(passo); flex: none; display: grid; place-items: center; width: 1.9rem; height: 1.9rem; border-radius: 50%; border: 1px solid var(--fio-forte); font-weight: 600; font-variant-numeric: tabular-nums; color: var(--acc-texto); }
 .cmp-passos .cmp-item > div { display: flex; flex-direction: column; gap: .3rem; min-width: 0; }
 .cmp-rodape { margin: var(--espaco-secao) 0 0; color: var(--tinta-suave); font-size: .85rem; line-height: 1.55; }
+/* Em números: barras pareadas, cada medida na sua escala. Cinza (antes) e dourado
+   (agora) conferidos no validador de cores do guia de gráficos; rótulo e valor
+   escritos ao lado, para não depender só da cor (também na impressão). */
+.cmp-num-cab { display: flex; flex-direction: column; gap: .15rem; }
+.cmp-num-destaque { font-weight: 700; color: var(--acc-texto); }
+.cmp-item .cmp-num-explica { color: var(--tinta-suave); font-size: .9rem; }
+.cmp-barras { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .45rem .7rem; margin-top: auto; padding-top: .35rem; }
+.cmp-barra { display: block; height: 10px; overflow: visible; }
+.cmp-barra rect { fill: var(--tinta-suave); }
+.cmp-barra.agora rect { fill: var(--lampiao); }
+.cmp-barra-rotulo { font-size: max(var(--rotulo-min), .72rem); text-transform: uppercase; letter-spacing: .1em; font-weight: 600; color: var(--tinta-suave); }
+.cmp-barra-rotulo.agora { color: var(--acc-texto); }
+.cmp-barra-valor { font-variant-numeric: tabular-nums; text-align: right; color: var(--tinta-suave); }
+.cmp-barra-valor.agora { font-weight: 700; color: var(--tinta); }
 @media print {
   .cmp-indice, .cmp-links, .cmp .pagina-cabecalho .botao-neutro { display: none; }
   .cmp-item { box-shadow: none; }
@@ -55,25 +69,42 @@
   </div>
   <p class="eleg-intro">{{ intro }}</p>
 
-  <div class="kpis">
-    {% for n in numeros %}
-    <div class="kpi"><span class="kpi-rotulo letreiro">{{ n.rotulo }}</span><span class="kpi-valor">{{ n.valor }}{% if n.unidade %} <small>{{ n.unidade }}</small>{% endif %}</span><span class="kpi-nota">{{ n.nota }}</span></div>
-    {% endfor %}
-  </div>
-
   <nav class="cmp-indice" aria-label="Seções do comparativo">
-    <a class="filtro-chip" href="#correcoes">Correções</a>
+    <a class="filtro-chip" href="#numeros">Em números</a>
+    <a class="filtro-chip" href="#correcoes">Consertos</a>
     <a class="filtro-chip" href="#novidades">Novidades</a>
-    <a class="filtro-chip" href="#design">Design e uso</a>
-    <a class="filtro-chip" href="#qualidade">Qualidade e operação</a>
-    <a class="filtro-chip" href="#original">Do original</a>
+    <a class="filtro-chip" href="#design">Mais fácil de usar</a>
+    <a class="filtro-chip" href="#qualidade">Por trás das telas</a>
+    <a class="filtro-chip" href="#original">Do Gefferson</a>
     <a class="filtro-chip" href="#proximos">Próximos passos</a>
   </nav>
 
+  <section id="numeros" aria-labelledby="t-numeros">
+    <div class="cmp-secao-cab">
+      <h2 id="t-numeros">Em números</h2>
+      <p>A mesma medida nas duas versões: a barra cinza é a versão anterior; a dourada, a atualizada.</p>
+    </div>
+    <ul class="cmp-grade">
+      {% for m in em_numeros %}
+      <li class="cmp-item">
+        <div class="cmp-num-cab"><h3>{{ m.titulo }}</h3><span class="cmp-num-destaque">{{ m.destaque }}</span></div>
+        <p class="cmp-num-explica">{{ m.explica }}</p>
+        <div class="cmp-barras" role="img" aria-label="{{ m.titulo }}: antes {{ m.antes_txt }}, agora {{ m.agora_txt }}">
+          {% for b in m.barras %}
+          <span class="cmp-barra-rotulo{% if b.agora %} agora{% endif %}">{{ b.rotulo }}</span>
+          <svg class="cmp-barra{% if b.agora %} agora{% endif %}" width="100%" height="10" aria-hidden="true"><svg width="{{ b.pct }}%" height="10" overflow="visible"><title>{{ b.rotulo }}: {{ b.txt }}</title><rect width="100%" height="10" rx="4"/><rect width="50%" height="10"/></svg></svg>
+          <span class="cmp-barra-valor{% if b.agora %} agora{% endif %}">{{ b.txt }}</span>
+          {% endfor %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+
   <section id="correcoes" aria-labelledby="t-correcoes">
     <div class="cmp-secao-cab">
-      <h2 id="t-correcoes">Correções importantes</h2>
-      <p>O que podia custar dinheiro, perder ou expor dados ou travar a operação, e já está resolvido nesta versão. Os itens de segurança aparecem só por alto; o detalhe técnico fica num relatório à parte.</p>
+      <h2 id="t-correcoes">O que foi consertado</h2>
+      <p>{{ n_correcoes }} consertos, {{ n_alto }} deles de impacto alto: o que podia custar dinheiro, perder ou expor dados ou travar a operação. Os de segurança aparecem só por alto; o detalhe técnico fica num relatório à parte.</p>
       <p class="cmp-legenda"><span class="grave">Impacto alto</span><span>Impacto médio</span></p>
     </div>
     <ul class="cmp-grade">
@@ -99,7 +130,7 @@
   <section id="novidades" aria-labelledby="t-novidades">
     <div class="cmp-secao-cab">
       <h2 id="t-novidades">O que é novo</h2>
-      <p>Módulos, fluxos e capacidades que a versão anterior ainda não tinha.</p>
+      <p>O que a versão anterior ainda não fazia.</p>
     </div>
     <ul class="cmp-grade">
       {% for n in novidades %}
@@ -115,7 +146,7 @@
 
   <section id="design" aria-labelledby="t-design">
     <div class="cmp-secao-cab">
-      <h2 id="t-design">Design e usabilidade</h2>
+      <h2 id="t-design">Mais fácil de usar</h2>
       <p>O mesmo visual em todas as telas, pensado para o toque e para o celular.</p>
     </div>
     <ul class="cmp-grade">
@@ -136,8 +167,8 @@
 
   <section id="qualidade" aria-labelledby="t-qualidade">
     <div class="cmp-secao-cab">
-      <h2 id="t-qualidade">Qualidade, segurança e operação</h2>
-      <p>O que segura o sistema em pé no dia a dia e avisa antes de um erro chegar à recepção.</p>
+      <h2 id="t-qualidade">Por trás das telas</h2>
+      <p>O que não aparece, mas segura o sistema em pé e avisa antes de um erro chegar à recepção.</p>
     </div>
     <ul class="cmp-grade">
       {% for q in qualidade %}
@@ -151,7 +182,7 @@
 
   <section id="original" aria-labelledby="t-original">
     <div class="cmp-secao-cab">
-      <h2 id="t-original">Vindo do original</h2>
+      <h2 id="t-original">O que veio do Gefferson</h2>
       <p>O que o Gefferson publicou nestes dias também está aqui, ligado aos fluxos desta versão.</p>
     </div>
     <ul class="cmp-grade">
@@ -169,7 +200,7 @@
   <section id="proximos" aria-labelledby="t-proximos">
     <div class="cmp-secao-cab">
       <h2 id="t-proximos">Próximos passos</h2>
-      <p>O que ainda depende de decisão ou de credencial para valer na operação real.</p>
+      <p>O que ainda depende de uma decisão ou de um cadastro para valer na operação de verdade.</p>
     </div>
     <ol class="cmp-grade cmp-passos">
       {% for p in proximos %}

@@ -9,6 +9,19 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 26/10/2026: aba Comparativo em linguagem do dia a dia, com gráficos
+
+- **Sem jargão.** Os textos foram reescritos para quem não é da área técnica, com
+  exemplos concretos ("R$ 650,00 virava R$ 65.000,00", "o despertador que dispara as
+  tarefas da madrugada"). As seções viraram "O que foi consertado", "O que é novo",
+  "Mais fácil de usar", "Por trás das telas" e "O que veio do Gefferson".
+- **Em números, com barras.** No lugar dos quatro indicadores do topo, seis medidas com
+  barra cinza (antes) e dourada (agora), cada uma na sua escala e com o destaque escrito
+  ("10× mais rápida", "35× mais"). As duas cores passaram pelo validador de cores do
+  guia de gráficos, e cada barra tem rótulo e valor escritos.
+- **Modificado:** `deploy/vps/comparador/comparativo.py` e
+  `templates/vps/comparativo.html`.
+
 ## 26/10/2026: aba Comparativo com o tom revisto
 
 - **Texto para apresentar.** "Grave" e "Importante" viraram "Impacto alto" e "Impacto
