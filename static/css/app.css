@@ -3374,56 +3374,32 @@ form.htmx-request .botao-primario {
 }
 
 /* Mural de recados do turno — destacado dos cards brancos */
-.mural {
-  margin: 1.4rem 0 .4rem;
-  padding: 1rem 1.15rem 1.15rem;
-  border-radius: var(--raio);
-  background:
-    radial-gradient(120% 90% at 0% 0%, color-mix(in srgb, var(--lampiao) 14%, transparent), transparent 60%),
-    linear-gradient(180deg, var(--mural-topo), var(--mural-fundo));
-  border: 1px solid color-mix(in srgb, var(--madeira) 18%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--superficie) 35%, transparent);
-}
-.mural-cabecalho { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: .8rem; }
-.mural-titulo {
-  display: inline-flex; align-items: center; gap: .5rem;
-  font-family: var(--fonte-ui); font-size: max(var(--rotulo-min), 0.72rem); font-weight: 700;
-  letter-spacing: .12em; text-transform: uppercase; color: var(--madeira);
-}
-.mural-titulo .ico { color: var(--lampiao); width: 17px; height: 17px; }
-.mural-link { font-size: 0.8rem; font-weight: 600; color: var(--madeira); text-decoration: none; }
-.mural-link:hover { text-decoration: underline; }
-
-.mural-notas { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: .7rem; }
+/* Recados do turno: cartão da casa com os últimos recados em lista, como as chegadas
+   (era um quadro de cortiça atravessado no meio do painel). O ponto marca cada
+   recado; o vermelho, o importante. */
+.mural-notas { list-style: none; margin: 0; padding: 0; }
+.mural-notas > li + li { border-top: 1px solid var(--fio); }
 .mural-nota {
   position: relative;
-  display: flex; flex-direction: column; gap: .35rem;
-  padding: 1.25rem .8rem .6rem;
-  background: var(--mural-papel);
-  border: 1px solid color-mix(in srgb, var(--madeira) 14%, transparent);
-  border-radius: var(--raio-p);
-  box-shadow: 0 2px 6px color-mix(in srgb, var(--madeira) 12%, transparent);
+  display: flex; flex-direction: column; gap: .25rem;
+  min-height: 44px; padding: .8rem 1.25rem .85rem 2.15rem;
   text-decoration: none;
-  transition: transform .12s, box-shadow .12s;
+  transition: background-color var(--mov-rapido) var(--curva);
 }
 .mural-nota::before {
-  content: ""; position: absolute; top: .4rem; left: .8rem;
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--madeira); box-shadow: 0 1px 2px color-mix(in srgb, var(--mascara-opaca) 30%, transparent);
+  content: ""; position: absolute; top: 1.22rem; left: 1.25rem;
+  width: 7px; height: 7px; border-radius: 50%; background: var(--madeira);
 }
-.mural-nota:hover { transform: translateY(-2px); box-shadow: 0 6px 14px color-mix(in srgb, var(--madeira) 18%, transparent); }
-.mural-nota-txt { font-size: 0.86rem; line-height: 1.4; color: var(--tinta); }
+.mural-nota:hover { background: var(--superficie-2); }
+.mural-nota:focus-visible { outline: 2px solid var(--lampiao); outline-offset: -2px; }
+.mural-nota-txt { font-size: 0.88rem; line-height: 1.45; color: var(--tinta); overflow-wrap: anywhere; }
 .mural-nota-autor { font-size: max(var(--rotulo-min), 0.72rem); color: var(--tinta-suave); }
-.mural-importante { border-left: 3px solid var(--lampiao); background: var(--mural-importante); }
+.mural-importante { background: var(--mural-importante); }
 .mural-importante::before { background: var(--perigo); }
-.mural-flag {
-  align-self: flex-start;
-  font-size: var(--rotulo-min); font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
-  color: var(--perigo); background: var(--perigo-bg);
-  padding: .1rem .38rem; border-radius: var(--raio-pilula);
-}
-.mural-vazio { display: block; font-size: 0.88rem; color: var(--madeira); text-decoration: none; }
-.mural-vazio:hover { text-decoration: underline; }
+.mural-flag { font-weight: 700; color: var(--perigo); }
+.mural-vazio, .mural-escrever { display: block; padding: 1rem 1.25rem; font-size: 0.88rem; color: var(--tinta-suave); text-decoration: none; }
+.mural-escrever { border-top: 1px solid var(--fio); font-weight: 600; }
+:is(.mural-vazio, .mural-escrever):hover { color: var(--noturno); text-decoration: underline; }
 
 /* Gráficos do dashboard */
 .graficos-grid {
@@ -3484,15 +3460,20 @@ form.htmx-request .botao-primario {
 .fluxo-info small { color: var(--tinta-suave); font-size: 0.78rem; }
 .bloco-vazio { color: var(--tinta-suave); font-size: 0.9rem; padding: .4rem 0 .2rem; }
 
-/* Recepção: identidade, situação financeira e próximo passo da estadia. */
-.painel-estadias {
-  display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,32rem),1fr));
-  gap:1.3rem; align-items:start; margin-block:var(--espaco-secao);
+/* Recepção: identidade, situação financeira e próximo passo da estadia. Chegadas e
+   saídas ficam uma embaixo da outra: lado a lado, a lista mais curta sobrava em branco.
+   Com espaço, os recados do turno ocupam uma coluna ao lado e acompanham a rolagem. */
+.painel-hoje { display:grid; grid-template-columns:minmax(0,1fr); gap:1.3rem; align-items:start; margin-block:var(--espaco-secao); }
+.painel-estadias { display:grid; gap:1rem; min-width:0; }
+@container conteudo (width > 62rem) {
+  .painel-hoje:has(> .painel-estadias + .mural) { grid-template-columns:minmax(0,1fr) minmax(17rem,22rem); }
+  .painel-hoje > .painel-estadias + .mural { position:sticky; top:calc(var(--topbar-h) + 1rem); }
 }
+.painel-estadias-secao .estado-vazio { flex-direction:row; justify-content:flex-start; gap:.55rem; padding:.95rem 1.25rem; text-align:left; }
+.painel-estadias-secao .estado-vazio .ico { width:18px; height:18px; flex:none; }
 .painel-visao > .atencao-secao { margin:1rem 0 .25rem; }
 .painel-visao .atencao-grid { gap:.55rem; }
 .painel-visao .atencao-item { padding:.65rem .8rem; min-height:44px; }
-.painel-visao .mural-cabecalho { flex-wrap:wrap; gap:.4rem .8rem; }
 .painel-visao > .corredor-hero { margin-top:1.5rem; }
 /* O painel completo tem seis indicadores: evita uma última linha com só um
    cartão. Perfis com menos indicadores mantêm a grade automática; papel também. */
@@ -6800,9 +6781,9 @@ form.filtros.manutencao-filtros:not(.subnav) { display: grid; grid-template-colu
      as posições (e a altura do rodapé) se recalculam sozinhas. */
   .sidebar { --alvo: 44px; }
   /* Controles que escaparam da lista original: aba do Marketing (35px), chip do
-     painel de quartos (26px), navegação do calendário (32px) e link do mural
-     (19px) — todos coisas que se TOCA, não texto corrido. */
-  .mk-aba, .pq-chip, .mk-cal-nav, .mural-link,
+     painel de quartos (26px) e navegação do calendário (32px) — todos coisas que
+     se TOCA, não texto corrido. */
+  .mk-aba, .pq-chip, .mk-cal-nav,
   .mkt-entrega-contagens a, .mkt-entrega-principal > a {
     min-height: 44px; display: inline-flex; align-items: center;
   }
@@ -8301,10 +8282,6 @@ html.com-js [data-precos-filtros][hidden] { display: block; visibility: hidden; 
   .cartoes-indicadores .indicador-valor { font-size: clamp(.95rem, 12cqi, 1.5rem); }
 }
 .rc-razao .rot { display: flex; align-items: start; min-height: 3em; }
-.mural-nota { display: grid; grid-template-rows: minmax(1.2rem,auto) 1fr auto; gap: .3rem; }
-.mural-nota .mural-flag { grid-row: 1; justify-self: start; }
-.mural-nota .mural-nota-txt { grid-row: 2; }
-.mural-nota .mural-nota-autor { grid-row: 3; }
 .form-grade-endereco { grid-template-columns: repeat(6,minmax(0,1fr)); }
 .form-grade-endereco .campo-endereco { grid-column: span 5; }
 .form-grade-endereco .campo-numero { grid-column: span 1; }

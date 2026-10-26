@@ -113,36 +113,45 @@ nem chega aqui: entra direto nele (views.dashboard).{% endcomment %}
 </div>
 {% endif %}
 
-{% if tem_reservas %}
-<div class="painel-estadias">
-  {% include "nucleo/partials/estadias_hoje.html" with reservas=resumo_reservas.chegadas total=resumo_reservas.chegadas_hoje secao_id="chegadas-hoje" titulo="Chegadas de hoje" tipo="chegada" acao="Check-in" %}
-  {% include "nucleo/partials/estadias_hoje.html" with reservas=resumo_reservas.saidas total=resumo_reservas.saidas_hoje secao_id="saidas-hoje" titulo="Saídas de hoje" tipo="saida" acao="Check-out" %}
-</div>
-{% endif %}
-
-{% if tem_logbook %}
-<section class="mural">
-  <div class="mural-cabecalho">
-    <span class="mural-titulo">
-      <svg viewBox="0 0 24 24" class="ico"><path d="M9 4h6l-1 6 3 2v2H7v-2l3-2z"/><path d="M12 14v6"/></svg>
-      Recados do turno
-    </span>
-    <a href="{% url 'logbook' %}" class="mural-link">Escrever · ver todos</a>
+{% comment %}O movimento do dia: chegadas e saídas uma embaixo da outra (mesma largura,
+sem sobra em branco ao lado da lista mais curta) e, quando cabe, os recados do turno
+numa coluna ao lado. Em tela estreita, os recados vêm depois das saídas.{% endcomment %}
+{% if tem_reservas or tem_logbook %}
+<div class="painel-hoje">
+  {% if tem_reservas %}
+  <div class="painel-estadias">
+    {% include "nucleo/partials/estadias_hoje.html" with reservas=resumo_reservas.chegadas total=resumo_reservas.chegadas_hoje secao_id="chegadas-hoje" titulo="Chegadas de hoje" tipo="chegada" acao="Check-in" %}
+    {% include "nucleo/partials/estadias_hoje.html" with reservas=resumo_reservas.saidas total=resumo_reservas.saidas_hoje secao_id="saidas-hoje" titulo="Saídas de hoje" tipo="saida" acao="Check-out" %}
   </div>
-  {% if recados_turno %}
-    <div class="mural-notas">
-      {% for r in recados_turno %}
-        <a href="{% url 'logbook' %}" class="mural-nota {% if r.importante %}mural-importante{% endif %}">
-          {% if r.importante %}<span class="mural-flag">importante</span>{% endif %}
-          <span class="mural-nota-txt">{{ r.texto }}</span>
-          <small class="mural-nota-autor">{{ r.autor }} · {{ r.criado_em|date:"d/m H:i" }}</small>
-        </a>
-      {% endfor %}
-    </div>
-  {% else %}
-    <a href="{% url 'logbook' %}" class="mural-vazio">Nenhum recado ainda. Deixe um aviso para o próximo turno →</a>
   {% endif %}
-</section>
+
+  {% if tem_logbook %}
+  <section class="painel-bloco painel-estadias-secao mural" aria-labelledby="mural-titulo">
+    <header class="painel-estadias-cabecalho">
+      <div class="painel-estadias-titulo">
+        <svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><path d="M9 4h6l-1 6 3 2v2H7v-2l3-2z"/><path d="M12 14v6"/></svg>
+        <h2 id="mural-titulo">Recados do turno</h2>
+      </div>
+      <a href="{% url 'logbook' %}" class="painel-estadias-ver">Ver todos <span aria-hidden="true">→</span></a>
+    </header>
+    {% if recados_turno %}
+    <ul class="mural-notas">
+      {% for r in recados_turno %}
+      <li>
+        <a href="{% url 'logbook' %}" class="mural-nota{% if r.importante %} mural-importante{% endif %}">
+          <span class="mural-nota-txt">{{ r.texto }}</span>
+          <small class="mural-nota-autor">{% if r.importante %}<span class="mural-flag">Importante</span> · {% endif %}{{ r.autor }} · {{ r.criado_em|date:"d/m H:i" }}</small>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+    <a href="{% url 'logbook' %}" class="mural-escrever">Escrever um recado <span aria-hidden="true">→</span></a>
+    {% else %}
+    <a href="{% url 'logbook' %}" class="mural-vazio">Nenhum recado ainda. Deixe um aviso para o próximo turno →</a>
+    {% endif %}
+  </section>
+  {% endif %}
+</div>
 {% endif %}
 
 {% if corredor %}

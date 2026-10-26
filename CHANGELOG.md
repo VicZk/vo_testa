@@ -9,6 +9,20 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 26/10/2026: Visão geral com chegadas e saídas empilhadas e recados ao lado
+
+- **Chegadas e saídas uma embaixo da outra.** Lado a lado, as duas listas tinham
+  alturas diferentes (a vazia ficava maior que a com um hóspede) e, com muita gente,
+  a mais curta sobrava em branco. Agora ficam empilhadas, com a mesma largura, e a
+  lista vazia vira uma linha só ("Sem saídas previstas para hoje.").
+- **Recados do turno num cartão ao lado.** O quadro amarelo atravessava o painel entre
+  as listas e o mapa dos quartos. Virou um cartão da casa, em lista como as chegadas,
+  numa coluna ao lado do movimento do dia que acompanha a rolagem. No celular, e em
+  tela média com o menu aberto, vem depois das saídas. O recado importante tem o ponto
+  vermelho e o fundo suave, e o pé do cartão leva a "Escrever um recado".
+- **Modificado:** `templates/nucleo/dashboard.html`, `static/css/app.css` (saiu também
+  uma regra antiga que reservava uma faixa vazia em cima de cada recado).
+
 ## 26/10/2026: aba "Comparativo" na versão atualizada
 
 - **O que mudou, numa tela só.** A cópia atualizada da VPS ganhou o item "Comparativo"
