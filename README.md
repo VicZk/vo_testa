@@ -762,7 +762,11 @@ E2E_OBRIGATORIO=1 python manage.py test apps.site.tests_e2e --noinput
   dos checks pelo serviço de deploy são configurações externas; precisam ser
   conferidas antes de uma publicação de código.
 - **CI de segurança** (`.github/workflows/security.yml`): pip-audit, bandit, regras de
-  segurança do ruff, semgrep (só relatório), `check --deploy` e gitleaks.
+  segurança do ruff, semgrep (só relatório), `check --deploy` e gitleaks. Roda no push
+  da `main` e da `dev`, em PR, toda segunda e pelo "Run workflow" do Actions. O gitleaks
+  segue o `.gitleaks.toml`: regras padrão, fora os testes (senhas fictícias) e o
+  `.secrets.baseline` (só hashes). Alarme falso no código leva `# nosec BXXX` com o
+  motivo num comentário.
 - **Máquina do CI:** os workflows fixam `ubuntu-24.04` e Python 3.14.
 - **PowerShell:** use `$env:E2E_OBRIGATORIO = '1'` antes do comando de navegador;
   `playwright` está em `requirements-dev.txt`, mas o Chromium precisa ser instalado.

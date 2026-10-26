@@ -29,8 +29,8 @@ O CI roda sozinho: `testes.yml` (ruff, `makemigrations --check` e a suíte contr
 PostgreSQL 16, mais o job "Fluxos no navegador" com Playwright + Chromium —
 todos os arquivos `apps/site/tests*e2e.py`, `E2E_OBRIGATORIO=1` —,
 em todo push da `main`/`dev` e em PR)
-e `security.yml` (pip-audit, bandit, ruff de segurança e gitleaks, no push da `main`, em
-PR e toda segunda).
+e `security.yml` (pip-audit, bandit, ruff de segurança e gitleaks, no push da `main`/`dev`,
+em PR, toda segunda e sob demanda; o gitleaks segue o `.gitleaks.toml`).
 Rotinas agendadas: `manage.py rotinas --grupo frequentes` (a cada 10 min) e
 `--grupo diarias` (03:15 de Brasília) — dois serviços cron no Railway, configs em
 `deploy/`. Rotina nova entra no grupo certo em

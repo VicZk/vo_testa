@@ -1,0 +1,14 @@
+# Configuração do gitleaks (job "Segredos no histórico" do .github/workflows/security.yml).
+# Valem as regras padrão do gitleaks. Ficam de fora só arquivos sem segredo de verdade,
+# a mesma linha que o bandit e o semgrep do CI já seguem:
+# - testes (tests.py e tests_*.py): senha de usuário fictício criado no próprio teste;
+# - .secrets.baseline: o baseline do detect-secrets guarda só o hash do que achou.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Senhas fictícias dos testes e hashes do baseline do detect-secrets"
+paths = [
+    '''(^|/)tests(_[a-z0-9_]+)?\.py$''',
+    '''^\.secrets\.baseline$''',
+]

@@ -35,9 +35,10 @@ __all__ = ["icone_peca", "ordens_em_producao", "passo_da_quantidade",
 @register.simple_tag
 def icone_peca(nome, escolha="", classe=""):
     classes = " ".join(parte for parte in ("ico-peca", classe) if parte)
+    # O miolo sai da tabela fixa ICONES (icones.py): o nome só escolhe a chave.
     return format_html(
         '<svg class="{}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">{}</svg>',
-        classes, mark_safe(svg_de(icone_de(nome, escolha))),
+        classes, mark_safe(svg_de(icone_de(nome, escolha))),  # nosec B308, B703
     )
 
 

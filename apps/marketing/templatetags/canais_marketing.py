@@ -123,5 +123,6 @@ def icone_canal(nome, classe=""):
     marca = _achar(chave, MARCAS)
     tipo, miolo = ("ico-canal--marca", marca) if marca else ("ico-canal--traco", _achar(chave, TRACOS) or CORINGA)
     classes = " ".join(c for c in ("ico-canal", tipo, classe) if c)
+    # O miolo sai das tabelas fixas deste arquivo: o nome só escolhe a chave.
     return format_html('<svg class="{}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">{}</svg>',
-                       classes, mark_safe(miolo))
+                       classes, mark_safe(miolo))  # nosec B308, B703

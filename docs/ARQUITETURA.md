@@ -1230,14 +1230,16 @@ com Python 3.14, confere `makemigrations --check --dry-run` e roda
 e roda `apps.site.tests_e2e` com `E2E_OBRIGATORIO=1`. Proteção de branch e espera de
 checks pelo deploy dependem da configuração externa e precisam ser confirmadas.
 
-**`security.yml`**: dispara em **push na `main`**, em **todo pull request** e por **cron
-semanal** (segunda, 09:00 UTC). Dois jobs:
+**`security.yml`**: dispara em **push na `main` e na `dev`**, em **todo pull request**,
+por **cron semanal** (segunda, 09:00 UTC) e à mão (`workflow_dispatch`). Dois jobs:
 
 1. **`sast-deps-secrets`** (Python 3.14): `pip-audit` → `bandit` → `ruff` (regras de
    segurança) → `semgrep` (**`continue-on-error: true`**, report-only) →
    `python manage.py check --deploy --fail-level WARNING` com env sintético
    (`DEBUG=0`, SECRET_KEY dummy, `DATABASE_URL=sqlite:///ci.db`).
-2. **`gitleaks`**: segredos no histórico completo (`fetch-depth: 0`).
+2. **`gitleaks`**: segredos no histórico completo (`fetch-depth: 0`) na semanal e no
+   disparo manual; no push, só os commits novos. Configuração em `.gitleaks.toml`
+   (regras padrão, fora os testes e o `.secrets.baseline`).
 
 **Limites do CI:** não calcula cobertura nem executa deploy. O job de navegador
 roda Playwright; a publicação da aplicação depende da integração/configuração do

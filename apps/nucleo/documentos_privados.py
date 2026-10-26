@@ -42,9 +42,11 @@ def preparar_documento(arquivo):
                 raise ValueError()
         elif extensao == ".xml":
             texto = conteudo.decode("utf-8-sig")
+            # Sem DTD não há entidade para expandir nem para buscar fora: é a defesa
+            # do defusedxml, feita aqui antes do parse.
             if re.search(r"<!\s*(?:DOCTYPE|ENTITY)\b", texto, re.IGNORECASE):
                 raise ValueError()
-            ElementTree.fromstring(texto)
+            ElementTree.fromstring(texto)  # nosec B314
         else:
             with warnings.catch_warnings():
                 warnings.simplefilter("error", Image.DecompressionBombWarning)

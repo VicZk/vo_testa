@@ -9,6 +9,26 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 26/10/2026: verificação de segurança verde e rodando na dev
+
+- **A verificação de segurança passa a rodar a cada push da dev**, e não só na
+  semanal. A primeira semanal na dev (segunda, 26/10) ficou vermelha por alarme falso,
+  sem segredo nem falha de verdade:
+  - o gitleaks leu o histórico inteiro e marcou 359 linhas, todas em arquivo de teste
+    (senha de usuário fictício) ou no `.secrets.baseline` do detect-secrets (só hashes);
+  - o bandit marcou os ícones SVG da Lavanderia e do Marketing, que saem de tabelas
+    fixas do código, e a leitura do XML anexado, que já recusa DTD antes do parse. Marcou
+    também um teste chamado `tests_servicos.py`, que o filtro de testes não pegava.
+  - Com o bandit parado, o ruff de segurança e o `check --deploy` nem rodaram. Rodados à
+    mão, passam.
+- **Disparo manual:** o workflow também roda pelo botão "Run workflow" do Actions, com
+  o histórico inteiro, como a semanal.
+- **Modificado:** `.gitleaks.toml` (novo: regras padrão, fora os testes e o
+  baseline), `.github/workflows/security.yml` (push da `dev`, `workflow_dispatch` e
+  filtro `*/tests_*.py` no bandit), `# nosec` com o motivo em
+  `apps/lavanderia/templatetags/pecas_lavanderia.py`,
+  `apps/marketing/templatetags/canais_marketing.py` e `apps/nucleo/documentos_privados.py`.
+
 ## 25/10/2026: exportações e impressões conferidas
 
 - **Os CSV abrem certo no Excel em português.** Os números saíam com ponto

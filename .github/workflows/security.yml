@@ -1,12 +1,15 @@
 name: Segurança
 
-# Gate de segurança no PR e na main (não interfere no deploy do Railway).
+# Gate de segurança no PR, na main e na dev (a dev é o que sobe para a VPS); não
+# interfere no deploy do Railway. Na semanal e no disparo manual o gitleaks lê o
+# histórico inteiro; no push, só os commits novos.
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
   schedule:
     - cron: "0 9 * * 1"   # varredura semanal (segunda 09:00 UTC) pega CVE nova em dep
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -37,7 +40,7 @@ jobs:
         run: pip-audit -r requirements.txt
 
       - name: bandit (SAST Python)
-        run: bandit -r apps config -ll -x '*/tests.py,*/tests_e2e.py' --skip B310
+        run: bandit -r apps config -ll -x '*/tests.py,*/tests_*.py' --skip B310
 
       - name: ruff (regras de segurança)
         run: ruff check apps config --select "S105,S106,S107,S608,S301,S302,S324,S501,S602,S605,S611"
