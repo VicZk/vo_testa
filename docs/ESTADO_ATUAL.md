@@ -1,8 +1,26 @@
 # Estado atual do projeto
 
-**Atualização: 23/10/2026.** Voltar ao [README](../README.md) ou ao
+**Atualização: 26/10/2026.** Voltar ao [README](../README.md) ou ao
 [índice da documentação](README.md). Este registro diferencia código publicado,
 trabalho local e ativação de serviços externos.
+
+## Atualização de 26/10
+
+A `dev` e o ambiente de teste (viczk.cloud/votesta) estão na mesma versão; o commit
+de cada entrega está no [CHANGELOG](../CHANGELOG.md). A produção da pousada continua
+sendo o original no Railway: o último deploy registrado no GitHub é o `85e19bf` (25/10).
+Esse deploy já está na `dev`. Entre 23 e 26/10, a `dev` recebeu:
+
+- os 26 lotes da revisão de telas (25/10);
+- o Contábil/gerencial do original, ligado aos fluxos do fork: plano de contas,
+  de-para, DRE, fluxo de caixa, fechamento mensal e exportação para o contador;
+- a NFS-e pelo Spedy e o regime Lucro Presumido, também do original, adaptados ao
+  fiscal do fork;
+- os CSV no formato do Excel em português e a impressão do Contábil;
+- a verificação de segurança a cada push da `dev`, com o semgrep bloqueando.
+
+O que falta para a abertura, provedor a provedor, está no
+[checklist de ativação](Checklist_CRM_100.md).
 
 ## Atualização de 23/10
 
@@ -41,6 +59,8 @@ datadas. Não foram reexecutadas como parte desta revisão de texto.
 | Operação | Estoque e inventário, loja, restaurante, lavanderia, manutenção e escala |
 | Governança | Visão geral da casa, lista com o ciclo do quarto e um próximo passo por linha, tarefas, arrumações, inspeção opcional, ronda, discrepâncias e três relatórios |
 | Gestão | Pendências, trilha de auditoria, fechamento diário e conciliação OFX/cartão |
+| Contábil/gerencial (26/10) | Plano de contas, de-para, DRE, fluxo de caixa, fechamento mensal e exportação para o contador |
+| Day pass | Turnos, capacidade, visitantes, caixa e comandas |
 | Receita | Carteira de reservas (OTB), pickup, ritmo de vendas e custo de distribuição |
 | Continuidade | Kit imprimível de hospedados/chegadas/saídas/quartos, envio diário opcional e backup por rotina |
 | Atendimento | Comercial, oportunidades, cotações, atividades, WhatsApp, e-mail, LPs e campanhas |
@@ -73,7 +93,7 @@ unidades de day use ativas. Os cadastros efetivos da instalação determinam a o
 | Safrapay | Pix/cartão/boleto, diagnóstico de credenciais, timeout e tratamento de falhas | Evidências HML não comprovam liberação ou liquidação em produção |
 | Pix direto | Código Pix gerado localmente e baixa manual | Não há webhook de confirmação desse Pix |
 | FNRH Digital / Serpro | Adapter real e reenvio de pendências | Credenciais, códigos de cadastro e homologação precisam de validação |
-| Fiscal (atualização 22/10) | Focus NFe v2, NFS-e por classificação de serviço e NFC-e de vendas/comandas; consulta, reenvio e cancelamento confirmados | Credenciais e homologação real pendentes; modo simulado não tem validade fiscal |
+| Fiscal (atualização 26/10) | Spedy (NFS-e pelo Ambiente Nacional, retorno assinado e cancelamento só com a confirmação) e Focus NFe v2 (NFS-e e NFC-e); consulta, reenvio e cancelamento | Credenciais e homologação real pendentes; pelo Spedy, a NFC-e aguarda a inscrição estadual; modo simulado não tem validade fiscal |
 | WhatsApp (atualização 22/10) | Cloud API, mídia, webhook assinado e estados; provedores BSP indisponíveis | WABA, número, token, templates e entrega real dependem da conta |
 | E-mail (atualização 22/10) | SMTP, SES e simulador sem envio externo | Envio exige provedor real configurado; aceitação não comprova entrega |
 | Canais/OTAs (atualização 22/10) | Channex: mapeamento, fila durável, notificações assinadas, revisões de reservas e envio de disponibilidade/tarifas/restrições | Conexão desativada por padrão; contratação, credenciais e certificação/homologação reais pendentes; ver [guia](CANAIS.md) |

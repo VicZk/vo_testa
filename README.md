@@ -17,11 +17,12 @@ como desenvolver em cima dele. Dois documentos aprofundam o que aqui está resum
   (models, estados, services, sinais, telas, regras) e os fluxos ponta a ponta com
   diagramas.
 
-> **Revisão documental: 21/10/2026.** O [Estado atual](docs/ESTADO_ATUAL.md)
-> identifica a base de código publicada e as integrações; os commits de interface que
-> a revisão listava como locais foram publicados no décimo primeiro bloco do
-> [CHANGELOG](CHANGELOG.md). O [índice da documentação](docs/README.md) separa manuais
-> atuais, planos e registros históricos.
+> **Revisão documental: 26/10/2026.** O [Estado atual](docs/ESTADO_ATUAL.md)
+> identifica a base de código publicada e as integrações. O
+> [checklist de ativação](docs/Checklist_CRM_100.md) lista o que cada provedor precisa
+> antes da abertura (Spedy, Channex, Safrapay, Serpro, WhatsApp e e-mail). O
+> [índice da documentação](docs/README.md) separa manuais atuais, planos e registros
+> históricos.
 >
 > A [especificação](docs/ESPECIFICACAO.md) descreve o produto implementado.
 > O [CLAUDE.md](CLAUDE.md) reúne convenções de desenvolvimento. Uma funcionalidade

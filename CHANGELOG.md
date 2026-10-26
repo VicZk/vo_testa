@@ -41,6 +41,18 @@ A entrada mais nova fica no topo. As datas são as do push.
   Os quatro últimos levam `nosemgrep` na linha, com o motivo num comentário.
   (`.github/workflows/security.yml`, `apps/governanca/views.py`, `apps/nucleo/views.py`,
   `apps/comercial/views_whatsapp.py`, `apps/site/templates/site/reservas/minha_reserva.html`.)
+- **Checklist de ativação e estado atual em dia (só documentação).** O checklist ainda
+  dizia que o fiscal era stub, que o simulador de e-mail podia enviar e que NPS e Canais
+  eram backlog. Agora traz:
+  - o que o Spedy precisa (conta, chave, certificado A1, segredo do retorno e o teste
+    no sandbox);
+  - que a NFC-e depende da inscrição estadual;
+  - o Channex;
+  - o primeiro fechamento do Contábil com o contador.
+
+  O estado atual ganhou a atualização de 26/10. O checklist do contador registra o
+  regime (Lucro Presumido) e os provedores implementados.
+  (`docs/Checklist_CRM_100.md`, `docs/ESTADO_ATUAL.md`, `docs/Checklist_contador.md`.)
 - **Testes dos ícones passam também no Windows.** O `.gitattributes` só mantinha o
   Lucide em LF; os ícones do Tabler e o Chart.js saíam com CRLF no checkout do Windows, e
   o teste que compara o sha256 com o `origem.json` falhava só lá. Agora vale para todo o

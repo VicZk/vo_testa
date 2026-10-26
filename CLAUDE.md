@@ -214,7 +214,7 @@ e rode o comando — o teste `CssDasTelasPublicasTests` avisa quando o recorte f
 
 ## Estado atual
 
-**Referência revisada em 21/10/2026:** [Estado atual](docs/ESTADO_ATUAL.md).
+**Referência revisada em 26/10/2026:** [Estado atual](docs/ESTADO_ATUAL.md).
 Esse documento identifica o código publicado da fork e os limites de
 ativação/homologação externa; o que entrou depois está no [CHANGELOG](CHANGELOG.md).
 
