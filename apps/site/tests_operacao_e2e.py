@@ -240,7 +240,7 @@ class SuprimentosOperacaoE2ETests(_BaseE2E):
         produto.click()
         produto.click()
         p.locator(".pdv-etapas button").filter(has_text="Carrinho").click()
-        p.get_by_label("Forma de pagamento", exact=True).select_option(str(self.forma.pk))
+        p.get_by_role("radio", name=self.forma.nome, exact=True).check()
         with p.expect_navigation():
             p.locator(".pdv-finalizar").click()
         venda = Venda.objects.get()
@@ -1572,7 +1572,7 @@ class OperacaoUsabilidadeE2ETests(_FunilComercialMixin, _BaseE2E):
         p.locator(".pdv-finalizar").click()
         expect(p.get_by_text("Escolha a forma de pagamento.", exact=True)).to_be_visible()
         self.assertEqual(Venda.objects.count(), 0)
-        p.locator("select[x-model=forma_id]").select_option(str(self.cash.pk))
+        p.get_by_role("radio", name=self.cash.nome, exact=True).check()
         with p.expect_navigation():
             p.locator(".pdv-finalizar").click(click_count=2)
         venda = Venda.objects.get()
@@ -2198,7 +2198,9 @@ class PdvVisualE2ETests(_FunilComercialMixin, _BaseE2E):
         p = self.page
         self.abrir(1440)
         origem = p.get_by_role("button", name="Adicionar Água mineral com gás ao carrinho", exact=True)
-        origem.drag_to(p.locator(".pdv-painel"))
+        # Solta na lista do carrinho, onde aparece o "Solte aqui". O painel inteiro passa da
+        # altura da janela, e o Playwright rolaria a página no meio do arraste.
+        origem.drag_to(p.locator(".pdv-carrinho"))
         expect(p.locator(".pdv-item-nome")).to_have_text(self.agua.nome)
         expect(p.locator(".pdv-qtd span")).to_have_text("1")
         p.locator(".pdv-painel").evaluate("""el => {
@@ -2216,7 +2218,7 @@ class PdvVisualE2ETests(_FunilComercialMixin, _BaseE2E):
         self.abrir()
         p.get_by_role("button", name="Adicionar Água mineral com gás ao carrinho", exact=True).click()
         self.carrinho()
-        p.get_by_label("Forma de pagamento", exact=True).select_option(str(self.forma.pk))
+        p.get_by_role("radio", name=self.forma.nome, exact=True).check()
         requisicoes = []
         url = self.url(reverse("loja:finalizar"))
 

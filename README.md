@@ -266,7 +266,7 @@ Detalhes em [§9](#9-testes-e-qualidade).
 | `portal` | `appsite` | Portal do hóspede por token |
 | `fiscal` | `fiscal` | Documentos fiscais (NFS-e, NFC-e, NF-e) com gateway plugável |
 | `site` (label **`core`**) | — (serve `/`) | Site público, motor de reservas, páginas legais, e-mails transacionais |
-| `loja` | `loja` | PDV de balcão (carrinho com miniatura, quantidade e lixeira na linha; forma de pagamento em botões) |
+| `loja` | `loja` | PDV de balcão (clique ou arraste o produto para o carrinho; linha com miniatura, quantidade e lixeira; forma de pagamento em botões) |
 | `restaurante` | `restaurante` | Comandas por mesa, guarda-sol ou bar |
 | `lavanderia` | `lavanderia` | Serviço ao hóspede (fila por etapa, cesta de peças, cobrança) + rouparia (enxoval com lote e extrato) |
 | `governanca` | `governanca` | Situação de limpeza por quarto e fila de faxinas |

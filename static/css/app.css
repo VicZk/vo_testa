@@ -4214,16 +4214,18 @@ div.porta.dica[data-dica] { cursor: default; }
 .pdv-loja .pdv-item-unit { grid-area: unit; min-width: 0; font-size: 0.8rem; color: var(--tinta-suave); font-variant-numeric: tabular-nums; }
 .pdv-loja .pdv-item-acoes { grid-area: acoes; justify-self: end; display: flex; align-items: center; gap: .3rem; }
 .pdv-loja .pdv-qtd { gap: 0; padding: 0; border-radius: var(--raio-p); }
-.pdv-loja .pdv-qtd button, .pdv-loja .pdv-x { width: 2.25rem; height: 2.25rem; min-width: 2.25rem; border-radius: var(--raio-p); }
+/* 44 px também no mouse: o monitor de toque do balcão nem sempre se anuncia como
+   `pointer: coarse` (o e2e do carrinho cobra isso em todas as larguras). */
+.pdv-loja .pdv-qtd button, .pdv-loja .pdv-x { width: 2.75rem; height: 2.75rem; min-width: 2.75rem; border-radius: var(--raio-p); }
 .pdv-loja .pdv-qtd span { min-width: 1.6rem; font-variant-numeric: tabular-nums; }
 .pdv-loja .pdv-qtd button:disabled { opacity: .35; cursor: not-allowed; }
 .pdv-loja .pdv-x { display: inline-grid; place-items: center; padding: 0; color: var(--tinta-suave); }
 .pdv-loja .pdv-x .ico { width: 1.1rem; height: 1.1rem; }
 .pdv-loja .pdv-x:hover:not(:disabled) { color: var(--perigo); background: var(--perigo-bg); }
 .pdv-loja .pdv-x:active:not(:disabled) { transform: scale(.94); }
-@media (pointer: coarse) {
-  .pdv-loja .pdv-qtd button, .pdv-loja .pdv-x { width: 2.75rem; height: 2.75rem; min-width: 2.75rem; }
-}
+/* Durante o arraste, o painel inteiro é o alvo: soltar em cima do campo "Cliente"
+   (texto) caía no campo e o produto não entrava no carrinho. */
+.pdv-loja .pdv-painel.pdv-alvo-arrasto * { pointer-events: none; }
 /* Carrinho estreito: a miniatura sai antes de o preço unitário ficar sem espaço. */
 @container carrinho (max-width: 20rem) {
   .pdv-loja .pdv-item { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "nome sub" "unit acoes"; }

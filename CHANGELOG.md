@@ -9,6 +9,21 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 26/10/2026: checkout da Loja, ajustes depois do CI
+
+- **Botões do carrinho com 44 px também no mouse.** No redesenho, eles ficavam com
+  36 px fora das telas de toque. Mas o monitor de toque do balcão nem sempre se
+  anuncia como toque ao navegador, e a regra da casa (o teste de navegador do carrinho)
+  pede 44 px em qualquer largura.
+- **Soltar o produto em qualquer ponto do carrinho.** Arrastar um produto e soltar em
+  cima do campo "Cliente" não o colocava no carrinho, porque o campo de texto ficava
+  com o soltar. Durante o arraste, o painel inteiro passa a ser o alvo.
+- **Testes de navegador no checkout novo.** Três testes ainda escolhiam a forma de
+  pagamento no select antigo e agora usam os botões. O teste de arraste solta na lista
+  do carrinho: o painel ficou mais alto que a janela do teste, e o Playwright rolava a
+  página no meio do arraste, que então nem começava.
+- **Modificado:** `static/css/app.css`, `apps/site/tests_operacao_e2e.py`.
+
 ## 26/10/2026: checkout da Loja redesenhado
 
 - **Linha do carrinho arrumada.** O "×" de tirar o item ficava sozinho no canto
