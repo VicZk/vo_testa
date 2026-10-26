@@ -1211,10 +1211,11 @@ python manage.py test apps.reservas.tests_precos  # arquivo específico
   `per-file-ignores` solta `E501`/`S10x` em `tests.py`, `tests_e2e.py` e
   `management/commands/*.py`.
   `ruff check apps/ config/` (ou `--fix`).
-- **bandit** — SAST completo: `bandit -r apps config -ll -x '*/tests.py,*/tests_e2e.py' --skip B310`.
+- **bandit** — SAST completo: `bandit -r apps config -ll -x '*/tests.py,*/tests_*.py' --skip B310`.
 - **pip-audit** — CVEs nas dependências.
 - **detect-secrets** — contra `.secrets.baseline` (falha só em segredo **novo**).
-- **semgrep** — `p/django p/python p/secrets`, **report-only** por ora.
+- **semgrep** — `p/django p/python p/secrets`, bloqueante desde 26/10 (`--error`), sem a
+  regra de injeção em CSV (as células passam por `apps/nucleo/export.py`).
 - **pre-commit** (`.pre-commit-config.yaml`, instalar com `pre-commit install`):
   `detect-private-key`, `check-added-large-files` (1200 KB), `check-merge-conflict`,
   `end-of-file-fixer`, `trailing-whitespace`, `check-yaml`, `check-json`,
@@ -1234,7 +1235,7 @@ checks pelo deploy dependem da configuração externa e precisam ser confirmadas
 por **cron semanal** (segunda, 09:00 UTC) e à mão (`workflow_dispatch`). Dois jobs:
 
 1. **`sast-deps-secrets`** (Python 3.14): `pip-audit` → `bandit` → `ruff` (regras de
-   segurança) → `semgrep` (**`continue-on-error: true`**, report-only) →
+   segurança) → `semgrep` (`--error`, sem a regra de CSV) →
    `python manage.py check --deploy --fail-level WARNING` com env sintético
    (`DEBUG=0`, SECRET_KEY dummy, `DATABASE_URL=sqlite:///ci.db`).
 2. **`gitleaks`**: segredos no histórico completo (`fetch-depth: 0`) na semanal e no

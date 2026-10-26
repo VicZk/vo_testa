@@ -1565,8 +1565,10 @@ def funcionario_novo(request):
         if form.is_valid():
             try:
                 with transaction.atomic():
+                    # Nome e documento não são do FuncionarioForm: quem os valida é a
+                    # _validar_ficha_funcionario, antes do is_valid.
                     pessoa = Pessoa.objects.create(
-                        nome=nome, documento=(request.POST.get("documento") or "").strip())
+                        nome=nome, documento=(request.POST.get("documento") or "").strip())  # nosemgrep
                     f = form.save(commit=False)
                     f.pessoa = pessoa
                     f.save()

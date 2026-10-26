@@ -45,12 +45,16 @@ jobs:
       - name: ruff (regras de segurança)
         run: ruff check apps config --select "S105,S106,S107,S608,S301,S302,S324,S501,S602,S605,S611"
 
-      # Report-only por ora: a 1ª varredura achou injeção de fórmula em CSV e 1
-      # open-redirect guardado — correção real está na auditoria profunda (Fase 3) e
-      # parte vive em arquivos WIP. Trocar para `--error` quando esses forem fechados.
-      - name: semgrep (regras Django/Python/OWASP — report-only)
-        continue-on-error: true
-        run: semgrep --config p/django --config p/python --config p/secrets --exclude '*/tests.py' apps config
+      # Bloqueia desde 26/10, com os achados da 1ª varredura fechados. Fica de fora a
+      # regra de injeção em CSV: toda célula passa por apps/nucleo/export.py (celula /
+      # sanitizar_celula, testados em nucleo/tests_export.py), e o semgrep não acompanha
+      # a função. Alarme falso leva `nosemgrep` na linha, com o motivo num comentário.
+      - name: semgrep (regras Django/Python/OWASP)
+        run: >-
+          semgrep --error --config p/django --config p/python --config p/secrets
+          --exclude '*/tests.py'
+          --exclude-rule python.django.security.injection.csv-writer-injection.csv-writer-injection
+          apps config
 
       - name: Django check --deploy (hardening de settings)
         env:

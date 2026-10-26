@@ -44,10 +44,11 @@ def _assinatura_valida(request) -> bool:
 @require_http_methods(["GET", "POST"])
 def webhook(request):
     if request.method == "GET":
-        # Verificação do webhook (Meta chama uma vez ao configurar).
+        # Verificação do webhook (Meta chama uma vez ao configurar). O desafio só volta
+        # com o token certo, e em texto puro.
         modo = request.GET.get("hub.mode")
         token = request.GET.get("hub.verify_token")
-        desafio = request.GET.get("hub.challenge", "")
+        desafio = request.GET.get("hub.challenge", "")  # nosemgrep
         esperado = getattr(settings, "WHATSAPP_VERIFY_TOKEN", "")
         if modo == "subscribe" and esperado and hmac.compare_digest(token or "", esperado):
             return HttpResponse(desafio, content_type="text/plain")

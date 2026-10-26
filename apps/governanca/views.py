@@ -117,8 +117,8 @@ def _resposta_acao(request, aviso="", tipo="success"):
             {"error": messages.error, "warning": messages.warning}.get(
                 tipo, messages.success)(request, aviso)
         # A ficha do quarto navega de verdade (ela abre sobre a parede de blocos,
-        # e depois da ação a pessoa quer ver a parede atualizada).
-        voltar = request.POST.get("voltar")
+        # e depois da ação a pessoa quer ver a parede atualizada). Só os dois destinos fixos.
+        voltar = request.POST.get("voltar")  # nosemgrep
         if voltar in ("painel", "quartos"):
             return redirect(f"governanca:{voltar}")
         return redirect("governanca:minha_fila" if da_fila else "governanca:quartos")

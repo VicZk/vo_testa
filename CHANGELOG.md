@@ -28,6 +28,19 @@ A entrada mais nova fica no topo. As datas são as do push.
   filtro `*/tests_*.py` no bandit), `# nosec` com o motivo em
   `apps/lavanderia/templatetags/pecas_lavanderia.py`,
   `apps/marketing/templatetags/canais_marketing.py` e `apps/nucleo/documentos_privados.py`.
+- **O semgrep passou a bloquear.** Ele só gerava relatório, com a anotação "trocar
+  para `--error` quando esses forem fechados". Os 38 alertas foram conferidos, e todos
+  eram alarme falso:
+  - 34 linhas de CSV: as células passam por `apps/nucleo/export.py`, que o semgrep não
+    acompanha. Essa regra fica de fora;
+  - a volta da Governança só aceita dois destinos fixos;
+  - o formulário do "Minha reserva" tem o token CSRF;
+  - o nome e o documento do funcionário são validados antes de gravar;
+  - o webhook do WhatsApp só devolve o desafio com o token certo, em texto puro.
+
+  Os quatro últimos levam `nosemgrep` na linha, com o motivo num comentário.
+  (`.github/workflows/security.yml`, `apps/governanca/views.py`, `apps/nucleo/views.py`,
+  `apps/comercial/views_whatsapp.py`, `apps/site/templates/site/reservas/minha_reserva.html`.)
 - **Testes dos ícones passam também no Windows.** O `.gitattributes` só mantinha o
   Lucide em LF; os ícones do Tabler e o Chart.js saíam com CRLF no checkout do Windows, e
   o teste que compara o sha256 com o `origem.json` falhava só lá. Agora vale para todo o
