@@ -184,6 +184,9 @@
     fio = tok('--fio'), sup = tok('--superficie');
   Chart.defaults.color = tok('--tinta-suave');
   Chart.defaults.font.family = "'Hanken Grotesk', -apple-system, sans-serif";
+  // Valores no formato daqui: eixo curto ("R$ 60 mil") e balão com centavos.
+  const reais = v => 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const reaisCurto = v => 'R$ ' + Number(v).toLocaleString('pt-BR', { notation: 'compact', maximumFractionDigits: 1 });
   const cascata = disponivel('ctbWaterfall') && document.getElementById('ctbWaterfall').getContext('2d');
   if (cascata) criarGrafico(cascata, {
     type: 'bar',
@@ -191,18 +194,25 @@
       { data: [0, wf.receita_liquida, wf.lucro_bruto, wf.resultado, 0], backgroundColor: 'transparent', stack: 's' },
       { data: [wf.receita_bruta, wf.deducoes, wf.custos, wf.despesas, wf.resultado],
         backgroundColor: [acc, bad, bad, bad, wf.resultado < 0 ? bad : ok], borderRadius: 5, stack: 's' }] },
-    options: { responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { enabled: true } },
+    options: { responsive: true, maintainAspectRatio: false, locale: 'pt-BR',
+      plugins: { legend: { display: false },
+        // A base transparente da cascata é só apoio: o balão mostra a barra visível.
+        tooltip: { filter: item => item.datasetIndex === 1,
+          callbacks: { label: item => reais(item.raw) } } },
       scales: { x: { grid: { display: false }, ticks: { font: { size: 11 } } },
-        y: { grid: { color: fio }, stacked: true } } },
+        y: { grid: { color: fio }, stacked: true, ticks: { callback: reaisCurto } } } },
   });
   const rosca = disponivel('ctbDonut') && document.getElementById('ctbDonut').getContext('2d');
+  // A legenda com valor e fatia fica no HTML, embaixo da rosca.
+  const totalRosca = dn.reduce((soma, v) => soma + v, 0) || 1;
   if (rosca) criarGrafico(rosca, {
     type: 'doughnut',
     data: { labels: ['Serviços', 'Mercadorias'], datasets: [{
       data: dn, backgroundColor: [acc, ok], borderColor: sup, borderWidth: 3 }] },
-    options: { responsive: true, maintainAspectRatio: false, cutout: '60%',
-      plugins: { legend: { position: 'bottom' }, tooltip: { enabled: true } } },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '60%', locale: 'pt-BR',
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: item => item.label + ': ' + reais(item.raw) + ' ('
+          + (item.raw / totalRosca * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%)' } } } },
   });
   }
   function iniciar() {

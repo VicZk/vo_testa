@@ -703,6 +703,44 @@ class FluxoCaixaTests(TestCase):
         self.assertEqual(f["saidas"], Decimal("100"))      # só estorno
         self.assertEqual(f["liquido"], Decimal("900"))
 
+    def test_fluxo_diario_soma_por_dia_e_acumula_o_saldo(self):
+        from datetime import datetime
+
+        from apps.nucleo.models.financeiro import (
+            FormaPagamento,
+            MovimentoCaixa,
+            SessaoCaixa,
+        )
+        user = get_user_model().objects.create_user("opdia", password="x" * 10)
+        forma = FormaPagamento.objects.filter(
+            tipo=FormaPagamento.Tipo.DINHEIRO
+        ).first() or FormaPagamento.objects.create(nome="Dinheiro", tipo="dinheiro")
+        sessao = SessaoCaixa.objects.create(operador=user, modulo="reservas")
+        hoje = timezone.localdate()
+
+        def mov(tipo, valor, dia, origem=None, motivo=""):
+            m = MovimentoCaixa.objects.create(
+                sessao=sessao, forma_pagamento=forma, tipo=tipo,
+                valor=Decimal(valor), descricao="x", criado_por=user,
+                movimento_origem=origem, motivo=motivo,
+            )
+            quando = timezone.make_aware(datetime(hoje.year, hoje.month, dia, 14))
+            MovimentoCaixa.objects.filter(pk=m.pk).update(criado_em=quando)
+            return m
+        rec = mov(MovimentoCaixa.Tipo.RECEBIMENTO, "1000", 1)
+        mov(MovimentoCaixa.Tipo.REFORCO, "50", 1)        # interno → fica de fora
+        mov(MovimentoCaixa.Tipo.RECEBIMENTO, "200", 2)
+        mov(MovimentoCaixa.Tipo.ESTORNO, "100", 2, origem=rec, motivo="devolução")
+        dias = rel.fluxo_diario(hoje.year, hoje.month)
+        self.assertEqual([d["dia"].day for d in dias], [1, 2])
+        self.assertEqual((dias[0]["entradas"], dias[0]["saidas"], dias[0]["saldo"]),
+                         (Decimal("1000"), Decimal("0.00"), Decimal("1000")))
+        self.assertEqual((dias[1]["entradas"], dias[1]["saidas"], dias[1]["liquido"],
+                          dias[1]["saldo"]),
+                         (Decimal("200"), Decimal("100"), Decimal("100"), Decimal("1100")))
+        # O saldo do último dia fecha com o líquido do mês.
+        self.assertEqual(dias[-1]["saldo"], rel.fluxo_caixa(hoje.year, hoje.month)["liquido"])
+
 
 class OrfaosTests(TestCase):
     def test_categoria_sem_depara_aparece(self):
@@ -721,6 +759,21 @@ class PainelViewTests(TestCase):
             "chefe", "c@x.com", "x" * 10
         )
         self.client.force_login(self.admin)
+
+    def test_aba_da_url_abre_direto(self):
+        resp = self.client.get("/crm/contabil/?ano=2026&mes=9&aba=fluxo")
+        self.assertContains(resp, 'class="painel-aba on" id="aba-fluxo"')
+        self.assertNotContains(resp, 'class="painel-aba on" id="aba-dre"')
+        # Aba desconhecida volta à DRE; a paginação (só a fila de órfãos tem) abre a fila.
+        resp = self.client.get("/crm/contabil/?ano=2026&mes=9&aba=xpto")
+        self.assertContains(resp, 'class="painel-aba on" id="aba-dre"')
+        resp = self.client.get("/crm/contabil/?ano=2026&mes=9&pagina=2")
+        self.assertContains(resp, 'class="painel-aba on" id="aba-depara"')
+
+    def test_dre_de_janeiro_compara_com_dezembro_do_ano_anterior(self):
+        resp = self.client.get("/crm/contabil/?ano=2026&mes=1")
+        self.assertContains(resp, "Jan/2026")
+        self.assertContains(resp, "Dez/2025")
 
     def test_painel_200(self):
         resp = self.client.get("/crm/contabil/?ano=2026&mes=9")

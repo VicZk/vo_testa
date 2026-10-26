@@ -16,7 +16,8 @@ from apps.nucleo.export import celula, resposta_csv
 from apps.nucleo.forms import ReaisInput
 from apps.nucleo.formularios import erros_do_formulario
 from apps.nucleo.modulos import Modulo
-from apps.nucleo.periodos import _mes_ano, selecao_periodo
+from apps.nucleo.paginacao import paginar
+from apps.nucleo.periodos import MESES_PT, _mes_ano, selecao_periodo
 from apps.nucleo.permissoes import requer_gerencia, requer_modulo
 
 from . import relatorios
@@ -30,18 +31,64 @@ def _periodo(request):
     return ano, mes
 
 
+# Abas do painel, na ordem da tela. `?aba=` abre direto numa delas (o JS mantém o
+# parâmetro na URL ao trocar, para a troca de mês e o recarregar não voltarem à DRE).
+ABAS = (
+    ("dre", "DRE gerencial"), ("fluxo", "Fluxo de caixa"), ("plano", "Plano de contas"),
+    ("depara", "A classificar"), ("fechar", "Fechar o mês"), ("export", "Exportar"),
+)
+
+
+def _porcento(valor: Decimal) -> str:
+    return f"{valor:.1f}%".replace(".", ",")
+
+
+def _fatia(valor: Decimal, base: Decimal) -> str:
+    """Peso da linha na receita bruta (análise vertical); sem receita, "—"."""
+    return _porcento(valor / base * 100) if base > 0 else "—"
+
+
+def _variacao(atual: Decimal, anterior: Decimal) -> str | None:
+    """"↑ 16,3%" sobre o mês anterior; sem base positiva para comparar, None."""
+    if anterior <= 0:
+        return None
+    pct = (atual - anterior) / anterior * 100
+    seta = "↑" if pct > 0 else ("↓" if pct < 0 else "→")
+    return f"{seta} {_porcento(abs(pct))}"
+
+
 @never_cache
 @requer_modulo(Modulo.CONTABIL)
 @requer_gerencia
 def painel(request):
     ano, mes = _periodo(request)
+    ano_ant, mes_ant = (ano - 1, 12) if mes == 1 else (ano, mes - 1)
     dados_dre = relatorios.dre(ano, mes)
+    dre_ant = relatorios.dre(ano_ant, mes_ant)
+    # As duas DREs saem da mesma lista de linhas, na mesma ordem.
+    linhas_dre = [
+        {"rotulo": rotulo, "estilo": estilo, "valor": valor, "anterior": anterior,
+         "fatia": _fatia(valor, dados_dre["receita_bruta"])}
+        for (_, rotulo, valor, estilo), (_, _, anterior, _) in zip(
+            dados_dre["linhas"], dre_ant["linhas"], strict=True)
+    ]
+    variacao = {chave: _variacao(dados_dre[chave], dre_ant[chave])
+                for chave in ("receita_liquida", "lucro_bruto", "despesas", "resultado")}
     fluxo = relatorios.fluxo_caixa(ano, mes)
     orf = relatorios.orfaos()
     totais = relatorios._totais_por_conta(ano, mes)
     contas = []
     for c in plano_de_contas():
         contas.append({"conta": c, "total": totais.get(c.classificacao, Decimal("0.00"))})
+    servicos = totais.get("3.1.01.03", Decimal("0.00"))
+    mercadorias = totais.get("3.1.01.01", Decimal("0.00"))
+    natureza = {"servicos": servicos, "mercadorias": mercadorias,
+                "servicos_fatia": _fatia(servicos, servicos + mercadorias),
+                "mercadorias_fatia": _fatia(mercadorias, servicos + mercadorias)}
+    aba = request.GET.get("aba")
+    if aba not in dict(ABAS):
+        # A única lista paginada é a dos lançamentos a classificar.
+        aba = "depara" if "pagina" in request.GET else "dre"
     fechamento = FechamentoMensal.objects.filter(ano=ano, mes=mes).first()
     from apps.nucleo.models.cadastros import folha_base
     folha = folha_base()
@@ -51,18 +98,14 @@ def painel(request):
 
     # Receita futura contratada (reservas confirmadas ainda não hospedadas).
     from apps.nucleo.models import modulo_ativo
-    from apps.nucleo.periodos import MESES_PT
-    futura = {"total": Decimal("0.00"), "qtd": 0, "por_mes": []}
+    futura ={"total": Decimal("0.00"), "qtd": 0, "por_mes": []}
     if modulo_ativo(Modulo.RESERVAS):
         from apps.reservas.services import receita_contratada_futura
         futura = receita_contratada_futura()
         for linha in futura["por_mes"]:
             linha["rotulo"] = f"{MESES_PT[linha['mes']]}/{linha['ano']}"
 
-    donut = [
-        float(totais.get("3.1.01.03", Decimal("0.00"))),  # serviços
-        float(totais.get("3.1.01.01", Decimal("0.00"))),  # mercadorias
-    ]
+    donut = [float(servicos), float(mercadorias)]
     waterfall = {
         "labels": ["Rec. bruta", "(−) Deduções", "(−) Custos", "(−) Despesas", "Resultado"],
         "receita_bruta": float(dados_dre["receita_bruta"]),
@@ -79,6 +122,11 @@ def painel(request):
         "donut": donut, "waterfall": waterfall, "folha_cadastro": folha,
         "folha_cadastro_campo": ReaisInput().format_value(folha["total"]),
         "form_fechamento": form_fechamento, "futura": futura,
+        "abas": ABAS, "aba": aba, "linhas_dre": linhas_dre, "variacao": variacao,
+        "natureza": natureza, "dias": relatorios.fluxo_diario(ano, mes),
+        "titulos": fluxo["titulos"],
+        "pagina_orfaos": paginar(request, orf["lancamentos"], por_pagina=50),
+        "nome_mes": MESES_PT[mes], "nome_mes_ant": MESES_PT[mes_ant], "ano_ant": ano_ant,
         **selecao_periodo(request),
     })
 
@@ -100,7 +148,7 @@ def fechar(request):
 
     ano = _int("ano", hoje.year)
     mes = _int("mes", hoje.month)
-    voltar = f"{reverse('contabil:painel')}?ano={ano}&mes={mes}#fechar"
+    voltar = f"{reverse('contabil:painel')}?ano={ano}&mes={mes}&aba=fechar"
     if not (1 <= mes <= 12 and 2000 <= ano <= 2100):
         messages.error(request, "Mês ou ano inválido para o fechamento.")
         return redirect(reverse("contabil:painel"))

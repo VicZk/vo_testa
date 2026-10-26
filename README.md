@@ -91,7 +91,7 @@ consultadas nesta revisão. Esta é uma **fork de desenvolvimento**: publicar na
 | Site + motor de reservas, Portal do hóspede | Implementados |
 | Comercial (funil, WhatsApp, e-mail, landing pages) e Marketing (campanhas) | Implementados |
 | Relatórios, Auditoria (pendências, trilha e fechamentos), Conciliação (OFX e cartão) | Implementados |
-| Contábil / gerencial (DRE, fluxo de caixa, fechamento mensal, export para o contador) | Vindo do original (24/10) e integrado aos fluxos do fork em 25/10 |
+| Contábil / gerencial (DRE comparada ao mês anterior, fluxo de caixa dia a dia, fila a classificar, fechamento mensal, export para o contador) | Vindo do original (24/10), integrado aos fluxos do fork em 25/10; painel revisto em 26/10 |
 | Pagamentos online | Safrapay implementado; ativação em produção a confirmar. Pix direto tem baixa manual |
 | FNRH Digital (envio ao governo) | Integração Serpro escrita; credenciais e homologação precisam ser verificadas no ambiente |
 | Fiscal (NFS-e/NFC-e) | Focus NFe v2 e Spedy (NFS-e, vindo do original em 25/10) implementados; cadastro, credenciais e homologação pendentes de configuração |

@@ -10,7 +10,8 @@ import calendar
 from datetime import date
 from decimal import Decimal
 
-from django.db.models import Sum
+from django.db.models import Count, Q, Sum
+from django.db.models.functions import TruncDate
 
 from apps.nucleo.models.financeiro import (
     CategoriaFinanceira,
@@ -97,15 +98,45 @@ def dre(ano: int, mes: int) -> dict:
     }
 
 
-def fluxo_caixa(ano: int, mes: int) -> dict:
-    """Realizado (MovimentoCaixa) + projetado (contas em aberto no período)."""
-    ini, fim = periodo(ano, mes)
+def _movimentos_de_negocio(ini: date, fim: date):
     # Só movimentos de NEGÓCIO: recebimento (entra) e estorno (sai, devolução).
     # Reforço e sangria são internos (troco/cofre) — não são fluxo do negócio.
-    movs = MovimentoCaixa.objects.filter(
+    return MovimentoCaixa.objects.filter(
         criado_em__date__range=(ini, fim),
         tipo__in=[MovimentoCaixa.Tipo.RECEBIMENTO, MovimentoCaixa.Tipo.ESTORNO],
     )
+
+
+def fluxo_diario(ano: int, mes: int) -> list[dict]:
+    """O caixa do mês dia a dia (os mesmos movimentos do `fluxo_caixa`): entradas,
+    saídas, o líquido do dia e o saldo acumulado no mês. No máximo 31 linhas, em vez
+    de um movimento por linha (um mês de restaurante e loja passa de mil)."""
+    ini, fim = periodo(ano, mes)
+    por_dia = (
+        _movimentos_de_negocio(ini, fim)
+        .annotate(dia=TruncDate("criado_em"))
+        .values("dia")
+        .annotate(
+            entradas=Sum("valor", filter=Q(tipo=MovimentoCaixa.Tipo.RECEBIMENTO)),
+            saidas=Sum("valor", filter=Q(tipo=MovimentoCaixa.Tipo.ESTORNO)),
+            qtd=Count("id"),
+        )
+        .order_by("dia")
+    )
+    saldo = ZERO
+    dias = []
+    for linha in por_dia:
+        entradas, saidas = linha["entradas"] or ZERO, linha["saidas"] or ZERO
+        saldo += entradas - saidas
+        dias.append({"dia": linha["dia"], "entradas": entradas, "saidas": saidas,
+                     "liquido": entradas - saidas, "saldo": saldo, "qtd": linha["qtd"]})
+    return dias
+
+
+def fluxo_caixa(ano: int, mes: int) -> dict:
+    """Realizado (MovimentoCaixa) + projetado (contas em aberto no período)."""
+    ini, fim = periodo(ano, mes)
+    movs = _movimentos_de_negocio(ini, fim)
 
     entradas = movs.filter(tipo=MovimentoCaixa.Tipo.RECEBIMENTO).aggregate(
         s=Sum("valor"))["s"] or ZERO

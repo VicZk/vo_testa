@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% load moeda static %}
+{% load moeda %}
 
 {% block titulo %}Contábil · Gerencial{% endblock %}
 
 {% block conteudo %}
 <style>
-/* ===== Camada Contábil — réplica do mockup, em tokens Lampião. Escopo .ctb ===== */
+/* ===== Painel Contábil — escopo .ctb, só tokens do app.css ===== */
 /* O dourado de faixa e gráfico é o --lampiao; como TEXTO sobre claro, o --lampiao-tinta
    (o claro dá ~2:1 de contraste, abaixo do mínimo até para número grande). */
 .ctb { --acc: var(--lampiao); --acc-texto: var(--lampiao-tinta); }
@@ -13,7 +13,7 @@
 /* Filtro de período no cabeçalho: controle solto, não barra que estica. */
 .ctb .filtro-inline { justify-content:flex-end; gap:.6rem; }
 .ctb .filtro-inline .filtro-campo { flex:0 0 auto; }
-.ctb .periodo { color:var(--tinta-suave); margin-bottom:1.2rem; }
+.ctb .periodo { color:var(--tinta-suave); margin:0 0 1.2rem; max-width:none; }
 
 /* Abas: componente da casa (.abas-secao/.est-aba). Como aqui são <button>
    (troca de painel sem recarregar), só o reset do botão mora nesta tela. */
@@ -21,88 +21,122 @@
 .ctb .painel-aba { display:none; }
 .ctb .painel-aba.on { display:block; animation:materializa var(--mov-padrao) var(--curva-entrada); }
 
-/* kpis */
-.ctb .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr)); gap:1rem; margin-bottom:1.4rem; }
-.ctb .kpi .rotulo { text-transform:uppercase; letter-spacing:.07em; font-size:max(var(--rotulo-min), .72rem); color:var(--tinta-suave); font-weight:600; }
-.ctb .kpi .valor { font-size:2rem; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; margin-top:.2rem; }
-.ctb .kpi .valor.pos { color:var(--sucesso); } .ctb .kpi .valor.neg { color:var(--perigo); } .ctb .kpi .valor.acc { color:var(--acc-texto); }
-.ctb .kpi .foot { font-size:max(var(--rotulo-min), .78rem); color:var(--tinta-suave); margin-top:.1rem; }
+/* Indicadores: o .kpi da casa. Cor só onde o sinal importa (resultado, líquido,
+   projetado); receita, custo e despesa ficam na tinta. */
+.ctb .kpis { margin:0 0 1.4rem; }
+.ctb .kpi-nota { font-variant-numeric:tabular-nums; }
 
-/* No estreito, a densidade dos indicadores da casa: dois por linha, número que cabe
-   no cartão (a regra geral dos .kpis perde para a desta tela, mais específica). */
-@container conteudo (max-width:42rem){
-  .ctb .kpis { grid-template-columns:repeat(2,minmax(0,1fr)); gap:.7rem; }
-  .ctb .kpis > .kpi { min-width:0; padding:1rem .85rem; }
-  .ctb .kpi .valor { font-size:clamp(1.05rem, 5cqi, 1.5rem); overflow-wrap:anywhere; }
-}
+.ctb .link-aba { background:none; border:0; padding:0; font:inherit; font-weight:600; color:inherit; text-decoration:underline; text-underline-offset:2px; cursor:pointer; }
 
 /* Quem divide espaço decide pelo ESPAÇO: o menu aberto/recolhido muda a largura
    útil e o @media só enxerga a janela. `.conteudo` é container nomeado no app.css. */
-.ctb .duas { display:grid; grid-template-columns:1.25fr .9fr; gap:1.2rem; align-items:start; }
-@container conteudo (max-width:56rem){ .ctb .duas { grid-template-columns:1fr; } }
-.ctb .chart-box { position:relative; height:320px; }
-.ctb .chart-box.sm { height:240px; }
+.ctb .duas { display:grid; grid-template-columns:1.35fr .9fr; gap:1.2rem; align-items:start; }
+/* min-width:0: o canvas do Chart.js tem largura em px e, sem isso, segurava a coluna
+   larga com o menu aberto (a DRE saía da tela em 821 px). */
+.ctb .duas > *, .ctb .coluna-graficos > * { min-width:0; }
+@container conteudo (max-width:60rem){ .ctb .duas { grid-template-columns:1fr; } }
+.ctb .chart-box { position:relative; height:300px; }
+.ctb .chart-box.sm { height:210px; }
 
-/* DRE table */
+/* Tabelas da tela */
 .ctb table.dre { width:100%; border-collapse:collapse; font-size:.94rem; }
 .ctb table.dre :is(td, th) { padding:.6rem .8rem; border-bottom:1px solid var(--fio); text-align:left; }
 .ctb table.dre :is(td, th).num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
 .ctb table.dre thead th { font-size:max(var(--rotulo-min), .72rem); text-transform:uppercase; letter-spacing:.07em; color:var(--tinta-suave); font-weight:600; }
+.ctb table.dre tbody tr:last-child td { border-bottom:0; }
 .ctb tr.l-grupo td { font-weight:700; background:color-mix(in srgb, var(--lampiao) 8%, transparent); }
 .ctb tr.l-sub td:first-child { padding-left:2rem; color:var(--tinta-suave); }
 .ctb tr.l-resultado td { font-weight:800; border-top:2px solid var(--fio); }
+.ctb tr.zero td.num, .ctb td.num.zero { color:var(--tinta-suave); }
+.ctb td.num.neg, .ctb .v.neg { color:var(--perigo); }
+.ctb .col-av, .ctb td.col-ant { color:var(--tinta-suave); }
+.ctb td.col-av { font-size:.86rem; }
+/* A DRE perde colunas pela largura do próprio cartão: primeiro o mês anterior,
+   depois a fatia da receita. */
+.ctb .cartao-dre { container:dre / inline-size; }
+@container dre (max-width:36rem){ .ctb .col-ant { display:none; } }
+@container dre (max-width:25rem){ .ctb .col-av { display:none; } .ctb table.dre :is(td, th) { padding:.55rem .6rem; } .ctb tr.l-sub td:first-child { padding-left:1.1rem; } }
+@container conteudo (max-width:30rem){ .ctb table.dre :is(td, th) { padding:.55rem .55rem; } }
 
-/* bridge */
-.ctb .bridge { display:grid; grid-template-columns:1fr auto 1fr auto 1fr; gap:.6rem; align-items:center; }
-@container conteudo (max-width:47.5rem){ .ctb .bridge{ grid-template-columns:1fr;} .ctb .bridge .op{display:none;} }
-.ctb .bridge .op { font-size:1.4rem; color:var(--acc); text-align:center; }
-.ctb .bridge .b { background:var(--canvas); border:1px solid var(--fio); border-radius:var(--raio); padding:1rem; text-align:center; }
-.ctb .bridge .b .l { font-size:max(var(--rotulo-min), .72rem); text-transform:uppercase; letter-spacing:.06em; color:var(--tinta-suave); }
-.ctb .bridge .b .v { font-size:1.3rem; font-weight:700; font-variant-numeric:tabular-nums; margin-top:.2rem; }
+/* Rosca com legenda em HTML: valor e fatia de cada natureza. */
+.ctb .legenda-rosca { list-style:none; margin:.9rem 0 0; padding:0; display:grid; gap:.45rem; }
+.ctb .legenda-rosca li { display:flex; align-items:center; gap:.55rem; font-size:.9rem; }
+.ctb .legenda-rosca .marca { flex:none; width:.7rem; height:.7rem; border-radius:50%; }
+.ctb .legenda-rosca .marca-servicos { background:var(--lampiao); }
+.ctb .legenda-rosca .marca-mercadorias { background:var(--sucesso); }
+.ctb .legenda-rosca strong { margin-left:auto; font-family:var(--fonte-ui); font-weight:600; font-variant-numeric:tabular-nums; }
+.ctb .legenda-rosca .fatia { min-width:3.4rem; text-align:right; color:var(--tinta-suave); font-variant-numeric:tabular-nums; }
 
-/* plano tree */
+/* Ponte do realizado ao projetado: lado a lado no largo; no estreito vira extrato
+   (o sinal entra na frente do rótulo). */
+.ctb .ponte { display:grid; grid-template-columns:1fr auto 1fr auto 1fr auto 1fr; gap:.6rem; align-items:center; }
+.ctb .ponte .op { font-size:1.3rem; color:var(--acc-texto); text-align:center; }
+.ctb .ponte .b { min-width:0; background:var(--canvas); border:1px solid var(--fio); border-radius:var(--raio); padding:1rem; text-align:center; }
+.ctb .ponte .b-total { background:color-mix(in srgb, var(--lampiao) 10%, var(--superficie)); border-color:color-mix(in srgb, var(--lampiao) 35%, transparent); }
+.ctb .ponte .l { font-size:max(var(--rotulo-min), .72rem); text-transform:uppercase; letter-spacing:.06em; color:var(--tinta-suave); }
+.ctb .ponte .v { font-size:1.3rem; font-weight:700; font-variant-numeric:tabular-nums; margin-top:.2rem; overflow-wrap:anywhere; }
+@container conteudo (max-width:60rem){
+  .ctb .ponte { grid-template-columns:1fr; gap:.4rem; }
+  .ctb .ponte .op { display:none; }
+  .ctb .ponte .b { display:flex; align-items:baseline; gap:.45rem; padding:.7rem .9rem; text-align:left; }
+  .ctb .ponte .b[data-op]::before { content:attr(data-op); font-weight:700; color:var(--acc-texto); }
+  .ctb .ponte .v { margin:0 0 0 auto; font-size:1.05rem; white-space:nowrap; }
+}
+
+/* Plano de contas e listas da fila */
 .ctb .conta-linha { display:flex; align-items:center; gap:.8rem; padding:.5rem .6rem; border-bottom:1px solid var(--fio); font-size:.92rem; }
+.ctb .conta-linha:last-child { border-bottom:0; }
 .ctb .conta-linha .cod { font-variant-numeric:tabular-nums; color:var(--acc-texto); font-weight:700; min-width:80px; }
 .ctb .conta-linha.sintetica { font-weight:700; background:color-mix(in srgb, var(--lampiao) 6%, transparent); }
 .ctb .conta-linha.sintetica .cod { color:var(--tinta); }
 .ctb .conta-linha .nome { flex:1 1 auto; min-width:0; }
 .ctb .conta-linha .v { margin-left:auto; flex:none; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.ctb .conta-linha .v.zero { color:var(--tinta-suave); }
+.ctb .conta-linha .botao-mini { flex:none; }
 /* Recuo pela profundidade da conta. A classe vem do comprimento do código
-   (1 → ind-1, 3.1.01 → ind-6, 3.1.01.01 → ind-9): antes ind-1/2/3, e só a raiz
-   recuava — o grupo e a analítica ficavam à esquerda dela. */
+   (1 → ind-1, 3.1.01 → ind-6, 3.1.01.01 → ind-9). */
 .ctb .ind-1 { padding-left:.6rem; } .ctb .ind-6 { padding-left:1.4rem; } .ctb .ind-9 { padding-left:2.2rem; }
+.ctb .sub { display:block; margin-top:.15rem; white-space:normal; }
+.ctb .sub .rotulo-dado { white-space:normal; }
+.ctb .linha-fila { flex-wrap:wrap; }
+.ctb .linha-fila .nome { flex:1 1 10rem; }
+
+/* Fluxo: caixa dia a dia. No estreito, entradas e saídas dão lugar ao líquido do dia. */
+.ctb .cartao-dias { container:dias / inline-size; }
+.ctb .col-liquido { display:none; }
+@container dias (max-width:32rem){ .ctb .col-detalhe { display:none; } .ctb .col-liquido { display:table-cell; } }
+.ctb .dia-semana { margin-left:.3rem; color:var(--tinta-suave); font-size:.8rem; }
+.ctb table.dre thead th.num { white-space:normal; }
+@container dias (max-width:22rem){ .ctb .dia-semana { display:none; } .ctb .cartao-dias table.dre :is(td, th) { padding:.5rem .4rem; font-size:.86rem; } }
 
 /* fechar form */
-.ctb .form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr)); gap:1.1rem 1.2rem; margin-bottom:1rem; align-items:start; }
+.ctb .form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr)); gap:1.1rem 1.2rem; margin-bottom:1rem; align-items:start; }
 .ctb .form-campo { display:flex; flex-direction:column; }
 .ctb .form-grid label { min-height:2.5em; font-size:max(var(--rotulo-min), .72rem); text-transform:uppercase; letter-spacing:.06em; color:var(--tinta-suave); margin-bottom:.3rem; line-height:1.4; }
-.ctb .hint { text-transform:none; letter-spacing:0; font-weight:400; opacity:.75; }
+.ctb .hint { text-transform:none; letter-spacing:0; font-weight:400; color:var(--tinta-suave); }
 .ctb .form-grid input { width:100%; padding:.55rem .7rem; border:1px solid var(--fio); border-radius:var(--raio-p); background:var(--superficie); color:var(--tinta); font-family:inherit; font-variant-numeric:tabular-nums; }
-/* Texto e botão lado a lado; sem espaço, o botão desce alinhado à esquerda (antes
-   levava o recuo de quando estava ao lado do texto). */
+/* Texto e botão lado a lado; sem espaço, o botão desce alinhado à esquerda. */
 .ctb .folha-dica { display:flex; flex-wrap:wrap; align-items:center; gap:.35rem .6rem; margin-top:.4rem; line-height:1.5; }
 
 .ctb .export-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr)); gap:1rem; }
-.ctb .vazio { color:var(--tinta-suave); padding:1rem; text-align:center; max-width:none; }
+.ctb .export-grid .cartao { display:flex; flex-direction:column; gap:.45rem; }
+.ctb .export-grid h3 { font-size:1.05rem; margin:0; }
+.ctb .export-grid p { margin:0 0 .5rem; color:var(--tinta-suave); }
+.ctb .export-grid .botao-neutro { margin-top:auto; }
+.ctb .linha-vazia { color:var(--tinta-suave); margin:.2rem 0 0; }
+.ctb .cartao-tabela > .linha-vazia { margin:0; padding:.2rem .8rem .8rem; }
+.ctb .texto-cartao { margin:0; padding:0 .8rem .7rem; max-width:none; }
 
 /* Blocos da tela — o projeto não aceita `style=` estático no template
    (teste EstiloForaDoAtributoTests); o desenho mora aqui, em tokens. */
 .ctb .cartao-tabela { padding:.4rem; }
 .ctb .cartao-bloco { margin-bottom:1.2rem; }
-.ctb .cartao-form { max-width:640px; }
-.ctb .coluna-graficos { display:grid; gap:1.2rem; }
+.ctb .cartao-form { max-width:720px; }
+.ctb .coluna-graficos { display:grid; grid-template-columns:minmax(0, 1fr); gap:1.2rem; }
 .ctb .t-grafico { font-size:1rem; margin-bottom:.4rem; }
-.ctb .t-bloco { font-size:1rem; margin-bottom:.8rem; }
-.ctb .t-secao { font-size:1.05rem; margin-bottom:.6rem; }
-.ctb .t-form { font-size:1.1rem; margin-bottom:.3rem; }
-.ctb .cab-bloco { display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:.5rem; margin-bottom:.6rem; }
-.ctb .cab-bloco h3 { font-size:1rem; }
-.ctb .export-grid h3 { font-size:1.05rem; }
-.ctb .bridge .b .v.pos { color:var(--sucesso); }
-.ctb .bridge .b .v.neg { color:var(--perigo); }
-.ctb .conta-linha .rotulo-dado { margin-left:auto; }
-.ctb .selo.ao-lado { margin-left:.6rem; }
-.ctb .nota { display:block; margin-top:.5rem; }
+.ctb .cab-bloco { display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:.3rem 1rem; margin-bottom:.6rem; }
+.ctb .cab-bloco :is(h3, h4) { font-size:1rem; margin:0; }
+.ctb .cartao-tabela > .cab-bloco { padding:.8rem .8rem 0; }
 .ctb .nota-rodape { margin-top:.8rem; }
 .ctb .esp-fim { margin-bottom:1.4rem; }
 /* Papel: sem abas nem seletor, a folha diz a competência e cada seção traz o próprio
@@ -110,7 +144,7 @@
    (formulário) e Exportar (links) não têm o que fazer no papel. */
 .ctb .so-papel { display:none; }
 @media print {
-  .ctb .abas-secao, .ctb .filtro-barra, .botao-neutro { display:none !important; }
+  .ctb .abas-secao, .ctb .filtro-barra, .ctb .botao-neutro, .ctb .botao-mini, .ctb .link-aba, .ctb .paginacao { display:none !important; }
   .ctb .painel-aba { display:block !important; animation:none; }
   .ctb .painel-aba.fora-do-papel { display:none !important; }
   .ctb .so-papel { display:block; }
@@ -119,7 +153,7 @@
   .ctb .duas { grid-template-columns:1fr; }
   .ctb .chart-box, .ctb .chart-box.sm { height:auto; }
   .ctb .chart-box canvas { width:100% !important; height:auto !important; }
-  .ctb .coluna-graficos .cartao { break-inside:avoid; }
+  .ctb .coluna-graficos .cartao, .ctb .cartao-bloco { break-inside:avoid; }
 }
 </style>
 
@@ -128,9 +162,10 @@
     <div>
       <p class="eyebrow">Financeiro</p>
       <h1>Painel Contábil</h1>
-      <p class="so-papel competencia-papel">Competência: {% for num, nome in meses %}{% if num == mes_sel %}{{ nome }}{% endif %}{% endfor %}/{{ ano_sel }}</p>
+      <p class="so-papel competencia-papel">Competência: {{ nome_mes }}/{{ ano }}</p>
     </div>
     <form method="get" class="filtro-barra filtro-inline">
+      <input type="hidden" name="aba" value="{{ aba }}">
       <div class="filtro-campo"><label for="ctb-mes">Mês</label>
         <select id="ctb-mes" name="mes" onchange="this.form.submit()">
           {% for num, nome in meses %}<option value="{{ num }}" {% if num == mes_sel %}selected{% endif %}>{{ nome }}</option>{% endfor %}
@@ -144,137 +179,203 @@
   </div>
 
   <nav class="est-abas abas-secao" role="tablist" aria-label="Seções do Contábil">
-    <button type="button" class="est-aba ativo" role="tab" aria-selected="true" aria-controls="aba-dre" data-aba="dre">DRE gerencial</button>
-    <button type="button" class="est-aba" role="tab" aria-selected="false" aria-controls="aba-fluxo" data-aba="fluxo">Fluxo de caixa</button>
-    <button type="button" class="est-aba" role="tab" aria-selected="false" aria-controls="aba-plano" data-aba="plano">Plano de contas</button>
-    <button type="button" class="est-aba" role="tab" aria-selected="false" aria-controls="aba-depara" data-aba="depara">A classificar{% if orfaos.total %} <span class="n">{{ orfaos.total }}</span>{% endif %}</button>
-    <button type="button" class="est-aba" role="tab" aria-selected="false" aria-controls="aba-fechar" data-aba="fechar">Fechar o mês</button>
-    <button type="button" class="est-aba" role="tab" aria-selected="false" aria-controls="aba-export" data-aba="export">Exportar</button>
+    {% for chave, rotulo in abas %}
+    <button type="button" class="est-aba{% if chave == aba %} ativo{% endif %}" role="tab" id="tab-{{ chave }}" aria-selected="{% if chave == aba %}true{% else %}false{% endif %}" aria-controls="aba-{{ chave }}" tabindex="{% if chave == aba %}0{% else %}-1{% endif %}" data-aba="{{ chave }}">{{ rotulo }}{% if chave == "depara" and orfaos.total %} <span class="n">{{ orfaos.total|milhar }}</span>{% endif %}</button>
+    {% endfor %}
   </nav>
 
   {# ===================== DRE ===================== #}
-  <section class="painel-aba on" id="aba-dre" role="tabpanel" tabindex="0">
+  <section class="painel-aba{% if aba == 'dre' %} on{% endif %}" id="aba-dre" role="tabpanel" aria-labelledby="tab-dre" tabindex="0">
     <h2 class="so-papel titulo-papel">DRE gerencial</h2>
     <div class="kpis">
-      <div class="cartao kpi"><div class="rotulo">Receita líquida</div><div class="valor">{{ dre.receita_liquida|intcomma_brl }}</div></div>
-      <div class="cartao kpi"><div class="rotulo">Lucro bruto</div><div class="valor acc">{{ dre.lucro_bruto|intcomma_brl }}</div></div>
-      <div class="cartao kpi"><div class="rotulo">Despesas operacionais</div><div class="valor neg">{{ dre.despesas|intcomma_brl }}</div></div>
-      <div class="cartao kpi"><div class="rotulo">Resultado do período</div><div class="valor {% if dre.resultado < 0 %}neg{% else %}pos{% endif %}">{{ dre.resultado|intcomma_brl }}</div><div class="foot">Margem {{ dre.margem }}</div></div>
+      <div class="kpi"><span class="kpi-rotulo letreiro">Receita líquida</span>
+        <span class="kpi-valor">{{ dre.receita_liquida|intcomma_brl }}</span>
+        {% if variacao.receita_liquida %}<span class="kpi-nota">{{ variacao.receita_liquida }} sobre {{ nome_mes_ant|lower }}</span>{% endif %}</div>
+      <div class="kpi"><span class="kpi-rotulo letreiro">Lucro bruto</span>
+        <span class="kpi-valor">{{ dre.lucro_bruto|intcomma_brl }}</span>
+        {% if variacao.lucro_bruto %}<span class="kpi-nota">{{ variacao.lucro_bruto }} sobre {{ nome_mes_ant|lower }}</span>{% endif %}</div>
+      <div class="kpi"><span class="kpi-rotulo letreiro">Despesas operacionais</span>
+        <span class="kpi-valor">{{ dre.despesas|intcomma_brl }}</span>
+        {% if variacao.despesas %}<span class="kpi-nota">{{ variacao.despesas }} sobre {{ nome_mes_ant|lower }}</span>{% endif %}</div>
+      <div class="kpi {% if dre.resultado < 0 %}alerta{% else %}kpi-destaque{% endif %}"><span class="kpi-rotulo letreiro">Resultado do período</span>
+        <span class="kpi-valor">{{ dre.resultado|intcomma_brl }}</span>
+        <span class="kpi-nota">Margem {{ dre.margem }}{% if variacao.resultado %} · {{ variacao.resultado }} sobre {{ nome_mes_ant|lower }}{% endif %}</span></div>
     </div>
 
     {% if dre.nao_classificado %}
-    <p class="aviso-inline">{{ dre.nao_classificado|intcomma_brl }} em lançamentos sem conta — ver a aba "A classificar".</p>
+    <p class="aviso-inline">{{ dre.nao_classificado|intcomma_brl }} em lançamentos sem conta contábil ficaram fora da DRE. <button type="button" class="link-aba" data-ir-aba="depara">Classificar</button></p>
     {% endif %}
 
     <div class="duas">
-      <div class="cartao cartao-tabela">
-        <table class="dre">
-          {% for nivel, rotulo, valor, estilo in dre.linhas %}
-          <tr class="l-{{ estilo }}"><td>{{ rotulo }}</td><td class="num">{{ valor|intcomma_brl }}</td></tr>
+      <div class="cartao cartao-tabela cartao-dre">
+        <table class="dre" aria-label="DRE de {{ nome_mes|lower }} de {{ ano }}">
+          <thead><tr>
+            <th scope="col">Conta</th>
+            <th scope="col" class="num">{{ nome_mes|slice:":3" }}/{{ ano }}</th>
+            <th scope="col" class="num col-av">% receita</th>
+            <th scope="col" class="num col-ant">{{ nome_mes_ant|slice:":3" }}/{{ ano_ant }}</th>
+          </tr></thead>
+          <tbody>
+          {% for l in linhas_dre %}
+          <tr class="l-{{ l.estilo }}{% if not l.valor %} zero{% endif %}"><td>{{ l.rotulo }}</td><td class="num">{{ l.valor|intcomma_brl }}</td><td class="num col-av">{{ l.fatia }}</td><td class="num col-ant">{{ l.anterior|intcomma_brl }}</td></tr>
           {% endfor %}
+          </tbody>
         </table>
       </div>
       <div class="coluna-graficos">
         <div class="cartao"><h3 class="t-grafico">Composição do resultado</h3>
-          <div class="chart-box"><canvas id="ctbWaterfall"></canvas></div></div>
+          <div class="chart-box"><canvas id="ctbWaterfall" role="img" aria-label="Cascata da receita bruta ao resultado; os valores estão na tabela da DRE"></canvas></div></div>
         <div class="cartao"><h3 class="t-grafico">Receita por natureza</h3>
-          <div class="chart-box sm"><canvas id="ctbDonut"></canvas></div></div>
+          {% if natureza.servicos or natureza.mercadorias %}
+          <div class="chart-box sm"><canvas id="ctbDonut" role="img" aria-label="Rosca da receita por natureza; os valores estão na legenda"></canvas></div>
+          <ul class="legenda-rosca">
+            <li><span class="marca marca-servicos" aria-hidden="true"></span>Serviços<strong>{{ natureza.servicos|intcomma_brl }}</strong><span class="fatia">{{ natureza.servicos_fatia }}</span></li>
+            <li><span class="marca marca-mercadorias" aria-hidden="true"></span>Mercadorias<strong>{{ natureza.mercadorias|intcomma_brl }}</strong><span class="fatia">{{ natureza.mercadorias_fatia }}</span></li>
+          </ul>
+          {% else %}
+          <p class="linha-vazia">Sem receita lançada no mês.</p>
+          {% endif %}
+        </div>
       </div>
     </div>
   </section>
 
   {# ===================== FLUXO ===================== #}
-  <section class="painel-aba" id="aba-fluxo" role="tabpanel" tabindex="0">
+  <section class="painel-aba{% if aba == 'fluxo' %} on{% endif %}" id="aba-fluxo" role="tabpanel" aria-labelledby="tab-fluxo" tabindex="0">
     <h2 class="so-papel titulo-papel">Fluxo de caixa</h2>
     <div class="kpis">
-      <div class="cartao kpi"><div class="rotulo">Entradas (caixa)</div><div class="valor pos">{{ fluxo.entradas|intcomma_brl }}</div></div>
-      <div class="cartao kpi"><div class="rotulo">Saídas (caixa)</div><div class="valor neg">{{ fluxo.saidas|intcomma_brl }}</div></div>
-      <div class="cartao kpi"><div class="rotulo">Líquido realizado</div><div class="valor {% if fluxo.liquido < 0 %}neg{% else %}pos{% endif %}">{{ fluxo.liquido|intcomma_brl }}</div></div>
-      <div class="cartao kpi"><div class="rotulo">Projetado (fim do mês)</div><div class="valor {% if fluxo.projetado < 0 %}neg{% else %}acc{% endif %}">{{ fluxo.projetado|intcomma_brl }}</div></div>
+      <div class="kpi"><span class="kpi-rotulo letreiro">Entradas no caixa</span>
+        <span class="kpi-valor">{{ fluxo.entradas|intcomma_brl }}</span><span class="kpi-nota">Recebimentos do mês</span></div>
+      <div class="kpi"><span class="kpi-rotulo letreiro">Saídas do caixa</span>
+        <span class="kpi-valor">{{ fluxo.saidas|intcomma_brl }}</span><span class="kpi-nota">Estornos e devoluções</span></div>
+      <div class="kpi{% if fluxo.liquido < 0 %} alerta{% endif %}"><span class="kpi-rotulo letreiro">Líquido realizado</span>
+        <span class="kpi-valor">{{ fluxo.liquido|intcomma_brl }}</span></div>
+      <div class="kpi {% if fluxo.projetado < 0 %}alerta{% else %}kpi-destaque{% endif %}"><span class="kpi-rotulo letreiro">Projetado no fim do mês</span>
+        <span class="kpi-valor">{{ fluxo.projetado|intcomma_brl }}</span><span class="kpi-nota">Com as contas em aberto do mês</span></div>
     </div>
 
     <div class="cartao cartao-bloco">
-      <h3 class="t-bloco">Ponte realizado → projetado</h3>
-      <div class="bridge">
+      <div class="cab-bloco"><h3>Do realizado ao projetado</h3></div>
+      <div class="ponte">
         <div class="b"><div class="l">Líquido realizado</div><div class="v">{{ fluxo.liquido|intcomma_brl }}</div></div>
-        <div class="op">+</div>
-        <div class="b"><div class="l">A receber (aberto)</div><div class="v pos">{{ fluxo.a_receber|intcomma_brl }}</div></div>
-        <div class="op">−</div>
-        <div class="b"><div class="l">A pagar (aberto)</div><div class="v neg">{{ fluxo.a_pagar|intcomma_brl }}</div></div>
+        <div class="op" aria-hidden="true">+</div>
+        <div class="b" data-op="+"><div class="l">A receber no mês</div><div class="v">{{ fluxo.a_receber|intcomma_brl }}</div></div>
+        <div class="op" aria-hidden="true">−</div>
+        <div class="b" data-op="−"><div class="l">A pagar no mês</div><div class="v">{{ fluxo.a_pagar|intcomma_brl }}</div></div>
+        <div class="op" aria-hidden="true">=</div>
+        <div class="b b-total" data-op="="><div class="l">Projetado</div><div class="v{% if fluxo.projetado < 0 %} neg{% endif %}">{{ fluxo.projetado|intcomma_brl }}</div></div>
       </div>
     </div>
 
-    <div class="cartao cartao-bloco">
-      <div class="cab-bloco">
-        <h3>Receita contratada a entrar</h3>
-        <span class="hint">Reservas confirmadas ainda não hospedadas · {{ futura.qtd }} reserva{{ futura.qtd|pluralize }} · total {{ futura.total|intcomma_brl }}</span>
-      </div>
-      {% if futura.por_mes %}
-      <table class="dre">
-        <thead><tr><th scope="col">Mês de entrada</th><th scope="col" class="num">Reservas</th><th scope="col" class="num">Diárias contratadas</th></tr></thead>
-        {% for m in futura.por_mes %}
-        <tr><td>{{ m.rotulo }}</td><td class="num">{{ m.qtd }}</td><td class="num">{{ m.total|intcomma_brl }}</td></tr>
+    <div class="cartao cartao-tabela cartao-bloco">
+      <div class="cab-bloco"><h3>Contas em aberto que vencem no mês</h3>{% if titulos %}<span class="hint">{{ titulos|length|milhar }} conta{{ titulos|length|pluralize }}</span>{% endif %}</div>
+      {% if titulos %}
+      <table class="dre" aria-label="Contas em aberto que vencem no mês">
+        <thead><tr><th scope="col">Conta</th><th scope="col" class="num">Valor</th></tr></thead>
+        <tbody>
+        {% for t in titulos %}
+        <tr><td>{{ t.descricao }}<span class="sub"><span class="rotulo-dado">{{ t.get_tipo_display }}</span><span class="rotulo-dado">Vence {{ t.vencimento|date:"d/m" }}</span></span></td>
+          <td class="num">{% if t.tipo == "pagar" %}− {% else %}+ {% endif %}{{ t.valor|intcomma_brl }}</td></tr>
         {% endfor %}
-        <tr class="l-resultado"><td>Total contratado</td><td class="num">{{ futura.qtd }}</td><td class="num">{{ futura.total|intcomma_brl }}</td></tr>
+        </tbody>
       </table>
       {% else %}
-      <p class="vazio">Nenhuma reserva confirmada com entrada futura.</p>
+      <p class="linha-vazia">Nenhuma conta em aberto vence neste mês.</p>
       {% endif %}
-      <p class="hint nota">Estimativa pelo valor fechado (diária × noites). Vira receita de fato no check-in; ainda não está na DRE (competência).</p>
+    </div>
+
+    <div class="cartao cartao-tabela cartao-bloco cartao-dias">
+      <div class="cab-bloco"><h3>Caixa dia a dia</h3><span class="hint">Recebimentos e estornos de cada dia; o saldo acumula no mês</span></div>
+      {% if dias %}
+      <table class="dre" aria-label="Caixa dia a dia">
+        <thead><tr><th scope="col">Dia</th><th scope="col" class="num col-detalhe">Entradas</th><th scope="col" class="num col-detalhe">Saídas</th><th scope="col" class="num col-liquido">Líquido do dia</th><th scope="col" class="num">Saldo do mês</th></tr></thead>
+        <tbody>
+        {% for d in dias %}
+        <tr><td>{{ d.dia|date:"d/m" }}<span class="dia-semana">{{ d.dia|date:"D" }}</span></td>
+          <td class="num col-detalhe{% if not d.entradas %} zero{% endif %}">{% if d.entradas %}{{ d.entradas|intcomma_brl }}{% else %}—{% endif %}</td>
+          <td class="num col-detalhe{% if not d.saidas %} zero{% endif %}">{% if d.saidas %}{{ d.saidas|intcomma_brl }}{% else %}—{% endif %}</td>
+          <td class="num col-liquido{% if d.liquido < 0 %} neg{% endif %}">{{ d.liquido|intcomma_brl }}</td>
+          <td class="num{% if d.saldo < 0 %} neg{% endif %}">{{ d.saldo|intcomma_brl }}</td></tr>
+        {% endfor %}
+        <tr class="l-resultado"><td>Total</td><td class="num col-detalhe">{{ fluxo.entradas|intcomma_brl }}</td><td class="num col-detalhe">{{ fluxo.saidas|intcomma_brl }}</td><td class="num col-liquido">{{ fluxo.liquido|intcomma_brl }}</td><td class="num{% if fluxo.liquido < 0 %} neg{% endif %}">{{ fluxo.liquido|intcomma_brl }}</td></tr>
+        </tbody>
+      </table>
+      {% else %}
+      <p class="linha-vazia">Sem recebimentos nem estornos no caixa neste mês.</p>
+      {% endif %}
     </div>
 
     <div class="cartao cartao-tabela">
-      <table class="dre">
-        <thead><tr><th scope="col">Data</th><th scope="col">Descrição</th><th scope="col" class="num">Entrada</th><th scope="col" class="num">Saída</th></tr></thead>
-        {% for m in fluxo.movimentos %}
-        <tr><td>{{ m.criado_em|date:"d/m" }}</td><td>{{ m.descricao }}</td>
-          <td class="num">{% if m.tipo == 'recebimento' or m.tipo == 'reforco' %}{{ m.valor|intcomma_brl }}{% else %}—{% endif %}</td>
-          <td class="num">{% if m.tipo == 'sangria' or m.tipo == 'estorno' %}{{ m.valor|intcomma_brl }}{% else %}—{% endif %}</td></tr>
-        {% empty %}
-        <tr><td colspan="4" class="vazio">Sem movimentos de caixa no período.</td></tr>
+      <div class="cab-bloco">
+        <h3>Receita contratada a entrar</h3>
+        {% if futura.por_mes %}<span class="hint">{{ futura.qtd|milhar }} reserva{{ futura.qtd|pluralize }} · {{ futura.total|intcomma_brl }}</span>{% endif %}
+      </div>
+      <p class="hint texto-cartao">Reservas confirmadas que ainda não chegaram, pelo valor fechado (diária × noites). Viram receita na DRE no check-in.</p>
+      {% if futura.por_mes %}
+      <table class="dre" aria-label="Receita contratada a entrar">
+        <thead><tr><th scope="col">Mês de entrada</th><th scope="col" class="num">Reservas</th><th scope="col" class="num">Valor</th></tr></thead>
+        <tbody>
+        {% for m in futura.por_mes %}
+        <tr><td>{{ m.rotulo }}</td><td class="num">{{ m.qtd|milhar }}</td><td class="num">{{ m.total|intcomma_brl }}</td></tr>
         {% endfor %}
+        <tr class="l-resultado"><td>Total</td><td class="num">{{ futura.qtd|milhar }}</td><td class="num">{{ futura.total|intcomma_brl }}</td></tr>
+        </tbody>
       </table>
+      {% else %}
+      <p class="linha-vazia">Nenhuma reserva confirmada com entrada futura.</p>
+      {% endif %}
     </div>
   </section>
 
   {# ===================== PLANO ===================== #}
-  <section class="painel-aba" id="aba-plano" role="tabpanel" tabindex="0">
+  <section class="painel-aba{% if aba == 'plano' %} on{% endif %}" id="aba-plano" role="tabpanel" aria-labelledby="tab-plano" tabindex="0">
     <h2 class="so-papel titulo-papel">Plano de contas</h2>
+    <p class="periodo">Saldo de {{ nome_mes|lower }} de {{ ano }} em cada conta analítica. Os códigos são os do contador, os mesmos do arquivo exportado.</p>
     <div class="cartao cartao-tabela">
       {% for item in contas %}
       <div class="conta-linha {{ item.conta.tipo }} ind-{{ item.conta.classificacao|length }}">
         <span class="cod">{{ item.conta.classificacao }}</span>
         <span class="nome">{{ item.conta.nome }}</span>
-        {% if item.conta.tipo == 'analitica' %}<span class="v">{{ item.total|intcomma_brl }}</span>{% endif %}
+        {% if item.conta.tipo == 'analitica' %}<span class="v{% if not item.total %} zero{% endif %}">{{ item.total|intcomma_brl }}</span>{% endif %}
       </div>
       {% endfor %}
     </div>
-    <p class="periodo nota-rodape">Códigos do contador preservados para o export. As contas 1 e 2 ficam fora da DRE: recebem só o dinheiro que liquida o que a DRE já reconheceu (o faturado pago, a folha paga) e a compra que entra no estoque. O balanço completo fica com o contador.</p>
+    <p class="periodo nota-rodape">As contas 1 e 2 ficam fora da DRE: recebem só o dinheiro que liquida o que a DRE já reconheceu (o faturado pago, a folha paga) e a compra que entra no estoque. O balanço completo fica com o contador.</p>
   </section>
 
   {# ===================== A CLASSIFICAR (órfãos) ===================== #}
-  <section class="painel-aba" id="aba-depara" role="tabpanel" tabindex="0">
+  <section class="painel-aba{% if aba == 'depara' %} on{% endif %}" id="aba-depara" role="tabpanel" aria-labelledby="tab-depara" tabindex="0">
     <h2 class="so-papel titulo-papel">A classificar</h2>
-    <h3 class="t-secao">Categorias sem de‑para</h3>
+    {% if orfaos.total %}
+    <p class="periodo">Lançamento sem conta contábil fica fora da DRE. Mapeie a categoria no de-para, para os próximos lançamentos dela já nascerem classificados, e classifique os que já existem.</p>
+    {% endif %}
+    <div class="cab-bloco"><h3>Categorias sem de-para</h3>{% if orfaos.categorias %}<span class="hint">{{ orfaos.categorias|length|milhar }} categoria{{ orfaos.categorias|length|pluralize }}</span>{% endif %}</div>
     <div class="cartao cartao-tabela esp-fim">
       {% for c in orfaos.categorias %}
-      <div class="conta-linha"><span>{{ c.nome }}</span><span class="rotulo-dado">{{ c.get_tipo_display }}</span></div>
-      {% empty %}<div class="vazio">Todas as categorias estão mapeadas. ✓</div>{% endfor %}
+      <div class="conta-linha linha-fila"><span class="nome">{{ c.nome }}<span class="sub"><span class="rotulo-dado">{{ c.get_tipo_display }}</span></span></span>
+        {% if perms.contabil.add_mapeamentocontabil %}<a class="botao-mini" href="{% url 'admin:contabil_mapeamentocontabil_add' %}?categoria={{ c.pk }}">Mapear</a>{% endif %}</div>
+      {% empty %}<p class="linha-vazia">Todas as categorias estão mapeadas.</p>{% endfor %}
     </div>
-    <h3 class="t-secao">Lançamentos sem conta contábil</h3>
+    <div class="cab-bloco"><h3>Lançamentos sem conta contábil</h3>{% if pagina_orfaos.paginator.count %}<span class="hint">{{ pagina_orfaos.paginator.count|milhar }} lançamento{{ pagina_orfaos.paginator.count|pluralize }}</span>{% endif %}</div>
     <div class="cartao cartao-tabela">
-      {% for l in orfaos.lancamentos|slice:":50" %}
-      <div class="conta-linha"><span class="cod">{{ l.data|date:"d/m/y" }}</span><span>{{ l.descricao }}</span><span class="v">{{ l.valor|intcomma_brl }}</span></div>
-      {% empty %}<div class="vazio">Nenhum lançamento órfão. ✓</div>{% endfor %}
+      {% for l in pagina_orfaos %}
+      <div class="conta-linha linha-fila">
+        <span class="nome">{{ l.descricao }}<span class="sub"><span class="rotulo-dado">{{ l.data|date:"d/m/Y" }}</span><span class="rotulo-dado">{{ l.get_tipo_display }}</span><span class="rotulo-dado">{{ l.categoria.nome }}</span></span></span>
+        <span class="v">{{ l.valor|intcomma_brl }}</span>
+        {% if perms.nucleo.change_lancamentofinanceiro %}<a class="botao-mini" href="{% url 'admin:nucleo_lancamentofinanceiro_change' l.pk %}">Classificar</a>{% endif %}</div>
+      {% empty %}<p class="linha-vazia">Nenhum lançamento sem conta.</p>{% endfor %}
     </div>
-    <p class="periodo nota-rodape">Classificação se resolve no de‑para (admin) ou criando a categoria já mapeada.</p>
+    {% include "componentes/paginacao.html" with pagina=pagina_orfaos %}
   </section>
 
   {# ===================== FECHAR O MÊS ===================== #}
-  <section class="painel-aba fora-do-papel" id="aba-fechar" role="tabpanel" tabindex="0">
+  <section class="painel-aba fora-do-papel{% if aba == 'fechar' %} on{% endif %}" id="aba-fechar" role="tabpanel" aria-labelledby="tab-fechar" tabindex="0">
     <div class="cartao cartao-form">
-      <h3 class="t-form">Fechar {{ mes_sel }}/{{ ano_sel }}</h3>
-      <p class="periodo">Os números de baixa frequência que não nascem no sistema. Gera os lançamentos de competência já classificados. Recomputável (reenviar atualiza).</p>
+      <div class="cab-bloco">
+        <h3>Fechar {{ nome_mes|lower }} de {{ ano }}</h3>
+        {% if fechamento %}<span class="selo selo-ok">Aplicado em {{ fechamento.fechado_em|date:"d/m/Y H:i" }}</span>{% else %}<span class="selo">Ainda não aplicado</span>{% endif %}
+      </div>
+      <p class="periodo">Folha, encargos, pró-labore e impostos não nascem no sistema: informe os valores do mês e aplique. Os lançamentos de competência entram na DRE já classificados; aplicar de novo atualiza os mesmos lançamentos.</p>
       <form method="post" action="{% url 'contabil:fechar' %}" data-preservar-erros>
         {% csrf_token %}
         <input type="hidden" name="ano" value="{{ ano_sel }}"><input type="hidden" name="mes" value="{{ mes_sel }}">
@@ -302,18 +403,17 @@
         </div>
         {% endwith %}
         <button type="submit" class="botao-primario">Aplicar à DRE</button>
-        {% if fechamento %}<span class="selo selo-ok ao-lado">Fechado em {{ fechamento.fechado_em|date:"d/m/Y H:i" }}</span>{% endif %}
       </form>
     </div>
   </section>
 
   {# ===================== EXPORT ===================== #}
-  <section class="painel-aba fora-do-papel" id="aba-export" role="tabpanel" tabindex="0">
-    <p class="periodo">Arquivos CSV (pt‑BR, Excel) no layout do contador — com o código numérico das contas.</p>
+  <section class="painel-aba fora-do-papel{% if aba == 'export' %} on{% endif %}" id="aba-export" role="tabpanel" aria-labelledby="tab-export" tabindex="0">
+    <p class="periodo">Arquivos CSV no formato do Excel em português, com o código do contador em cada conta.</p>
     <div class="export-grid">
-      <div class="cartao"><h3>Resumo por conta</h3><p class="periodo">Saldo do mês por conta analítica.</p><a class="botao-neutro" href="{% url 'contabil:export' 'resumo' %}?ano={{ ano_sel }}&mes={{ mes_sel }}">Baixar CSV</a></div>
-      <div class="cartao"><h3>Lançamentos</h3><p class="periodo">Linha a linha, com conta e centro.</p><a class="botao-neutro" href="{% url 'contabil:export' 'lancamentos' %}?ano={{ ano_sel }}&mes={{ mes_sel }}">Baixar CSV</a></div>
-      <div class="cartao"><h3>Plano de contas</h3><p class="periodo">Estrutura + códigos do contador.</p><a class="botao-neutro" href="{% url 'contabil:export' 'plano' %}">Baixar CSV</a></div>
+      <div class="cartao"><h3>Resumo por conta</h3><p>Saldo de {{ nome_mes|lower }}/{{ ano }} em cada conta analítica.</p><a class="botao-neutro" href="{% url 'contabil:export' 'resumo' %}?ano={{ ano }}&mes={{ mes }}">Baixar CSV</a></div>
+      <div class="cartao"><h3>Lançamentos</h3><p>Os lançamentos de {{ nome_mes|lower }}/{{ ano }}, um por linha, com conta e centro.</p><a class="botao-neutro" href="{% url 'contabil:export' 'lancamentos' %}?ano={{ ano }}&mes={{ mes }}">Baixar CSV</a></div>
+      <div class="cartao"><h3>Plano de contas</h3><p>A estrutura das contas com os códigos do contador.</p><a class="botao-neutro" href="{% url 'contabil:export' 'plano' %}">Baixar CSV</a></div>
     </div>
   </section>
 </div>
@@ -325,17 +425,42 @@ carrega o Chart.js local quando a página tem os dados e acompanha a navegação
 um script inline com o Chart no próprio template rodava antes do Chart carregar ao
 chegar pelo menu (hx-boost) e a tela ficava sem gráfico.{% endcomment %}
 <script>
-(function(){
-  // abas
-  var btns = document.querySelectorAll('.ctb .est-aba');
-  btns.forEach(function(b){ b.addEventListener('click', function(){
-    btns.forEach(function(x){ x.classList.remove('ativo'); x.setAttribute('aria-selected', 'false'); });
-    b.classList.add('ativo');
-    b.setAttribute('aria-selected', 'true');
-    document.querySelectorAll('.ctb .painel-aba').forEach(function(p){ p.classList.remove('on'); });
-    var el = document.getElementById('aba-' + b.dataset.aba); if(el) el.classList.add('on');
-  }); });
-  if (location.hash === '#fechar') { var fb = document.querySelector('[data-aba="fechar"]'); if(fb) fb.click(); }
+(function () {
+  var raiz = document.querySelector('.ctb');
+  if (!raiz) return;
+  var abas = Array.prototype.slice.call(raiz.querySelectorAll('.est-aba'));
+  var campoAba = raiz.querySelector('input[name="aba"]');
+  function ativar(nome, focar) {
+    var botao = raiz.querySelector('.est-aba[data-aba="' + nome + '"]');
+    if (!botao) return;
+    abas.forEach(function (b) {
+      var sim = b === botao;
+      b.classList.toggle('ativo', sim);
+      b.setAttribute('aria-selected', sim ? 'true' : 'false');
+      b.tabIndex = sim ? 0 : -1;
+    });
+    raiz.querySelectorAll('.painel-aba').forEach(function (p) { p.classList.toggle('on', p.id === 'aba-' + nome); });
+    if (focar) botao.focus();
+    // A aba vai para a URL: recarregar, trocar o mês ou paginar volta nela.
+    if (campoAba) campoAba.value = nome;
+    var url = new URL(location.href);
+    url.searchParams.set('aba', nome);
+    url.hash = '';
+    history.replaceState(history.state, '', url);
+  }
+  abas.forEach(function (b, i) {
+    b.addEventListener('click', function () { ativar(b.dataset.aba); });
+    // Setas, Home e End andam entre as abas (padrão de abas do WAI-ARIA).
+    b.addEventListener('keydown', function (e) {
+      var alvo = {ArrowRight: abas[(i + 1) % abas.length], ArrowLeft: abas[(i - 1 + abas.length) % abas.length],
+                  Home: abas[0], End: abas[abas.length - 1]}[e.key];
+      if (alvo) { e.preventDefault(); ativar(alvo.dataset.aba, true); }
+    });
+  });
+  raiz.querySelectorAll('[data-ir-aba]').forEach(function (b) {
+    b.addEventListener('click', function () { ativar(b.dataset.irAba, true); });
+  });
+  if (location.hash === '#fechar') ativar('fechar');  // links antigos
 })();
 </script>
 {% endblock %}

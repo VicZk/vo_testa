@@ -9,6 +9,48 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 26/10/2026: painel Contábil mais claro, comparado ao mês anterior e sem vazar no celular
+
+- **DRE comparada com o mês anterior.** A tabela ganhou duas colunas:
+  - "% receita": quanto cada linha pesa na receita bruta;
+  - o mês anterior. Em janeiro, a comparação é com dezembro do ano anterior.
+
+  Os indicadores dizem quanto variaram ("↑ 16,3% sobre setembro"). Com o cartão
+  estreito, sai primeiro a coluna do mês anterior e depois a da receita, para a tabela
+  caber.
+- **Indicadores no padrão do CRM e com menos cor.** Receita, lucro bruto e despesas
+  ficam na cor normal do texto. Só o resultado muda de cor pelo sinal, e no fluxo, o
+  líquido e o projetado.
+- **Gráficos em reais.** O eixo da cascata mostrava "60,000", no formato americano.
+  Agora mostra "R$ 60 mil", e o balão traz o valor com centavos. A rosca ganhou uma
+  legenda com o valor e a fatia de serviços e de mercadorias.
+- **Fluxo de caixa:**
+  - a ponte termina no projetado, e no celular vira extrato;
+  - as contas em aberto que vencem no mês aparecem uma a uma; antes só o total entrava
+    na ponte;
+  - os movimentos viraram "Caixa dia a dia", com entradas, saídas e saldo acumulado.
+    A lista anterior parava em 200 movimentos sem avisar, e um mês de restaurante e
+    loja passa disso.
+- **Celular:** a tabela de movimentos vazava para o lado em 390 px e cortava a coluna
+  "Saída". Com o menu aberto em 821 px, a DRE saía da tela, porque o canvas do gráfico
+  segurava a coluna. Conferido nas seis abas em 320, 390, 821 (menu aberto) e 1440 px.
+- **Fila "A classificar" com ação.** Quem tem permissão no admin vê um botão em cada
+  item, que abre o cadastro no admin:
+  - "Mapear", nas categorias sem de-para;
+  - "Classificar", nos lançamentos sem conta.
+
+  A lista agora tem páginas, em vez de parar nos 50 primeiros. O aviso da DRE leva
+  direto para essa aba.
+- **A aba fica na URL.** Trocar o mês, recarregar a página ou voltar de "Fechar o mês"
+  mantém a aba aberta, e as setas do teclado passam de uma aba para outra.
+- **"Fechar o mês"** mostra se o mês já foi aplicado e quando.
+- **Modificado:**
+  - `templates/contabil/painel.html`;
+  - `apps/contabil/views.py`: abas, comparação, fatias e paginação da fila;
+  - `apps/contabil/relatorios.py`: `fluxo_diario`;
+  - `static/js/graficos.js`: formato dos gráficos;
+  - três testes novos em `apps/contabil/tests.py`.
+
 ## 26/10/2026: verificação de segurança verde e rodando na dev
 
 - **A verificação de segurança passa a rodar a cada push da dev**, e não só na
