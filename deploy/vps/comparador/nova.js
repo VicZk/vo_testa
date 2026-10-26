@@ -11,7 +11,8 @@
     prefixo: "/votesta",
     tirarPrefixo: true,
     rotulo: "Versão anterior",
-    dicas: true
+    dicas: true,
+    comparativo: "Comparativo"
   };
 
   if (window.__comparadorVoTesta) { return; }
@@ -74,10 +75,40 @@
     a.innerHTML = ICONE + '<span class="rotulo"></span>';
     a.querySelector(".rotulo").textContent = CFG.rotulo;
 
+    if (CFG.comparativo) { grupo.appendChild(itemComparativo()); }
     grupo.appendChild(a);
     nav.appendChild(grupo);
     rotular();
     return true;
+  }
+
+  // Aba "Comparativo" (só na versão atualizada): a página da VPS com o resumo do que
+  // mudou. Navega pelo HTMX como os outros itens; sem data-nav, porque o menu que vem
+  // do servidor não o tem e a diferença faria o navegacao.js recarregar a página.
+  var ICONE_LISTA = '<svg viewBox="0 0 24 24" class="ico" aria-hidden="true">'
+                  + '<path d="M3 7l2 2 4-4"/><path d="M3 17l2 2 4-4"/>'
+                  + '<path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/></svg>';
+
+  function itemComparativo() {
+    var c = document.createElement("a");
+    c.id = "comparativo-item";
+    c.className = "nav-item";
+    c.href = CFG.prefixo + "/crm/comparativo/";
+    c.title = CFG.comparativo;
+    c.dataset.nomeItem = CFG.comparativo;
+    c.innerHTML = ICONE_LISTA + '<span class="rotulo"></span>';
+    c.querySelector(".rotulo").textContent = CFG.comparativo;
+    return c;
+  }
+
+  // O "ativo" vem do data-nav-ativa da página, como no sidebar.js.
+  function marcarComparativo() {
+    var c = document.getElementById("comparativo-item");
+    if (!c) { return; }
+    var conteudo = document.getElementById("conteudo");
+    var ativo = !!conteudo && conteudo.dataset.navAtiva === "comparativo";
+    c.classList.toggle("ativo", ativo);
+    if (ativo) { c.setAttribute("aria-current", "page"); } else { c.removeAttribute("aria-current"); }
   }
 
   // Espelha o rotularSidebar() do base.html da versão atualizada: no trilho do
@@ -85,25 +116,25 @@
   // rótulo vira dica à direita. Expandido, nenhum title — o rótulo está visível.
   // A versão anterior não tem essa função: lá o title nativo é o padrão da casa.
   function rotular() {
-    var a = document.getElementById("comparador-item");
-    if (!a) { return; }
-    if (a.dataset.nomeItem === undefined) { a.dataset.nomeItem = CFG.rotulo; }
     var app = document.getElementById("app");
     var trilho = !!app && app.classList.contains("recolhida") &&
                  !window.matchMedia("(max-width: 820px)").matches;
-    if (!CFG.dicas) {
-      a.setAttribute("title", a.dataset.nomeItem);
-      return;
-    }
-    if (trilho) {
-      a.removeAttribute("title");
-      a.setAttribute("data-dica", a.dataset.nomeItem);
-      a.setAttribute("data-dica-lado", "direita");
-    } else {
-      a.removeAttribute("title");
-      a.removeAttribute("data-dica");
-      a.removeAttribute("data-dica-lado");
-    }
+    ["comparador-item", "comparativo-item"].forEach(function (id) {
+      var a = document.getElementById(id);
+      if (!a) { return; }
+      if (a.dataset.nomeItem === undefined) { a.dataset.nomeItem = CFG.rotulo; }
+      if (!CFG.dicas) {
+        a.setAttribute("title", a.dataset.nomeItem);
+      } else if (trilho) {
+        a.removeAttribute("title");
+        a.setAttribute("data-dica", a.dataset.nomeItem);
+        a.setAttribute("data-dica-lado", "direita");
+      } else {
+        a.removeAttribute("title");
+        a.removeAttribute("data-dica");
+        a.removeAttribute("data-dica-lado");
+      }
+    });
   }
 
   // ---- Site público: gaveta do celular + menu do desktop ---------------------
@@ -168,6 +199,7 @@
     noSite();
     atualizarDestinos();
     rotular();
+    marcarComparativo();
     observarApp();
   }
 

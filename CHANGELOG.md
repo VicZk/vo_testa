@@ -9,6 +9,23 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 26/10/2026: aba "Comparativo" na versão atualizada
+
+- **O que mudou, numa tela só.** A cópia atualizada da VPS ganhou o item "Comparativo"
+  no menu, acima de "Versão anterior". A página traz os números das duas versões
+  (testes automáticos de 977 para 2.863, testes de navegador de 8 para 282), as 14
+  correções mais importantes com o antes e o agora (9 graves), as novidades, o design,
+  a qualidade e a operação, o que veio do Gefferson depois da separação e os próximos
+  passos. Cada item com tela leva à mesma tela nas duas versões.
+- **Segurança só por alto.** A página fica aberta e a produção ainda roda a versão
+  anterior, então falha de segurança aparece sem detalhe; o detalhe técnico fica no
+  relatório privado.
+- **Só na VPS.** Liga com `COMPARATIVO_VERSOES=1` na cópia atualizada. A produção e o
+  desenvolvimento local não mudam.
+- **Modificado:** `deploy/vps/comparador/` (`comparativo.py`, `urls_vps.py`,
+  `settings_vps.py`, `templates/vps/comparativo.html`, `nova.js`, README),
+  `apps/site/tests_comparativo.py`, README §10.
+
 ## 26/10/2026: comparação entre as versões sem senha
 
 - **As duas cópias de teste abrem sem senha.** O item "Versão anterior/atualizada" do

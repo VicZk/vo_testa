@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block titulo %}Comparativo entre versões{% endblock %}
+
+{% block conteudo %}
+<style>
+/* ===== Comparativo entre versões — escopo .cmp, só tokens do app.css ===== */
+.cmp { --acc-texto: var(--lampiao-tinta); }
+.cmp .eyebrow { text-transform: uppercase; letter-spacing: .14em; font-size: max(var(--rotulo-min), .72rem); font-weight: 600; color: var(--acc-texto); margin: 0; }
+.cmp .eleg-intro { max-width: 74ch; }
+.cmp-indice { display: flex; flex-wrap: wrap; gap: .5rem; }
+.cmp section { margin-top: var(--espaco-secao); scroll-margin-top: calc(var(--topbar-h) + 1rem); }
+.cmp-secao-cab h2 { margin: 0; }
+.cmp-secao-cab p { margin: .3rem 0 0; color: var(--tinta-suave); max-width: 74ch; line-height: 1.55; }
+.cmp-legenda { display: flex; flex-wrap: wrap; gap: .35rem 1.1rem; font-size: .85rem; }
+.cmp-legenda span { display: inline-flex; align-items: center; gap: .45rem; }
+.cmp-legenda span::before { content: ""; width: .8rem; height: 3px; border-radius: 2px; background: var(--alerta); }
+.cmp-legenda .grave::before { background: var(--perigo); }
+.cmp-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(21rem, 100%), 1fr)); gap: 1rem; margin: 1rem 0 0; padding: 0; list-style: none; }
+.cmp-item { position: relative; overflow: hidden; display: flex; flex-direction: column; gap: .6rem; min-width: 0; padding: 1.1rem 1.2rem 1.15rem; background: var(--superficie); border: 1px solid var(--fio); border-radius: var(--raio-g); box-shadow: var(--sombra-cartao); break-inside: avoid; }
+.cmp-item h3 { margin: 0; font-size: 1.05rem; line-height: 1.3; }
+.cmp-item p { margin: 0; line-height: 1.55; }
+.cmp-area { font-size: max(var(--rotulo-min), .7rem); text-transform: uppercase; letter-spacing: .1em; font-weight: 600; color: var(--tinta-suave); }
+.cmp-area .grave { color: var(--perigo); }
+.cmp-marcado::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--alerta); }
+.cmp-marcado.grave::before { background: var(--perigo); }
+.cmp-marcado.credito::before { background: var(--lampiao); }
+.cmp-aa { display: grid; gap: .5rem; margin: 0; }
+.cmp-aa > div { padding: .55rem .75rem .65rem; border: 1px solid var(--fio); border-radius: var(--raio-p); }
+.cmp-aa .agora { border-color: transparent; background: color-mix(in srgb, var(--lampiao) 11%, transparent); }
+.cmp-aa dt { display: flex; align-items: center; gap: .4rem; margin-bottom: .2rem; font-size: max(var(--rotulo-min), .7rem); text-transform: uppercase; letter-spacing: .1em; font-weight: 600; }
+.cmp-aa dt::before { content: ""; flex: none; width: .45rem; height: .45rem; border-radius: 50%; background: currentColor; }
+.cmp-aa dd { margin: 0; line-height: 1.55; }
+.cmp-aa .antes dt, .cmp-aa .antes dd { color: var(--tinta-suave); }
+.cmp-aa .agora dt { color: var(--acc-texto); }
+.cmp-item .cmp-links { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: auto; padding-top: .35rem; }
+.cmp-passos { counter-reset: passo; }
+.cmp-passos .cmp-item { counter-increment: passo; flex-direction: row; align-items: flex-start; gap: .85rem; }
+.cmp-passos .cmp-item::before { content: counter(passo); flex: none; display: grid; place-items: center; width: 1.9rem; height: 1.9rem; border-radius: 50%; border: 1px solid var(--fio-forte); font-weight: 600; font-variant-numeric: tabular-nums; color: var(--acc-texto); }
+.cmp-passos .cmp-item > div { display: flex; flex-direction: column; gap: .3rem; min-width: 0; }
+.cmp-rodape { margin: var(--espaco-secao) 0 0; color: var(--tinta-suave); font-size: .85rem; line-height: 1.55; }
+@media print {
+  .cmp-indice, .cmp-links, .cmp .pagina-cabecalho .botao-neutro { display: none; }
+  .cmp-item { box-shadow: none; }
+}
+</style>
+
+<div class="cmp">
+  <div class="pagina-cabecalho">
+    <div>
+      <p class="eyebrow">Versão anterior → atualizada</p>
+      <h1>Comparativo entre versões</h1>
+    </div>
+    <a class="botao-neutro" href="{{ anterior }}" target="_blank" rel="noopener">Abrir a versão anterior</a>
+  </div>
+  <p class="eleg-intro">{{ intro }}</p>
+
+  <div class="kpis">
+    {% for n in numeros %}
+    <div class="kpi"><span class="kpi-rotulo letreiro">{{ n.rotulo }}</span><span class="kpi-valor">{{ n.valor }}{% if n.unidade %} <small>{{ n.unidade }}</small>{% endif %}</span><span class="kpi-nota">{{ n.nota }}</span></div>
+    {% endfor %}
+  </div>
+
+  <nav class="cmp-indice" aria-label="Seções do comparativo">
+    <a class="filtro-chip" href="#correcoes">Correções</a>
+    <a class="filtro-chip" href="#novidades">Novidades</a>
+    <a class="filtro-chip" href="#design">Design e uso</a>
+    <a class="filtro-chip" href="#qualidade">Qualidade e operação</a>
+    <a class="filtro-chip" href="#original">Do original</a>
+    <a class="filtro-chip" href="#proximos">Próximos passos</a>
+  </nav>
+
+  <section id="correcoes" aria-labelledby="t-correcoes">
+    <div class="cmp-secao-cab">
+      <h2 id="t-correcoes">Correções importantes</h2>
+      <p>O que podia custar dinheiro, gerar reserva em dobro, perder ou expor dados e já está corrigido nesta versão. As falhas de segurança aparecem só por alto; o detalhe técnico fica no relatório privado.</p>
+      <p class="cmp-legenda"><span class="grave">Grave</span><span>Importante</span></p>
+    </div>
+    <ul class="cmp-grade">
+      {% for c in correcoes %}
+      <li class="cmp-item cmp-marcado{% if c.grave %} grave{% endif %}">
+        <p class="cmp-area"><span{% if c.grave %} class="grave"{% endif %}>{% if c.grave %}Grave{% else %}Importante{% endif %}</span> · {{ c.area }}</p>
+        <h3>{{ c.titulo }}</h3>
+        <dl class="cmp-aa">
+          <div class="antes"><dt>Antes</dt><dd>{{ c.antes }}</dd></div>
+          <div class="agora"><dt>Agora</dt><dd>{{ c.agora }}</dd></div>
+        </dl>
+        {% if c.agora_url %}
+        <p class="cmp-links">
+          <a class="botao-mini" href="{{ c.antes_url }}" target="_blank" rel="noopener">Ver antes</a>
+          <a class="botao-mini" href="{{ c.agora_url }}">Ver agora</a>
+        </p>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section id="novidades" aria-labelledby="t-novidades">
+    <div class="cmp-secao-cab">
+      <h2 id="t-novidades">O que é novo</h2>
+      <p>Módulos, fluxos e capacidades que a versão anterior ainda não tinha.</p>
+    </div>
+    <ul class="cmp-grade">
+      {% for n in novidades %}
+      <li class="cmp-item">
+        <p class="cmp-area">{{ n.area }}</p>
+        <h3>{{ n.titulo }}</h3>
+        <p>{{ n.texto }}</p>
+        {% if n.agora_url %}<p class="cmp-links"><a class="botao-mini" href="{{ n.agora_url }}">Abrir</a></p>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section id="design" aria-labelledby="t-design">
+    <div class="cmp-secao-cab">
+      <h2 id="t-design">Design e usabilidade</h2>
+      <p>O mesmo visual em todas as telas, pensado para o toque e para o celular.</p>
+    </div>
+    <ul class="cmp-grade">
+      {% for d in design %}
+      <li class="cmp-item">
+        <h3>{{ d.titulo }}</h3>
+        <p>{{ d.texto }}</p>
+        {% if d.agora_url %}
+        <p class="cmp-links">
+          <a class="botao-mini" href="{{ d.antes_url }}" target="_blank" rel="noopener">Ver antes</a>
+          <a class="botao-mini" href="{{ d.agora_url }}">Ver agora</a>
+        </p>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section id="qualidade" aria-labelledby="t-qualidade">
+    <div class="cmp-secao-cab">
+      <h2 id="t-qualidade">Qualidade, segurança e operação</h2>
+      <p>O que segura o sistema em pé no dia a dia e avisa antes de um erro chegar à recepção.</p>
+    </div>
+    <ul class="cmp-grade">
+      {% for q in qualidade %}
+      <li class="cmp-item">
+        <h3>{{ q.titulo }}</h3>
+        <p>{{ q.texto }}</p>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section id="original" aria-labelledby="t-original">
+    <div class="cmp-secao-cab">
+      <h2 id="t-original">Vindo do original</h2>
+      <p>O trabalho do Gefferson depois da separação também está aqui, ligado aos fluxos desta versão.</p>
+    </div>
+    <ul class="cmp-grade">
+      {% for o in do_original %}
+      <li class="cmp-item cmp-marcado credito">
+        <p class="cmp-area">{{ o.area }}</p>
+        <h3>{{ o.titulo }}</h3>
+        <p>{{ o.texto }}</p>
+        {% if o.agora_url %}<p class="cmp-links"><a class="botao-mini" href="{{ o.agora_url }}">Abrir</a></p>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section id="proximos" aria-labelledby="t-proximos">
+    <div class="cmp-secao-cab">
+      <h2 id="t-proximos">Próximos passos</h2>
+      <p>O que ainda depende de decisão ou de credencial para valer na operação real.</p>
+    </div>
+    <ol class="cmp-grade cmp-passos">
+      {% for p in proximos %}
+      <li class="cmp-item"><div><h3>{{ p.titulo }}</h3><p>{{ p.texto }}</p></div></li>
+      {% endfor %}
+    </ol>
+  </section>
+
+  <p class="cmp-rodape">{{ rodape }}</p>
+</div>
+{% endblock %}
