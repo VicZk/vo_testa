@@ -33,26 +33,26 @@ def relatorio(request, chave):
     dados = r["builder"](inicio, fim, **{c["nome"]: c["valor"] for c in controles})
 
     if request.GET.get("export") == "csv":
-        from apps.nucleo.export import resposta_csv, sanitizar_celula
+        from apps.nucleo.export import celula, resposta_csv
         nome = slugify(r["nome"])
         resp = resposta_csv(f"{nome}_{inicio}_{fim}.csv")
         w = csv.writer(resp, delimiter=";")
         for rotulo_kpi, valor in dados["kpis"]:
-            w.writerow([sanitizar_celula(rotulo_kpi), sanitizar_celula(valor)])
+            w.writerow([celula(rotulo_kpi), celula(valor)])
         w.writerow([])
-        w.writerow([sanitizar_celula(c) for c in dados["colunas"]])
+        w.writerow([celula(c) for c in dados["colunas"]])
         for linha in dados["linhas"]:
-            w.writerow([sanitizar_celula(c) for c in linha])
+            w.writerow([celula(c) for c in linha])
         if dados.get("nota"):
             w.writerow([])
-            w.writerow([sanitizar_celula(dados["nota"])])
+            w.writerow([celula(dados["nota"])])
         if dados.get("restaurante_financeiro"):
             for secao, titulo_secao in (("vendas", "Restaurante: vendas pela data de fechamento"),
                                         ("caixa", "Restaurante: caixa pela data do movimento")):
                 w.writerow([])
                 w.writerow([titulo_secao])
                 for rotulo_kpi, valor in dados["restaurante_financeiro"][secao]:
-                    w.writerow([sanitizar_celula(rotulo_kpi), sanitizar_celula(valor)])
+                    w.writerow([celula(rotulo_kpi), celula(valor)])
         return resp
 
     return render(request, "relatorios/relatorio.html", {

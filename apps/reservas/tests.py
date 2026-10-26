@@ -1225,6 +1225,9 @@ class BOHTests(ReservasTestsBase):
         corpo = resp.content.decode("utf-8")
         self.assertIn("Boletim de Ocupação Hoteleira", corpo)
         self.assertIn("Motivo da viagem", corpo)
+        # Vírgula decimal: "16.8" o Excel pt-BR deixa como texto.
+        self.assertRegex(corpo, r"Taxa de ocupação \(%\);\d+,\d")
+        self.assertRegex(corpo, r"Permanência média \(noites\);\d+,\d")
 
 
 class EnvioFNRHTests(ReservasTestsBase):

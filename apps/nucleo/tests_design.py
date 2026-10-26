@@ -1531,7 +1531,8 @@ class ComentarioQueNaoVazaTests(TestCase):
         raiz = Path(settings.BASE_DIR)
         vazando = []
         for arq in sorted(raiz.rglob("*.html")):
-            if "node_modules" in arq.parts or ".venv" in arq.parts:
+            # .codex-work guarda worktrees de outras branches (local, fora do Git).
+            if {"node_modules", ".venv", ".codex-work"} & set(arq.parts):
                 continue
             texto = arq.read_text(encoding="utf-8")
             for achado in re.finditer(r"\{#", texto):

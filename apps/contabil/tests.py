@@ -781,6 +781,27 @@ class PainelViewTests(TestCase):
         self.assertEqual(resp["Content-Type"], "text/csv; charset=utf-8")
         self.assertTrue(resp.content.startswith("﻿".encode()))
 
+    def test_export_lancamentos_csv_para_o_contador(self):
+        """Valor com vírgula (o Excel pt-BR lê como número), data dd/mm/aaaa e tipo,
+        centro e origem em palavras, não o código gravado."""
+        self.client.post("/crm/contabil/fechar/", {
+            "ano": 2026, "mes": 9, "folha": "12.500,00", "encargos": "0",
+            "pro_labore": "0", "das": "0",
+        })
+        corpo = self.client.get("/crm/contabil/export/lancamentos/?ano=2026&mes=9").content.decode()
+        self.assertIn("Data;Histórico;Tipo;Valor (R$);Conta contábil;Centro;Origem", corpo)
+        linha = next(lin for lin in corpo.splitlines() if ";12500,00;" in lin)
+        self.assertTrue(linha.startswith("30/09/2026;"), linha)
+        self.assertIn(";Despesa;12500,00;", linha)
+        self.assertTrue(linha.endswith(";Núcleo / Recepção;Fechamento do mês"), linha)
+
+    def test_impressao_diz_a_competencia_e_deixa_fechar_e_exportar_fora(self):
+        resp = self.client.get("/crm/contabil/?ano=2026&mes=9")
+        self.assertContains(resp, "Competência: Setembro/2026")
+        self.assertContains(resp, 'class="so-papel titulo-papel">DRE gerencial</h2>')
+        self.assertContains(resp, 'class="painel-aba fora-do-papel" id="aba-fechar"')
+        self.assertContains(resp, 'class="painel-aba fora-do-papel" id="aba-export"')
+
     def test_export_tipo_invalido_404(self):
         resp = self.client.get("/crm/contabil/export/xpto/?ano=2026&mes=9")
         self.assertEqual(resp.status_code, 404)

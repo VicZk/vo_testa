@@ -49,10 +49,13 @@ def _mes_ano(request, padrao=None):
 
 
 def periodo(request, padrao=None):
-    """Período resolvido: MÊS/ANO (padrão) ou `de`+`ate`. Retorna (inicio, fim, rotulo)."""
+    """Período resolvido: MÊS/ANO (padrão) ou `de`+`ate`. Retorna (inicio, fim, rotulo).
+
+    O rótulo vai para o "Período:" das telas e para a 1ª linha dos CSV: "Outubro/2026"
+    no mês e as datas no intervalo livre ("01/10/2026 a 15/10/2026")."""
     de, ate = _data(request.GET.get("de")), _data(request.GET.get("ate"))
     if de and ate and de <= ate and (ate - de).days <= 3660:
-        return de, ate, "personalizado"
+        return de, ate, f"{de:%d/%m/%Y} a {ate:%d/%m/%Y}"
     mes, ano = _mes_ano(request, padrao)
     inicio = date(ano, mes, 1)
     fim = date(ano, mes, calendar.monthrange(ano, mes)[1])

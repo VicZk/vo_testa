@@ -561,7 +561,7 @@ def fechamento(inicio, fim) -> dict:
             ("Extrato: conciliadas", ext_conc),
             ("Extrato: pendentes", ext_pend),
             ("Extrato: ignoradas", ext_ign),
-            ("Extrato: % conciliado", f"{pct_ext}%"),
+            ("Extrato: % conciliado", pct_ext),
             ("Créditos conciliados (R$)", creditos),
             ("Débitos conciliados (R$)", debitos),
             ("Cartão: transações", c_total),

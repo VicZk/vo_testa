@@ -12,7 +12,7 @@ from django.utils.crypto import constant_time_compare
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
 
-from apps.nucleo.export import resposta_csv, sanitizar_celula
+from apps.nucleo.export import celula, resposta_csv
 from apps.nucleo.forms import ReaisInput
 from apps.nucleo.formularios import erros_do_formulario
 from apps.nucleo.modulos import Modulo
@@ -148,6 +148,13 @@ def cron_capturar(request):
 
 
 EXPORTS = {"resumo", "lancamentos", "plano"}
+# `LancamentoFinanceiro.origem` em palavras (o código fica no banco).
+ORIGENS = {
+    "manual": "Manual", "receita": "Receita da competência", "desconto": "Desconto na conta",
+    "taxa_cartao": "Taxa de cartão", "comissao_ota": "Comissão de canal (OTA)", "cmv": "CMV",
+    "consumo_estoque": "Consumo interno", "perda_estoque": "Perda de estoque",
+    "fechamento": "Fechamento do mês",
+}
 
 
 @never_cache
@@ -161,24 +168,27 @@ def export(request, tipo):
     w = csv.writer(resp, delimiter=";")
 
     if tipo == "plano":
-        w.writerow(["Codigo contador", "Classificacao", "Nome", "Grupo", "Tipo"])
+        w.writerow(["Código do contador", "Classificação", "Nome", "Grupo", "Tipo"])
         for c in plano_de_contas():
-            w.writerow([sanitizar_celula(x) for x in (
-                c.codigo_contador or "", c.classificacao, c.nome,
+            w.writerow([celula(x) for x in (
+                c.codigo_contador, c.classificacao, c.nome,
                 c.get_grupo_display(), c.get_tipo_display())])
     elif tipo == "resumo":
         totais = relatorios._totais_por_conta(ano, mes)
-        w.writerow(["Codigo contador", "Classificacao", "Nome", "Saldo do mes"])
+        w.writerow(["Código do contador", "Classificação", "Nome", "Saldo do mês (R$)"])
         for c in plano_de_contas().filter(tipo=ContaContabil.Tipo.ANALITICA):
-            w.writerow([sanitizar_celula(x) for x in (
-                c.codigo_contador or "", c.classificacao, c.nome,
+            w.writerow([celula(x) for x in (
+                c.codigo_contador, c.classificacao, c.nome,
                 totais.get(c.classificacao, Decimal("0.00")))])
     else:  # lancamentos
-        from apps.nucleo.models.financeiro import LancamentoFinanceiro
+        from apps.nucleo.models.financeiro import LancamentoFinanceiro, centro_choices
         ini, fim = relatorios.periodo(ano, mes)
-        w.writerow(["Data", "Historico", "Valor", "Conta contabil", "Centro", "Origem"])
+        centros = dict(centro_choices())
+        w.writerow(["Data", "Histórico", "Tipo", "Valor (R$)", "Conta contábil", "Centro",
+                    "Origem"])
         for lanc in LancamentoFinanceiro.objects.filter(data__range=(ini, fim)).order_by("data"):
-            w.writerow([sanitizar_celula(x) for x in (
-                lanc.data.isoformat(), lanc.descricao, lanc.valor,
-                lanc.conta_contabil, lanc.centro, lanc.origem)])
+            w.writerow([celula(x) for x in (
+                lanc.data, lanc.descricao, lanc.get_tipo_display(), lanc.valor,
+                lanc.conta_contabil, centros.get(lanc.centro, lanc.centro),
+                ORIGENS.get(lanc.origem, lanc.origem))])
     return resp

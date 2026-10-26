@@ -1187,7 +1187,7 @@ def boh(request):
 def _boh_csv(dados):
     import csv
 
-    from apps.nucleo.export import sanitizar_celula
+    from apps.nucleo.export import celula, sanitizar_celula
     resp = HttpResponse(content_type="text/csv; charset=utf-8")
     resp["Content-Disposition"] = (
         f'attachment; filename="BOH_{dados["ano"]}_{dados["mes"]:02d}.csv"'
@@ -1202,8 +1202,8 @@ def _boh_csv(dados):
     w.writerow(["Chegadas (reservas)", dados["total_chegadas"]])
     w.writerow(["UH-noites disponíveis", dados["uh_noites_disponiveis"]])
     w.writerow(["UH-noites ocupadas", dados["uh_noites_ocupadas"]])
-    w.writerow(["Taxa de ocupação (%)", dados["taxa_ocupacao"]])
-    w.writerow(["Permanência média (noites)", dados["permanencia_media"]])
+    w.writerow(["Taxa de ocupação (%)", celula(dados["taxa_ocupacao"])])
+    w.writerow(["Permanência média (noites)", celula(dados["permanencia_media"])])
 
     def bloco(titulo, itens):
         w.writerow([])

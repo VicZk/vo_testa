@@ -462,6 +462,10 @@ class RelatorioTests(TestCase):
         self.assertContains(r, "rastreada")
         r2 = self.client.get("/crm/marketing/relatorio/?mes=9&ano=2026&export=csv")
         self.assertEqual(r2["Content-Type"], "text/csv; charset=utf-8")
+        corpo = r2.content.decode("utf-8")
+        self.assertIn("Relatório de Marketing;Setembro/2026", corpo)
+        self.assertRegex(corpo, r"Teto \(R\$\);\d+,\d{2};Gasto \(R\$\);\d+,\d{2};")
+        self.assertIn("Campanha;Gasto (R$);Retorno rastreado (R$);", corpo)
 
 
 class VigenciaTests(TestCase):

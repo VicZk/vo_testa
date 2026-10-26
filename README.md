@@ -473,8 +473,9 @@ bruto continua disponível com a mesma redação de credenciais e dados sensíve
 - Content-Security-Policy por middleware (começa em modo de observação).
 - Webhooks com verificação de assinatura ou token; o de pagamento consulta o provedor em
   vez de confiar no corpo da requisição.
-- Exportações CSV com neutralização de fórmulas; `Referrer-Policy: same-origin` para
-  proteger tokens em URL.
+- Exportações CSV com neutralização de fórmulas, no formato do Excel em português
+  (`apps/nucleo/export.py`: `;`, BOM, vírgula decimal, data dd/mm/aaaa e hora de
+  Brasília); `Referrer-Policy: same-origin` para proteger tokens em URL.
 - No CI: pip-audit, bandit, regras de segurança do ruff, gitleaks e `check --deploy`.
 - Medição só com licença (LGPD): GA4, Google tag e Meta Pixel ficam no HTML como
   `<script type="text/plain" data-consentimento>` e só ligam no "Aceitar" do aviso de

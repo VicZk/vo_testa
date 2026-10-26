@@ -69,7 +69,7 @@ busca na folha.{% endcomment %}
   </form>
 </div>
 
-<p class="subtitulo">Período: {{ inicio|date:"d/m/Y" }} a {{ fim|date:"d/m/Y" }} ({{ rotulo }})</p>
+<p class="subtitulo">Período: {{ inicio|date:"d/m/Y" }} a {{ fim|date:"d/m/Y" }}{% if " a " not in rotulo %} ({{ rotulo }}){% endif %}</p>
 {# Como ler o relatório: o que entra, o que fica fora e o que é estimativa. #}
 {% if dados.nota %}<p class="subtitulo subtitulo-mini">{{ dados.nota }}</p>{% endif %}
 

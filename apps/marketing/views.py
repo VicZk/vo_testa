@@ -521,17 +521,18 @@ def relatorio(request):
         resp["Content-Disposition"] = f'attachment; filename="marketing_{inicio}_{fim}.csv"'
         resp.write("﻿")
         w = csv.writer(resp, delimiter=";")
+        from apps.nucleo.export import celula  # S-M2: anti CSV formula-injection
         w.writerow(["Relatório de Marketing", rotulo])
-        w.writerow(["Teto", dados["teto"], "Gasto", dados["gasto"], "Sobra", dados["sobra"],
-                    "Ritmo/dia", dados["ritmo"]])
+        w.writerow([celula(x) for x in (
+            "Teto (R$)", dados["teto"], "Gasto (R$)", dados["gasto"], "Sobra (R$)",
+            dados["sobra"], "Ritmo/dia (R$)", dados["ritmo"])])
         w.writerow([])
-        w.writerow(["Campanha", "Gasto", "Retorno rastreado", "Retorno estimado (janela)",
-                    "Fechamentos", "CAC"])
-        from apps.nucleo.export import sanitizar_celula  # S-M2: anti CSV formula-injection
+        w.writerow(["Campanha", "Gasto (R$)", "Retorno rastreado (R$)",
+                    "Retorno estimado na janela (R$)", "Fechamentos", "CAC (R$)"])
         for linha in dados["linhas"]:
-            w.writerow([sanitizar_celula(linha["nome"]), linha["gasto"], linha["rastreada"],
-                        linha["janela"], linha["fechamentos"],
-                        linha["cac"] if linha["cac"] is not None else "—"])
+            w.writerow([celula(x) for x in (
+                linha["nome"], linha["gasto"], linha["rastreada"], linha["janela"],
+                linha["fechamentos"], linha["cac"] if linha["cac"] is not None else "—")])
         return resp
     return render(request, "marketing/relatorio.html", {
         "dados": dados, "inicio": inicio, "fim": fim, "rotulo": rotulo,

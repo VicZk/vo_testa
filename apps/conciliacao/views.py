@@ -10,6 +10,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from apps.nucleo.areas import Area
+from apps.nucleo.export import celula
 from apps.nucleo.periodos import periodo, selecao_periodo
 from apps.nucleo.permissoes import requer_area
 
@@ -238,7 +239,7 @@ def fechamento(request):
         w.writerow(["Fechamento de conciliação", rotulo])
         w.writerow([])
         for rot, val in dados["kpis"]:
-            w.writerow([rot, val])
+            w.writerow([rot, celula(val)])
         return resp
     return render(request, "conciliacao/fechamento.html", {
         "dados": dados, "inicio": inicio, "fim": fim, "rotulo": rotulo,

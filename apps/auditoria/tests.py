@@ -93,8 +93,11 @@ class PainelTrilhaTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertContains(r, "estorno_pagamento")
         csv_resp = self.client.get(reverse("auditoria:trilha"), {"export": "csv"})
-        self.assertIn("text/csv", csv_resp["Content-Type"])  # agora com charset utf-8-sig (BOM)
-        self.assertIn("estorno_pagamento", csv_resp.content.decode())
+        self.assertIn("text/csv", csv_resp["Content-Type"])
+        corpo = csv_resp.content.decode()
+        self.assertIn("Quando;Usuário;Descrição;Ação;Código da ação;Alvo;ID do alvo;Detalhe",
+                      corpo)
+        self.assertIn(";Estorno de pagamento;estorno_pagamento;", corpo)
 
     def test_sem_acesso_da_403(self):
         Usuario.objects.create_user(username="x", password="senha-forte-123")
@@ -245,7 +248,9 @@ class FechamentosTelaTests(TestCase):
         self.assertContains(r, "R$ 200,00")  # ADR = 2.400 / 12
         csv_resp = self.client.get(reverse("auditoria:fechamentos"), {"export": "csv"})
         self.assertIn("text/csv", csv_resp["Content-Type"])
-        self.assertIn("2400.00", csv_resp.content.decode("utf-8-sig"))
+        corpo = csv_resp.content.decode("utf-8-sig")
+        self.assertIn("Dia;Quartos disponíveis;Quartos ocupados;Ocupação (%);", corpo)
+        self.assertIn(";2400,00;200,00;", corpo)  # vírgula: o Excel pt-BR lê como número
 
     def test_operador_ve_mas_nao_exporta(self):
         from apps.nucleo.models import ModuloContratado
@@ -287,4 +292,5 @@ class RotulosDaTrilhaTests(TestCase):
         self.assertContains(r, '<option value="no_show">Não comparecimento</option>', html=True)
         self.assertNotContains(r, ">no_show<")
         csv_resp = self.client.get(reverse("auditoria:trilha"), {"export": "csv"})
-        self.assertIn("no_show", csv_resp.content.decode())                # o CSV guarda o código
+        # O CSV guarda o código (forense), na coluna dele, ao lado do rótulo.
+        self.assertIn(";Não comparecimento;no_show;", csv_resp.content.decode())

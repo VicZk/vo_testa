@@ -9,6 +9,43 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 25/10/2026: exportações e impressões conferidas
+
+- **Os CSV abrem certo no Excel em português.** Os números saíam com ponto
+  ("62983.20"), que o Excel brasileiro lê como texto: a coluna não soma, e "5.7" pode
+  virar data. Agora saem com vírgula, data em dd/mm/aaaa e cabeçalho legível
+  ("Quartos disponíveis", não `quartos_disponiveis`). Valia para o export do Contábil
+  para o contador (resumo, lançamentos e plano de contas), fechamentos do dia, marketing,
+  conciliação e boletim de ocupação (BOH).
+- **A trilha de auditoria em CSV saía no horário de Greenwich**, 3 horas à frente.
+  Agora sai no horário de Brasília, com a ação por extenso ("Estorno de pagamento"). O
+  código técnico continua numa coluna própria, para a perícia filtrar.
+- **Lançamentos do Contábil para o contador** ganharam a coluna Tipo (receita ou
+  despesa), e o centro e a origem saem em palavras ("Fechamento do mês", não
+  `fechamento`).
+- **Valor negativo nos relatórios** não sai mais com apóstrofo ("'-R$ 50,00"). A
+  proteção contra fórmula continua para texto digitado.
+- **Período escolhido por datas:** o CSV e o "Período:" das telas de Auditoria,
+  Conciliação, Escala e Marketing mostravam "personalizado". Agora mostram as datas.
+- **Impressão do Contábil (Imprimir / PDF):**
+  - a folha diz a competência e cada seção sai com título;
+  - o DRE ocupa a largura toda e os gráficos cabem na página (o de receita por natureza
+    invadia a seção seguinte);
+  - o formulário "Fechar o mês" e os links de exportação não vão mais para o papel.
+- **BOH:** "28 fichas sem preenchimento ficaram fora" (antes, "ficou").
+- **Conferidos sem mudança:**
+  - cupons de 80 mm da loja, do restaurante e da lavanderia;
+  - kit de contingência e conferência da hospedagem;
+  - relatórios em retrato e em paisagem;
+  - relatório da escala, marketing, conciliação e BOH.
+- **Modificado:** `apps/nucleo/export.py` (`celula`, novo, e `sanitizar_celula`),
+  `apps/nucleo/periodos.py`, os exports em `apps/contabil`, `apps/auditoria`,
+  `apps/conciliacao`, `apps/marketing`, `apps/reservas` e `apps/relatorios`,
+  `templates/contabil/painel.html`, `templates/relatorios/relatorio.html` e
+  `templates/reservas/boh.html`. Testes em `apps/nucleo/tests_export.py` (novo) e nos
+  testes dos módulos. O teste de comentários de template deixou de ler as worktrees
+  locais em `.codex-work`, que davam falha falsa só na máquina.
+
 ## 25/10/2026: NFS-e pelo Spedy e regime Lucro Presumido, vindos do original
 
 - **O original passou a emitir NFS-e pelo Spedy** (commit `85e19bf` do Gefferson). O

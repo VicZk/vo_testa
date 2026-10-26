@@ -3,7 +3,6 @@ import csv
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import render
-from django.utils import timezone
 from django.views.decorators.cache import never_cache
 
 from apps.nucleo.audit import redigir_credenciais, redigir_sensiveis
@@ -57,19 +56,20 @@ def trilha(request):
             raise PermissionDenied("Exportar a trilha exige gerência.")
         import json as _json
 
-        from apps.nucleo.export import resposta_csv, sanitizar_celula
+        from apps.nucleo.export import celula, resposta_csv
         resp = resposta_csv("trilha_auditoria.csv")
-        from .formatacao import frase
+        from .formatacao import frase, rotulo_alvo
         w = csv.writer(resp, delimiter=";")
-        w.writerow(["quando", "usuario", "descricao", "acao", "alvo", "alvo_id", "detalhe"])
+        # O código da ação fica numa coluna própria: é por ele que a perícia filtra.
+        w.writerow(["Quando", "Usuário", "Descrição", "Ação", "Código da ação", "Alvo",
+                    "ID do alvo", "Detalhe"])
         for t in qs[:5000]:
             t.detalhe = redigir_credenciais(t.detalhe)
             if ocultar_sensivel:
                 t.detalhe = redigir_sensiveis(t.detalhe)
-            w.writerow([sanitizar_celula(x) for x in (
-                t.criado_em.strftime("%d/%m/%Y %H:%M"),
-                t.usuario or "—", frase(t), t.acao, t.alvo, t.alvo_id,
-                _json.dumps(t.detalhe, ensure_ascii=False),
+            w.writerow([celula(x) for x in (
+                t.criado_em, t.usuario or "—", frase(t), rotulo_acao(t.acao), t.acao,
+                rotulo_alvo(t.alvo), t.alvo_id, _json.dumps(t.detalhe, ensure_ascii=False),
             )])
         return resp
     pagina = paginar(request, qs, 100)
@@ -122,19 +122,18 @@ def fechamentos(request):
     if request.GET.get("export") == "csv":
         if not eh_gerente(request.user):
             raise PermissionDenied("Exportar os fechamentos exige gerência.")
-        from apps.nucleo.export import resposta_csv
+        from apps.nucleo.export import celula, resposta_csv
 
         resp = resposta_csv("fechamentos_do_dia.csv")
         w = csv.writer(resp, delimiter=";")
-        w.writerow(["dia", "quartos_disponiveis", "quartos_ocupados", "ocupacao_pct",
-                    "chegadas", "saidas", "no_shows", "diarias", "adr", "servico",
-                    "consumo", "saldo_em_aberto", "fechado_em"])
+        w.writerow(["Dia", "Quartos disponíveis", "Quartos ocupados", "Ocupação (%)",
+                    "Chegadas", "Saídas", "No-shows", "Diárias (R$)", "ADR (R$)",
+                    "Serviço (R$)", "Consumo (R$)", "Em aberto (R$)", "Fechado em"])
         for f in lista:
-            w.writerow([f.data.strftime("%d/%m/%Y"), f.quartos_disponiveis,
-                        f.quartos_ocupados, f.taxa_ocupacao, f.chegadas, f.saidas,
-                        f.no_shows, f.receita_diarias, f.adr, f.receita_servico,
-                        f.receita_consumo, f.saldo_em_aberto,
-                        timezone.localtime(f.criado_em).strftime("%d/%m/%Y %H:%M")])
+            w.writerow([celula(x) for x in (
+                f.data, f.quartos_disponiveis, f.quartos_ocupados, f.taxa_ocupacao,
+                f.chegadas, f.saidas, f.no_shows, f.receita_diarias, f.adr,
+                f.receita_servico, f.receita_consumo, f.saldo_em_aberto, f.criado_em)])
         return resp
     return render(request, "auditoria/fechamentos.html", {
         "fechamentos": lista,

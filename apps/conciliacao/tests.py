@@ -355,6 +355,16 @@ class FechamentoViewTests(TestCase):
         self.assertEqual(r["Content-Type"], "text/csv; charset=utf-8")
         self.assertIn("Taxa de cartão", r.content.decode("utf-8"))
 
+    def test_fechamento_csv_de_periodo_livre_diz_as_datas(self):
+        r = self.client.get("/crm/conciliacao/fechamento/?export=csv&de=2026-10-01&ate=2026-10-15")
+        corpo = r.content.decode("utf-8")
+        self.assertIn("Fechamento de conciliação;01/10/2026 a 15/10/2026", corpo)
+        self.assertIn("Extrato: % conciliado;0,0", corpo)
+        self.assertIn("Créditos conciliados (R$);0,00", corpo)
+        tela = self.client.get("/crm/conciliacao/fechamento/?de=2026-10-01&ate=2026-10-15")
+        self.assertContains(tela, "01/10/2026 a 15/10/2026")
+        self.assertNotContains(tela, "personalizado</b>")
+
 
 class FechamentoGraficoTests(TestCase):
     def setUp(self):

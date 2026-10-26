@@ -105,7 +105,22 @@
 .ctb .nota { display:block; margin-top:.5rem; }
 .ctb .nota-rodape { margin-top:.8rem; }
 .ctb .esp-fim { margin-bottom:1.4rem; }
-@media print { .ctb .abas-secao, .ctb .filtro-barra, .botao-neutro { display:none !important; } .ctb .painel-aba { display:block !important; } }
+/* Papel: sem abas nem seletor, a folha diz a competência e cada seção traz o próprio
+   título; o DRE ocupa a largura toda e o gráfico encolhe para caber. Fechar o mês
+   (formulário) e Exportar (links) não têm o que fazer no papel. */
+.ctb .so-papel { display:none; }
+@media print {
+  .ctb .abas-secao, .ctb .filtro-barra, .botao-neutro { display:none !important; }
+  .ctb .painel-aba { display:block !important; animation:none; }
+  .ctb .painel-aba.fora-do-papel { display:none !important; }
+  .ctb .so-papel { display:block; }
+  .ctb .competencia-papel { color:var(--tinta-suave); margin:.2rem 0 0; }
+  .ctb .titulo-papel { font-size:1.1rem; margin:1.4rem 0 .7rem; break-after:avoid; }
+  .ctb .duas { grid-template-columns:1fr; }
+  .ctb .chart-box, .ctb .chart-box.sm { height:auto; }
+  .ctb .chart-box canvas { width:100% !important; height:auto !important; }
+  .ctb .coluna-graficos .cartao { break-inside:avoid; }
+}
 </style>
 
 <div class="ctb">
@@ -113,6 +128,7 @@
     <div>
       <p class="eyebrow">Financeiro</p>
       <h1>Painel Contábil</h1>
+      <p class="so-papel competencia-papel">Competência: {% for num, nome in meses %}{% if num == mes_sel %}{{ nome }}{% endif %}{% endfor %}/{{ ano_sel }}</p>
     </div>
     <form method="get" class="filtro-barra filtro-inline">
       <div class="filtro-campo"><label for="ctb-mes">Mês</label>
@@ -138,6 +154,7 @@
 
   {# ===================== DRE ===================== #}
   <section class="painel-aba on" id="aba-dre" role="tabpanel" tabindex="0">
+    <h2 class="so-papel titulo-papel">DRE gerencial</h2>
     <div class="kpis">
       <div class="cartao kpi"><div class="rotulo">Receita líquida</div><div class="valor">{{ dre.receita_liquida|intcomma_brl }}</div></div>
       <div class="cartao kpi"><div class="rotulo">Lucro bruto</div><div class="valor acc">{{ dre.lucro_bruto|intcomma_brl }}</div></div>
@@ -168,6 +185,7 @@
 
   {# ===================== FLUXO ===================== #}
   <section class="painel-aba" id="aba-fluxo" role="tabpanel" tabindex="0">
+    <h2 class="so-papel titulo-papel">Fluxo de caixa</h2>
     <div class="kpis">
       <div class="cartao kpi"><div class="rotulo">Entradas (caixa)</div><div class="valor pos">{{ fluxo.entradas|intcomma_brl }}</div></div>
       <div class="cartao kpi"><div class="rotulo">Saídas (caixa)</div><div class="valor neg">{{ fluxo.saidas|intcomma_brl }}</div></div>
@@ -221,6 +239,7 @@
 
   {# ===================== PLANO ===================== #}
   <section class="painel-aba" id="aba-plano" role="tabpanel" tabindex="0">
+    <h2 class="so-papel titulo-papel">Plano de contas</h2>
     <div class="cartao cartao-tabela">
       {% for item in contas %}
       <div class="conta-linha {{ item.conta.tipo }} ind-{{ item.conta.classificacao|length }}">
@@ -235,6 +254,7 @@
 
   {# ===================== A CLASSIFICAR (órfãos) ===================== #}
   <section class="painel-aba" id="aba-depara" role="tabpanel" tabindex="0">
+    <h2 class="so-papel titulo-papel">A classificar</h2>
     <h3 class="t-secao">Categorias sem de‑para</h3>
     <div class="cartao cartao-tabela esp-fim">
       {% for c in orfaos.categorias %}
@@ -251,7 +271,7 @@
   </section>
 
   {# ===================== FECHAR O MÊS ===================== #}
-  <section class="painel-aba" id="aba-fechar" role="tabpanel" tabindex="0">
+  <section class="painel-aba fora-do-papel" id="aba-fechar" role="tabpanel" tabindex="0">
     <div class="cartao cartao-form">
       <h3 class="t-form">Fechar {{ mes_sel }}/{{ ano_sel }}</h3>
       <p class="periodo">Os números de baixa frequência que não nascem no sistema. Gera os lançamentos de competência já classificados. Recomputável (reenviar atualiza).</p>
@@ -288,7 +308,7 @@
   </section>
 
   {# ===================== EXPORT ===================== #}
-  <section class="painel-aba" id="aba-export" role="tabpanel" tabindex="0">
+  <section class="painel-aba fora-do-papel" id="aba-export" role="tabpanel" tabindex="0">
     <p class="periodo">Arquivos CSV (pt‑BR, Excel) no layout do contador — com o código numérico das contas.</p>
     <div class="export-grid">
       <div class="cartao"><h3>Resumo por conta</h3><p class="periodo">Saldo do mês por conta analítica.</p><a class="botao-neutro" href="{% url 'contabil:export' 'resumo' %}?ano={{ ano_sel }}&mes={{ mes_sel }}">Baixar CSV</a></div>
