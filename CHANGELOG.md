@@ -9,16 +9,27 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 26/10/2026: aba Comparativo com o tom revisto
+
+- **Texto para apresentar.** "Grave" e "Importante" viraram "Impacto alto" e "Impacto
+  médio", que falam do efeito para a pousada e não do trabalho de ninguém. Os textos com
+  tom de crítica ficaram descritivos: as rotinas da madrugada estavam prontas e faltava
+  ligar o agendador. "De volta para o original" não repete a lista de correções. Entrou
+  a Visão geral reorganizada, com o antes e o agora.
+- **Modificado:** `deploy/vps/comparador/comparativo.py` e
+  `templates/vps/comparativo.html`; o texto das duas entradas abaixo e um comentário do
+  `app.css` ficaram neutros.
+
 ## 26/10/2026: Visão geral com chegadas e saídas empilhadas e recados ao lado
 
 - **Chegadas e saídas uma embaixo da outra.** Lado a lado, as duas listas tinham
   alturas diferentes (a vazia ficava maior que a com um hóspede) e, com muita gente,
   a mais curta sobrava em branco. Agora ficam empilhadas, com a mesma largura, e a
   lista vazia vira uma linha só ("Sem saídas previstas para hoje.").
-- **Recados do turno num cartão ao lado.** O quadro amarelo atravessava o painel entre
-  as listas e o mapa dos quartos. Virou um cartão da casa, em lista como as chegadas,
-  numa coluna ao lado do movimento do dia que acompanha a rolagem. No celular, e em
-  tela média com o menu aberto, vem depois das saídas. O recado importante tem o ponto
+- **Recados do turno num cartão ao lado.** Os recados saíram da faixa entre as listas
+  e o mapa dos quartos e viraram um cartão da casa, em lista como as chegadas, numa
+  coluna ao lado do movimento do dia que acompanha a rolagem. No celular, e em tela
+  média com o menu aberto, vêm depois das saídas. O recado importante tem o ponto
   vermelho e o fundo suave, e o pé do cartão leva a "Escrever um recado".
 - **Modificado:** `templates/nucleo/dashboard.html`, `static/css/app.css` (saiu também
   uma regra antiga que reservava uma faixa vazia em cima de cada recado).
@@ -28,12 +39,12 @@ A entrada mais nova fica no topo. As datas são as do push.
 - **O que mudou, numa tela só.** A cópia atualizada da VPS ganhou o item "Comparativo"
   no menu, acima de "Versão anterior". A página traz os números das duas versões
   (testes automáticos de 977 para 2.863, testes de navegador de 8 para 282), as 14
-  correções mais importantes com o antes e o agora (9 graves), as novidades, o design,
-  a qualidade e a operação, o que veio do Gefferson depois da separação e os próximos
+  correções mais importantes com o antes e o agora (9 de impacto alto), as novidades, o design,
+  a qualidade e a operação, o que veio do Gefferson nesses dias e os próximos
   passos. Cada item com tela leva à mesma tela nas duas versões.
 - **Segurança só por alto.** A página fica aberta e a produção ainda roda a versão
-  anterior, então falha de segurança aparece sem detalhe; o detalhe técnico fica no
-  relatório privado.
+  anterior, então os itens de segurança aparecem sem o detalhe técnico, que fica num
+  relatório à parte.
 - **Só na VPS.** Liga com `COMPARATIVO_VERSOES=1` na cópia atualizada. A produção e o
   desenvolvimento local não mudam.
 - **Modificado:** `deploy/vps/comparador/` (`comparativo.py`, `urls_vps.py`,

@@ -73,13 +73,13 @@
   <section id="correcoes" aria-labelledby="t-correcoes">
     <div class="cmp-secao-cab">
       <h2 id="t-correcoes">Correções importantes</h2>
-      <p>O que podia custar dinheiro, gerar reserva em dobro, perder ou expor dados e já está corrigido nesta versão. As falhas de segurança aparecem só por alto; o detalhe técnico fica no relatório privado.</p>
-      <p class="cmp-legenda"><span class="grave">Grave</span><span>Importante</span></p>
+      <p>O que podia custar dinheiro, perder ou expor dados ou travar a operação, e já está resolvido nesta versão. Os itens de segurança aparecem só por alto; o detalhe técnico fica num relatório à parte.</p>
+      <p class="cmp-legenda"><span class="grave">Impacto alto</span><span>Impacto médio</span></p>
     </div>
     <ul class="cmp-grade">
       {% for c in correcoes %}
       <li class="cmp-item cmp-marcado{% if c.grave %} grave{% endif %}">
-        <p class="cmp-area"><span{% if c.grave %} class="grave"{% endif %}>{% if c.grave %}Grave{% else %}Importante{% endif %}</span> · {{ c.area }}</p>
+        <p class="cmp-area"><span{% if c.grave %} class="grave"{% endif %}>{% if c.grave %}Impacto alto{% else %}Impacto médio{% endif %}</span> · {{ c.area }}</p>
         <h3>{{ c.titulo }}</h3>
         <dl class="cmp-aa">
           <div class="antes"><dt>Antes</dt><dd>{{ c.antes }}</dd></div>
@@ -152,7 +152,7 @@
   <section id="original" aria-labelledby="t-original">
     <div class="cmp-secao-cab">
       <h2 id="t-original">Vindo do original</h2>
-      <p>O trabalho do Gefferson depois da separação também está aqui, ligado aos fluxos desta versão.</p>
+      <p>O que o Gefferson publicou nestes dias também está aqui, ligado aos fluxos desta versão.</p>
     </div>
     <ul class="cmp-grade">
       {% for o in do_original %}

@@ -44,8 +44,9 @@ CORRECOES = [
      "agora": "O campo devolve 650,00 em qualquer formulário de R$, com teste da ida e volta do valor.",
      "tela": "comercial:funil"},
     {"grave": True, "area": "Operação", "titulo": "Rotinas da madrugada passam a rodar",
-     "antes": "Expiração de pré-reserva, reenvio de FNRH, campanhas, reenvio de e-mail e WhatsApp e "
-              "backup dependiam de um agendador que não existia; pré-reserva vencida seguia segurando o quarto.",
+     "antes": "As rotinas de expiração de pré-reserva, reenvio de FNRH, campanhas, reenvio de e-mail "
+              "e WhatsApp e backup estavam prontas, mas faltava ligar o agendador; a pré-reserva "
+              "vencida seguia segurando o quarto.",
      "agora": "As rotinas rodam em dois grupos, a cada 10 min e às 03:15, com aviso de começo, fim e falha."},
     {"grave": True, "area": "Fiscal", "titulo": "ISS fora da própria base da NFS-e",
      "antes": "O ISS e a taxa de turismo entravam na base de cálculo da nota, então o ISS incidia "
@@ -68,7 +69,7 @@ CORRECOES = [
      "tela": "lp:inauguracao"},
     {"grave": True, "area": "Hóspede · Contrato", "titulo": "Termos e devolução dizem a mesma coisa",
      "antes": "Os termos falavam em devolver 90% nos 7 dias, o sistema devolvia 100% (o que o CDC "
-              "pede na venda pela internet) e a reserva mostrava “Retemos 1E+1% do valor total”.",
+              "pede na venda pela internet), e o percentual saía num formato técnico (1E+1%).",
      "agora": "Resumo, termos e cálculo saem da mesma configuração, o percentual aparece como 10% "
               "e a reserva guarda o texto aceito, com data e hora.",
      "tela": "core:termos_servico"},
@@ -102,7 +103,7 @@ NUMEROS = [
     {"rotulo": "Testes automáticos", "valor": "2.863", "nota": "Eram 977 na versão anterior"},
     {"rotulo": "Testes no navegador", "valor": "282", "nota": "Eram 8, e agora rodam a cada push"},
     {"rotulo": "Correções importantes", "valor": str(len(CORRECOES)),
-     "nota": f"{sum(1 for c in CORRECOES if c.get('grave'))} delas graves"},
+     "nota": f"{sum(1 for c in CORRECOES if c.get('grave'))} de impacto alto"},
     {"rotulo": "Busca de quartos no site", "valor": "18", "unidade": "consultas",
      "nota": "Eram 334, para 3 noites"},
 ]
@@ -163,6 +164,10 @@ NOVIDADES = [
 ]
 
 DESIGN = [
+    {"titulo": "Visão geral reorganizada",
+     "texto": "Chegadas e saídas uma embaixo da outra, com a lista vazia numa linha só, e os recados "
+              "do turno num cartão ao lado do movimento do dia.",
+     "tela": "dashboard"},
     {"titulo": "Menu lateral firme",
      "texto": "Abrir e recolher não faz mais nada saltar: o menu recolhido é o aberto recortado. No "
               "celular, a gaveta funciona como janela (Esc, foco preso) e cada ícone tem nome.",
@@ -192,7 +197,8 @@ DESIGN = [
 QUALIDADE = [
     {"titulo": "Testes a cada push, com navegador",
      "texto": "A suíte roda contra PostgreSQL 16 em todo push, com um job obrigatório de fluxos no "
-              "navegador (Playwright e Chromium). Antes, os testes de navegador pulavam em silêncio no CI."},
+              "navegador (Playwright e Chromium). Os testes de navegador, que rodavam só na máquina "
+              "de quem tinha o Playwright, agora rodam no CI também."},
     {"titulo": "Segurança verificada a cada push",
      "texto": "pip-audit, bandit, gitleaks e semgrep rodam a cada push e barram a entrega; os 38 "
               "alertas do semgrep foram conferidos um a um."},
@@ -231,9 +237,9 @@ DO_ORIGINAL = [
               "tarifa não reembolsável e o comando para zerar as reservas de teste.",
      "tela": "tabela_precos"},
     {"area": "Mão na volta", "titulo": "De volta para o original",
-     "texto": "As correções que também valem para a produção dele (o R$ cem vezes maior, o 1E+1%, "
-              "termos e devolução, aviso de cookies) estão prontas como patches sobre a main. E um "
-              "robô busca o original duas vezes por dia, testa a junção e abre um PR para revisão."},
+     "texto": "Quatro correções que também valem para a produção atual estão prontas como patches "
+              "sobre a main, para aplicar quando fizer sentido. E um robô busca o original duas vezes "
+              "por dia, testa a junção e abre um PR para revisão."},
 ]
 
 PROXIMOS = [
