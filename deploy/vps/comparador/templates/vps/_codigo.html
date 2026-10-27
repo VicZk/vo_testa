@@ -1,0 +1,4 @@
+<figure class="cmp-cod">
+  <figcaption><code>{{ b.titulo }}</code>{% if b.nota %}<span>{{ b.nota }}</span>{% endif %}{% if b.link %}<a href="{{ b.link }}" target="_blank" rel="noopener">{{ b.link_txt }}</a>{% endif %}</figcaption>
+  <pre><code>{% for l in b.linhas %}{% if l.tipo == "rem" %}<del class="l">{{ l.texto }}</del>{% elif l.tipo == "add" %}<ins class="l">{{ l.texto }}</ins>{% else %}<span class="l{% if l.tipo == 'omit' %} omit{% endif %}">{{ l.texto }}</span>{% endif %}{% endfor %}</code></pre>
+</figure>

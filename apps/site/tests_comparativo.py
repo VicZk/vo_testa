@@ -23,3 +23,15 @@ class ComparativoTests(TestCase):
         r = self.client.get("/crm/comparativo/")
         self.assertContains(r, "<h1>Comparativo entre versões</h1>", html=True)
         self.assertContains(r, f'href="{ANTERIOR}/crm/')
+        # Diff do conserto: a linha nova vem marcada, e o código das LPs aparece como
+        # texto (escapado), nunca como uma tag de verdade na página.
+        self.assertContains(r, '<ins class="l">    _creditar_na_reserva(cobranca)</ins>')
+        self.assertContains(r, "&lt;script type=&quot;text/plain&quot; data-consentimento&gt;")
+        self.assertNotContains(r, '<script type="text/plain" data-consentimento>')
+
+    def test_diff_marca_o_que_saiu_e_o_que_entrou(self):
+        from deploy.vps.comparador.comparativo import _diff
+
+        linhas = _diff("    a\n    …\n    b\n", "    a\n    …\n    c\n")
+        self.assertEqual([(linha["tipo"], linha["texto"]) for linha in linhas],
+                         [("", "a"), ("omit", "…"), ("rem", "b"), ("add", "c")])

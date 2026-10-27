@@ -51,12 +51,21 @@ Arquivo `.py` alterado: copiar para a pasta e recriar os dois containers. Testes
 ## Aba "Comparativo"
 
 Só na cópia atualizada: `/votesta/crm/comparativo/` resume o que mudou da versão
-anterior para esta, como uma curadoria do CHANGELOG. As seções são correções (com o
-antes e o agora), novidades, design, qualidade, o que veio do original e os próximos
-passos. Cada item com tela leva a "Ver antes" (a mesma tela na versão anterior, em outra
-aba) e "Ver agora". O conteúdo fica em `comparativo.py`, o modelo em
-`templates/vps/comparativo.html` e o item do menu no `nova.js`. Falha de segurança
-aparece só por alto: esta página fica aberta, e a produção ainda roda a versão anterior.
+anterior para esta, como uma curadoria técnica do CHANGELOG. As seções são números
+(barras antes × agora), consertos (com o antes, o agora e o diff do código), novidades,
+interface, engenharia, o que é do Gefferson (a base que ficou, com o código dele, e o que
+ele publicou) e os próximos passos. Cada item com tela leva a "Ver antes" (a mesma tela
+na versão anterior, em outra aba) e "Ver agora". O conteúdo fica em `comparativo.py`, os
+trechos de código em `trechos.py`, o modelo em `templates/vps/` e o item do menu no
+`nova.js`. Nos textos, `crase` vira código. Falha de segurança aparece só por alto e sem
+código: esta página fica aberta, e a produção ainda roda a versão anterior.
+
+Os trechos são colados do código sem retoque. Ao mexer em `trechos.py`, confira cada
+linha no git das duas versões (precisa do remoto `upstream` atualizado):
+
+```bash
+python deploy/vps/comparador/conferir_trechos.py   # "tudo confere" ou a linha sem par
+```
 
 Liga com `COMPARATIVO_VERSOES=1` no `.env` da cópia atualizada, que faz o
 `settings_vps.py` usar o `urls_vps.py` e achar o modelo nesta pasta. Teste em

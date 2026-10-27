@@ -859,8 +859,8 @@ conteúdo existente.
 
 **Cópias de comparação (VPS de teste):** a versão atualizada (`viczk.cloud/votesta`) e
 a anterior rodam lado a lado. O item "Versão anterior/atualizada" do menu abre a mesma
-tela na outra versão, e a aba "Comparativo" resume o que mudou entre as duas. As duas
-entram sem senha. Como funciona e como desligar está em
+tela na outra versão, e a aba "Comparativo" resume o que mudou entre as duas, com o
+diff do código de cada conserto. As duas entram sem senha. Como funciona e como desligar está em
 [`deploy/vps/comparador/`](deploy/vps/comparador/README.md).
 
 Detalhes em [`docs/ARQUITETURA.md` §10](docs/ARQUITETURA.md).

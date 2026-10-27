@@ -9,6 +9,30 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 26/10/2026: aba Comparativo técnica, com o código de cada conserto
+
+- **Código no lugar da paráfrase.** A versão em linguagem do dia a dia ficou simples
+  demais para apresentar a quem escreveu o sistema. Cada conserto traz agora o antes e o
+  agora em termos técnicos (funções, models, migrations) e o diff do trecho: `−` é a
+  linha do `main` do original, `+` a da `dev`, com link para o commit. São 12 consertos
+  com código e 27 blocos ao todo; os dois de segurança seguem sem código, porque a página
+  é aberta e a produção ainda roda a versão anterior.
+- **Números técnicos.** Nove medidas: testes (977 → 2.863), testes de ponta a ponta
+  (8 → 282), restrições no banco (21 → 60), travas de linha (5 → 77), consultas ao abrir
+  um lead (444 → 56) e na busca de quartos (334 → 18), tamanho e primeira pintura da LP
+  da inauguração e alvos de toque abaixo de 44 px.
+- **O que é do Gefferson, com o código dele.** Nova parte "A base que ficou": o
+  `ExclusionConstraint` contra overbooking, o `@requer_modulo` e o `travar()`, iguais nas
+  duas versões. Também ficou dito o que já era dele: o `security.yml`, a verificação em
+  duas etapas e a trava do custo médio no estoque.
+- **Trechos conferidos no git.** Os trechos são colados sem retoque, e
+  `conferir_trechos.py` confere cada linha no `main` do original e no commit do fork.
+  Na conferência, a máscara de R$ apareceu reescrita também no front: converte só o que
+  é enviado (`formdata` e `htmx:configRequest`), e o diff mostra as duas camadas.
+- **Modificado:** `deploy/vps/comparador/comparativo.py`, `trechos.py` (novo),
+  `conferir_trechos.py` (novo), `templates/vps/comparativo.html`, `_texto.html` e
+  `_codigo.html` (novos), o README da pasta e `apps/site/tests_comparativo.py`.
+
 ## 26/10/2026: aba Comparativo em linguagem do dia a dia, com gráficos
 
 - **Sem jargão.** Os textos foram reescritos para quem não é da área técnica, com

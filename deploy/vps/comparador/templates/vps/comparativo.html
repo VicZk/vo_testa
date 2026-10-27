@@ -7,18 +7,20 @@
 /* ===== Comparativo entre versões — escopo .cmp, só tokens do app.css ===== */
 .cmp { --acc-texto: var(--lampiao-tinta); }
 .cmp .eyebrow { text-transform: uppercase; letter-spacing: .14em; font-size: max(var(--rotulo-min), .72rem); font-weight: 600; color: var(--acc-texto); margin: 0; }
-.cmp .eleg-intro { max-width: 74ch; }
+.cmp .eleg-intro { max-width: 80ch; line-height: 1.6; }
 .cmp-indice { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.1rem; }
 .cmp section { margin-top: var(--espaco-secao); scroll-margin-top: calc(var(--topbar-h) + 1rem); }
 .cmp-secao-cab h2 { margin: 0; }
-.cmp-secao-cab p { margin: .3rem 0 0; color: var(--tinta-suave); max-width: 74ch; line-height: 1.55; }
+.cmp-secao-cab p { margin: .3rem 0 0; color: var(--tinta-suave); max-width: 80ch; line-height: 1.55; }
+.cmp-sub { margin: 1.5rem 0 0; font-size: 1rem; }
 .cmp-legenda { display: flex; flex-wrap: wrap; gap: .35rem 1.1rem; font-size: .85rem; }
 .cmp-legenda span { display: inline-flex; align-items: center; gap: .45rem; }
 .cmp-legenda span::before { content: ""; width: .8rem; height: 3px; border-radius: 2px; background: var(--alerta); }
 .cmp-legenda .grave::before { background: var(--perigo); }
 .cmp-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(21rem, 100%), 1fr)); gap: 1rem; margin: 1rem 0 0; padding: 0; list-style: none; }
+.cmp-tec { display: grid; gap: 1rem; margin: 1rem 0 0; padding: 0; list-style: none; }
 .cmp-item { position: relative; overflow: hidden; display: flex; flex-direction: column; gap: .6rem; min-width: 0; padding: 1.1rem 1.2rem 1.15rem; background: var(--superficie); border: 1px solid var(--fio); border-radius: var(--raio-g); box-shadow: var(--sombra-cartao); break-inside: avoid; }
-.cmp-item h3 { margin: 0; font-size: 1.05rem; line-height: 1.3; }
+.cmp-item h3, .cmp-item h4 { margin: 0; font-size: 1.05rem; line-height: 1.3; }
 .cmp-item p { margin: 0; line-height: 1.55; }
 .cmp-area { font-size: max(var(--rotulo-min), .7rem); text-transform: uppercase; letter-spacing: .1em; font-weight: 600; color: var(--tinta-suave); }
 .cmp-area .grave { color: var(--perigo); }
@@ -38,7 +40,34 @@
 .cmp-passos .cmp-item { counter-increment: passo; flex-direction: row; align-items: flex-start; gap: .85rem; }
 .cmp-passos .cmp-item::before { content: counter(passo); flex: none; display: grid; place-items: center; width: 1.9rem; height: 1.9rem; border-radius: 50%; border: 1px solid var(--fio-forte); font-weight: 600; font-variant-numeric: tabular-nums; color: var(--acc-texto); }
 .cmp-passos .cmp-item > div { display: flex; flex-direction: column; gap: .3rem; min-width: 0; }
-.cmp-rodape { margin: var(--espaco-secao) 0 0; color: var(--tinta-suave); font-size: .85rem; line-height: 1.55; }
+.cmp-rodape { margin: var(--espaco-secao) 0 0; color: var(--tinta-suave); font-size: .85rem; line-height: 1.55; max-width: 80ch; }
+/* Código no meio do texto (`crase` no comparativo.py). */
+.cmp-ic { font-family: var(--fonte-mono); font-size: .86em; padding: .06em .32em; border-radius: calc(var(--raio-p) / 2.5); background: color-mix(in srgb, var(--tinta) 7%, transparent); overflow-wrap: anywhere; }
+/* Cartão com código: texto e diff lado a lado quando o CONTEÚDO tem espaço (container
+   query, não @media: o menu aberto ou recolhido muda a largura útil). */
+.cmp-texto { display: flex; flex-direction: column; gap: .6rem; min-width: 0; }
+.cmp-codigos { display: grid; gap: .75rem; min-width: 0; align-content: start; }
+@container conteudo (width > 64rem) {
+  .cmp-com-codigo { display: grid; grid-template-columns: minmax(19rem, 4fr) minmax(0, 9fr); gap: 1.5rem; align-items: start; }
+}
+/* Diff: − linha da versão anterior, + linha da atualizada. <del>/<ins> dizem o mesmo
+   ao leitor de tela; o código rola dentro do bloco, nunca a página. */
+.cmp-cod { margin: 0; min-width: 0; border: 1px solid var(--fio); border-radius: var(--raio-p); background: var(--superficie-2); overflow: hidden; }
+.cmp-cod figcaption { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem .75rem; padding: .45rem .8rem; border-bottom: 1px solid var(--fio); font-size: max(var(--rotulo-min), .74rem); color: var(--tinta-suave); }
+.cmp-cod figcaption code { font-family: var(--fonte-mono); color: var(--tinta); overflow-wrap: anywhere; }
+.cmp-cod figcaption a { margin-left: auto; color: var(--acc-texto); }
+.cmp-cod pre { margin: 0; padding: .5rem 0; overflow-x: auto; font-family: var(--fonte-mono); font-size: .76rem; line-height: 1.6; tab-size: 4; }
+.cmp-cod pre > code { display: block; min-width: max-content; }
+.cmp-cod .l { display: block; position: relative; min-height: 1.6em; padding: 0 1rem 0 2rem; text-decoration: none; }
+.cmp-cod .l::before { position: absolute; left: .8rem; }
+.cmp-cod del.l { background: var(--perigo-bg); }
+.cmp-cod del.l::before { content: "−"; color: var(--perigo); }
+.cmp-cod ins.l { background: var(--sucesso-bg); }
+.cmp-cod ins.l::before { content: "+"; color: var(--sucesso); }
+.cmp-cod .omit { color: var(--tinta-suave); }
+@media (pointer: coarse) {
+  .cmp-cod figcaption a { display: inline-flex; align-items: center; min-height: 2.75rem; }
+}
 /* Em números: barras pareadas, cada medida na sua escala. Cinza (antes) e dourado
    (agora) conferidos no validador de cores do guia de gráficos; rótulo e valor
    escritos ao lado, para não depender só da cor (também na impressão). */
@@ -54,27 +83,29 @@
 .cmp-barra-valor { font-variant-numeric: tabular-nums; text-align: right; color: var(--tinta-suave); }
 .cmp-barra-valor.agora { font-weight: 700; color: var(--tinta); }
 @media print {
-  .cmp-indice, .cmp-links, .cmp .pagina-cabecalho .botao-neutro { display: none; }
+  .cmp-indice, .cmp-links, .cmp .pagina-cabecalho .botao-neutro, .cmp-cod figcaption a { display: none; }
   .cmp-item { box-shadow: none; }
+  .cmp-cod pre { overflow: visible; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .cmp-cod pre > code { min-width: 0; }
 }
 </style>
 
 <div class="cmp">
   <div class="pagina-cabecalho">
     <div>
-      <p class="eyebrow">Versão anterior → atualizada</p>
+      <p class="eyebrow">main 85e19bf → dev do fork</p>
       <h1>Comparativo entre versões</h1>
     </div>
     <a class="botao-neutro" href="{{ anterior }}" target="_blank" rel="noopener">Abrir a versão anterior</a>
   </div>
-  <p class="eleg-intro">{{ intro }}</p>
+  <p class="eleg-intro">{% include "vps/_texto.html" with partes=intro %}</p>
 
   <nav class="cmp-indice" aria-label="Seções do comparativo">
     <a class="filtro-chip" href="#numeros">Em números</a>
     <a class="filtro-chip" href="#correcoes">Consertos</a>
     <a class="filtro-chip" href="#novidades">Novidades</a>
-    <a class="filtro-chip" href="#design">Mais fácil de usar</a>
-    <a class="filtro-chip" href="#qualidade">Por trás das telas</a>
+    <a class="filtro-chip" href="#interface">Interface</a>
+    <a class="filtro-chip" href="#engenharia">Engenharia</a>
     <a class="filtro-chip" href="#original">Do Gefferson</a>
     <a class="filtro-chip" href="#proximos">Próximos passos</a>
   </nav>
@@ -82,13 +113,13 @@
   <section id="numeros" aria-labelledby="t-numeros">
     <div class="cmp-secao-cab">
       <h2 id="t-numeros">Em números</h2>
-      <p>A mesma medida nas duas versões: a barra cinza é a versão anterior; a dourada, a atualizada.</p>
+      <p>A mesma medida nas duas versões: a barra cinza é o <code class="cmp-ic">main</code> do original; a dourada, a <code class="cmp-ic">dev</code> do fork.</p>
     </div>
     <ul class="cmp-grade">
       {% for m in em_numeros %}
       <li class="cmp-item">
         <div class="cmp-num-cab"><h3>{{ m.titulo }}</h3><span class="cmp-num-destaque">{{ m.destaque }}</span></div>
-        <p class="cmp-num-explica">{{ m.explica }}</p>
+        <p class="cmp-num-explica">{% include "vps/_texto.html" with partes=m.explica %}</p>
         <div class="cmp-barras" role="img" aria-label="{{ m.titulo }}: antes {{ m.antes_txt }}, agora {{ m.agora_txt }}">
           {% for b in m.barras %}
           <span class="cmp-barra-rotulo{% if b.agora %} agora{% endif %}">{{ b.rotulo }}</span>
@@ -104,24 +135,39 @@
   <section id="correcoes" aria-labelledby="t-correcoes">
     <div class="cmp-secao-cab">
       <h2 id="t-correcoes">O que foi consertado</h2>
-      <p>{{ n_correcoes }} consertos, {{ n_alto }} deles de impacto alto: o que podia custar dinheiro, perder ou expor dados ou travar a operação. Os de segurança aparecem só por alto; o detalhe técnico fica num relatório à parte.</p>
+      <p>{{ n_correcoes }} consertos, {{ n_alto }} de impacto alto: dinheiro, dado pessoal ou a operação parada. Cada um traz o trecho de código: <code class="cmp-ic">−</code> é a linha da versão anterior e <code class="cmp-ic">+</code>, a da atualizada; o link leva ao commit. Os de segurança ficam sem código: esta página é aberta, e a versão no ar ainda é a anterior.</p>
       <p class="cmp-legenda"><span class="grave">Impacto alto</span><span>Impacto médio</span></p>
     </div>
+    <ul class="cmp-tec">
+      {% for c in correcoes_codigo %}
+      <li class="cmp-item cmp-marcado cmp-com-codigo{% if c.grave %} grave{% endif %}">
+        <div class="cmp-texto">
+          <p class="cmp-area"><span{% if c.grave %} class="grave"{% endif %}>{% if c.grave %}Impacto alto{% else %}Impacto médio{% endif %}</span> · {{ c.area }}</p>
+          <h3>{{ c.titulo }}</h3>
+          <dl class="cmp-aa">
+            <div class="antes"><dt>Antes</dt><dd>{% include "vps/_texto.html" with partes=c.antes %}</dd></div>
+            <div class="agora"><dt>Agora</dt><dd>{% include "vps/_texto.html" with partes=c.agora %}</dd></div>
+          </dl>
+          {% if c.agora_url %}
+          <p class="cmp-links">
+            <a class="botao-mini" href="{{ c.antes_url }}" target="_blank" rel="noopener">Ver antes</a>
+            <a class="botao-mini" href="{{ c.agora_url }}">Ver agora</a>
+          </p>
+          {% endif %}
+        </div>
+        <div class="cmp-codigos">{% for b in c.codigo %}{% include "vps/_codigo.html" %}{% endfor %}</div>
+      </li>
+      {% endfor %}
+    </ul>
     <ul class="cmp-grade">
       {% for c in correcoes %}
       <li class="cmp-item cmp-marcado{% if c.grave %} grave{% endif %}">
         <p class="cmp-area"><span{% if c.grave %} class="grave"{% endif %}>{% if c.grave %}Impacto alto{% else %}Impacto médio{% endif %}</span> · {{ c.area }}</p>
         <h3>{{ c.titulo }}</h3>
         <dl class="cmp-aa">
-          <div class="antes"><dt>Antes</dt><dd>{{ c.antes }}</dd></div>
-          <div class="agora"><dt>Agora</dt><dd>{{ c.agora }}</dd></div>
+          <div class="antes"><dt>Antes</dt><dd>{% include "vps/_texto.html" with partes=c.antes %}</dd></div>
+          <div class="agora"><dt>Agora</dt><dd>{% include "vps/_texto.html" with partes=c.agora %}</dd></div>
         </dl>
-        {% if c.agora_url %}
-        <p class="cmp-links">
-          <a class="botao-mini" href="{{ c.antes_url }}" target="_blank" rel="noopener">Ver antes</a>
-          <a class="botao-mini" href="{{ c.agora_url }}">Ver agora</a>
-        </p>
-        {% endif %}
       </li>
       {% endfor %}
     </ul>
@@ -130,30 +176,47 @@
   <section id="novidades" aria-labelledby="t-novidades">
     <div class="cmp-secao-cab">
       <h2 id="t-novidades">O que é novo</h2>
-      <p>O que a versão anterior ainda não fazia.</p>
+      <p>O que a versão anterior ainda não fazia, com o nome de cada peça no código.</p>
     </div>
     <ul class="cmp-grade">
       {% for n in novidades %}
       <li class="cmp-item">
         <p class="cmp-area">{{ n.area }}</p>
         <h3>{{ n.titulo }}</h3>
-        <p>{{ n.texto }}</p>
+        <p>{% include "vps/_texto.html" with partes=n.texto %}</p>
         {% if n.agora_url %}<p class="cmp-links"><a class="botao-mini" href="{{ n.agora_url }}">Abrir</a></p>{% endif %}
       </li>
       {% endfor %}
     </ul>
   </section>
 
-  <section id="design" aria-labelledby="t-design">
+  <section id="interface" aria-labelledby="t-interface">
     <div class="cmp-secao-cab">
-      <h2 id="t-design">Mais fácil de usar</h2>
-      <p>O mesmo visual em todas as telas, pensado para o toque e para o celular.</p>
+      <h2 id="t-interface">Interface</h2>
+      <p>Um design system só (“Lampião”), pensado para o toque e para a largura que sobra ao lado do menu.</p>
     </div>
+    <ul class="cmp-tec">
+      {% for d in interface_codigo %}
+      <li class="cmp-item cmp-com-codigo">
+        <div class="cmp-texto">
+          <h3>{{ d.titulo }}</h3>
+          <p>{% include "vps/_texto.html" with partes=d.texto %}</p>
+          {% if d.agora_url %}
+          <p class="cmp-links">
+            <a class="botao-mini" href="{{ d.antes_url }}" target="_blank" rel="noopener">Ver antes</a>
+            <a class="botao-mini" href="{{ d.agora_url }}">Ver agora</a>
+          </p>
+          {% endif %}
+        </div>
+        <div class="cmp-codigos">{% for b in d.codigo %}{% include "vps/_codigo.html" %}{% endfor %}</div>
+      </li>
+      {% endfor %}
+    </ul>
     <ul class="cmp-grade">
-      {% for d in design %}
+      {% for d in interface %}
       <li class="cmp-item">
         <h3>{{ d.titulo }}</h3>
-        <p>{{ d.texto }}</p>
+        <p>{% include "vps/_texto.html" with partes=d.texto %}</p>
         {% if d.agora_url %}
         <p class="cmp-links">
           <a class="botao-mini" href="{{ d.antes_url }}" target="_blank" rel="noopener">Ver antes</a>
@@ -165,16 +228,24 @@
     </ul>
   </section>
 
-  <section id="qualidade" aria-labelledby="t-qualidade">
+  <section id="engenharia" aria-labelledby="t-engenharia">
     <div class="cmp-secao-cab">
-      <h2 id="t-qualidade">Por trás das telas</h2>
-      <p>O que não aparece, mas segura o sistema em pé e avisa antes de um erro chegar à recepção.</p>
+      <h2 id="t-engenharia">Engenharia</h2>
+      <p>O que não aparece na tela, mas barra o erro antes de ele chegar à recepção.</p>
     </div>
+    <ul class="cmp-tec">
+      {% for q in engenharia_codigo %}
+      <li class="cmp-item cmp-com-codigo">
+        <div class="cmp-texto"><h3>{{ q.titulo }}</h3><p>{% include "vps/_texto.html" with partes=q.texto %}</p></div>
+        <div class="cmp-codigos">{% for b in q.codigo %}{% include "vps/_codigo.html" %}{% endfor %}</div>
+      </li>
+      {% endfor %}
+    </ul>
     <ul class="cmp-grade">
-      {% for q in qualidade %}
+      {% for q in engenharia %}
       <li class="cmp-item">
         <h3>{{ q.titulo }}</h3>
-        <p>{{ q.texto }}</p>
+        <p>{% include "vps/_texto.html" with partes=q.texto %}</p>
       </li>
       {% endfor %}
     </ul>
@@ -182,15 +253,25 @@
 
   <section id="original" aria-labelledby="t-original">
     <div class="cmp-secao-cab">
-      <h2 id="t-original">O que veio do Gefferson</h2>
-      <p>O que o Gefferson publicou nestes dias também está aqui, ligado aos fluxos desta versão.</p>
+      <h2 id="t-original">O que é do Gefferson</h2>
+      <p>A espinha dorsal segue a dele, e o que ele publicou nestes dias também está aqui, ligado aos fluxos desta versão.</p>
     </div>
+    <h3 class="cmp-sub">A base que ficou</h3>
+    <ul class="cmp-tec">
+      {% for x in base %}
+      <li class="cmp-item cmp-marcado credito cmp-com-codigo">
+        <div class="cmp-texto"><h4>{{ x.titulo }}</h4><p>{% include "vps/_texto.html" with partes=x.texto %}</p></div>
+        <div class="cmp-codigos">{% for b in x.codigo %}{% include "vps/_codigo.html" %}{% endfor %}</div>
+      </li>
+      {% endfor %}
+    </ul>
+    <h3 class="cmp-sub">O que ele publicou de 20 a 26/10</h3>
     <ul class="cmp-grade">
       {% for o in do_original %}
       <li class="cmp-item cmp-marcado credito">
         <p class="cmp-area">{{ o.area }}</p>
-        <h3>{{ o.titulo }}</h3>
-        <p>{{ o.texto }}</p>
+        <h4>{{ o.titulo }}</h4>
+        <p>{% include "vps/_texto.html" with partes=o.texto %}</p>
         {% if o.agora_url %}<p class="cmp-links"><a class="botao-mini" href="{{ o.agora_url }}">Abrir</a></p>{% endif %}
       </li>
       {% endfor %}
@@ -200,15 +281,15 @@
   <section id="proximos" aria-labelledby="t-proximos">
     <div class="cmp-secao-cab">
       <h2 id="t-proximos">Próximos passos</h2>
-      <p>O que ainda depende de uma decisão ou de um cadastro para valer na operação de verdade.</p>
+      <p>O que ainda depende de uma decisão ou de uma credencial para valer na operação de verdade.</p>
     </div>
     <ol class="cmp-grade cmp-passos">
       {% for p in proximos %}
-      <li class="cmp-item"><div><h3>{{ p.titulo }}</h3><p>{{ p.texto }}</p></div></li>
+      <li class="cmp-item"><div><h3>{{ p.titulo }}</h3><p>{% include "vps/_texto.html" with partes=p.texto %}</p></div></li>
       {% endfor %}
     </ol>
   </section>
 
-  <p class="cmp-rodape">{{ rodape }}</p>
+  <p class="cmp-rodape">{% include "vps/_texto.html" with partes=rodape %}</p>
 </div>
 {% endblock %}
