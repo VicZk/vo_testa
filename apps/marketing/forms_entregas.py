@@ -1,4 +1,5 @@
 """Formulários de entregas com referências a recursos já existentes."""
+from decimal import Decimal
 from pathlib import PurePosixPath
 
 from django import forms
@@ -9,6 +10,7 @@ from apps.nucleo.models import modulo_ativo
 from apps.nucleo.modulos import Modulo
 
 from . import services_entregas
+from .forms import NumeroBrasileiro
 from .models import Campanha, ItemChecklist, PecaCampanha
 
 
@@ -55,13 +57,20 @@ class EntregaForm(forms.Form):
         empty_label="Sem anexo vinculado")
     pagina_captacao = forms.TypedChoiceField(label="LP existente", required=False, coerce=int,
                                              empty_value=None, choices=[("", "Sem LP vinculada")])
+    valor = NumeroBrasileiro(
+        label="Valor (R$)", required=False, min_value=Decimal("0"), max_digits=10, decimal_places=2,
+        help_text="Quanto custou (impressão, anúncio, mídia). Entra no relatório por tipo.")
+
+    # O tipo vem primeiro: é por ele que o Marketing pensa a entrega (rede social,
+    # impressão, mídia off…); a campanha é opcional.
+    field_order = ["versao", "tipo", "campanha", "nome", "canal", "data", "valor", "status"]
 
     def __init__(self, *args, usuario, peca=None, campanha=None, **kwargs):
         self.peca = peca
         initial = dict(kwargs.pop("initial", {}))
         if peca:
             initial.update({nome: getattr(peca, nome) for nome in (
-                "nome", "tipo", "canal", "data", "status", "url_material")})
+                "nome", "tipo", "canal", "data", "status", "url_material", "valor")})
             initial.update(campanha=peca.campanha_id, versao=peca.versao, material_checklist=peca.material_checklist_id,
                            pagina_captacao=peca.pagina_captacao_id)
             campanha = peca.campanha_id
@@ -101,6 +110,10 @@ class EntregaForm(forms.Form):
             self.fields["pagina_captacao"].help_text = "Cadastre a página no Comercial para vinculá-la aqui."
         for campo in self.fields.values():
             campo.widget.attrs["class"] = "fx-sel" if isinstance(campo.widget, forms.Select) else "fx-in"
+        valor = self.fields["valor"]
+        valor.widget = forms.TextInput(attrs={"class": "fx-in num", "inputmode": "decimal",
+                                              "placeholder": "0,00"})
+        valor.localize = valor.widget.is_localized = True
 
     def clean(self):
         dados = super().clean()
@@ -109,5 +122,5 @@ class EntregaForm(forms.Form):
         if anexo and (not campanha or anexo.campanha_id != campanha.pk):
             self.add_error("material_checklist", "Escolha um anexo desta campanha.")
         if dados.get("pagina_captacao") and dados.get("tipo") != PecaCampanha.Tipo.LP:
-            self.add_error("pagina_captacao", "Escolha o tipo Landing page para vincular uma LP.")
+            self.add_error("pagina_captacao", "Escolha o tipo LP para vincular uma LP.")
         return dados

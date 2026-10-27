@@ -149,9 +149,13 @@ ORDEM_FASES = [
 ]
 
 
-def proxima_fase(fase):
+def proxima_fase(fase, campanha=None):
+    """Fase seguinte. Campanha sem aprovação do gestor pula a fase Aprovação."""
     i = ORDEM_FASES.index(fase)
-    return ORDEM_FASES[i + 1] if i + 1 < len(ORDEM_FASES) else None
+    prox = ORDEM_FASES[i + 1] if i + 1 < len(ORDEM_FASES) else None
+    if prox == Campanha.Fase.APROVACAO and campanha is not None and not campanha.exige_aprovacao:
+        return Campanha.Fase.ESTRUTURACAO
+    return prox
 
 
 def _tem_pecas(c) -> bool:
@@ -284,7 +288,7 @@ def portao_da(campanha) -> dict:
             "descricao": DESCRICOES.get(chave, ""),
             "nota": (row.nota if row else ""),
         })
-    prox = proxima_fase(campanha.fase)
+    prox = proxima_fase(campanha.fase, campanha)
     if prox is None:
         label = ""
     elif prox == Campanha.Fase.ENCERRADA:
@@ -296,7 +300,7 @@ def portao_da(campanha) -> dict:
         "itens": itens, "feitos": feitos, "total": len(crit),
         "obrig_pendentes": obrig_pendentes,
         "pode_avancar": not obrig_pendentes and prox is not None,
-        "eh_aprovacao": campanha.fase == Campanha.Fase.APROVACAO,
+        "eh_aprovacao": campanha.fase == Campanha.Fase.APROVACAO and campanha.exige_aprovacao,
         "proxima": prox, "proxima_nome": (Campanha.Fase(prox).label if prox else ""),
         "avancar_label": label,
     }
@@ -364,10 +368,11 @@ def _garantir_anuncio(campanha, usuario):
         ativa=True, criado_por=usuario)
 
 
-def _aplicar_aprovacao(campanha, usuario):
-    """Trava a verba no teto do mês + garante o anúncio (origem dos leads). Valida antes."""
+def _travar_verba(campanha, usuario):
+    """Trava a verba no teto do mês + garante o anúncio (origem dos leads). Valida antes.
+    A própria campanha já travada (voltou e avançou de novo) não conta contra ela mesma."""
     mes = _mes_de_campanha(campanha)
-    disponivel = posicao_verba(mes)["disponivel"]
+    disponivel = posicao_verba(mes)["disponivel"] + campanha.verba_travada
     if campanha.verba_prevista > disponivel:
         raise ValidationError(
             f"Verba insuficiente no teto de {mes}: disponível R$ {disponivel}, "
@@ -375,8 +380,26 @@ def _aplicar_aprovacao(campanha, usuario):
     if not campanha.anuncio_id:
         campanha.anuncio = _garantir_anuncio(campanha, usuario)
     campanha.verba_travada = campanha.verba_prevista
+
+
+def _aplicar_aprovacao(campanha, usuario):
+    _travar_verba(campanha, usuario)
     campanha.aprovada_por = usuario
     campanha.aprovada_em = timezone.now()
+
+
+@transaction.atomic
+def definir_aprovacao(campanha, exige: bool):
+    """Liga/desliga a aprovação do gestor. Só antes da execução: depois de Estruturação a
+    verba já foi travada (com ou sem aprovação) e mudar não teria efeito."""
+    from apps.nucleo.sistema import travar
+
+    travar(campanha)
+    if ORDEM_FASES.index(campanha.fase) > ORDEM_FASES.index(Campanha.Fase.APROVACAO):
+        raise ValidationError("A campanha já passou da aprovação; volte a fase para mudar.")
+    campanha.exige_aprovacao = exige
+    campanha.save(update_fields=["exige_aprovacao"])
+    return campanha
 
 
 @transaction.atomic
@@ -384,6 +407,8 @@ def avancar(campanha, usuario):
     """Move a campanha UMA fase adiante, cobrando o portão e aplicando o efeito da transição.
 
     Aprovação→Estruturação é a aprovação (só gerência): trava a verba no teto do mês.
+    Campanha sem aprovação do gestor vai de Proposta a Estruturação e trava a verba
+    do mesmo jeito, sem a assinatura da gerência.
     No ar→Encerrada é a finalização: devolve o não gasto. Ambas validam antes de gravar,
     em transação — o mês nunca fica comprometido por uma transição que não passou.
     """
@@ -395,17 +420,19 @@ def avancar(campanha, usuario):
     travar(campanha)
     if campanha.fase != esperado:
         raise ValidationError("A campanha mudou de fase em outra sessão. Atualize a tela.")
-    prox = proxima_fase(campanha.fase)
+    prox = proxima_fase(campanha.fase, campanha)
     if prox is None:
         raise ValidationError("Campanha já encerrada.")
     port = portao_da(campanha)
     if port["obrig_pendentes"]:
         raise ValidationError("Falta para avançar: " + ", ".join(port["obrig_pendentes"]) + ".")
     with transaction.atomic():
-        if campanha.fase == Campanha.Fase.APROVACAO:
+        if prox == Campanha.Fase.ESTRUTURACAO and campanha.exige_aprovacao:
             if not eh_gerente(usuario):
                 raise ValidationError("Apenas a gerência aprova campanhas.")
             _aplicar_aprovacao(campanha, usuario)
+        elif prox == Campanha.Fase.ESTRUTURACAO:
+            _travar_verba(campanha, usuario)  # sem aprovação: o teto do mês segue valendo
         elif prox == Campanha.Fase.ENCERRADA:
             campanha.verba_travada = campanha.gasta  # devolve o não gasto ao mês
         campanha.fase = prox
@@ -756,7 +783,28 @@ def relatorio(inicio, fim) -> dict:
         })
     linhas.sort(key=lambda x: x["rastreada"], reverse=True)  # ordena pela RASTREADA
     return {"teto": teto, "gasto": gasto, "sobra": sobra, "ritmo": ritmo,
-            "campanhas": len(linhas), "serie": _serie_mensal(fim), "linhas": linhas}
+            "campanhas": len(linhas), "serie": _serie_mensal(fim), "linhas": linhas,
+            "midias": investimento_por_tipo(inicio, fim, gasto_campanhas=gasto)}
+
+
+def investimento_por_tipo(inicio, fim, *, gasto_campanhas) -> dict:
+    """Investimento por tipo de mídia no período (gráfico do relatório): o valor das
+    entregas, pela data da entrega, avulsas ou não; e, numa barra à parte, os gastos
+    lançados nas campanhas, que não têm tipo. Uma despesa vai num lugar só."""
+    por_tipo = dict(PecaCampanha.objects.filter(data__gte=inicio, data__lte=fim, valor__gt=0)
+                    .order_by().values_list("tipo").annotate(s=Sum("valor")))
+    linhas = [{"nome": rotulo, "valor": por_tipo[codigo]}
+              for codigo, rotulo in PecaCampanha.Tipo.choices if por_tipo.get(codigo)]
+    if gasto_campanhas:
+        linhas.append({"nome": "Gastos lançados nas campanhas", "valor": gasto_campanhas})
+    linhas.sort(key=lambda x: x["valor"], reverse=True)
+    total = sum((x["valor"] for x in linhas), Decimal("0.00"))
+    maior = linhas[0]["valor"] if linhas else Decimal("0")
+    for x in linhas:
+        x["pct"] = max(int(round(x["valor"] / maior * 100)), 1)
+        x["parte"] = int(round(x["valor"] / total * 100))
+    return {"linhas": linhas, "total": total,
+            "entregas": sum(por_tipo.values(), Decimal("0.00"))}
 
 
 def _serie_mensal(ate, n: int = 5) -> list:
@@ -962,7 +1010,8 @@ def motivos_meus(user) -> dict:
             motivos[cid].append(texto)
 
     if eh_gerente(user):
-        for cid in Campanha.objects.filter(fase=Campanha.Fase.APROVACAO).values_list("id", flat=True):
+        for cid in Campanha.objects.filter(fase=Campanha.Fase.APROVACAO,
+                                           exige_aprovacao=True).values_list("id", flat=True):
             add(cid, "espera sua aprovação")
     for cid in Campanha.objects.filter(responsavel=user).values_list("id", flat=True):
         add(cid, "você responde por ela")

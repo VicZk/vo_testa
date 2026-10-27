@@ -620,7 +620,11 @@ cancela e devolve o que foi pago pela gaveta; pago online bloqueia até o estorn
 gateway).
 
 **Marketing.** Gerência de campanhas com fases, peças com data, checklist, verba mensal
-e calendário, embrulhando as campanhas do Comercial. O **Cronograma** mostra o mês em
+e calendário, embrulhando as campanhas do Comercial. A aprovação do gestor é escolhida
+por campanha: sem ela, a campanha vai da Proposta à Estruturação, e o teto do mês
+continua valendo ao travar a verba. As entregas têm tipo (Rede social, Campanha, LP,
+Impressão, Mídia off, Anúncio) e valor em R$. O relatório mostra o investimento por tipo
+de mídia: o valor das entregas mais os gastos lançados nas campanhas. O **Cronograma** mostra o mês em
 grade, um quadrado por dia, com tudo o que tem data: entregas (posts, artes, ações,
 impressos, anúncios), tarefas das campanhas, início e fim de campanha e prazos de
 aprovação de LP. Nada é cadastrado duas vezes: cada item aparece pela própria data, e o

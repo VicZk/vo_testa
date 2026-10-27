@@ -9106,3 +9106,22 @@ html.com-js [data-precos-filtros][hidden] { display: block; visibility: hidden; 
 .mkt-lp-principal, .mkt-lp-situacao { display: flex; flex-direction: column; align-items: flex-start; gap: .3rem; }
 .mkt-lp-nome { font-weight: 650; font-size: 1rem; color: var(--tinta); overflow-wrap: anywhere; }
 .mkt-lp .rotulo-dado, .mkt-lp-sub .rotulo-dado { white-space: normal; overflow-wrap: anywhere; }
+
+/* ── Marketing · Relatório: investimento por tipo de mídia ─────────────────────
+   Uma série só (magnitude): uma cor, barras ordenadas, valor e % escritos ao lado.
+   Estreito: nome e valor em cima, a barra embaixo, na largura toda. */
+.mk-midias { list-style: none; margin: 0; padding: 8px 0 12px; container-type: inline-size; }
+.mk-midia { display: grid; grid-template-columns: minmax(8rem, 14rem) minmax(0, 1fr) 10.5rem; align-items: center;
+  gap: .4rem 1rem; padding: 8px 20px; }
+.mk-midia-nome { font-size: .86rem; font-weight: 600; color: var(--tinta); overflow-wrap: anywhere; }
+.mk-midia-trilho { display: block; height: 10px; border-radius: var(--raio-pilula); background: var(--superficie-2);
+  box-shadow: inset 0 0 0 1px var(--fio); overflow: hidden; }
+.mk-midia-barra { display: block; height: 100%; border-radius: var(--raio-pilula); background: var(--lampiao);
+  print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+.mk-midia-valor { font-size: .86rem; font-weight: 700; text-align: right; white-space: nowrap;
+  font-variant-numeric: tabular-nums; color: var(--tinta); }
+.mk-midia-parte { font-weight: 600; color: var(--tinta-suave); }
+@container (width < 34rem) {
+  .mk-midia { grid-template-columns: minmax(0, 1fr) auto; }
+  .mk-midia-trilho { grid-column: 1 / -1; grid-row: 2; }
+}

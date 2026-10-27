@@ -4,6 +4,7 @@ from datetime import date
 from unittest import mock
 
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 from django.urls import reverse
@@ -155,3 +156,87 @@ class AprovacaoLPTests(TestCase):
         antigo = aprovacao.token
         self.client.post(reverse("marketing:lp_novo_link", args=[aprovacao.pk]))
         self.assertEqual(Client().get(reverse("previa_lp:ver", args=[antigo])).status_code, 404)
+
+
+class AprovacaoOpcionalTests(TestCase):
+    """Nem toda campanha passa pelo gestor (pedido do Marketing, 27/10)."""
+
+    def setUp(self):
+        from decimal import Decimal
+
+        from django.utils import timezone
+
+        from apps.marketing import services
+        ModuloContratado.objects.update_or_create(codigo=Modulo.MARKETING, defaults={"ativo": True})
+        self.analista = Usuario.objects.create_user(username="analista-mkt")
+        self.analista.modulos.add(ModuloContratado.objects.get(codigo=Modulo.MARKETING))
+        hoje = timezone.localdate()
+        services.definir_teto(hoje.strftime("%Y-%m"), "1000")
+        self.campanha = Campanha.objects.create(
+            nome="Flyer do feriado", objetivo="obj", publico="pub", inicio=hoje, fim=hoje,
+            verba_prevista=Decimal("600"), objetivo_tipo=Campanha.Objetivo.LEADS,
+            meta_valor=Decimal("10"))
+        services.avancar(self.campanha, self.analista)  # Ideia → Proposta
+        services.garantir_itens(self.campanha)
+        for chave in ("publico_delimitado", "verba_base"):
+            services.marcar_item(self.campanha.checks.get(chave=chave), self.analista)
+
+    def test_sem_aprovacao_pula_a_fase_e_trava_a_verba_no_teto(self):
+        from decimal import Decimal
+
+        from apps.marketing import services
+        self.client.force_login(self.analista)
+        self.client.post(reverse("marketing:definir_aprovacao", args=[self.campanha.pk]), {"exige": "0"})
+        self.campanha.refresh_from_db()
+        self.assertFalse(self.campanha.exige_aprovacao)
+        self.assertEqual(services.portao_da(self.campanha)["avancar_label"], "Avançar para Estruturação")
+        services.avancar(self.campanha, self.analista)  # analista, sem gerência
+        self.assertEqual(self.campanha.fase, Campanha.Fase.ESTRUTURACAO)
+        self.assertEqual(self.campanha.verba_travada, Decimal("600"))
+        self.assertIsNone(self.campanha.aprovada_por)
+        # Depois de travar a verba, a escolha não muda mais.
+        with self.assertRaises(ValidationError):
+            services.definir_aprovacao(self.campanha, True)
+
+    def test_sem_aprovacao_o_teto_do_mes_continua_valendo(self):
+        from decimal import Decimal
+
+        from apps.marketing import services
+        self.campanha.exige_aprovacao = False
+        self.campanha.verba_prevista = Decimal("1500")
+        self.campanha.save()
+        with self.assertRaises(ValidationError):
+            services.avancar(self.campanha, self.analista)
+        self.campanha.refresh_from_db()
+        self.assertEqual(self.campanha.fase, Campanha.Fase.PROPOSTA)
+
+    def test_com_aprovacao_segue_parando_no_gestor(self):
+        from apps.marketing import services
+        services.avancar(self.campanha, self.analista)  # Proposta → Aprovação
+        self.assertEqual(self.campanha.fase, Campanha.Fase.APROVACAO)
+        with self.assertRaises(ValidationError):
+            services.avancar(self.campanha, self.analista)
+
+
+class ValorDaEntregaTests(TestCase):
+    def setUp(self):
+        ModuloContratado.objects.update_or_create(codigo=Modulo.MARKETING, defaults={"ativo": True})
+        self.client.force_login(Usuario.objects.create_superuser(username="valor-mkt"))
+
+    def test_valor_em_reais_entra_no_relatorio_por_tipo(self):
+        from decimal import Decimal
+        r = self.client.post(reverse("marketing:nova_entrega"), {
+            "versao": 1, "tipo": "impresso", "nome": "Flyer", "data": "2026-11-05",
+            "valor": "1.234,50", "status": "a_fazer"})
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(PecaCampanha.objects.get().valor, Decimal("1234.50"))
+        PecaCampanha.objects.create(nome="Rádio", tipo="midia_off", data=date(2026, 11, 9), valor=Decimal("400"))
+        PecaCampanha.objects.create(nome="Fora do mês", tipo="midia_off", data=date(2026, 12, 1), valor=Decimal("99"))
+        r = self.client.get(reverse("marketing:relatorio"), {"mes": 11, "ano": 2026})
+        midias = r.context["dados"]["midias"]
+        self.assertEqual([(m["nome"], m["valor"]) for m in midias["linhas"]],
+                         [("Impressão", Decimal("1234.50")), ("Mídia off", Decimal("400"))])
+        self.assertEqual(midias["total"], Decimal("1634.50"))
+        self.assertContains(r, "Investimento por tipo de mídia")
+        csv = self.client.get(reverse("marketing:relatorio"), {"mes": 11, "ano": 2026, "export": "csv"})
+        self.assertIn("Mídia off", csv.content.decode())

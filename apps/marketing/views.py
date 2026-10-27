@@ -87,7 +87,7 @@ def mover_fase(request, pk):
     try:
         origem = campanha.fase
         if fase != origem:
-            if services.proxima_fase(origem) == fase:
+            if services.proxima_fase(origem, campanha) == fase:
                 services.avancar(campanha, request.user)
                 messages.success(request, f"Avançou para {campanha.get_fase_display()}.")
             elif services.ORDEM_FASES.index(fase) < services.ORDEM_FASES.index(origem):
@@ -112,6 +112,22 @@ def _rota_pos(request, campanha, destino="marketing:quadro"):
             destino, allowed_hosts={request.get_host()}):
         return redirect(destino)
     return redirect("marketing:quadro")
+
+
+@never_cache
+@requer_modulo(Modulo.MARKETING)
+@require_POST
+def definir_aprovacao(request, pk):
+    """Ficha: a campanha passa ou não pela aprovação do gestor."""
+    campanha = get_object_or_404(Campanha, pk=pk)
+    exige = request.POST.get("exige") == "1"
+    try:
+        services.definir_aprovacao(campanha, exige)
+        messages.success(request, "Esta campanha passa pela aprovação do gestor." if exige
+                         else "Esta campanha segue sem a aprovação do gestor.")
+    except ValidationError as e:
+        messages.error(request, "; ".join(e.messages))
+    return _pos_ficha(request, campanha)
 
 
 @never_cache
@@ -186,6 +202,7 @@ def _ficha_ctx(request, campanha, dados_invalidos=None):
         "envolvidos": _envolvidos(campanha),
         "usuarios": services.usuarios_equipe(),
         "canais_padrao": services.CANAIS_PADRAO,
+        "opcoes_aprovacao": (("1", "Com aprovação"), ("0", "Sem aprovação")),
         "eh_gerente": eh_gerente(request.user),
         "Fase": Campanha.Fase,
         "Funil": Campanha.Funil,
@@ -568,6 +585,10 @@ def relatorio(request):
             w.writerow([celula(x) for x in (
                 linha["nome"], linha["gasto"], linha["rastreada"], linha["janela"],
                 linha["fechamentos"], linha["cac"] if linha["cac"] is not None else "—")])
+        w.writerow([])
+        w.writerow(["Tipo de mídia", "Investimento (R$)", "% do total"])
+        for linha in dados["midias"]["linhas"]:
+            w.writerow([celula(x) for x in (linha["nome"], linha["valor"], linha["parte"])])
         return resp
     return render(request, "marketing/relatorio.html", {
         "dados": dados, "inicio": inicio, "fim": fim, "rotulo": rotulo,

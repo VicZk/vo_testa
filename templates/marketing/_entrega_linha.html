@@ -1,4 +1,4 @@
-{% load canais_marketing %}
+{% load canais_marketing moeda %}
 <article class="mkt-entrega" data-entrega="{{ p.pk }}">
   <div class="mkt-entrega-principal">
     <h3>{{ p.nome }}</h3>
@@ -7,7 +7,7 @@
   </div>
   <div class="mkt-entrega-situacao">
     <span class="selo{% if p.status == 'pronta' %} selo-ok{% endif %}">{{ p.get_status_display }}</span>
-    <span class="mkt-meta">Prazo: {{ p.data|date:"d/m/Y"|default:"Sem data" }}</span>
+    <span class="mkt-meta">Prazo: {{ p.data|date:"d/m/Y"|default:"Sem data" }}{% if p.valor %} · {{ p.valor|intcomma_brl }}{% endif %}</span>
     {% if p.status == 'pronta' %}<span class="mkt-meta">{% if p.concluida_em %}Concluída em {{ p.concluida_em|date:"d/m/Y H:i" }}{% else %}Data de conclusão não registrada{% endif %}</span>{% endif %}
   </div>
   <div class="mkt-entrega-acoes">

@@ -13,7 +13,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.validators import FileExtensionValidator, URLValidator
+from django.core.validators import FileExtensionValidator, MinValueValidator, URLValidator
 from django.db import models
 from django.db.models import Sum
 from django.utils import timezone
@@ -130,6 +130,9 @@ class Campanha(models.Model):
         "verba travada (R$)", max_digits=10, decimal_places=2, default=Decimal("0.00"),
         help_text="Travada no teto do mês ao aprovar; devolvida (não gasta) ao encerrar.")
 
+    # Nem toda campanha passa pelo gestor (pedido do Marketing, 27/10). Sem aprovação,
+    # a campanha pula a fase Aprovação; o teto do mês continua valendo ao travar a verba.
+    exige_aprovacao = models.BooleanField("precisa da aprovação do gestor", default=True)
     aprovada_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="campanhas_mkt_aprovadas", verbose_name="aprovada por")
@@ -210,12 +213,14 @@ class PecaCampanha(models.Model):
     """Entrega avulsa ou vinculada; produção não altera a publicação da campanha."""
 
     class Tipo(models.TextChoices):
-        IMPRESSO = "impresso", "Impresso"
+        # As categorias do Marketing (27/10): o tipo é também o "tipo de mídia" do
+        # investimento no relatório.
+        POST = "post", "Rede social"
+        CAMPANHA = "campanha", "Campanha"
+        LP = "lp", "LP"
+        IMPRESSO = "impresso", "Impressão"
+        MIDIA_OFF = "midia_off", "Mídia off"
         ANUNCIO = "anuncio", "Anúncio"
-        POST = "post", "Post / conteúdo social"
-        ARTE = "arte", "Arte"
-        ACAO = "acao", "Ação / evento"
-        LP = "lp", "Landing page"
         OUTRO = "outro", "Outro"
         NAO_CLASSIFICADO = "nao_classificado", "Não classificado"
 
@@ -235,6 +240,10 @@ class PecaCampanha(models.Model):
     data = models.DateField("data", null=True, blank=True)
     status = models.CharField(
         "status", max_length=14, choices=Status.choices, default=Status.A_FAZER)
+    valor = models.DecimalField(
+        "valor (R$)", max_digits=10, decimal_places=2, null=True, blank=True,
+        validators=[MinValueValidator(Decimal("0"))],
+        help_text="Quanto custou (impressão, anúncio, mídia). Entra no relatório por tipo.")
     url_material = models.URLField(
         "link do material", max_length=2048, blank=True,
         validators=[URLValidator(schemes=["http", "https"])])
@@ -274,7 +283,7 @@ class PecaCampanha(models.Model):
             if material.campanha_id != self.campanha_id or not material.arquivo:
                 raise ValidationError({"material_checklist": "Escolha um anexo desta campanha."})
         if self.pagina_captacao_id and self.tipo != self.Tipo.LP:
-            raise ValidationError({"pagina_captacao": "Uma LP só pode ser vinculada a uma entrega do tipo Landing page."})
+            raise ValidationError({"pagina_captacao": "Uma LP só pode ser vinculada a uma entrega do tipo LP."})
 
 
 class EtapaCampanha(models.Model):

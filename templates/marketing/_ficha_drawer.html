@@ -31,6 +31,21 @@
         {% endif %}{% endfor %}
       </div>
     </div>
+    {# Aprovação do gestor: opcional por campanha #}
+    <div class="fx-canais">
+      <span class="fx-lb com-info">APROVAÇÃO DO GESTOR{% include "marketing/_info.html" with tip="Com aprovação, a campanha para na fase Aprovação até a gerência aprovar a verba. Sem aprovação, ela vai direto da Proposta para a Estruturação; o teto do mês continua valendo." %}</span>
+      {% if c.fase == 'ideia' or c.fase == 'proposta' or c.fase == 'aprovacao' %}
+      <div class="fx-chips" role="group" aria-label="Aprovação do gestor">
+        {% for valor, rotulo in opcoes_aprovacao %}
+        <form method="post" action="{% url 'marketing:definir_aprovacao' c.pk %}" hx-post="{% url 'marketing:definir_aprovacao' c.pk %}" hx-target="#ficha-slot" hx-swap="innerHTML">
+          {% csrf_token %}<input type="hidden" name="exige" value="{{ valor }}">
+          <button type="submit" class="fx-chip{% if valor == '1' and c.exige_aprovacao or valor == '0' and not c.exige_aprovacao %} on{% endif %}" aria-pressed="{% if valor == '1' and c.exige_aprovacao or valor == '0' and not c.exige_aprovacao %}true{% else %}false{% endif %}">{{ rotulo }}</button>
+        </form>
+        {% endfor %}
+      </div>
+      {% elif c.aprovada_por %}<p class="fx-sub">Aprovada por {{ c.aprovada_por.get_full_name|default:c.aprovada_por.username }} em {{ c.aprovada_em|date:"d/m/Y" }}.</p>
+      {% else %}<p class="fx-sub">Seguiu sem a aprovação do gestor.</p>{% endif %}
+    </div>
     </details>
 
     <details class="mkt-dobra"{% if form_objetivo.errors %} open{% endif %}>

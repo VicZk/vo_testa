@@ -75,6 +75,26 @@
   {% endif %}
 </section>
 
+<section class="mk-secao" aria-labelledby="mk-midias-tit">
+  <div class="mk-secao-cab justa">
+    <h2 class="mk-secao-tit" id="mk-midias-tit">Investimento por tipo de mídia</h2>
+    <p class="mk-secao-sub respiro">{% if dados.midias.linhas %}{{ dados.midias.total|intcomma_brl }} no período. {% endif %}Soma o valor informado nas entregas (pela data da entrega, com ou sem campanha) e os gastos lançados nas campanhas.</p>
+  </div>
+  {% if dados.midias.linhas %}
+  <ul class="mk-midias">
+    {% for m in dados.midias.linhas %}
+    <li class="mk-midia" data-dica="{{ m.nome }}: {{ m.valor|intcomma_brl }} ({{ m.parte }}% do total)">
+      <span class="mk-midia-nome">{{ m.nome }}</span>
+      <span class="mk-midia-trilho" aria-hidden="true"><span class="mk-midia-barra" style="width:{{ m.pct }}%"></span></span>
+      <span class="mk-midia-valor"><span class="valor-metrica">{{ m.valor|intcomma_brl }}</span> <span class="mk-midia-parte">{{ m.parte }}%</span></span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  {% include "componentes/estado_vazio.html" with mensagem="Nenhum valor no período. Informe o valor ao cadastrar a entrega (impressão, anúncio, mídia off…) para ver o investimento por tipo." only %}
+  {% endif %}
+</section>
+
 <section class="mk-secao">
   <div class="mk-secao-cab justa">
     <h2 class="mk-secao-tit">Campanha por campanha</h2>

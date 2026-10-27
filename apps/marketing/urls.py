@@ -30,6 +30,7 @@ urlpatterns = [
     path("etapa/<int:pk>/remover/", views.remover_etapa, name="remover_etapa"),
     path("campanha/<int:pk>/papel/", views.atribuir_papel, name="atribuir_papel"),
     path("campanha/<int:pk>/canal/", views.alternar_canal, name="alternar_canal"),
+    path("campanha/<int:pk>/aprovacao/", views.definir_aprovacao, name="definir_aprovacao"),
     path("campanha/<int:pk>/comentar/", views.comentar, name="comentar"),
     # Passo 5 — calendário + peças
     path("calendario/", views.calendario, name="calendario"),

@@ -9,6 +9,39 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 27/10/2026 (noite): aprovação do gestor opcional, tipos de entrega e investimento por mídia
+
+Retorno do Marketing depois de usar o Cronograma e as LPs.
+
+- **Aprovação do gestor opcional.** A ficha da campanha (Dados da campanha) tem agora a
+  escolha "Com aprovação / Sem aprovação". Sem aprovação, a campanha vai direto da
+  Proposta para a Estruturação, sem esperar a gerência. A verba é travada do mesmo jeito,
+  e o teto do mês continua valendo: se não couber, não avança. A escolha vale até a
+  Aprovação e trava junto com a verba. A ficha mostra depois quem aprovou ou que a
+  campanha seguiu sem aprovação.
+- **Tipos de entrega do Marketing.** Os tipos são agora Rede social, Campanha, LP,
+  Impressão, Mídia off e Anúncio (mais Outro). O tipo vem primeiro no formulário da
+  entrega, antes da campanha, que é opcional. Arte e Ação, criados mais cedo, viram Rede
+  social e Outro.
+- **Valor na entrega.** A entrega, com ou sem campanha, ganhou o campo "Valor (R$)",
+  digitado como 1.234,56. Serve para o material de impressão ou o anúncio que aparece de
+  última hora. O valor aparece na lista de entregas.
+- **Investimento por tipo de mídia no relatório.** O relatório do mês ganhou um gráfico
+  de barras com quanto foi investido em cada tipo: o valor das entregas (pela data da
+  entrega) e, numa barra à parte, os gastos lançados nas campanhas. Cada barra mostra o
+  valor em R$ e a % do total, e o CSV também traz esses números. A verba do mês (teto,
+  travada e gasta) continua contando só os gastos lançados nas campanhas.
+
+**O que foi modificado:**
+- `Campanha.exige_aprovacao` e `PecaCampanha.valor`, com os novos tipos (migração
+  `marketing.0013`, que converte arte e acao).
+- `services`: `proxima_fase(fase, campanha)`, `_travar_verba`, `definir_aprovacao`,
+  `investimento_por_tipo`.
+- View e rota `definir_aprovacao`.
+- `EntregaForm` (valor e ordem dos campos), `_ficha_drawer.html` e `relatorio.html`.
+- Estilos `.mk-midia*` no `app.css`.
+- Testes em `tests_lp_cronograma.py`: aprovação opcional, teto e valor no relatório.
+
 ## 27/10/2026: Cronograma do mês e Aprovação de LPs no Marketing
 
 Os dois pedidos do Marketing para centralizar o trabalho no CRM.

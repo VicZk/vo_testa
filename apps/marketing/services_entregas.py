@@ -83,7 +83,7 @@ def salvar_entrega(*, dados, usuario, peca=None):
     if pagina_id and pagina_id != peca.pagina_captacao_id and not referencias_lps(usuario, [pagina_id]):
         raise ValidationError({"pagina_captacao": "LP indisponível para este acesso."})
     peca.campanha = campanha
-    for campo in ("nome", "tipo", "canal", "data", "status", "url_material", "material_checklist"):
+    for campo in ("nome", "tipo", "canal", "data", "status", "url_material", "material_checklist", "valor"):
         setattr(peca, campo, dados.get(campo))
     peca.pagina_captacao_id = pagina_id
     _concluir(peca, anterior, usuario)
