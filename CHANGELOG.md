@@ -32,6 +32,11 @@ A entrada mais nova fica no topo. As datas são as do push.
 - **Modificado:** `deploy/vps/comparador/comparativo.py`, `trechos.py` (novo),
   `conferir_trechos.py` (novo), `templates/vps/comparativo.html`, `_texto.html` e
   `_codigo.html` (novos), o README da pasta e `apps/site/tests_comparativo.py`.
+- **Teste de navegador estável:** o do calendário da reserva no site falhou uma vez no
+  CI com "Transition was aborted… Viewport size changed". É o próprio teste trocando a
+  largura da janela no meio de uma transição de página, e só acontece se ela ainda
+  estiver rodando naquele instante. `tests_auditoria_publico_e2e` passou a ignorar só
+  esse aviso; qualquer outro erro de JavaScript continua reprovando.
 
 ## 26/10/2026: aba Comparativo em linguagem do dia a dia, com gráficos
 

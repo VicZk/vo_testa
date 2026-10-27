@@ -29,6 +29,11 @@ if _PLAYWRIGHT_OK:
 class AuditoriaPublicoE2ETests(_UnidadeVendavelMixin, _BaseE2E):
     LOCALE = "pt-BR"
     LARGURAS = (320, 390, 821, 1440)
+    # Trocar a largura no meio de uma View Transition a aborta, e o Chrome rejeita a
+    # promessa dela ("Transition was aborted because of invalid state. Viewport size
+    # changed"). Quem muda a janela é o próprio teste, entre uma largura e outra: não é
+    # erro da página, e depende só de a transição ainda estar rodando naquele instante.
+    TRANSICAO_ABORTADA = "Viewport size changed"
 
     def setUp(self):
         super().setUp()
@@ -59,7 +64,7 @@ class AuditoriaPublicoE2ETests(_UnidadeVendavelMixin, _BaseE2E):
         self.assertEqual(resposta.status, 200)
         self.page.evaluate("() => document.fonts.ready")
         self.assertLessEqual(self.page.evaluate("document.documentElement.scrollWidth"), largura + 1)
-        self.assertEqual(self.erros, [])
+        self.assertEqual([e for e in self.erros if self.TRANSICAO_ABORTADA not in e], [])
         self.assertEqual(self.http_erros, [])
 
     def foto(self, nome, largura):
