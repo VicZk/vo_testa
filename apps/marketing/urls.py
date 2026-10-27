@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views, views_entregas
+from . import views, views_entregas, views_lps
 
 app_name = "marketing"
 
@@ -33,6 +33,17 @@ urlpatterns = [
     path("campanha/<int:pk>/comentar/", views.comentar, name="comentar"),
     # Passo 5 — calendário + peças
     path("calendario/", views.calendario, name="calendario"),
+    path("cronograma/", views.cronograma, name="cronograma"),
+    # Aprovação de LPs (a prévia pública mora em urls_previa)
+    path("lps/", views_lps.lps, name="lps"),
+    path("lps/nova/", views_lps.nova_lp, name="nova_lp"),
+    path("lps/<int:pk>/", views_lps.lp_detalhe, name="lp_detalhe"),
+    path("lps/<int:pk>/v<int:numero>/", views_lps.lp_pagina, name="lp_pagina"),
+    path("lps/<int:pk>/versao/", views_lps.lp_versao, name="lp_versao"),
+    path("lps/<int:pk>/comentar/", views_lps.lp_comentar, name="lp_comentar"),
+    path("lps/<int:pk>/link/", views_lps.lp_novo_link, name="lp_novo_link"),
+    path("lps/<int:pk>/publicar/", views_lps.lp_publicar, name="lp_publicar"),
+    path("lps/comentario/<int:pk>/resolver/", views_lps.lp_resolver, name="lp_resolver"),
     path("campanha/<int:pk>/peca/", views.adicionar_peca, name="adicionar_peca"),
     path("peca/<int:pk>/status/", views.marcar_peca, name="marcar_peca"),
     path("peca/<int:pk>/remover/", views.remover_peca, name="remover_peca"),

@@ -457,6 +457,41 @@ def calendario(request):
 
 @never_cache
 @requer_modulo(Modulo.MARKETING)
+def cronograma(request):
+    """Grade do mês: entregas, tarefas das campanhas, início e fim de campanha e
+    prazos de aprovação de LP, cada um pela própria data (nada cadastrado duas vezes)."""
+    from django.utils import timezone
+
+    hoje = timezone.localdate()
+    try:
+        ano = int(request.GET.get("ano") or hoje.year)
+        mes = int(request.GET.get("mes") or hoje.month)
+    except (TypeError, ValueError):
+        ano, mes = hoje.year, hoje.month
+    if not (1 <= mes <= 12 and 2 <= ano <= 9998):
+        ano, mes = hoje.year, hoje.month
+    canal, canais = services_agenda.filtros_canais(request)
+
+    def endereco(a, m):
+        if not 2 <= a <= 9998:
+            return None
+        query = request.GET.copy()
+        query.update({"ano": a, "mes": m})
+        return "?" + query.urlencode()
+
+    anterior = (ano - 1, 12) if mes == 1 else (ano, mes - 1)
+    proximo = (ano + 1, 1) if mes == 12 else (ano, mes + 1)
+    return render(request, "marketing/cronograma.html", {
+        "grade": services_agenda.cronograma_mes(ano, mes, canal=canal, hoje=hoje),
+        "anterior_url": endereco(*anterior), "proximo_url": endereco(*proximo),
+        "este_mes_url": None if (ano, mes) == (hoje.year, hoje.month) else endereco(hoje.year, hoje.month),
+        "voltar": request.get_full_path(), "canal": canal, "canais": canais,
+        "atual": "marketing", "aba": "cronograma",
+    })
+
+
+@never_cache
+@requer_modulo(Modulo.MARKETING)
 @require_POST
 def adicionar_peca(request, pk):
     from .forms_entregas import EntregaForm

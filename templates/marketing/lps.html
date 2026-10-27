@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block titulo %}Aprovação de LPs | Marketing{% endblock %}
+{% block conteudo %}
+<div class="eleg mkt-lps">
+  <p class="pagina-eyebrow letreiro">Marketing</p>
+  <div class="pagina-cabecalho mkt-cabecalho">
+    <div><h1>Aprovação de LPs</h1><p class="subtitulo">Envie o HTML da LP, mande o link para quem aprova e publique quando estiver aprovada.</p></div>
+    <a href="{% url 'marketing:nova_lp' %}" class="botao-primario">Enviar LP</a>
+  </div>
+  {% include "marketing/_tabs.html" %}
+  <form method="get" class="filtros-chips mkt-canais" aria-label="Filtrar por situação">
+    {% for item in filtros %}<button type="submit" name="situacao" value="{{ item.valor }}" class="filtro-chip" aria-pressed="{{ item.ativo|yesno:'true,false' }}">{{ item.nome }} <span class="n">{{ item.n }}</span></button>{% endfor %}
+  </form>
+  <ul class="mkt-lp-lista">
+    {% for lp in pagina.object_list %}
+    <li class="mkt-lp">
+      <div class="mkt-lp-principal">
+        <a href="{% url 'marketing:lp_detalhe' lp.pk %}" class="mkt-lp-nome">{{ lp.nome }}</a>
+        <span class="rotulo-dado">Versão {{ lp.versao_atual }}{% if lp.campanha %} · {{ lp.campanha.nome }}{% endif %}{% if lp.prazo %} · Prazo {{ lp.prazo|date:"d/m/Y" }}{% endif %} · Atualizada em {{ lp.atualizado_em|date:"d/m H:i" }}</span>
+      </div>
+      <div class="mkt-lp-situacao">
+        <span class="selo{% if lp.situacao == 'ajustes' or lp.situacao == 'aprovada' %} selo--acao{% endif %}">{{ lp.get_situacao_display }}</span>
+        {% if lp.ajustes %}<span class="mkt-meta">{{ lp.ajustes }} ajuste{{ lp.ajustes|pluralize }} em aberto</span>{% endif %}
+      </div>
+    </li>
+    {% empty %}
+    <li class="mkt-lp mkt-lp-vazia"><p class="subtitulo">{% if request.GET.situacao %}Nenhuma LP nesta situação.{% else %}Nenhuma LP enviada ainda. Envie o HTML que o design entregou para gerar o link de aprovação.{% endif %}</p></li>
+    {% endfor %}
+  </ul>
+  {% include "componentes/paginacao.html" with pagina=pagina %}
+</div>
+{% endblock %}

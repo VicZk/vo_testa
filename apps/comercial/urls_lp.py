@@ -22,4 +22,7 @@ urlpatterns = [
                                               permanent=False, query_string=True)),
     # Fotos e fontes que vinham embutidas no HTML das LPs (nome = hash do conteúdo).
     path("arquivo/<str:nome>", views_lp.arquivo_lp, name="arquivo"),
+    # LPs aprovadas no Marketing (o HTML vem do design). Por último: as fixas vencem.
+    path("<slug:slug>/", views_lp.servir_lp_publicada, name="publicada"),
+    path("<slug:slug>/lead/", views_lp.lp_publicada_lead, name="publicada_lead"),
 ]

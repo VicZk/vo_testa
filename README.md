@@ -620,7 +620,17 @@ cancela e devolve o que foi pago pela gaveta; pago online bloqueia até o estorn
 gateway).
 
 **Marketing.** Gerência de campanhas com fases, peças com data, checklist, verba mensal
-e calendário, embrulhando as campanhas do Comercial.
+e calendário, embrulhando as campanhas do Comercial. O **Cronograma** mostra o mês em
+grade, um quadrado por dia, com tudo o que tem data: entregas (posts, artes, ações,
+impressos, anúncios), tarefas das campanhas, início e fim de campanha e prazos de
+aprovação de LP. Nada é cadastrado duas vezes: cada item aparece pela própria data, e o
+"+" do dia abre uma entrega já com aquele prazo. Em **LPs** (Aprovação de LPs) a equipe
+envia o HTML que o design entrega e ganha um link de prévia, que abre sem login. Por esse
+link o gestor ou o cliente vê a página no computador e no celular, comenta, pede ajuste
+ou aprova. Cada arquivo novo vira uma versão e volta para aprovação. Aprovada, a LP é
+publicada em `/lp/<endereço>/` pelo Comercial, com os leads caindo no funil. A prévia
+roda isolada: `Content-Security-Policy: sandbox` sem `allow-same-origin` e `<iframe sandbox>`,
+então o script da LP não lê a sessão do CRM.
 
 **Conciliação.** Importa extrato OFX e arquivo de cartão, casa por valor, data e NSU, e
 fecha o mês.

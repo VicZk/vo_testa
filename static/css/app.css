@@ -9020,3 +9020,89 @@ html.com-js [data-precos-filtros][hidden] { display: block; visibility: hidden; 
   .tabela.est-kardex-tabela td[data-rotulo]::before { display:block; width:auto; margin-bottom:.2rem; }
   .tabela.est-kardex-tabela td.num, .tabela.est-kardex-tabela td.num .tabela-valor { text-align:right; }
 }
+
+/* ── Marketing · Cronograma (grade do mês) ─────────────────────────────────────
+   Cada dia é um quadrado com o que tem data nele: entrega, tarefa da campanha,
+   início/fim de campanha e prazo de aprovação de LP. A cor diz o tipo e o texto
+   repete (leitor de tela e lista estreita). Estreito (menu aberto em tablet,
+   celular): vira lista dos dias que têm algo; decide pelo espaço, não pela janela. */
+.cron .cron-acoes { display: flex; flex-wrap: wrap; gap: .5rem; margin-left: auto; }
+.cron--entrega { --cron-cor: var(--lampiao); }
+.cron--tarefa { --cron-cor: var(--info); }
+.cron--campanha { --cron-cor: var(--madeira); }
+.cron--lp { --cron-cor: var(--musgo); }
+.cron-legenda { list-style: none; margin: 0; padding: 12px 20px; display: flex; flex-wrap: wrap; gap: .4rem 1.1rem;
+  border-bottom: 1px solid var(--fio); font-size: .78rem; color: var(--tinta-suave); }
+.cron-legenda-item { display: inline-flex; align-items: center; gap: .4rem; }
+.cron-legenda .n { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--tinta); }
+.cron-ponto { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--cron-cor); }
+.cron-vazio { margin: 0; padding: 12px 20px; font-size: .85rem; color: var(--tinta-suave); border-bottom: 1px solid var(--fio); }
+.cron-corpo { container: cron / inline-size; }
+.cron-semana-cab, .cron-dias { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.cron-semana-cab { border-bottom: 1px solid var(--fio); }
+.cron-semana-cab span { padding: 8px 10px; font-size: var(--rotulo-min); font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--tinta-suave); }
+.cron-dias { list-style: none; margin: 0; padding: 0; }
+.cron-dia { display: flex; flex-direction: column; gap: 4px; min-width: 0; min-height: 7.5rem; padding: 6px 6px 8px;
+  border-right: 1px solid var(--fio); border-bottom: 1px solid var(--fio); }
+.cron-dia:nth-child(7n) { border-right: 0; }
+.cron-dia:nth-last-child(-n+7) { border-bottom: 0; }
+.cron-dia--fora { background: var(--superficie-2); }
+.cron-dia--fora .cron-num { color: var(--tinta-suave); }
+.cron-dia-cab { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.cron-data { display: flex; align-items: baseline; gap: .35rem; }
+.cron-semana { display: none; }
+.cron-num { display: grid; place-items: center; min-width: 1.75rem; height: 1.75rem; border-radius: var(--raio-pilula);
+  font-size: .82rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+.cron-dia--hoje .cron-num { background: var(--noturno); color: var(--superficie); }
+.cron-mais { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: var(--raio-p);
+  color: var(--tinta-suave); font-size: 1.05rem; line-height: 1; text-decoration: none; opacity: 0;
+  transition: opacity var(--mov-rapido) var(--curva), background var(--mov-rapido) var(--curva); }
+.cron-dia:hover .cron-mais, .cron-mais:focus-visible { opacity: 1; }
+.cron-mais:hover { background: var(--superficie-2); color: var(--tinta); }
+.cron-mais:active { transform: scale(.94); }
+.cron-itens { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.cron-item { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 3px 6px; border-radius: var(--raio-p);
+  font-size: .74rem; line-height: 1.3; color: var(--tinta); text-decoration: none;
+  background: color-mix(in srgb, var(--cron-cor) 9%, var(--superficie));
+  transition: background var(--mov-rapido) var(--curva); }
+.cron-item:hover { background: color-mix(in srgb, var(--cron-cor) 17%, var(--superficie)); }
+.cron-item:active { transform: scale(.98); }
+.cron-item.feito .cron-nome { color: var(--tinta-suave); text-decoration: line-through; }
+/* Início/Fim de campanha e LP dizem o que são também em texto, não só pela cor. */
+.cron-marca { font-weight: 700; color: color-mix(in srgb, var(--cron-cor) 80%, var(--tinta)); }
+.cron-texto { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Na grade o tipo vai pela cor e pela dica; o texto do tipo fica para o leitor de tela. */
+.cron-tipo { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (pointer: coarse) {
+  .cron-mais { opacity: 1; width: 44px; height: 44px; }
+  .cron-item { min-height: 44px; }
+}
+@container cron (width < 46rem) {
+  .cron-semana-cab { display: none; }
+  .cron-dias { grid-template-columns: minmax(0, 1fr); }
+  .cron-dia { flex-direction: row; align-items: flex-start; gap: 12px; min-height: 0; padding: 10px 16px; border-right: 0; }
+  .cron-dia:nth-last-child(-n+7) { border-bottom: 1px solid var(--fio); }
+  .cron-dia:last-child { border-bottom: 0; }
+  .cron-dia--fora, .cron-dia--vazio:not(.cron-dia--hoje) { display: none; }
+  .cron-dia-cab { flex-direction: column; align-items: center; flex: none; width: 3rem; }
+  .cron-data { flex-direction: column; align-items: center; gap: 0; }
+  .cron-semana { display: block; font-size: var(--rotulo-min); font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--tinta-suave); }
+  .cron-mais { opacity: 1; }
+  .cron-itens { flex: 1; }
+  .cron-item { padding: 6px 8px; font-size: .84rem; }
+  .cron-texto { white-space: normal; overflow-wrap: anywhere; }
+  .cron-marca { display: none; }
+  .cron-tipo { position: static; width: auto; height: auto; overflow: visible; clip-path: none;
+    color: var(--tinta-suave); font-size: .76rem; }
+}
+
+/* ── Marketing · Aprovação de LPs (lista) ─────────────────────────────────────── */
+.mkt-lp-lista { list-style: none; margin: 1rem 0 0; padding: 0; }
+.mkt-lp { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr)); gap: .5rem 1rem;
+  padding-block: 1rem; border-top: 1px solid var(--fio); }
+.mkt-lp > * { min-width: 0; }
+.mkt-lp-principal, .mkt-lp-situacao { display: flex; flex-direction: column; align-items: flex-start; gap: .3rem; }
+.mkt-lp-nome { font-weight: 650; font-size: 1rem; color: var(--tinta); overflow-wrap: anywhere; }
+.mkt-lp .rotulo-dado, .mkt-lp-sub .rotulo-dado { white-space: normal; overflow-wrap: anywhere; }

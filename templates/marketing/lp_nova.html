@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block titulo %}Enviar LP | Marketing{% endblock %}
+{% block conteudo %}
+<div class="eleg mkt-ficha-pagina">
+  <p class="pagina-eyebrow letreiro">Marketing</p>
+  <div class="pagina-cabecalho"><h1>Enviar LP para aprovação</h1><a href="{% url 'marketing:lps' %}" class="botao-neutro">Voltar</a></div>
+  {% include "marketing/_tabs.html" %}
+  <form method="post" enctype="multipart/form-data" class="painel-bloco mkt-entrega-form">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="mkt-form-grid">
+      {% for field in form %}
+      <div class="campo{% if field.errors %} campo-erro{% endif %}">
+        <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span aria-hidden="true">*</span>{% endif %}</label>
+        {{ field }}{% if field.help_text %}<small class="ajuda">{{ field.help_text }}</small>{% endif %}
+        {% for erro in field.errors %}<small class="erro" role="alert">{{ erro }}</small>{% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+    <div class="acoes"><button type="submit" class="botao-primario">Enviar e gerar o link</button><a href="{% url 'marketing:lps' %}" class="botao-neutro">Cancelar</a></div>
+  </form>
+</div>
+{% endblock %}

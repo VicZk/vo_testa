@@ -2,7 +2,9 @@
 <nav class="est-abas abas-secao mkt-abas" aria-label="Seções do Marketing">
   <a href="{% url 'marketing:quadro' %}" class="est-aba"{% if atual == 'quadro' %} aria-current="page"{% endif %}>Campanhas</a>
   <a href="{% url 'marketing:entregas' %}" class="est-aba"{% if atual == 'entregas' or atual == 'nova_entrega' or atual == 'editar_entrega' %} aria-current="page"{% endif %}>Entregas</a>
+  <a href="{% url 'marketing:cronograma' %}" class="est-aba"{% if atual == 'cronograma' %} aria-current="page"{% endif %}>Cronograma</a>
   <a href="{% url 'marketing:calendario' %}" class="est-aba"{% if atual == 'calendario' %} aria-current="page"{% endif %}>Calendário</a>
+  <a href="{% url 'marketing:lps' %}" class="est-aba"{% if atual == 'lps' or atual == 'nova_lp' or atual == 'lp_detalhe' %} aria-current="page"{% endif %}>LPs</a>
   <a href="{% url 'marketing:ocupacao' %}" class="est-aba"{% if atual == 'ocupacao' %} aria-current="page"{% endif %}>Ocupação</a>
   <a href="{% url 'marketing:relatorio' %}" class="est-aba"{% if atual == 'relatorio' %} aria-current="page"{% endif %}>Relatório</a>
 </nav>

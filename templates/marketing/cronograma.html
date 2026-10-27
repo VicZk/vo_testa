@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block titulo %}Cronograma | Marketing{% endblock %}
+{% block conteudo_classe %}conteudo-largo{% endblock %}
+
+{% block conteudo %}
+<div id="marketing-cronograma">
+{% include "marketing/_cabecalho.html" with titulo="Cronograma do mês" descricao="Tudo o que tem data no mês: entregas, tarefas das campanhas, início e fim de campanha e prazos de aprovação de LP." %}
+{% include "marketing/_canais.html" %}
+
+<section class="mk-secao fim mkt-calendario cron" aria-labelledby="cron-titulo">
+  <div class="mk-cal-cab">
+    <div class="mk-cal-periodo">
+    {% if anterior_url %}<a href="{{ anterior_url }}" class="mk-cal-nav" aria-label="Mês anterior">‹</a>{% else %}<span class="mk-cal-nav" aria-disabled="true">‹</span>{% endif %}
+    <h2 class="mk-cal-mes" id="cron-titulo">{{ grade.titulo }}</h2>
+    {% if proximo_url %}<a href="{{ proximo_url }}" class="mk-cal-nav" aria-label="Próximo mês">›</a>{% else %}<span class="mk-cal-nav" aria-disabled="true">›</span>{% endif %}
+    </div>
+    <div class="cron-acoes">
+      {% if este_mes_url %}<a href="{{ este_mes_url }}" class="botao-neutro">Este mês</a>{% endif %}
+      <a href="{% url 'marketing:nova_entrega' %}?voltar={{ voltar|urlencode }}" class="botao-primario">Nova entrega</a>
+    </div>
+  </div>
+
+  <ul class="cron-legenda" aria-label="Legenda">
+    {% for item in grade.legenda %}<li class="cron-legenda-item cron--{{ item.tipo }}"><span class="cron-ponto" aria-hidden="true"></span>{{ item.nome }} <span class="n">{{ item.n }}</span></li>{% endfor %}
+  </ul>
+  {% if not grade.total %}<p class="cron-vazio">Nada com data neste mês ainda. Use o + de um dia para programar uma entrega.</p>{% endif %}
+
+  <div class="cron-corpo">
+    <div class="cron-semana-cab" aria-hidden="true">{% for dia in grade.dias_semana %}<span>{{ dia }}</span>{% endfor %}</div>
+    <ol class="cron-dias">
+      {% for dia in grade.dias %}
+      <li class="cron-dia{% if not dia.no_mes %} cron-dia--fora{% endif %}{% if dia.hoje %} cron-dia--hoje{% endif %}{% if not dia.itens %} cron-dia--vazio{% endif %}">
+        <div class="cron-dia-cab">
+          <time datetime="{{ dia.data|date:'Y-m-d' }}" class="cron-data"><span class="cron-semana">{{ dia.semana }}</span><span class="cron-num">{{ dia.data.day }}</span></time>
+          <a href="{% url 'marketing:nova_entrega' %}?data={{ dia.data|date:'Y-m-d' }}&amp;voltar={{ voltar|urlencode }}" class="cron-mais" aria-label="Nova entrega em {{ dia.data|date:'d/m' }}" data-dica="Nova entrega em {{ dia.data|date:'d/m' }}">+</a>
+        </div>
+        {% if dia.itens %}
+        <ul class="cron-itens">
+          {% for item in dia.itens %}
+          <li><a href="{{ item.url }}{% if item.tipo == 'entrega' %}?voltar={{ voltar|urlencode }}{% endif %}"{% if item.ficha %} hx-get="{{ item.ficha }}" hx-target="#modal-conteudo" hx-swap="innerHTML"{% endif %}
+                 class="cron-item cron--{{ item.tipo }}{% if item.feito %} feito{% endif %}" data-dica="{{ item.detalhe }}">
+            <span class="cron-ponto" aria-hidden="true"></span>
+            <span class="cron-texto">{% if item.marca %}<span class="cron-marca" aria-hidden="true">{{ item.marca }}</span> {% elif item.tipo == 'lp' %}<span class="cron-marca" aria-hidden="true">LP</span> {% endif %}<span class="cron-tipo">{% if item.marca %}{{ item.marca }} de campanha{% elif item.tipo == 'lp' %}Aprovação de LP{% elif item.tipo == 'tarefa' %}Tarefa{% else %}Entrega{% endif %}{% if item.feito %} · feita{% endif %}: </span><span class="cron-nome">{{ item.nome }}</span></span>
+          </a></li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ol>
+  </div>
+</section>
+</div>
+<div hidden hx-get="{{ request.get_full_path }}" hx-trigger="marketing:atualizar from:body" hx-target="#marketing-cronograma" hx-select="#marketing-cronograma" hx-swap="outerHTML"></div>
+{% include "marketing/_dica.html" %}
+{% endblock %}

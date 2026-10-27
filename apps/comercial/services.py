@@ -3079,3 +3079,47 @@ def paginas_para_marketing(*, usuario, ids=None):
          "url_gestao": reverse("comercial:pagina_detalhe", args=[pagina.pk])}
         for pagina in paginas
     ]
+
+
+# Endereços de /lp/ que já têm rota própria (LPs feitas à mão em views_lp).
+SLUGS_LP_RESERVADOS = {"fundador", "fundador-2", "inauguracao", "inauguracao_31_10_2026",
+                       "arquivo", "privacidade"}
+
+
+def publicar_lp_aprovada(*, usuario, nome, slug, html, pagina_id=None):
+    """Põe no ar uma LP aprovada no Marketing: a Página de Captação guarda o HTML e a
+    página passa a responder em /lp/<slug>/, com os leads caindo no funil como os das
+    outras LPs. Republicar (nova versão aprovada) troca o HTML da mesma página.
+
+    Quem publica precisa do Comercial: é ele que responde pela página e pelos leads."""
+    from django.urls import reverse
+
+    from apps.nucleo.sistema import travar
+
+    from .models import PaginaCaptacao
+
+    if not (usuario.is_authenticated and usuario.pode_acessar(Modulo.COMERCIAL)
+            and modulo_ativo(Modulo.COMERCIAL)):
+        raise ValidationError("Publicar uma LP exige acesso ao Comercial.")
+    if slug in SLUGS_LP_RESERVADOS:
+        raise ValidationError("Esse endereço já é de uma LP da casa. Escolha outro.")
+    with transaction.atomic():
+        pagina = None
+        if pagina_id:
+            pagina = PaginaCaptacao.objects.filter(pk=pagina_id).first()
+        outra = PaginaCaptacao.objects.filter(slug=slug).exclude(
+            pk=pagina.pk if pagina else None).exists()
+        if outra:
+            raise ValidationError("Esse endereço já é de outra página. Escolha outro.")
+        agora = timezone.now()
+        if pagina is None:
+            pagina = PaginaCaptacao.objects.create(
+                nome=nome[:80], slug=slug, status=PaginaCaptacao.Status.PUBLICADA,
+                criado_por=usuario, html=html, publicada_em=agora)
+        else:
+            travar(pagina)
+            pagina.slug, pagina.html = slug, html
+            pagina.status = PaginaCaptacao.Status.PUBLICADA
+            pagina.publicada_em = pagina.publicada_em or agora
+            pagina.save(update_fields=["slug", "html", "status", "publicada_em", "atualizado_em"])
+    return {"id": pagina.pk, "url": reverse("lp:publicada", args=[pagina.slug])}

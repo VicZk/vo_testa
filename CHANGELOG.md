@@ -9,6 +9,54 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 27/10/2026: Cronograma do mês e Aprovação de LPs no Marketing
+
+Os dois pedidos do Marketing para centralizar o trabalho no CRM.
+
+- **Cronograma do mês.** A nova aba Cronograma mostra o mês em grade, um quadrado por dia.
+  Num só lugar aparecem:
+  - as entregas com prazo;
+  - as tarefas das campanhas com prazo;
+  - o início e o fim de cada campanha;
+  - os prazos de aprovação de LP.
+
+  Nada é cadastrado duas vezes: a entrega ou a tarefa criada dentro da campanha aparece
+  pela própria data. O "+" de cada dia abre uma entrega nova já com aquele prazo. As
+  entregas ganharam os tipos **Arte** e **Ação / evento**, ao lado de Post, Anúncio,
+  Impresso e Landing page. O filtro de canal vale aqui também. No espaço estreito (menu
+  aberto no tablet, celular), a grade vira a lista dos dias que têm algo.
+- **Aprovação de LPs.** Na nova aba LPs, a equipe envia o HTML da LP, que é o mesmo
+  arquivo autocontido que o design entrega hoje. O CRM gera um link de prévia que abre
+  sem login e fica fora das buscas. Por esse link, o gestor ou o cliente:
+  - vê a página como computador ou celular, ou em tela cheia;
+  - comenta, pede ajuste ou aprova a versão.
+
+  Cada arquivo novo é uma versão: volta para aprovação e quem estava vendo a anterior
+  precisa abrir a nova antes de decidir. A equipe marca cada ajuste como feito. Pode
+  também gerar um link novo, e o antigo deixa de abrir. Depois de aprovada, a LP é
+  publicada daqui em `/lp/<endereço>/`, pelo Comercial, e os leads do formulário caem
+  no funil como os das outras LPs. Republicar troca o HTML da mesma página.
+- **Segurança da prévia.** Um HTML de fora servido no endereço do CRM rodaria com a
+  sessão de quem abriu. Por isso a prévia vai com `Content-Security-Policy: sandbox`
+  (sem `allow-same-origin`) e dentro de `<iframe sandbox>`: o script da LP roda, mas não
+  lê cookie nem age no CRM como o usuário. O formulário do link tem antirrobô e limite
+  por IP. O que chega sem login fica na trilha como "Aprovação de LP (link)". O HTML,
+  que pode ter alguns megabytes, fica na versão e não é copiado para a trilha de
+  auditoria.
+
+**O que foi modificado:**
+- Models `AprovacaoLP`, `VersaoLP` e `ComentarioLP` (migração `marketing.0012`).
+- Campo `PaginaCaptacao.html` (`comercial.0035`).
+- Novos arquivos: `apps/marketing/services_lp.py`, `views_lps.py`, `views_previa.py`,
+  `urls_previa.py` (montado em `/aprovacao/`) e `forms_lp.py`.
+- `services_agenda.cronograma_mes` e a view `cronograma`.
+- `comercial.services.publicar_lp_aprovada`, com as rotas `lp:publicada` e
+  `lp:publicada_lead`.
+- Templates em `templates/marketing/` (`cronograma`, `lps`, `lp_nova`, `lp_detalhe`,
+  `previa_publica` e parciais) e estilos `.cron-*`/`.mkt-lp*` no `app.css`.
+- Manifesto do `base.css`.
+- Testes em `apps/marketing/tests_lp_cronograma.py`.
+
 ## 26/10/2026: aba Comparativo técnica, com o código de cada conserto
 
 - **Código no lugar da paráfrase.** A versão em linguagem do dia a dia ficou simples

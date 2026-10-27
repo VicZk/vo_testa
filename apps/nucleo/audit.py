@@ -29,6 +29,9 @@ _contexto = threading.local()
 # Campos que nunca entram no diff (ruído, automáticos ou sensíveis).
 CAMPOS_IGNORADOS = {
     "criado_em", "atualizado_em", "modificado_em", "last_login", "password",
+    # O HTML de uma LP (Marketing/Comercial) tem até megabytes e já fica guardado na
+    # própria versão: a trilha registra a versão, não uma segunda cópia da página.
+    "html",
 }
 
 # Credenciais nunca pertencem à trilha, nem para administradores. A mesma
@@ -150,6 +153,7 @@ _ATORES_PUBLICOS = (
     ("/hospede/", "_portal", "Portal"),
     ("/crm/pagamentos/", "_pagamentos", "Pagamentos (público)"),
     ("/whatsapp/", "_whatsapp", "WhatsApp"),
+    ("/aprovacao/", "_aprovacao_lp", "Aprovação de LP (link)"),
 )
 
 

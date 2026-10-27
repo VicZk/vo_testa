@@ -1,0 +1,35 @@
+{% load nucleo_extras %}
+<section class="lpv-cartao" id="comentarios" aria-labelledby="lpv-comentarios-tit">
+  <h2 class="lpv-tit" id="lpv-comentarios-tit">Comentários{% if ajustes_abertos %} <span class="lpv-meta">· {{ ajustes_abertos }} ajuste{{ ajustes_abertos|pluralize }} em aberto</span>{% endif %}</h2>
+  {% if erro %}<p class="mensagem error" role="alert">{{ erro }}</p>{% endif %}
+  {% if enviado == 'aprovacao' %}<p class="mensagem" role="status">Obrigado! A versão {{ ultima.numero }} está aprovada e a equipe já vê a aprovação aqui.</p>
+  {% elif enviado == 'ajuste' %}<p class="mensagem" role="status">Pedido de ajuste enviado. A versão nova chega neste mesmo link.</p>
+  {% elif enviado %}<p class="mensagem" role="status">Comentário enviado.</p>{% endif %}
+  <form method="post" action="{{ acao }}" class="lpv-form">
+    {% csrf_token %}{% if publico %}{% campos_antirrobo %}{% endif %}
+    {{ form_comentario.versao }}
+    {% if publico %}
+    <label for="{{ form_comentario.nome.id_for_label }}">Seu nome</label>{{ form_comentario.nome }}
+    {% else %}<input type="hidden" name="nome" value="{{ form_comentario.nome.value }}">{% endif %}
+    <label for="{{ form_comentario.texto.id_for_label }}">Comentário sobre a versão {{ versao.numero }}</label>
+    <textarea name="texto" id="{{ form_comentario.texto.id_for_label }}" rows="3" maxlength="{{ limite_texto }}" placeholder="Ex.: trocar a foto do topo, o preço está errado…">{{ form_comentario.texto.value|default_if_none:"" }}</textarea>
+    <div class="lpv-acoes">
+      <button type="submit" name="tipo" value="comentario" class="botao-neutro">Comentar</button>
+      {% if pode_decidir %}<button type="submit" name="tipo" value="ajuste" class="botao-neutro">Pedir ajuste</button>
+      <button type="submit" name="tipo" value="aprovacao" class="botao-primario">Aprovar versão {{ versao.numero }}</button>{% endif %}
+    </div>
+    {% if pode_decidir %}<p class="lpv-dica">Aprovar libera a equipe para publicar esta versão. Ao pedir ajuste, diga o que mudar.</p>
+    {% elif versao.numero != ultima.numero %}<p class="lpv-dica">Você está vendo a versão {{ versao.numero }}. Para aprovar ou pedir ajuste, <a href="?v={{ ultima.numero }}">abra a versão {{ ultima.numero }}</a>.</p>
+    {% elif aprovacao.situacao == 'publicada' %}<p class="lpv-dica">Esta versão já está no ar.</p>
+    {% else %}<p class="lpv-dica">Versão {{ aprovacao.aprovada_versao }} aprovada por {{ aprovacao.aprovada_por }} em {{ aprovacao.aprovada_em|date:"d/m/Y H:i" }}.</p>{% endif %}
+  </form>
+  <ol class="lpv-comentarios">
+    {% for c in comentarios %}
+    <li class="lpv-com lpv-com--{{ c.tipo }}{% if c.resolvido %} resolvido{% endif %}">
+      <div class="lpv-com-cab"><strong>{{ c.nome_autor }}</strong><span class="lpv-meta">{{ c.get_tipo_display }} · v{{ c.versao.numero }} · {{ c.em|date:"d/m H:i" }}{% if c.resolvido %} · Feito{% endif %}</span></div>
+      {% if c.texto %}<p>{{ c.texto|linebreaksbr }}</p>{% endif %}
+      {% if not publico and c.tipo == 'ajuste' %}<form method="post" action="{% url 'marketing:lp_resolver' c.pk %}">{% csrf_token %}<button type="submit" class="botao-mini">{% if c.resolvido %}Reabrir ajuste{% else %}Marcar ajuste como feito{% endif %}</button></form>{% endif %}
+    </li>
+    {% empty %}<li class="lpv-meta">Ninguém comentou ainda.</li>{% endfor %}
+  </ol>
+</section>

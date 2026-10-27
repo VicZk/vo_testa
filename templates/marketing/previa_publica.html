@@ -1,0 +1,39 @@
+{% load static %}
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ aprovacao.nome }} · Prévia para aprovação | Pousada Vô Testa</title>
+  {% comment %}Link com token na URL: fora de busca e sem vazar a URL no Referer.{% endcomment %}
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  {% include "componentes/fontes.html" %}
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
+  {% include "marketing/_previa_estilo.html" %}
+  <style>
+    body { margin: 0; background: var(--canvas); color: var(--tinta); }
+    .lpv-pagina { max-width: 1500px; margin: 0 auto; padding: 1.25rem 1rem 2.5rem; }
+    .lpv-topo { margin-bottom: 1.1rem; }
+    .lpv-topo h1 { margin: .15rem 0 .45rem; font-family: var(--fonte-titulo); font-size: 1.45rem; line-height: 1.2; letter-spacing: -.015em; overflow-wrap: anywhere; }
+    .lpv-topo p { margin: 0; }
+  </style>
+  <script src="{% static 'js/previa_lp.js' %}" defer></script>
+</head>
+<body>
+<div class="lpv-pagina">
+  <header class="lpv-topo">
+    <p class="letreiro">Pousada Vô Testa · Prévia para aprovação</p>
+    <h1>{{ aprovacao.nome }}</h1>
+    <p><span class="selo{% if aprovacao.situacao == 'ajustes' %} selo--acao{% endif %}">{{ aprovacao.get_situacao_display }}</span>
+      <span class="lpv-meta">Versão {{ ultima.numero }} · enviada em {{ ultima.enviada_em|date:"d/m/Y H:i" }}</span></p>
+  </header>
+  <main class="lpv-area">
+    <div class="lpv">
+      {% include "marketing/_lp_palco.html" %}
+      <div class="lpv-lado">{% include "marketing/_lp_comentarios.html" with publico=True %}</div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

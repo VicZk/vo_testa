@@ -216,6 +216,7 @@ TEMPLATES_PUBLICOS = (
     "portal/base.html", "portal/home.html", "portal/checkin.html", "portal/checkout.html",
     "portal/nps.html", "pagamentos/pagar.html", "pagamentos/_confianca.html",
     "reservas/partials/fnrh_fichas.html", "componentes/fontes.html",
+    "marketing/previa_publica.html", "marketing/_lp_palco.html", "marketing/_lp_comentarios.html",
 )
 
 

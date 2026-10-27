@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load static nucleo_extras %}
+{% block titulo %}{{ aprovacao.nome }} | Aprovação de LPs{% endblock %}
+{% block conteudo_classe %}conteudo-largo{% endblock %}
+{% block conteudo %}
+{% include "marketing/_previa_estilo.html" %}
+<div class="eleg">
+  <p class="pagina-eyebrow letreiro">Marketing · Aprovação de LPs</p>
+  <div class="pagina-cabecalho mkt-cabecalho">
+    <div>
+      <h1>{{ aprovacao.nome }}</h1>
+      <p class="subtitulo mkt-lp-sub"><span class="selo{% if aprovacao.situacao == 'ajustes' or aprovacao.situacao == 'aprovada' %} selo--acao{% endif %}">{{ aprovacao.get_situacao_display }}</span>
+        <span class="rotulo-dado">Versão {{ ultima.numero }}{% if aprovacao.campanha %} · {{ aprovacao.campanha.nome }}{% endif %}{% if aprovacao.prazo %} · Prazo {{ aprovacao.prazo|date:"d/m/Y" }}{% endif %}</span></p>
+    </div>
+    <a href="{% url 'marketing:lps' %}" class="botao-neutro">Voltar</a>
+  </div>
+  {% include "marketing/_tabs.html" %}
+
+  <div class="lpv-area">
+  <div class="lpv">
+    {% include "marketing/_lp_palco.html" %}
+    <aside class="lpv-lado" aria-label="Revisão">
+      <section class="lpv-cartao" aria-labelledby="lpv-link-tit">
+        <h2 class="lpv-tit" id="lpv-link-tit">Link para quem vai aprovar</h2>
+        {% copiar link_previa rotulo="Link da prévia" recado="Olá! A LP "|add:aprovacao.nome|add:" está pronta. Dá para ver no computador e no celular, comentar e aprovar por aqui:" %}
+        <p class="lpv-dica">Abre sem login. Quem tiver o link vê a prévia, comenta e aprova; a página não aparece em buscas.</p>
+        <form method="post" action="{% url 'marketing:lp_novo_link' aprovacao.pk %}" class="lpv-form">
+          {% csrf_token %}<button type="submit" class="botao-mini">Gerar link novo (o atual deixa de abrir)</button>
+        </form>
+      </section>
+
+      {% include "marketing/_lp_comentarios.html" %}
+
+      <section class="lpv-cartao" aria-labelledby="lpv-versao-tit">
+        <h2 class="lpv-tit" id="lpv-versao-tit">Enviar nova versão</h2>
+        <form method="post" action="{% url 'marketing:lp_versao' aprovacao.pk %}" enctype="multipart/form-data" class="lpv-form">
+          {% csrf_token %}
+          <label for="{{ form_versao.arquivo.id_for_label }}">{{ form_versao.arquivo.label }}</label>{{ form_versao.arquivo }}
+          <label for="{{ form_versao.nota.id_for_label }}">{{ form_versao.nota.label }}</label>{{ form_versao.nota }}
+          <button type="submit" class="botao-neutro">Enviar versão {{ ultima.numero|add:1 }}</button>
+          <p class="lpv-dica">A versão nova volta para aprovação no mesmo link.{% if url_publicada %} A LP no ar continua com a versão {{ aprovacao.publicada_versao }} até a nova ser aprovada e publicada.{% endif %}</p>
+        </form>
+      </section>
+
+      <section class="lpv-cartao" id="publicar" aria-labelledby="lpv-publicar-tit">
+        <h2 class="lpv-tit" id="lpv-publicar-tit">Publicação</h2>
+        {% if url_publicada %}
+        <p class="lpv-meta">Versão {{ aprovacao.publicada_versao }} no ar desde {{ aprovacao.publicada_em|date:"d/m/Y H:i" }}.</p>
+        {% copiar link_publicada rotulo="Endereço da LP" %}
+        <p><a href="{{ url_publicada }}" target="_blank" rel="noopener" class="botao-mini">Abrir a LP no ar</a></p>
+        {% endif %}
+        {% if aprovacao.situacao == 'aprovada' %}
+          {% if form_publicar %}
+          <form method="post" action="{% url 'marketing:lp_publicar' aprovacao.pk %}" class="lpv-form">
+            {% csrf_token %}
+            <label for="{{ form_publicar.slug.id_for_label }}">{{ form_publicar.slug.label }}</label>{{ form_publicar.slug }}
+            <p class="lpv-dica">{{ form_publicar.slug.help_text }} O formulário da LP envia os leads para /lp/&lt;endereço&gt;/lead/, como nas LPs de hoje, e eles caem no funil.</p>
+            <button type="submit" class="botao-primario">{% if url_publicada %}Publicar a versão {{ ultima.numero }}{% else %}Publicar LP{% endif %}</button>
+          </form>
+          {% else %}<p class="lpv-dica">Aprovada. A publicação é feita por quem tem acesso ao Comercial.</p>{% endif %}
+        {% elif not url_publicada %}<p class="lpv-dica">Depois de aprovada, a LP pode ser publicada daqui.</p>{% endif %}
+      </section>
+    </aside>
+  </div>
+  </div>
+</div>
+<script src="{% static 'js/previa_lp.js' %}" defer></script>
+{% endblock %}

@@ -213,6 +213,8 @@ class PecaCampanha(models.Model):
         IMPRESSO = "impresso", "Impresso"
         ANUNCIO = "anuncio", "Anúncio"
         POST = "post", "Post / conteúdo social"
+        ARTE = "arte", "Arte"
+        ACAO = "acao", "Ação / evento"
         LP = "lp", "Landing page"
         OUTRO = "outro", "Outro"
         NAO_CLASSIFICADO = "nao_classificado", "Não classificado"
@@ -351,3 +353,118 @@ class Comentario(models.Model):
 
     def __str__(self):
         return f"{self.autor}: {self.texto[:40]}"
+
+
+def _token_previa():
+    import secrets
+    return secrets.token_urlsafe(24)
+
+
+class AprovacaoLP(models.Model):
+    """LP enviada pelo Marketing para revisão antes de ir ao ar.
+
+    O HTML vem pronto do design (autocontido, como as LPs de hoje) e ganha um link de
+    prévia (`token`) para o gestor ou o cliente abrir sem login, comentar, pedir ajuste
+    e aprovar. Aprovada, vira página pública pelo Comercial (`pagina`), que é quem
+    cuida do funil de leads."""
+
+    class Situacao(models.TextChoices):
+        AGUARDANDO = "aguardando", "Aguardando aprovação"
+        AJUSTES = "ajustes", "Ajustes pedidos"
+        APROVADA = "aprovada", "Aprovada"
+        PUBLICADA = "publicada", "Publicada"
+
+    nome = models.CharField("nome", max_length=140)
+    campanha = models.ForeignKey(
+        Campanha, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="lps_em_aprovacao", verbose_name="campanha")
+    prazo = models.DateField("prazo da aprovação", null=True, blank=True)
+    situacao = models.CharField(
+        "situação", max_length=12, choices=Situacao.choices, default=Situacao.AGUARDANDO,
+        db_index=True)
+    token = models.CharField(max_length=40, unique=True, default=_token_previa, editable=False)
+    aprovada_versao = models.PositiveIntegerField("versão aprovada", null=True, blank=True)
+    aprovada_por = models.CharField("aprovada por", max_length=80, blank=True)
+    aprovada_em = models.DateTimeField("aprovada em", null=True, blank=True)
+    pagina = models.ForeignKey(
+        "comercial.PaginaCaptacao", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="aprovacoes_lp", verbose_name="página publicada")
+    slug = models.SlugField("endereço da LP", max_length=60, blank=True,
+                            help_text="Vira a URL pública: /lp/<endereço>/")
+    publicada_versao = models.PositiveIntegerField("versão publicada", null=True, blank=True)
+    publicada_em = models.DateTimeField("publicada em", null=True, blank=True)
+    criado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="lps_enviadas", verbose_name="enviada por")
+    criado_em = models.DateTimeField("criada em", auto_now_add=True)
+    atualizado_em = models.DateTimeField("atualizada em", auto_now=True)
+
+    class Meta:
+        verbose_name = "LP em aprovação"
+        verbose_name_plural = "LPs em aprovação"
+        ordering = ["-atualizado_em", "-id"]
+
+    def __str__(self):
+        return self.nome
+
+    @property
+    def ultima(self):
+        return self.versoes.order_by("-numero").first()
+
+
+class VersaoLP(models.Model):
+    """Cada arquivo enviado. O HTML fica no banco: é ele que a prévia mostra e o que
+    vai ao ar, e o histórico de versões não depende do disco do servidor."""
+
+    aprovacao = models.ForeignKey(
+        AprovacaoLP, on_delete=models.CASCADE, related_name="versoes", verbose_name="LP")
+    numero = models.PositiveIntegerField("versão")
+    html = models.TextField("HTML")
+    nome_arquivo = models.CharField("arquivo", max_length=200)
+    tamanho = models.PositiveIntegerField("tamanho (bytes)", default=0)
+    nota = models.CharField("o que mudou", max_length=300, blank=True)
+    enviada_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="versoes_lp", verbose_name="enviada por")
+    enviada_em = models.DateTimeField("enviada em", default=timezone.now)
+
+    class Meta:
+        verbose_name = "versão de LP"
+        verbose_name_plural = "versões de LP"
+        ordering = ["-numero"]
+        constraints = [models.UniqueConstraint(fields=["aprovacao", "numero"],
+                                               name="versao_lp_unica")]
+
+    def __str__(self):
+        return f"{self.aprovacao} v{self.numero}"
+
+
+class ComentarioLP(models.Model):
+    """O que quem revisa disse sobre uma versão: comentário, pedido de ajuste ou aprovação."""
+
+    class Tipo(models.TextChoices):
+        COMENTARIO = "comentario", "Comentário"
+        AJUSTE = "ajuste", "Pedido de ajuste"
+        APROVACAO = "aprovacao", "Aprovação"
+
+    aprovacao = models.ForeignKey(
+        AprovacaoLP, on_delete=models.CASCADE, related_name="comentarios", verbose_name="LP")
+    versao = models.ForeignKey(
+        VersaoLP, on_delete=models.CASCADE, related_name="comentarios", verbose_name="versão")
+    tipo = models.CharField("tipo", max_length=12, choices=Tipo.choices, default=Tipo.COMENTARIO)
+    texto = models.TextField("texto", blank=True)
+    autor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="comentarios_lp", verbose_name="autor")
+    nome_autor = models.CharField("nome de quem comentou", max_length=80)
+    pelo_link = models.BooleanField("veio pelo link de prévia", default=False)
+    resolvido = models.BooleanField("resolvido", default=False)
+    em = models.DateTimeField("em", default=timezone.now)
+
+    class Meta:
+        verbose_name = "comentário de LP"
+        verbose_name_plural = "comentários de LP"
+        ordering = ["em", "id"]
+
+    def __str__(self):
+        return f"{self.nome_autor}: {self.texto[:40]}"

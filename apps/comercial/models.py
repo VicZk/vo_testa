@@ -577,6 +577,10 @@ class PaginaCaptacao(models.Model):
         help_text="URL de 'incorporar' do Google Maps (o src do iframe).",
     )
 
+    # LP feita no design e aprovada no Marketing: a página é este HTML, servido em
+    # /lp/<slug>/ (ver views_lp.servir_lp_publicada); os campos acima não se aplicam.
+    html = models.TextField("HTML da LP aprovada", blank=True, default="", editable=False)
+
     # Metas e medição.
     meta_leads = models.PositiveIntegerField("meta de leads", default=0)
     visitas = models.PositiveIntegerField("visitas", default=0)

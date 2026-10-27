@@ -1275,6 +1275,7 @@ def robots_txt(request):
         "Disallow: /minha-reserva/",
         "Disallow: /reservar/resumo/",
         "Disallow: /lab/",
+        "Disallow: /aprovacao/",
         "",
         f"Sitemap: {request.build_absolute_uri('/sitemap.xml')}",
     ]

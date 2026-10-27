@@ -135,3 +135,19 @@ cancelado
 # os botões no papel (a regra global do app.css).
 @media print ‖ .botao-primario
 @media print ‖ .botao-neutro
+# Prévia de LP para aprovação (marketing/previa_publica.html): versões, telas e o botão mini.
+.botao-mini:active
+.botao-mini:focus-visible
+.filtro-chip
+.filtro-chip:hover
+.filtro-chip:active
+.filtro-chip[aria-pressed="true"]
+.filtro-chip[aria-current="page"]
+@media (prefers-reduced-motion: reduce) ‖ .filtro-chip
+@media (prefers-reduced-motion: reduce) ‖ .filtro-chip:active
+.botao-mini
+.botao-mini:hover
+@media (prefers-reduced-motion: reduce) ‖ .botao-mini:active
+@media (pointer: coarse), (max-width: 820px) ‖ .botao-mini
+@media (pointer: coarse), (max-width: 820px) ‖ .filtro-chip
+@media print ‖ .botao-mini

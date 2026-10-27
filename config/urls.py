@@ -62,6 +62,9 @@ urlpatterns = [
     # Páginas de Captação (Landing Pages) — públicas, fora do /crm.
     path("captacao/", include("apps.comercial.urls_publicas")),
 
+    # Prévia de LP para aprovação (Marketing): o link que vai ao gestor ou cliente.
+    path("aprovacao/", include("apps.marketing.urls_previa")),
+
     # Descadastro de e-mail marketing (LGPD) — público, fora do /crm.
     path("email/", include("apps.comercial.urls_email_publico")),
 

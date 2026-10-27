@@ -774,6 +774,8 @@ def captacao_publica(request, slug):
     pagina = PaginaCaptacao.objects.filter(slug=slug).first()
     if pagina is None or not pagina.publicada:
         raise Http404("Página não encontrada.")
+    if pagina.html:  # LP aprovada no Marketing: mora em /lp/<slug>/
+        return redirect("lp:publicada", slug=pagina.slug)
 
     # O tema escolhe o visual: 'fundador' (oferta c/ captura) ou 'blueprint' (tour do fundador).
     eh_blueprint = pagina.tema == PaginaCaptacao.Tema.BLUEPRINT

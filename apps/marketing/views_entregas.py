@@ -89,11 +89,20 @@ def alterar_estado(request, pk):
     return redirect(_voltar(request))
 
 
+def _data_da_url(request):
+    """`?data=AAAA-MM-DD` (o dia clicado no Cronograma); inválida, fica sem data."""
+    from datetime import date
+    try:
+        return date.fromisoformat(request.GET.get("data", ""))
+    except ValueError:
+        return None
+
+
 def _editar(request, peca=None):
     form = EntregaForm(
         request.POST if request.method == "POST" else None, usuario=request.user,
         peca=peca, campanha=request.GET.get("campanha"),
-        initial={"tipo": request.GET.get("tipo", "")})
+        initial={"tipo": request.GET.get("tipo", ""), "data": _data_da_url(request)})
     if request.method == "POST" and form.is_valid():
         try:
             services_entregas.salvar_entrega(dados=form.cleaned_data, usuario=request.user, peca=peca)

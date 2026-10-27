@@ -1,0 +1,18 @@
+<section class="lpv-palco" aria-label="Prévia da LP">
+  <div class="lpv-barra">
+    <nav class="lpv-versoes" aria-label="Versões">
+      {% for v in versoes %}<a href="?v={{ v.numero }}" class="filtro-chip"{% if v.numero == versao.numero %} aria-current="page"{% endif %}>v{{ v.numero }}{% if forloop.first and versoes|length > 1 %} · mais nova{% endif %}</a>{% endfor %}
+    </nav>
+    <div class="lpv-telas" role="group" aria-label="Ver como">
+      <button type="button" class="filtro-chip" data-lpv-tela="computador" aria-pressed="true">Computador</button>
+      <button type="button" class="filtro-chip" data-lpv-tela="celular" aria-pressed="false">Celular</button>
+      <a href="{{ pagina_url }}" target="_blank" rel="noopener noreferrer" class="filtro-chip">Tela cheia</a>
+    </div>
+  </div>
+  {% if versao.nota %}<p class="lpv-nota">Versão {{ versao.numero }}: {{ versao.nota }}</p>{% endif %}
+  <div class="lpv-moldura" data-tela="computador">
+    <iframe src="{{ pagina_url }}" title="Prévia da LP {{ aprovacao.nome }}, versão {{ versao.numero }}"
+            sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
+            referrerpolicy="no-referrer"></iframe>
+  </div>
+</section>

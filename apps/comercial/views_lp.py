@@ -427,12 +427,69 @@ def lp_inauguracao_lead(request):
         mensagem="Inauguração 31/10: confirmação de presença")
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# LPs aprovadas no Marketing (Aprovação de LPs): o HTML mora na Página de Captação
+# e passa pelo mesmo preparo das LPs acima. Rota genérica, depois das fixas.
+_PUBLICADAS_CACHE: dict[tuple, str] = {}
+
+
+def _publicada(slug):
+    from .models import PaginaCaptacao
+    pagina = (PaginaCaptacao.objects.filter(slug=slug, status=PaginaCaptacao.Status.PUBLICADA)
+              .exclude(html="").first())
+    if pagina is None:
+        raise Http404("Página não encontrada.")
+    return pagina
+
+
+def _html_publicada(pagina) -> str:
+    chave = (get_script_prefix(), settings.STATIC_URL, pagina.pk, pagina.atualizado_em)
+    if chave not in _PUBLICADAS_CACHE:
+        # Um HTML por página: a versão anterior sai do cache quando a nova entra.
+        for velha in [c for c in _PUBLICADAS_CACHE if c[2] == pagina.pk]:
+            del _PUBLICADAS_CACHE[velha]
+        _PUBLICADAS_CACHE[chave] = _com_toque_no_celular(_com_aviso_de_cookies(
+            _desembutir(pagina.html)))
+    return _PUBLICADAS_CACHE[chave]
+
+
+@never_cache
+def servir_lp_publicada(request, slug):
+    """LP aprovada no Marketing, em /lp/<slug>/."""
+    pagina = _publicada(slug)
+    resp = HttpResponse(_no_prefixo(_html_publicada(pagina)))
+    cookie = f"lpv_{pagina.pk}"
+    if not request.COOKIES.get(cookie):
+        try:
+            _contar_visita_pagina(request, pagina.slug)
+        except Exception:  # noqa: BLE001 — métrica nunca quebra a LP
+            pass
+        resp.set_cookie(cookie, "1", max_age=_VISITA_TTL,
+                        httponly=True, samesite="Lax", secure=not settings.DEBUG)
+    return resp
+
+
+@csrf_exempt
+@never_cache
+@require_POST
+def lp_publicada_lead(request, slug):
+    """Lead (JSON) de uma LP aprovada no Marketing → funil, como nas outras LPs."""
+    pagina = _publicada(slug)
+    return _receber_lead_lp(request, slug=pagina.slug, origem_padrao=f"lp-{pagina.slug}",
+                            mensagem=f"LP: {pagina.nome}")
+
+
 def arquivo_lp(request, nome):
     """Foto ou fonte que veio embutida numa LP (ver `_desembutir`). O nome é o hash do
     conteúdo — mudou a foto, muda o endereço —, então o navegador guarda para sempre."""
     if nome not in _ARQUIVOS_LP:      # outro worker serviu a LP: monta o mapa aqui também
         for carregar in (_lp_html, _lp2_html, _lpinaug_html):
             carregar()
+    if nome not in _ARQUIVOS_LP:
+        from .models import PaginaCaptacao
+        for pagina in (PaginaCaptacao.objects.filter(status=PaginaCaptacao.Status.PUBLICADA)
+                       .exclude(html="")):
+            _html_publicada(pagina)
     if nome not in _ARQUIVOS_LP:
         raise Http404
     mime, dados = _ARQUIVOS_LP[nome]
