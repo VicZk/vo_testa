@@ -56,6 +56,9 @@ Os dois pedidos do Marketing para centralizar o trabalho no CRM.
   `previa_publica` e parciais) e estilos `.cron-*`/`.mkt-lp*` no `app.css`.
 - Manifesto do `base.css`.
 - Testes em `apps/marketing/tests_lp_cronograma.py`.
+- A lista de LPs ordena explicitamente pela última atualização. Com a contagem de
+  ajustes, o banco agrupa e o Django deixa de aplicar a ordem do model. O aviso do
+  paginador apareceu na conferência na VPS.
 
 ## 26/10/2026: aba Comparativo técnica, com o código de cada conserto
 

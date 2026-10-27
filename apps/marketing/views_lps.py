@@ -73,7 +73,8 @@ def lps(request):
     consulta = AprovacaoLP.objects.select_related("campanha").annotate(
         versao_atual=Max("versoes__numero"),
         ajustes=Count("comentarios", filter=Q(comentarios__tipo=ComentarioLP.Tipo.AJUSTE,
-                                              comentarios__resolvido=False), distinct=True))
+                                              comentarios__resolvido=False), distinct=True)
+    ).order_by("-atualizado_em", "-id")  # com GROUP BY o Django ignora o ordering do Meta
     contagem = dict(AprovacaoLP.objects.order_by().values_list("situacao").annotate(n=Count("id")))
     if situacao in AprovacaoLP.Situacao.values:
         consulta = consulta.filter(situacao=situacao)
