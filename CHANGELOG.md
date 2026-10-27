@@ -59,6 +59,8 @@ Os dois pedidos do Marketing para centralizar o trabalho no CRM.
 - A lista de LPs ordena explicitamente pela última atualização. Com a contagem de
   ajustes, o banco agrupa e o Django deixa de aplicar a ordem do model. O aviso do
   paginador apareceu na conferência na VPS.
+- O texto dos itens do Cronograma subiu para 0,75 rem, o piso de legibilidade no toque
+  que o teste de design exige (`TemaCompartilhadoTests`).
 
 ## 26/10/2026: aba Comparativo técnica, com o código de cada conserto
 

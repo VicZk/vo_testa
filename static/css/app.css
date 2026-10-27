@@ -9063,7 +9063,7 @@ html.com-js [data-precos-filtros][hidden] { display: block; visibility: hidden; 
 .cron-mais:active { transform: scale(.94); }
 .cron-itens { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .cron-item { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 3px 6px; border-radius: var(--raio-p);
-  font-size: .74rem; line-height: 1.3; color: var(--tinta); text-decoration: none;
+  font-size: .75rem; line-height: 1.3; color: var(--tinta); text-decoration: none;
   background: color-mix(in srgb, var(--cron-cor) 9%, var(--superficie));
   transition: background var(--mov-rapido) var(--curva); }
 .cron-item:hover { background: color-mix(in srgb, var(--cron-cor) 17%, var(--superficie)); }
