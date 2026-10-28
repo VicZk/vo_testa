@@ -59,7 +59,8 @@ class EntregaForm(forms.Form):
                                              empty_value=None, choices=[("", "Sem LP vinculada")])
     valor = NumeroBrasileiro(
         label="Valor (R$)", required=False, min_value=Decimal("0"), max_digits=10, decimal_places=2,
-        help_text="Quanto custou (impressão, anúncio, mídia). Entra no relatório por tipo.")
+        help_text="Quanto custou (impressão, anúncio, mídia). Entra na verba do mês do prazo. "
+                  "Lance cada custo num lugar só: aqui ou em “Lançar gasto” da campanha.")
 
     # O tipo vem primeiro: é por ele que o Marketing pensa a entrega (rede social,
     # impressão, mídia off…); a campanha é opcional.
@@ -121,6 +122,8 @@ class EntregaForm(forms.Form):
         campanha = dados.get("campanha")
         if anexo and (not campanha or anexo.campanha_id != campanha.pk):
             self.add_error("material_checklist", "Escolha um anexo desta campanha.")
+        if dados.get("valor") and not dados.get("data"):
+            self.add_error("data", "Informe o prazo: o valor entra na verba desse mês.")
         if dados.get("pagina_captacao") and dados.get("tipo") != PecaCampanha.Tipo.LP:
             self.add_error("pagina_captacao", "Escolha o tipo LP para vincular uma LP.")
         return dados

@@ -85,7 +85,8 @@
         <span class="num mk-verba-n mk-tom-alerta">{{ verba.travada|intcomma_brl }}</span></div>
       <div class="mk-verba-num">
         <span class="mk-rotulo bloco">GASTO</span>
-        <span class="num mk-verba-n mk-tom-perigo">{{ verba.gasta|intcomma_brl }}</span></div>
+        <span class="num mk-verba-n mk-tom-perigo">{{ verba.gasta|intcomma_brl }}</span>
+        {% if verba.avulsas %}<span class="mk-meta">{{ verba.avulsas|intcomma_brl }} em entregas avulsas</span>{% endif %}</div>
       <div class="mk-verba-num">
         <span class="mk-rotulo bloco">TETO DO MÊS</span>
         {% if eh_gerente %}

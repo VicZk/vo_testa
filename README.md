@@ -624,7 +624,9 @@ e calendário, embrulhando as campanhas do Comercial. A aprovação do gestor é
 por campanha: sem ela, a campanha vai da Proposta à Estruturação, e o teto do mês
 continua valendo ao travar a verba. As entregas têm tipo (Rede social, Campanha, LP,
 Impressão, Mídia off, Anúncio) e valor em R$. O relatório mostra o investimento por tipo
-de mídia: o valor das entregas mais os gastos lançados nas campanhas. O **Cronograma** mostra o mês em
+de mídia: o valor das entregas mais os gastos lançados nas campanhas. O valor da entrega
+conta na verba do mês do prazo. A avulsa sai direto do disponível; a de campanha fica
+dentro da verba travada da campanha e entra no gasto dela. O **Cronograma** mostra o mês em
 grade, um quadrado por dia, com tudo o que tem data: entregas (posts, artes, ações,
 impressos, anúncios), tarefas das campanhas, início e fim de campanha e prazos de
 aprovação de LP. Nada é cadastrado duas vezes: cada item aparece pela própria data, e o

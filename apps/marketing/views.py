@@ -24,7 +24,7 @@ def quadro(request):
     pos = services.posicao_verba()
     teto = float(pos["teto"]) or 0
     gasta = float(pos["gasta"])
-    travada = float(pos["travada"])
+    travada = float(pos["comprometida"])  # campanhas + entregas avulsas do mês
     atrasados = services.banda_atrasados(canal=canal)
     # Contador e filtro do "Só os meus" SAEM DA MESMA FUNÇÃO (senão divergem).
     minhas = services.motivos_meus(user)

@@ -240,3 +240,29 @@ class ValorDaEntregaTests(TestCase):
         self.assertContains(r, "Investimento por tipo de mídia")
         csv = self.client.get(reverse("marketing:relatorio"), {"mes": 11, "ano": 2026, "export": "csv"})
         self.assertIn("Mídia off", csv.content.decode())
+
+    def test_valor_sem_prazo_pede_o_prazo(self):
+        r = self.client.post(reverse("marketing:nova_entrega"), {
+            "versao": 1, "tipo": "impresso", "nome": "Flyer", "valor": "100", "status": "a_fazer"})
+        self.assertContains(r, "Informe o prazo")
+        self.assertFalse(PecaCampanha.objects.exists())
+
+    def test_avulsa_sai_do_disponivel_e_a_de_campanha_so_entra_no_gasto(self):
+        from decimal import Decimal
+
+        from apps.marketing import services
+        services.definir_teto("2026-11", "1000")
+        campanha = Campanha.objects.create(nome="Com verba", inicio=date(2026, 11, 2), fim=date(2026, 11, 30),
+                                           verba_travada=Decimal("500"))
+        PecaCampanha.objects.create(nome="Flyer avulso", tipo="impresso", data=date(2026, 11, 5),
+                                    valor=Decimal("200"))
+        PecaCampanha.objects.create(nome="Banner", tipo="impresso", data=date(2026, 11, 6),
+                                    valor=Decimal("150"), campanha=campanha)
+        verba = services.posicao_verba("2026-11")
+        self.assertEqual(verba["gasta"], Decimal("350"))
+        self.assertEqual(verba["avulsas"], Decimal("200"))
+        self.assertEqual(verba["disponivel"], Decimal("300"))   # 1000 − 500 travada − 200 avulsa
+        self.assertEqual(campanha.gasta, Decimal("150"))         # encerrar devolve só o não gasto
+        relatorio = services.relatorio(date(2026, 11, 1), date(2026, 11, 30))
+        self.assertEqual(relatorio["gasto"], Decimal("350"))
+        self.assertEqual(relatorio["midias"]["total"], Decimal("350"))  # sem contar duas vezes

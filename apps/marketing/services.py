@@ -65,12 +65,34 @@ def _mes_de_campanha(c) -> str:
     return d.strftime("%Y-%m")
 
 
+def gasto_em_entregas(inicio, fim, *, campanha=None, avulsas=False) -> Decimal:
+    """Valor informado nas entregas com prazo no período (material, impressão, mídia).
+    O prazo é a data do gasto: entrega com valor sempre tem prazo (EntregaForm)."""
+    qs = PecaCampanha.objects.filter(data__gte=inicio, data__lte=fim, valor__isnull=False)
+    if campanha is not None:
+        qs = qs.filter(campanha=campanha)
+    if avulsas:
+        qs = qs.filter(campanha__isnull=True)
+    return qs.aggregate(s=Sum("valor"))["s"] or Decimal("0.00")
+
+
+def _limites_do_mes(mes: str):
+    import calendar as _cal
+    from datetime import date as _d
+    ano, m = int(mes[:4]), int(mes[5:7])
+    return _d(ano, m, 1), _d(ano, m, _cal.monthrange(ano, m)[1])
+
+
 def posicao_verba(mes: str | None = None) -> dict:
     """Foto da verba do mês. Fonte única: teto é cadastrado; travada e gasta são soma.
 
     - teto     = `VerbaMarketing.tetos[mes]`
     - travada  = Σ `verba_travada` das campanhas do mês, ainda não encerradas
-    - gasta    = Σ gastos (comercial) de campanhas COM fluxo de marketing, no mês do gasto
+    - gasta    = Σ gastos (comercial) de campanhas COM fluxo de marketing, no mês do gasto,
+                 + valor das entregas com prazo no mês (com ou sem campanha)
+    - avulsas  = parte das entregas SEM campanha: nenhuma verba travada cobre esse gasto,
+                 então ele sai direto do disponível. A entrega de campanha já está dentro
+                 da verba travada da campanha e não sai de novo.
     - **sobra não acumula**: cada mês olha só o seu teto.
     """
     mes = mes or mes_atual()
@@ -89,11 +111,16 @@ def posicao_verba(mes: str | None = None) -> dict:
     gasta = (GastoDiario.objects
              .filter(campanha__fluxo__isnull=False, data__year=ano, data__month=m)
              .aggregate(s=Sum("valor"))["s"] or Decimal("0.00"))
+    inicio, fim = _limites_do_mes(mes)
+    gasta += gasto_em_entregas(inicio, fim)
+    avulsas = gasto_em_entregas(inicio, fim, avulsas=True)
 
-    disponivel = teto - travada
-    pct = int(round(travada / teto * 100)) if teto else 0
+    comprometida = travada + avulsas
+    disponivel = teto - comprometida
+    pct = int(round(comprometida / teto * 100)) if teto else 0
     return {
         "mes": mes, "teto": teto, "travada": travada, "gasta": gasta,
+        "avulsas": avulsas, "comprometida": comprometida,
         "disponivel": disponivel, "pct": pct,
         "alerta": bool(teto) and pct >= verba.alerta_pct, "alerta_pct": verba.alerta_pct,
     }
@@ -753,8 +780,9 @@ def relatorio(inicio, fim) -> dict:
     from apps.comercial.models import GastoDiario
     verba = VerbaMarketing.atual()
     teto = sum((verba.teto_do_mes(m) for m in _meses_entre(inicio, fim)), Decimal("0.00"))
-    gasto = (GastoDiario.objects.filter(campanha__fluxo__isnull=False,
-             data__gte=inicio, data__lte=fim).aggregate(s=Sum("valor"))["s"] or Decimal("0.00"))
+    lancado = (GastoDiario.objects.filter(campanha__fluxo__isnull=False,
+               data__gte=inicio, data__lte=fim).aggregate(s=Sum("valor"))["s"] or Decimal("0.00"))
+    gasto = lancado + gasto_em_entregas(inicio, fim)
     sobra = teto - gasto
     hoje = timezone.localdate()
     dias = max((min(fim, hoje) - inicio).days + 1, 1)
@@ -764,6 +792,7 @@ def relatorio(inicio, fim) -> dict:
     for mc in Campanha.objects.filter(anuncio__isnull=False).select_related("anuncio"):
         g = (GastoDiario.objects.filter(campanha_id=mc.anuncio_id,
              data__gte=inicio, data__lte=fim).aggregate(s=Sum("valor"))["s"] or Decimal("0.00"))
+        g += gasto_em_entregas(inicio, fim, campanha=mc)
         rastreada, fechos = _retorno_rastreado(mc.anuncio_id)
         janela = _retorno_janela(mc)
         if not (g or rastreada or janela):
@@ -784,7 +813,7 @@ def relatorio(inicio, fim) -> dict:
     linhas.sort(key=lambda x: x["rastreada"], reverse=True)  # ordena pela RASTREADA
     return {"teto": teto, "gasto": gasto, "sobra": sobra, "ritmo": ritmo,
             "campanhas": len(linhas), "serie": _serie_mensal(fim), "linhas": linhas,
-            "midias": investimento_por_tipo(inicio, fim, gasto_campanhas=gasto)}
+            "midias": investimento_por_tipo(inicio, fim, gasto_campanhas=lancado)}
 
 
 def investimento_por_tipo(inicio, fim, *, gasto_campanhas) -> dict:
@@ -821,6 +850,7 @@ def _serie_mensal(ate, n: int = 5) -> list:
     for yy, mm in meses:
         g = (GastoDiario.objects.filter(campanha__fluxo__isnull=False, data__year=yy, data__month=mm)
              .aggregate(s=Sum("valor"))["s"] or Decimal("0.00"))
+        g += gasto_em_entregas(*_limites_do_mes(f"{yy:04d}-{mm:02d}"))
         out.append({"label": MESES_PT[mm][:3].lower(), "gasto": g,
                     "sel": (yy == ate.year and mm == ate.month)})
     mx = max((x["gasto"] for x in out), default=Decimal("0"))

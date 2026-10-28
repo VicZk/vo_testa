@@ -175,13 +175,16 @@ class Campanha(models.Model):
 
     @property
     def gasta(self) -> Decimal:
-        """Gasto real = Σ dos gastos da campanha de anúncio (fonte única, comercial)."""
+        """Gasto real = Σ dos gastos lançados na campanha de anúncio (comercial) + o valor
+        informado nas entregas da campanha (material, impressão, mídia)."""
+        entregas = (self.pecas.filter(valor__isnull=False).aggregate(s=Sum("valor"))["s"]
+                    or Decimal("0.00"))
         if not self.anuncio_id:
-            return Decimal("0.00")
+            return entregas
         from apps.comercial.models import GastoDiario
         total = (GastoDiario.objects.filter(campanha_id=self.anuncio_id)
                  .aggregate(s=Sum("valor"))["s"])
-        return total or Decimal("0.00")
+        return (total or Decimal("0.00")) + entregas
 
     @property
     def sobra_travada(self) -> Decimal:

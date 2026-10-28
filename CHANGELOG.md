@@ -29,8 +29,17 @@ Retorno do Marketing depois de usar o Cronograma e as LPs.
 - **Investimento por tipo de mídia no relatório.** O relatório do mês ganhou um gráfico
   de barras com quanto foi investido em cada tipo: o valor das entregas (pela data da
   entrega) e, numa barra à parte, os gastos lançados nas campanhas. Cada barra mostra o
-  valor em R$ e a % do total, e o CSV também traz esses números. A verba do mês (teto,
-  travada e gasta) continua contando só os gastos lançados nas campanhas.
+  valor em R$ e a % do total, e o CSV também traz esses números.
+- **O valor da entrega conta na verba do mês** (do prazo da entrega):
+  - A **entrega avulsa** entra no gasto e sai direto do disponível, porque nenhuma
+    campanha travou verba para ela. O painel mostra "R$ X em entregas avulsas".
+  - A **entrega de campanha** entra no gasto do mês e no gasto da campanha, mas não sai
+    de novo do disponível, porque já está dentro da verba travada da campanha.
+  - Ao encerrar a campanha, devolve-se só o que de fato sobrou.
+
+  O relatório (gasto do mês, barras mensais, gasto e CAC por campanha) soma o mesmo, sem
+  contar nada duas vezes. Entrega com valor exige prazo, e o campo avisa para lançar cada
+  custo num lugar só: na entrega ou em "Lançar gasto" da campanha.
 
 **O que foi modificado:**
 - `Campanha.exige_aprovacao` e `PecaCampanha.valor`, com os novos tipos (migração
