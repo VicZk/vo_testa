@@ -9,6 +9,25 @@ A entrada mais nova fica no topo. As datas são as do push.
 
 ---
 
+## 28/10/2026: filtros do Marketing na hora e teto do mês alinhado
+
+- **Filtros sem atraso.** No Marketing, os chips de canal (Instagram, Google, E-mail…),
+  "Só os meus", o vínculo das entregas e a situação das LPs recarregavam a página inteira
+  a cada toque. Isso refazia menu, fontes e scripts, uns 29 arquivos. Com a latência da
+  VPS, o clique parecia não pegar. Agora o filtro troca só o conteúdo, como os links do
+  menu, e o chip muda na hora do toque: a lista chega em seguida. A URL acompanha o
+  filtro, Voltar funciona, e quem usa o teclado continua no chip.
+- **Teto do mês alinhado.** No cartão da verba, o valor do teto ficava uns 11px abaixo
+  de Reservado e Gasto. O botão "Alterar" (44px, o tamanho de toque) estava na linha do
+  valor e o centralizava. Agora o botão fica ao lado do bloco rótulo+valor, e os três
+  valores estão na mesma linha. Em "Alterar", o campo aparece embaixo do rótulo, no
+  lugar do valor.
+- **Modificado:** `static/js/navegacao.js` (formulário `data-troca-conteudo` troca só
+  `#conteudo`), `_canais.html`, `quadro.html`, `entregas.html`, `lps.html` e `app.css`
+  (`.mk-verba-num--teto`).
+
+---
+
 ## 27/10/2026 (noite): aprovação do gestor opcional, tipos de entrega e investimento por mídia
 
 Retorno do Marketing depois de usar o Cronograma e as LPs.

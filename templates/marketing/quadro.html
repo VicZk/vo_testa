@@ -8,7 +8,7 @@
 {% include "marketing/_cabecalho.html" with titulo="Quadro de campanhas" descricao="Acompanhe as campanhas em cinco grupos. Abra o próximo passo para conferir os requisitos e avançar." %}
 {% include "marketing/_canais.html" %}
 <div class="mkt-barra">
-  <form method="get">
+  <form method="get" data-troca-conteudo>
   {% if canal %}<input type="hidden" name="canal" value="{{ canal }}">{% endif %}
   <button type="submit" name="meus" value="{% if not so_meus %}1{% endif %}" class="filtro-chip{% if so_meus %} ativo{% endif %}" aria-pressed="{{ so_meus|yesno:'true,false' }}">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ico"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Só os meus
@@ -87,23 +87,31 @@
         <span class="mk-rotulo bloco">GASTO</span>
         <span class="num mk-verba-n mk-tom-perigo">{{ verba.gasta|intcomma_brl }}</span>
         {% if verba.avulsas %}<span class="mk-meta">{{ verba.avulsas|intcomma_brl }} em entregas avulsas</span>{% endif %}</div>
-      <div class="mk-verba-num">
-        <span class="mk-rotulo bloco">TETO DO MÊS</span>
-        {% if eh_gerente %}
-        {% comment %}O valor fica na linha dos outros dois; o campo só aparece em
-        "Alterar" (e o foco já vai para ele).{% endcomment %}
+      {% if eh_gerente %}
+      {% comment %}Rótulo e valor ficam no mesmo bloco dos vizinhos (linha igual à de
+      Reservado e Gasto); "Alterar" vem ao lado do bloco, não do valor: o botão tem 44px e,
+      na linha do valor, empurrava o número para baixo. O campo só aparece em "Alterar"
+      (e o foco já vai para ele).{% endcomment %}
+      <div class="mk-verba-num mk-verba-num--teto">
+        <div class="mk-teto-dado">
+          <span class="mk-rotulo bloco">TETO DO MÊS</span>
+          <span class="num mk-verba-n">{{ verba.teto|intcomma_brl }}</span>
+        </div>
         <details class="mk-teto" ontoggle="if (this.open) this.querySelector('input[name=valor]').select()">
-          <summary class="mk-teto-resumo"><span class="num mk-verba-n">{{ verba.teto|intcomma_brl }}</span><span class="mk-teto-alterar"><span class="mk-teto-abrir">Alterar</span><span class="mk-teto-fechar">Cancelar</span></span></summary>
+          <summary class="mk-teto-alterar"><span class="mk-teto-abrir">Alterar</span><span class="mk-teto-fechar">Cancelar</span></summary>
           <form data-preservar-erros method="post" action="{% url 'marketing:editar_teto' %}" class="mk-teto-form">
             {% csrf_token %}<input type="hidden" name="mes" value="{{ verba.mes }}">
             <input type="text" name="valor" class="js-moeda mk-teto-campo" value="{{ verba.teto|intcomma_brl }}" aria-label="Novo teto do mês">
             <button type="submit" class="mk-teto-salvar">Salvar</button>
           </form>
         </details>
-        {% else %}
-        <span class="num mk-verba-n">{{ verba.teto|intcomma_brl }}</span>
-        {% endif %}
       </div>
+      {% else %}
+      <div class="mk-verba-num">
+        <span class="mk-rotulo bloco">TETO DO MÊS</span>
+        <span class="num mk-verba-n">{{ verba.teto|intcomma_brl }}</span>
+      </div>
+      {% endif %}
     </div>
   </div>
   <div class="mk-verba-trilho">

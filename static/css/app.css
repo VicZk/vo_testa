@@ -4979,25 +4979,21 @@ form.filtros:not(.subnav) :is(input:not([type=checkbox]):not([type=radio]):not([
 .mk-rotulo { font-size: var(--rotulo-min); letter-spacing: .06em; color: var(--tinta-suave); font-weight: 700; }
 .mk-rotulo.bloco { display: block; }
 .mk-verba-n { display: block; margin-top: 3px; font-size: 0.9375rem; font-weight: 700; color: var(--tinta); }
-/* Teto do mês na mesma linha de base de Reservado e Gasto (antes era um campo de texto
-   de 34px ao lado de dois números — a linha parecia desalinhada). Quem pode editar abre
-   o campo em "Alterar"; o <details> dispensa JS. */
-.mk-teto { margin-top: 3px; }
-/* Valor e "Alterar" alinhados pela linha de base; o valor, blocificado pelo flex, tem a
-   mesma caixa de linha dos vizinhos (que são blocos com a mesma fonte). Sem a seta
-   geral dos <details> (ela, com 1.1em, empurrava a linha 2px para baixo). */
-.mk-teto-resumo { display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; }
-.mk-teto-resumo::-webkit-details-marker, .mk-teto-resumo::marker { display: none; content: none; }
-.conteudo .mk-teto > summary::before { content: none; }   /* sem a seta geral dos <details> do conteúdo */
-.mk-teto-resumo .mk-verba-n { display: inline; margin-top: 0; }
+/* Teto do mês: rótulo e valor num bloco igual ao de Reservado e Gasto, e "Alterar" ao
+   lado do BLOCO, alinhado ao topo. Antes o botão (summary de 44px) ficava na linha do
+   valor e o centralizava, deixando o teto ~11px abaixo dos vizinhos. O <details>
+   dispensa JS. */
+.mk-verba-num--teto { display: flex; align-items: flex-start; gap: 12px; }
 .mk-teto-alterar { display:inline-flex; align-items:center; min-height:var(--controle-h); padding:0 .6rem; border:1px solid var(--fio); border-radius:var(--raio-p); background:var(--superficie); font-size:var(--rotulo-min); font-weight:700; color:var(--madeira); }
+.mk-teto-alterar::-webkit-details-marker, .mk-teto-alterar::marker { display: none; content: none; }
+.conteudo .mk-teto > summary::before { content: none; }   /* sem a seta geral dos <details> do conteúdo */
+.conteudo .mk-teto > summary.mk-teto-alterar { padding-block: 0; }
 .mk-teto[open] .mk-teto-abrir, .mk-teto:not([open]) .mk-teto-fechar { display: none; }
-/* Aberto, o campo toma o lugar do valor na MESMA linha ("[campo] Salvar  Cancelar"): o
-   bloco cresce só o que o campo pede, e o resto do cartão quase não se move. */
-.mk-teto[open] { display: flex; flex-direction: row-reverse; align-items: baseline; gap: 10px; }
-.mk-teto[open] .mk-teto-resumo .mk-verba-n { display: none; }
-.mk-teto-form { display: flex; align-items: center; gap: 5px; margin-top: 6px; }
-.mk-teto[open] .mk-teto-form { margin-top: 0; }
+/* Aberto, o campo toma o lugar do valor, embaixo do rótulo ("[campo] Salvar  Cancelar"). */
+.mk-verba-num--teto:has(.mk-teto[open]) { flex-direction: column; gap: 3px; }
+.mk-verba-num--teto:has(.mk-teto[open]) .mk-teto-dado .mk-verba-n { display: none; }
+.mk-teto[open] { display: flex; flex-direction: row-reverse; align-items: center; gap: 10px; }
+.mk-teto-form { display: flex; align-items: center; gap: 5px; }
 .mk-teto-campo {
   width: 128px; padding: 5px 9px; border: 1px solid var(--fio); border-radius: var(--raio);
   font-weight: 700; font-size: 0.8125rem; color: var(--tinta);

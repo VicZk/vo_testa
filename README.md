@@ -636,7 +636,9 @@ link o gestor ou o cliente vê a página no computador e no celular, comenta, pe
 ou aprova. Cada arquivo novo vira uma versão e volta para aprovação. Aprovada, a LP é
 publicada em `/lp/<endereço>/` pelo Comercial, com os leads caindo no funil. A prévia
 roda isolada: `Content-Security-Policy: sandbox` sem `allow-same-origin` e `<iframe sandbox>`,
-então o script da LP não lê a sessão do CRM.
+então o script da LP não lê a sessão do CRM. Os filtros em chips do Marketing
+(`<form method="get" data-troca-conteudo>`) trocam só o conteúdo, como os links do menu
+(`static/js/navegacao.js`), e o chip muda já no toque.
 
 **Conciliação.** Importa extrato OFX e arquivo de cartão, casa por valor, data e NSU, e
 fecha o mês.

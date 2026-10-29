@@ -90,19 +90,52 @@
     if (/(?:^|\/)(?:sair|logout|download|exportar[^/]*|imprimir[^/]*|recibo|comprovante|extrato|pdf)(?:\/|$)/i.test(url.pathname)) return false;
     return true;
   }
+  // Filtro em chips (GET) também troca só o conteúdo: recarregar a página inteira
+  // refazia menu, fontes e scripts a cada toque e parecia não responder.
+  const FILTRO = '#conteudo form[method="get"][data-troca-conteudo]';
+  let chipEmFoco = null;
+  function trocarConteudo(elemento) {
+    elemento.dataset.navegacaoShell = '1';
+    elemento.setAttribute('hx-boost', 'true');
+    elemento.setAttribute('hx-target', '#conteudo');
+    elemento.setAttribute('hx-select', '#conteudo');
+    elemento.setAttribute('hx-swap', 'outerHTML show:none settle:0');
+    elemento.setAttribute('hx-sync', '#conteudo:replace');
+    htmx.process(elemento);
+  }
   function preparar() {
     if (!window.htmx) return;
     document.querySelectorAll('#conteudo a[href]').forEach(link => {
       if (!link.matches(NAVEGAR) || !elegivel(link) || link.dataset.navegacaoShell) return;
-      link.dataset.navegacaoShell = '1';
-      link.setAttribute('hx-boost', 'true');
-      link.setAttribute('hx-target', '#conteudo');
-      link.setAttribute('hx-select', '#conteudo');
-      link.setAttribute('hx-swap', 'outerHTML show:none settle:0');
-      link.setAttribute('hx-sync', '#conteudo:replace');
-      htmx.process(link);
+      trocarConteudo(link);
+    });
+    document.querySelectorAll(FILTRO).forEach(form => {
+      if (!form.dataset.navegacaoShell) trocarConteudo(form);
     });
   }
+  // O chip responde no toque; a lista chega em seguida. O HTMX trata o envio no
+  // próprio <form> antes deste ouvinte: com `htmx-request`, o pedido saiu mesmo.
+  // A troca antecipada é desfeita antes de a página ir para o histórico (Voltar
+  // mostraria o chip errado) e quando o pedido falha.
+  let antecipados = [];
+  function desfazerAntecipados() {
+    antecipados.forEach(([botao, estado]) => botao.setAttribute('aria-pressed', estado));
+    antecipados = [];
+  }
+  document.addEventListener('submit', evento => {
+    const form = evento.target, chip = evento.submitter;
+    if (!form.matches?.(FILTRO) || !form.classList.contains('htmx-request') ||
+        !chip?.matches('.filtro-chip[name]')) return;
+    desfazerAntecipados();
+    const grupo = Array.from(form.querySelectorAll('.filtro-chip[name]'))
+      .filter(botao => botao.name === chip.name);
+    const ligado = grupo.length > 1 || chip.getAttribute('aria-pressed') !== 'true';
+    antecipados = grupo.map(botao => [botao, botao.getAttribute('aria-pressed') || 'false']);
+    grupo.forEach(botao => botao.setAttribute('aria-pressed', String(botao === chip && ligado)));
+    chipEmFoco = document.activeElement === chip ? {name: chip.name, value: chip.value} : null;
+  });
+  document.addEventListener('htmx:beforeHistorySave', desfazerAntecipados);
+  document.addEventListener('htmx:afterRequest', desfazerAntecipados);
   function mostrarAba(aba) {
     const faixa = aba?.closest('.abas-secao');
     if (!faixa || faixa.scrollWidth <= faixa.clientWidth) return;
@@ -173,6 +206,15 @@
       window.scrollTo({top: 0, left: 0, behavior: 'instant'});
     }
     animarParteNova();
+    // Quem filtra pelo teclado continua no chip, não volta para o topo da página.
+    if (chipEmFoco) {
+      const grupo = Array.from(document.querySelectorAll(`${FILTRO} .filtro-chip[name]`))
+        .filter(botao => botao.name === chipEmFoco.name);
+      // Chip único ("Só os meus") liga e desliga trocando o próprio valor.
+      const mesmo = grupo.length === 1 ? grupo[0] : grupo.find(botao => botao.value === chipEmFoco.value);
+      chipEmFoco = null;
+      mesmo?.focus({preventScroll: true});
+    }
     if (evento.detail.xhr?.responseText) {
       const pagina = new DOMParser().parseFromString(evento.detail.xhr.responseText, 'text/html');
       pagina.querySelectorAll('#toasts .toast').forEach(aviso => {

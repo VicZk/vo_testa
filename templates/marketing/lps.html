@@ -8,7 +8,7 @@
     <a href="{% url 'marketing:nova_lp' %}" class="botao-primario">Enviar LP</a>
   </div>
   {% include "marketing/_tabs.html" %}
-  <form method="get" class="filtros-chips mkt-canais" aria-label="Filtrar por situação">
+  <form method="get" class="filtros-chips mkt-canais" aria-label="Filtrar por situação" data-troca-conteudo>
     {% for item in filtros %}<button type="submit" name="situacao" value="{{ item.valor }}" class="filtro-chip" aria-pressed="{{ item.ativo|yesno:'true,false' }}">{{ item.nome }} <span class="n">{{ item.n }}</span></button>{% endfor %}
   </form>
   <ul class="mkt-lp-lista">

@@ -9,7 +9,7 @@
   </div>
   {% include "marketing/_tabs.html" %}
   {% include "marketing/_canais.html" %}
-  <form method="get" class="filtros-chips mkt-canais" aria-label="Filtrar vínculo da entrega">
+  <form method="get" class="filtros-chips mkt-canais" aria-label="Filtrar vínculo da entrega" data-troca-conteudo>
     {% for chave, valor in request.GET.items %}{% if chave != 'vinculo' and chave != 'campanha' and chave != 'pagina' %}<input type="hidden" name="{{ chave }}" value="{{ valor }}">{% endif %}{% endfor %}
     {% for item in vinculos %}<button type="submit" name="vinculo" value="{{ item.valor }}" class="filtro-chip{% if item.ativo %} ativo{% endif %}" aria-pressed="{{ item.ativo|yesno:'true,false' }}">{{ item.nome }}</button>{% endfor %}
   </form>
