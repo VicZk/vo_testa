@@ -25,6 +25,11 @@ A entrada mais nova fica no topo. As datas são as do push.
 - **Modificado:** `static/js/navegacao.js` (formulário `data-troca-conteudo` troca só
   `#conteudo`), `_canais.html`, `quadro.html`, `entregas.html`, `lps.html` e `app.css`
   (`.mk-verba-num--teto`).
+- **Testes de Reservas à meia-noite.** O CI deste push passou da meia-noite e 6 testes
+  de Reservas (no-show, check-in, troca de quarto) falharam. O arquivo calculava "hoje"
+  uma vez só, ao carregar, e o sistema já estava no dia seguinte. Agora `HOJE` é
+  recalculado a cada teste (`HojeDoTeste` em `apps/reservas/tests.py`). Só os testes
+  mudaram: o sistema não tinha erro.
 
 ---
 

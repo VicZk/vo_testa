@@ -640,6 +640,10 @@ então o script da LP não lê a sessão do CRM. Os filtros em chips do Marketin
 (`<form method="get" data-troca-conteudo>`) trocam só o conteúdo, como os links do menu
 (`static/js/navegacao.js`), e o chip muda já no toque.
 
+Teste que depende da data usa o "hoje" do momento do teste, não o do carregamento do
+arquivo: a suíte do CI pode passar da meia-noite (ver `HojeDoTeste` em
+`apps/reservas/tests.py`).
+
 **Conciliação.** Importa extrato OFX e arquivo de cartão, casa por valor, data e NSU, e
 fecha o mês.
 

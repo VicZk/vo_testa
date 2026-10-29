@@ -29,8 +29,19 @@ Usuario = get_user_model()
 HOJE = timezone.localdate()
 
 
+class HojeDoTeste:
+    """Recalcula `HOJE` a cada teste. Fixado só no import, a suíte que passava da
+    meia-noite (o CI rodando à noite) comparava o dia anterior com o `localdate()`
+    do código, e testes de no-show e check-in falhavam."""
+
+    def run(self, result=None):
+        global HOJE
+        HOJE = timezone.localdate()
+        return super().run(result)
+
+
 @override_settings(FNRH_BLOQUEAR_CHECKIN=False)
-class ReservasTestsBase(TestCase):
+class ReservasTestsBase(HojeDoTeste, TestCase):
     def setUp(self):
         self.usuario = Usuario.objects.create_superuser(
             username="recepcao", password="senha-forte-123"
@@ -2365,7 +2376,7 @@ class NoShowAutomaticoTests(ReservasTestsBase):
         self.assertEqual(ConfiguracaoReservas.carregar().no_show_automatico_noites, 2)
 
 
-class CompetenciaDasDiariasTests(TestCase):
+class CompetenciaDasDiariasTests(HojeDoTeste, TestCase):
     """A diária vale pela noite (competência), não pelo dia do check-in: a estadia que
     vira o mês divide a receita entre os dois meses, como a ocupação."""
 
@@ -2420,7 +2431,7 @@ class CompetenciaDasDiariasTests(TestCase):
         self.assertEqual(estendida.competencia, self.ini_mes + timedelta(days=1))
 
 
-class OcupacaoSemDayUseTests(TestCase):
+class OcupacaoSemDayUseTests(HojeDoTeste, TestCase):
     """Day use não é pernoite: fica fora da disponibilidade, da ocupação e do ADR (antes
     as 8 unidades dele entravam na conta e o preço do dia puxava a diária média)."""
 
@@ -2455,7 +2466,7 @@ class OcupacaoSemDayUseTests(TestCase):
         self.assertNotIn("Dia na Pousada", o["por_tipo"])
 
 
-class FechamentoDoDiaTests(TestCase):
+class FechamentoDoDiaTests(HojeDoTeste, TestCase):
     """Auditoria noturna: o retrato de ontem, gravado uma vez e nunca alterado."""
 
     def setUp(self):
@@ -2640,7 +2651,7 @@ class DesempenhoDoModalENoBancoTests(TestCase):
             self.assertEqual(cur.fetchone()[0], "off")
 
 
-class ZerarReservasCommandTests(TransactionTestCase):
+class ZerarReservasCommandTests(HojeDoTeste, TransactionTestCase):
     """O comando zerar_reservas apaga tudo de reservas, desvincula (não apaga) os leads
     e reinicia o contador para #1."""
 
